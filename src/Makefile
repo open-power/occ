@@ -5,7 +5,7 @@
 #
 # OpenPOWER OnChipController Project
 #
-# Contributors Listed Below - COPYRIGHT 2014,2017
+# Contributors Listed Below - COPYRIGHT 2014,2019
 # [+] International Business Machines Corp.
 #
 #
@@ -38,7 +38,7 @@ OBJDIR = $(BASE_OBJDIR)$(SUB_OBJDIR)
 SRCDIR = $(BASE_SRCDIR)$(SUB_SRCDIR)
 
 ifndef PPETRACEPP_DIR
-export PPETRACEPP_DIR = $(abspath ppe/tools/ppetracepp)
+export PPETRACEPP_DIR = $(abspath ppe/ppetrace/ppetracepp)
 endif
 
 ifndef PPETOOLS_OBJDIR
@@ -100,7 +100,7 @@ $(PPETOOLS_OBJDIR)/ppetracepp: $(PPETOOLS_OBJDIR)
 	g++ -O3 -w -g -I$(PPETRACEPP_DIR)/ $(PPETRACEPP_DIR)/ppetracepp.C -o $(PPETOOLS_OBJDIR)/ppetracepp
 
 $(PPETOOLS_OBJDIR)/ppe2fsp: $(PPETOOLS_OBJDIR)
-	gcc -w -g -I./ -I$(PK_SRCDIR)/trace $(PPETRACEPP_DIR)/ppe2fsp.c $(PPETRACEPP_DIR)/ppe2fsp_cmd.c -o $(PPETOOLS_OBJDIR)/ppe2fsp
+	gcc -w -g -I./ -I$(PPETRACEPP_DIR)/.. $(PPETRACEPP_DIR)/ppe2fsp.c $(PPETRACEPP_DIR)/ppe2fsp_cmd.c -o $(PPETOOLS_OBJDIR)/ppe2fsp
 
 $(PPETOOLS_OBJDIR):
 	mkdir -p $(PPETOOLS_OBJDIR)/

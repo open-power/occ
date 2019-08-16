@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -50,10 +50,10 @@ typedef uint8_t PkIrqId;
 /// a thread queue).
 ///
 /// These queues are used both for the run queue and the pending queue
-/// associated with every semaphore. 
+/// associated with every semaphore.
 ///
 /// On PPE42 with 32 threads (implied), this is a job for a uint32_t and
-/// cntlzw(). 
+/// cntlzw().
 
 typedef uint32_t PkThreadQueue;
 

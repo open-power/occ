@@ -5,7 +5,7 @@
 #
 # OpenPOWER OnChipController Project
 #
-# Contributors Listed Below - COPYRIGHT 2015,2016
+# Contributors Listed Below - COPYRIGHT 2015,2019
 # [+] International Business Machines Corp.
 #
 #
@@ -23,7 +23,7 @@
 #
 # IBM_PROLOG_END_TAG
 # This Makefile is designed to be invoked with the -I argument set to
-# the location of the "pk.mk" for the build
+#  the location of the "pk.mk" for the build
 
 include img_defs.mk
 include pkppe42files.mk

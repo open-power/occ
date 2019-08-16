@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -61,9 +61,10 @@ __pk_timer_handler()
 /// \retval -PK_INVALID_DEQUE_SENTINEL The \a deque pointer was null
 
 int
-pk_deque_sentinel_create(PkDeque *deque)
+pk_deque_sentinel_create(PkDeque* deque)
 {
-    if (PK_ERROR_CHECK_API) {
+    if (PK_ERROR_CHECK_API)
+    {
         PK_ERROR_IF(deque == 0, PK_INVALID_DEQUE_SENTINEL);
     }
 
@@ -78,16 +79,17 @@ pk_deque_sentinel_create(PkDeque *deque)
 ///
 /// PK has no way of knowing whether the \a element is currently in use, so
 /// this API must only be called on unitialized or otherwise unused deque
-/// elements. 
+/// elements.
 ///
 /// \retval 0 success
 ///
 /// \retval -PK_INVALID_DEQUE_ELEMENT The \a element pointer was null
 
 int
-pk_deque_element_create(PkDeque *element)
+pk_deque_element_create(PkDeque* element)
 {
-    if (PK_ERROR_CHECK_API) {
+    if (PK_ERROR_CHECK_API)
+    {
         PK_ERROR_IF(element == 0, PK_INVALID_DEQUE_ELEMENT);
     }
 

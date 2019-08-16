@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -67,7 +67,7 @@
 
 /// This macro encapsulates error handling boilerplate in the PK API
 /// functions, for errors that do not occur in critical sections.
-/// The error handling will only be enabled when PK_ERROR_CHECK_API 
+/// The error handling will only be enabled when PK_ERROR_CHECK_API
 /// is enabled.
 
 #define PK_ERROR_IF_CHECK_API(condition, code) \
@@ -117,13 +117,13 @@
 
 #define PK_ERROR_UNLESS_THREAD_CONTEXT() \
     PK_ERROR_IF(!__pk_kernel_context_thread(), \
-                 PK_ILLEGAL_CONTEXT_THREAD_CONTEXT)
+                PK_ILLEGAL_CONTEXT_THREAD_CONTEXT)
 
 
 /// Some PK APIs must be called from an interrupt context only.
 
 #define PK_ERROR_UNLESS_ANY_INTERRUPT_CONTEXT() \
     PK_ERROR_IF(!__pk_kernel_context_any_interrupt(), \
-                 PK_ILLEGAL_CONTEXT_INTERRUPT_CONTEXT)
+                PK_ILLEGAL_CONTEXT_INTERRUPT_CONTEXT)
 
 #endif /* __PK_MACROS_H__ */

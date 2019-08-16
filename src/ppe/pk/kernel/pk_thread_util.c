@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -61,26 +61,33 @@
 /// \retval -PK_INVALID_THREAD_AT_INFO The \a thread is a null (0) pointer.
 
 int
-pk_thread_info_get(PkThread         *thread,
-                    PkThreadState    *state,
-                    PkThreadPriority *priority,
-                    int               *runnable)
+pk_thread_info_get(PkThread*         thread,
+                   PkThreadState*    state,
+                   PkThreadPriority* priority,
+                   int*               runnable)
 {
-    if (PK_ERROR_CHECK_API) {
+    if (PK_ERROR_CHECK_API)
+    {
         PK_ERROR_IF(thread == 0, PK_INVALID_THREAD_AT_INFO);
     }
 
-    if (state) {
+    if (state)
+    {
         *state = thread->state;
     }
-    if (priority) {
+
+    if (priority)
+    {
         *priority = thread->priority;
     }
-    if (runnable) {
+
+    if (runnable)
+    {
         *runnable = ((thread->state == PK_THREAD_STATE_MAPPED) &&
                      __pk_thread_queue_member(&__pk_run_queue,
-                                               thread->priority));
+                                              thread->priority));
     }
+
     return PK_OK;
 }
 
@@ -109,7 +116,7 @@ pk_thread_info_get(PkThread         *thread,
 /// \retval 0 Successful completion, including the redundant case of
 /// attempting to change the priority of the thread to its current priority.
 ///
-/// \retval -PK_INVALID_THREAD_AT_CHANGE The \a thread is null (0) or 
+/// \retval -PK_INVALID_THREAD_AT_CHANGE The \a thread is null (0) or
 /// otherwise invalid.
 ///
 /// \retval -PK_INVALID_ARGUMENT_THREAD_CHANGE The \a new_priority is invalid.
@@ -117,36 +124,42 @@ pk_thread_info_get(PkThread         *thread,
 /// \retval -PK_PRIORITY_IN_USE_AT_CHANGE The \a thread is mapped and the \a
 /// new_priority is currently in use by another thread.
 
-int 
-pk_thread_priority_change(PkThread         *thread,
-                           PkThreadPriority new_priority,
-                           PkThreadPriority *old_priority)
+int
+pk_thread_priority_change(PkThread*         thread,
+                          PkThreadPriority new_priority,
+                          PkThreadPriority* old_priority)
 {
     PkMachineContext ctx;
     PkThreadPriority priority;
 
-    if (PK_ERROR_CHECK_API) {
+    if (PK_ERROR_CHECK_API)
+    {
         PK_ERROR_IF(thread == 0, PK_INVALID_THREAD_AT_CHANGE);
-        PK_ERROR_IF(new_priority > PK_THREADS, 
-        PK_INVALID_ARGUMENT_THREAD_CHANGE);
+        PK_ERROR_IF(new_priority > PK_THREADS,
+                    PK_INVALID_ARGUMENT_THREAD_CHANGE);
     }
 
     pk_critical_section_enter(&ctx);
 
     priority = thread->priority;
 
-    if (priority != new_priority) {
+    if (priority != new_priority)
+    {
 
-        if (!__pk_thread_is_mapped(thread)) {
+        if (!__pk_thread_is_mapped(thread))
+        {
 
             thread->priority = new_priority;
 
-        } else {
+        }
+        else
+        {
 
-            if (PK_ERROR_CHECK_API) {
+            if (PK_ERROR_CHECK_API)
+            {
                 PK_ERROR_IF_CRITICAL(__pk_priority_map[new_priority] != 0,
-                                      PK_PRIORITY_IN_USE_AT_CHANGE,
-                                      &ctx);
+                                     PK_PRIORITY_IN_USE_AT_CHANGE,
+                                     &ctx);
             }
 
             __pk_thread_unmap(thread);
@@ -156,7 +169,8 @@ pk_thread_priority_change(PkThread         *thread,
         }
     }
 
-    if (old_priority) {
+    if (old_priority)
+    {
         *old_priority = priority;
     }
 
@@ -182,16 +196,17 @@ pk_thread_priority_change(PkThread         *thread,
 ///
 /// \retval 0 Successful completion.
 ///
-/// \retval -PK_INVALID_ARGUMENT_THREAD_PRIORITY The \a priority is invalid 
-/// or the \a thread parameter is null (0). 
+/// \retval -PK_INVALID_ARGUMENT_THREAD_PRIORITY The \a priority is invalid
+/// or the \a thread parameter is null (0).
 
 int
 pk_thread_at_priority(PkThreadPriority priority,
-                       PkThread         **thread)
+                      PkThread**         thread)
 {
-    if (PK_ERROR_CHECK_API) {
+    if (PK_ERROR_CHECK_API)
+    {
         PK_ERROR_IF((priority > PK_THREADS) || (thread == 0),
-                     PK_INVALID_ARGUMENT_THREAD_PRIORITY);
+                    PK_INVALID_ARGUMENT_THREAD_PRIORITY);
     }
 
     *thread = __pk_thread_at_priority(priority);
@@ -224,7 +239,7 @@ pk_thread_at_priority(PkThreadPriority priority,
 /// mapped after the call of pk_thread_priority_swap() if and only if it was
 /// mapped prior to the call.  If the new priority of a mapped thread is
 /// currently in use (by a thread other than the swap partner), then the
-/// PK_PRIORITY_IN_USE_AT_SWAP error is signalled and the swap does not take 
+/// PK_PRIORITY_IN_USE_AT_SWAP error is signalled and the swap does not take
 /// place. This could only happen if the swap partner is not currently mapped.
 ///
 /// It is legal for a thread to swap its own priority with another thread. The
@@ -237,10 +252,10 @@ pk_thread_at_priority(PkThreadPriority priority,
 /// actually change priorities, or the cases that assign new priorities to
 /// suspended, completed or deleted threads.
 ///
-/// \retval -PK_INVALID_THREAD_AT_SWAP1 One or both of \a thread_a and 
-/// \a thread_b is null (0) or otherwise invalid, 
+/// \retval -PK_INVALID_THREAD_AT_SWAP1 One or both of \a thread_a and
+/// \a thread_b is null (0) or otherwise invalid,
 ///
-/// \retval -PK_INVALID_THREAD_AT_SWAP2 the priorities of One or both of 
+/// \retval -PK_INVALID_THREAD_AT_SWAP2 the priorities of One or both of
 /// \a thread_a and \a thread_b are invalid.
 ///
 /// \retval -PK_INVALID_ARGUMENT One or both of the priorities
@@ -257,49 +272,61 @@ pk_thread_priority_swap(PkThread* thread_a, PkThread* thread_b)
     PkThreadPriority priority_a, priority_b;
     int mapped_a, mapped_b;
 
-    if (PK_ERROR_CHECK_API) {
-        PK_ERROR_IF((thread_a == 0) ||  (thread_b == 0), 
-                       PK_INVALID_THREAD_AT_SWAP1);
+    if (PK_ERROR_CHECK_API)
+    {
+        PK_ERROR_IF((thread_a == 0) ||  (thread_b == 0),
+                    PK_INVALID_THREAD_AT_SWAP1);
     }
 
     pk_critical_section_enter(&ctx);
 
-    if (thread_a != thread_b) {
+    if (thread_a != thread_b)
+    {
 
         mapped_a = __pk_thread_is_mapped(thread_a);
         mapped_b = __pk_thread_is_mapped(thread_b);
         priority_a = thread_a->priority;
         priority_b = thread_b->priority;
 
-        if (PK_ERROR_CHECK_API) {
+        if (PK_ERROR_CHECK_API)
+        {
             int priority_in_use;
             PK_ERROR_IF_CRITICAL((priority_a > PK_THREADS) ||
-                                  (priority_b > PK_THREADS),
-                                  PK_INVALID_THREAD_AT_SWAP2,
-                                  &ctx);
-            priority_in_use = 
+                                 (priority_b > PK_THREADS),
+                                 PK_INVALID_THREAD_AT_SWAP2,
+                                 &ctx);
+            priority_in_use =
                 (mapped_a && !mapped_b &&
                  (__pk_thread_at_priority(priority_b) != 0)) ||
-                (!mapped_a && mapped_b && 
+                (!mapped_a && mapped_b &&
                  (__pk_thread_at_priority(priority_a) != 0));
-            PK_ERROR_IF_CRITICAL(priority_in_use, 
-                                  PK_PRIORITY_IN_USE_AT_SWAP, &ctx); 
+            PK_ERROR_IF_CRITICAL(priority_in_use,
+                                 PK_PRIORITY_IN_USE_AT_SWAP, &ctx);
         }
 
-        if (mapped_a) {
+        if (mapped_a)
+        {
             __pk_thread_unmap(thread_a);
         }
-        if (mapped_b) {
+
+        if (mapped_b)
+        {
             __pk_thread_unmap(thread_b);
-        }            
+        }
+
         thread_a->priority = priority_b;
         thread_b->priority = priority_a;
-        if (mapped_a) {
+
+        if (mapped_a)
+        {
             __pk_thread_map(thread_a);
         }
-        if (mapped_b) {
+
+        if (mapped_b)
+        {
             __pk_thread_map(thread_b);
         }
+
         __pk_schedule();
     }
 

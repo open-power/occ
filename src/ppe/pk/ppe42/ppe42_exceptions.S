@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -22,7 +22,7 @@
 /* permissions and limitations under the License.                         */
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
-        
+
 /// \file ppe42_exceptions.S
 /// \brief PPE42 exception vector area.
 ///
@@ -39,17 +39,28 @@
 
 ### ****************************************************************************
 ### .vectors - This section contains all ppe42 exception vectors
-### 
+###
 ### ****************************************************************************
 
         .section .vectors, "ax", @progbits
 
         .global __vectors
+        .global __set_msr
 
 __vectors:
 
+#if defined(__PPE42X__)
+        # See comment below for set MSR function
+        .org __vectors + 0x0010
+__set_msr:
+        mtmsr   %r3
+        blr
+
+        .org __vectors + 0x0020
+#endif
         ############################################################
-        # 0x0000 : Machine Check
+        # 0x0000 : Machine Check (PPE42A)
+        # 0x0020 : Machine Check (PPE42X)
         ############################################################
 
         ### Unmaskable interrupts (including program interrupts) are promoted
@@ -58,7 +69,28 @@ __vectors:
         ### will be forwarded to the program exception handler.
 __machine_check:
 
+        ### PPE_CAPTURE_INTERRUPT_FFDC is called within machine_check_handler
+        ### There is a branch issue if the PPE_CAPTURE_INTERRUPT_FFDC is called
+        ### from outside, so an work around, FFDC is captured within machine
+        ### check handler.
         PPE42_MACHINE_CHECK_HANDLER
+
+#if defined(__PPE42A__)
+        ############################################################
+        # 0x0010 : set MSR function (PPE42X)
+        # 0x0028 : set MSR function (PPE42A)
+        ############################################################
+
+        # If the MSR_WE bit is set, the PPE engine enters WAIT mode (idle)
+        # and this function provides a known address for the idle state.
+
+        ############################################################
+        .global __set_msr
+        .org __vectors + 0x0028
+__set_msr:
+        mtmsr   %r3
+        blr
+#endif
 
         ############################################################
         # 0x0040 : System Reset
@@ -75,6 +107,8 @@ __system_reset:
         .org __vectors + 0x0060
 __data_storage:
 
+        PPE_CAPTURE_INTERRUPT_FFDC
+
         PPE42_DATA_STORAGE_HANDLER
 
         ############################################################
@@ -84,8 +118,9 @@ __data_storage:
         .org __vectors + 0x0080
 __instruction_storage:
 
-        PPE42_INSTRUCTION_STORAGE_HANDLER
+        PPE_CAPTURE_INTERRUPT_FFDC
 
+        PPE42_INSTRUCTION_STORAGE_HANDLER
 
         ############################################################
         # 0x00A0 : External Interrupt
@@ -102,8 +137,9 @@ __external_interrupt_vector:
         .org __vectors + 0x00C0
 __alignment_exception:
 
-        PPE42_ALIGNMENT_HANDLER
+        PPE_CAPTURE_INTERRUPT_FFDC
 
+        PPE42_ALIGNMENT_HANDLER
 
         ############################################################
         # 0x00E0 : Program Interrupt
@@ -112,8 +148,10 @@ __alignment_exception:
         .org __vectors + 0x00E0
 
 __program_exception:
-        _pk_panic   PPE42_ILLEGAL_INSTRUCTION
 
+        PPE_CAPTURE_INTERRUPT_FFDC
+
+        _pk_panic   PPE42_ILLEGAL_INSTRUCTION
 
         ############################################################
         # 0x0100 : DEC Interrupts
@@ -158,11 +196,11 @@ __pk_idle_thread:
 
         ## The idle thread 'uses' the kernel stack.  Any register context
         ## pushed here is redundant and is wiped out/ignored every time the
-        ## idle thread is re-scheduled. 
+        ## idle thread is re-scheduled.
 
         ## The idle thread simply establishes a default machine context and
         ## enters the wait-enable state.  The idle thread is always entered
-        ## with interrupts disabled.  
+        ## with interrupts disabled.
         ##
         ## The kernel context is initialized to indicate that the idle thread
         ## is running - the idle thread priority is PK_THREADS, the
@@ -185,7 +223,10 @@ __pk_idle_thread_from_bootloader:
 
         _lwzsd  %r3, __pk_thread_machine_context_default
         _oriwa  %r3, %r3, MSR_WE
-        mtmsr   %r3
+        bl     __set_msr
+
+        # The following jump-to-self is for SIMICS, which does not
+        # support or detect MSR_WE
         b       .
 
         ## pk_halt() is implemented on the ppe42 by writing a value of 0x3 to
@@ -224,7 +265,7 @@ __pk_next_thread_resume:
         ## Enter the wait enabled state if the thread pointer is null
         bwz     %r3, __pk_idle_thread
 
-        ## switch to the new thread stack 
+        ## switch to the new thread stack
         lwz     %r1, PK_THREAD_OFFSET_SAVED_STACK_POINTER(%r3)
 
         ## load sprg0 from the stack and update the thread priority
@@ -260,7 +301,7 @@ pbaslvctl_continue:
 #endif
 
         b       ctx_pop
- 
+
 fit_handler:
 
         ## The FIT handler is user defined. By
@@ -283,8 +324,8 @@ fit_handler:
         b       check_for_ext_interrupt
 
 watchdog_handler:
-        ## Watchdog setup is described in the PK Specification. 
-        ## The kernel clears TSR[WIS] prior to calling the handler.  
+        ## Watchdog setup is described in the PK Specification.
+        ## The kernel clears TSR[WIS] prior to calling the handler.
 
         li      %r4, PPE42_IRQ_WATCHDOG
 
@@ -299,68 +340,97 @@ watchdog_handler:
 
         b       check_for_ext_interrupt
 
-
         ## Check if we can disard the interrupted context.
-        ## This routine expects r3, r4, lr, and cr to already be pushed.
-        ## It also expects r3 to hold the address of the function to jump
+        ## This routine expects r3, r4, and lr, to already be pushed.
+        ## It also expects lr to hold the address of the function to jump
         ## to after the interrupted context has been pushed (if necessary).
 
         .align 5
 ctx_check_discard:
-
-        ## Prepare to jump to the branch function that was passed in
-        mtlr    %r3 
-
+#if defined(__PPE42A__)
         ## Check if the DISCARD_CTX bit is set in the kernel context
-        mfsprg0 %r3
-        bb0wi   %r3, PPE42_DISCARD_CTX_BIT, ctx_continue_push
+        mfsprg0 %r4
+        bb0wi   %r4, PPE42_DISCARD_CTX_BIT, ctx_continue_push
 
-ctx_discard:
         ## DISCARD_CTX bit was set.  Discard stack and branch to interrupt
         ## handler code
         addi    %r1, %r1, PK_CTX_SIZE
         blr
 
         ## DISCARD_CTX bit was not set.  Continue saving full context.
-        ## (r3, r4, lr, and cr have already been saved for us) and
-        ## r3 contains the interrupted kernel context
-
-        .global __ctx_switch
-__ctx_switch:
-        stwu    %r1,    -PK_CTX_SIZE(%r1)
-        stvd    %d3,    PK_CTX_GPR3(%r1)
-        mfcr    %r3
-        mflr    %r4
-        stvd    %d3,    PK_CTX_CR(%r1)
-        _liw    %r3     __pk_next_thread_resume
-        mtlr    %r3
-        ## emulate what interrupt would do
-        mtsrr0  %r4
-        mfmsr   %r3
-        mtsrr1  %r3
-
-        ## ctx_continue_push expects r3 to be value of sprg0
-        mfsprg0 %r3
-
 ctx_continue_push:
+        mfcr    %r3
+        stvd    %d3,    PK_CTX_CR(%r1)  ## CR and SPRG0
 
+        stvd    %d0,    PK_CTX_GPR0(%r1)
         stvd    %d5,    PK_CTX_GPR5(%r1)
         stvd    %d7,    PK_CTX_GPR7(%r1)
         stvd    %d9,    PK_CTX_GPR9(%r1)
-        stvd    %d28,   PK_CTX_GPR28(%r1)
-        stvd    %d30,   PK_CTX_GPR30(%r1)
+
         mfxer   %r5
         mfctr   %r6
         stvd    %d5,    PK_CTX_XER(%r1)
+
         mfsrr0  %r7
         mfsrr1  %r8
         stvd    %d7,    PK_CTX_SRR0(%r1)
-        stw     %r0,    PK_CTX_GPR0(%r1)
-        stw     %r3,    PK_CTX_KERNEL_CTX(%r1)
 
+        stvd    %d28,   PK_CTX_GPR28(%r1)
+        stvd    %d30,   PK_CTX_GPR30(%r1)
+        b       ctx_interrupt_check
+#else
+        ## ctx_check_discard for PPE42X with stcxtu
+        ## Expect r4 to have sprg0
+        bb0wi   %r4, PPE42_DISCARD_CTX_BIT, ctx_interrupt_check
+
+        ## DISCARD_CTX bit was set.  Discard stack and branch to interrupt
+        ## handler code
+        addi    %r1, %r1, PK_CTX_SIZE
+        blr
+#endif
+
+        .global __ctx_switch
+__ctx_switch:
+        ## PPE has no protected mode and no "switch context" interrupt.
+        ## A context switch is accomplished by a c function call
+        ## to __ctx_switch, but will later return using an rfi.
+        ## This call must therefore mimic an interrupt. Need to:
+        ## - disable interrupts MSR(EE)<-0
+        ## - save lr to context srr0
+        ## - save msr to  context srr1
+        ## Other side effects:
+        ## - EABI calling conventions insures that volatile registers
+        ##   (r0,r3-r10,cr0,ctr,xer) are unassigned at this time.
+
+        mflr    %r3
+        mfmsr   %r4
+        wrteei  0
+        mtsrr0  %r3
+        mtsrr1  %r4
+        sync
+
+#if defined(__PPE42A__)
+        ## create stack frame and push needed context
+        stwu    %r1,    -PK_CTX_SIZE(%r1)
+        stvd    %d3,    PK_CTX_SRR0(%r1)
+        stw     %r3,    PK_CTX_LR(%r1)
+        stvd    %d28,   PK_CTX_GPR28(%r1)
+        stvd    %d30,   PK_CTX_GPR30(%r1)
+        mfsprg0 %r3
+        stw     %r3,    PK_CTX_KERNEL_CTX(%r1)
+#else
+        ## create stack frame and push all context
+        stcxtu  %r1,    -PK_CTX_SIZE(%r1)
+#endif
+        ## Set lr to the desired destination
+        _liw    %r5     __pk_next_thread_resume
+        mtlr    %r5
+
+ctx_interrupt_check:
         ## If the 'processing interrupt' bit is set then we were already
         ## using the kernel stack and don't need to modify or save the current
         ## stack pointer.
+        mfsprg0 %r3
         bb1wi   %r3, PPE42_PROC_IRQ_BIT, kernel_stack_check
 
         ## load the pointer to the current thread control block
@@ -406,12 +476,12 @@ __get_ext_irq:
         ## Entry invariants:
         ## 1. external interupts are disabled;
         ## 2. previous context has ben saved off
-        ## 3. r3 contains the kernel context
-        ## 4. r1 points to the kernel stack
+        ## 3. r1 points to the kernel stack
 
         ## This is HW Macro specific code that is responsible for finding the
         ## IRQ # and storing it in r4 (phantom IRQ's are assigned a value of EXTERNAL_IRQS).
 
+        mfsprg0 %r3
         // restore MSR in interrupt context, for imprecise mode performance
         _liwa   %r5, PPE42_MSR_INITIAL
         mtmsr   %r5
@@ -419,7 +489,7 @@ __get_ext_irq:
 
         hwmacro_get_ext_irq
 
-        ## An active or phantom IRQ was found. 
+        ## An active or phantom IRQ was found.
         ## R3 has the context of the interrupted thread or bottom half
         ## R4 has the IRQ number.
         ## The IRQ is converted into a pointer to an 8-byte handler
@@ -429,7 +499,7 @@ __get_ext_irq:
         ## R3 = private data ptr
         ## R4 = irq
 
-call_external_irq_handler:  
+call_external_irq_handler:
 
         _update_kernel_context %r4, %r3
         slwi    %r3, %r4, 3                 //multiply the irq# by 8
@@ -511,7 +581,7 @@ check_for_ctx_switch:
         bwz     %r3, check_for_idle_thread
 
         ## Clear the delayed switch flag and go to the context switch code to
-        ## finish the switch. 
+        ## finish the switch.
 
         li      %r3, 0
         _stwsd  %r3, __pk_delayed_switch
@@ -536,6 +606,7 @@ ctx_pop_with_sprg0:
 #endif
 
 ctx_pop:
+#if defined (__PPE42A__)
         lwz     %r0,    PK_CTX_GPR0(%r1)
         lvd     %d7,    PK_CTX_SRR0(%r1)
         mtsrr1  %r8
@@ -548,12 +619,15 @@ ctx_pop:
         lvd     %d9,    PK_CTX_GPR9(%r1)
         lvd     %d7,    PK_CTX_GPR7(%r1)
         lvd     %d5,    PK_CTX_GPR5(%r1)
-        lvd     %d3,    PK_CTX_CR(%r1)
-        mtlr    %r4
+        lvd     %d3,    PK_CTX_CR(%r1)  ## CR,SPRG0
         mtcr0   %r3
+        lwz     %r4,    PK_CTX_LR(%r1)
+        mtlr    %r4
         lvd     %d3,    PK_CTX_GPR3(%r1)
         addi    %r1,    %r1, PK_CTX_SIZE
-
+#else
+        lcxu    %r1, PK_CTX_SIZE(%r1)
+#endif
         rfi
 
 /// \endcond

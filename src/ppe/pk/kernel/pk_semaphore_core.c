@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -50,18 +50,19 @@
 /// \retval 0 Successful completion
 ///
 /// \retval -PK_INVALID_SEMAPHORE_AT_POST The \a semaphore is a null (0) pointer.
-/// 
+///
 /// \retval -PK_SEMAPHORE_OVERFLOW The \a max_count argument supplied when
 /// the semaphore was created is non-zero and the new internal count is
 /// greater than the \a max_count.
 
 int
-pk_semaphore_post(PkSemaphore *semaphore)
+pk_semaphore_post(PkSemaphore* semaphore)
 {
     PkMachineContext ctx;
     PkThreadPriority priority;
 
-    if (PK_ERROR_CHECK_API) {
+    if (PK_ERROR_CHECK_API)
+    {
         PK_ERROR_IF(semaphore == 0, PK_INVALID_SEMAPHORE_AT_POST);
     }
 
@@ -69,7 +70,8 @@ pk_semaphore_post(PkSemaphore *semaphore)
 
     priority = __pk_thread_queue_min(&(semaphore->pending_threads));
 
-    if (priority != PK_IDLE_THREAD_PRIORITY) {
+    if (priority != PK_IDLE_THREAD_PRIORITY)
+    {
 
         __pk_thread_queue_delete(&(semaphore->pending_threads), priority);
         __pk_thread_queue_insert(&__pk_run_queue, priority);
@@ -78,19 +80,22 @@ pk_semaphore_post(PkSemaphore *semaphore)
 
         __pk_schedule();
 
-    } else {
+    }
+    else
+    {
 
         semaphore->count++;
 
-        if (PK_ERROR_CHECK_API) {
-            PK_ERROR_IF((semaphore->max_count > 0) && 
-                         (semaphore->count > semaphore->max_count),
-                         PK_SEMAPHORE_OVERFLOW);
+        if (PK_ERROR_CHECK_API)
+        {
+            PK_ERROR_IF((semaphore->max_count > 0) &&
+                        (semaphore->count > semaphore->max_count),
+                        PK_SEMAPHORE_OVERFLOW);
         }
     }
 
     pk_critical_section_exit(&ctx);
-    
+
     return PK_OK;
 }
 
@@ -130,7 +135,7 @@ pk_semaphore_post(PkSemaphore *semaphore)
 /// constant as \c PK_WAIT_FOREVER.
 ///
 /// Return values other than PK_OK (0) are not necessarily errors; see \ref
-/// pk_errors 
+/// pk_errors
 ///
 /// The following return codes are non-error codes:
 ///
@@ -143,9 +148,9 @@ pk_semaphore_post(PkSemaphore *semaphore)
 ///
 /// The following return codes are error codes:
 ///
-/// \retval -PK_INVALID_SEMAPHORE_AT_PEND The \a semaphore is a null (0) 
+/// \retval -PK_INVALID_SEMAPHORE_AT_PEND The \a semaphore is a null (0)
 /// pointer.
-/// 
+///
 /// \retval -PK_SEMAPHORE_PEND_WOULD_BLOCK The call was made from an
 /// interrupt context (or before threads have been started), the semaphore
 /// internal count was 0 and a non-zero timeout was specified.
@@ -153,40 +158,47 @@ pk_semaphore_post(PkSemaphore *semaphore)
 // Note: Casting __pk_current_thread removes the 'volatile' attribute.
 
 int
-pk_semaphore_pend(PkSemaphore *semaphore,
-                   PkInterval  timeout)
+pk_semaphore_pend(PkSemaphore* semaphore,
+                  PkInterval  timeout)
 {
     PkMachineContext ctx;
     PkThreadPriority priority;
-    PkThread         *thread;
-    PkTimer          *timer = 0;
+    PkThread*         thread;
+    PkTimer*          timer = 0;
     PkInterval       scaled_timeout = PK_INTERVAL_SCALE(timeout);
 
     int rc = PK_OK;
 
-    if (PK_ERROR_CHECK_API) {
+    if (PK_ERROR_CHECK_API)
+    {
         PK_ERROR_IF(semaphore == 0, PK_INVALID_SEMAPHORE_AT_PEND);
     }
 
     pk_critical_section_enter(&ctx);
 
-    if (semaphore->count != 0) {
+    if (semaphore->count != 0)
+    {
 
         semaphore->count--;
 
-    } else if (timeout == PK_NO_WAIT) {
+    }
+    else if (timeout == PK_NO_WAIT)
+    {
 
         rc = -PK_SEMAPHORE_PEND_NO_WAIT;
 
-    } else { 
+    }
+    else
+    {
 
-        if (PK_ERROR_CHECK_API) {
-            PK_ERROR_IF_CRITICAL(!__pk_kernel_context_thread(), 
-                                  PK_SEMAPHORE_PEND_WOULD_BLOCK,
-                                  &ctx);
+        if (PK_ERROR_CHECK_API)
+        {
+            PK_ERROR_IF_CRITICAL(!__pk_kernel_context_thread(),
+                                 PK_SEMAPHORE_PEND_WOULD_BLOCK,
+                                 &ctx);
         }
 
-        thread = (PkThread *)__pk_current_thread;
+        thread = (PkThread*)__pk_current_thread;
         priority = thread->priority;
 
         __pk_thread_queue_insert(&(semaphore->pending_threads), priority);
@@ -196,7 +208,8 @@ pk_semaphore_pend(PkSemaphore *semaphore,
 
         PK_KERN_TRACE("THREAD_SEMAPHORE_PEND(%d)", priority);
 
-        if (timeout != PK_WAIT_FOREVER) {
+        if (timeout != PK_WAIT_FOREVER)
+        {
             timer = &(thread->timer);
             timer->timeout = pk_timebase_get() + scaled_timeout;
             __pk_timer_schedule(timer);
@@ -208,14 +221,19 @@ pk_semaphore_pend(PkSemaphore *semaphore,
 
         thread->flags &= ~PK_THREAD_FLAG_SEMAPHORE_PEND;
 
-        if (thread->flags & PK_THREAD_FLAG_TIMER_PEND) {
-            if (thread->flags & PK_THREAD_FLAG_TIMED_OUT) {
+        if (thread->flags & PK_THREAD_FLAG_TIMER_PEND)
+        {
+            if (thread->flags & PK_THREAD_FLAG_TIMED_OUT)
+            {
                 rc = -PK_SEMAPHORE_PEND_TIMED_OUT;
                 __pk_thread_queue_delete(&(semaphore->pending_threads), thread->priority);
-            } else {
+            }
+            else
+            {
                 __pk_timer_cancel(timer);
             }
-            thread->flags &= 
+
+            thread->flags &=
                 ~(PK_THREAD_FLAG_TIMER_PEND | PK_THREAD_FLAG_TIMED_OUT);
         }
     }
@@ -244,7 +262,7 @@ pk_semaphore_pend(PkSemaphore *semaphore,
 ///
 /// \retval 0 Successful completion
 ///
-/// \retval -PK_INVALID_SEMAPHORE_AT_RELEASE The \a semaphore is a null (0) 
+/// \retval -PK_INVALID_SEMAPHORE_AT_RELEASE The \a semaphore is a null (0)
 /// pointer.
 
 int
@@ -252,7 +270,8 @@ pk_semaphore_release_all(PkSemaphore* semaphore)
 {
     PkMachineContext ctx;
 
-    if (PK_ERROR_CHECK_API) {
+    if (PK_ERROR_CHECK_API)
+    {
         PK_ERROR_IF(semaphore == 0, PK_INVALID_SEMAPHORE_AT_RELEASE);
     }
 
@@ -266,8 +285,8 @@ pk_semaphore_release_all(PkSemaphore* semaphore)
 
     return PK_OK;
 }
-                             
-            
+
+
 /// Get information about a semaphore.
 ///
 /// \param semaphore A pointer to the PkSemaphore to query
@@ -287,23 +306,27 @@ pk_semaphore_release_all(PkSemaphore* semaphore)
 ///
 /// \retval 0 Successful completion
 ///
-/// \retval -PK_INVALID_SEMAPHORE_AT_INFO The \a semaphore is a null (0) 
+/// \retval -PK_INVALID_SEMAPHORE_AT_INFO The \a semaphore is a null (0)
 /// pointer.
 
 int
 pk_semaphore_info_get(PkSemaphore*      semaphore,
-                       PkSemaphoreCount* count,
-                       int*               pending)
-                   
+                      PkSemaphoreCount* count,
+                      int*               pending)
+
 {
-    if (PK_ERROR_CHECK_API) {
+    if (PK_ERROR_CHECK_API)
+    {
         PK_ERROR_IF(semaphore == 0, PK_INVALID_SEMAPHORE_AT_INFO);
     }
 
-    if (count) {
+    if (count)
+    {
         *count = semaphore->count;
     }
-    if (pending) {
+
+    if (pending)
+    {
         *pending = __pk_thread_queue_count(&(semaphore->pending_threads));
     }
 
@@ -319,7 +342,7 @@ pk_semaphore_info_get(PkSemaphore*      semaphore,
 /// pk_irq_handler_set().  The semaphore should be initialized with
 /// pk_semaphore_create(&sem, 0, 1).  This handler simply disables (masks)
 /// the interrupt, clears the status and calls pk_semaphore_post() on the
-/// semaphore.  
+/// semaphore.
 ///
 /// Note that clearing the status in the interrupt controller as done here is
 /// effectively a no-op for level-sensitive interrupts. In the level-sensitive
@@ -327,11 +350,11 @@ pk_semaphore_info_get(PkSemaphore*      semaphore,
 /// condition in the device before re-enabling the interrupt.
 #if 0
 void
-pk_semaphore_post_handler(void *arg, PkIrqId irq, int priority)
+pk_semaphore_post_handler(void* arg, PkIrqId irq, int priority)
 {
     pk_irq_disable(irq);
     pk_irq_status_clear(irq);
-    pk_semaphore_post((PkSemaphore *)arg);
+    pk_semaphore_post((PkSemaphore*)arg);
 }
 
 #endif

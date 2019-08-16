@@ -5,7 +5,7 @@
 #
 # OpenPOWER OnChipController Project
 #
-# Contributors Listed Below - COPYRIGHT 2015,2016
+# Contributors Listed Below - COPYRIGHT 2015,2019
 # [+] International Business Machines Corp.
 #
 #
@@ -33,7 +33,7 @@ ifdef P2P_ENABLE
 include $(P2P_SRCDIR)/p2pfiles.mk
 endif
 
-PK_MAKE_DIR := $(PK_SRCDIR)/$(PPE_TYPE)
+PK_MAKE_DIR := $(PK_SRCDIR)/../boltonlib/$(PPE_TYPE)
 OBJS := $(addprefix $(OBJDIR)/, $(TOP_OBJECTS))
 PKLIB := $(OBJDIR)/pk/libpk.a
 COMMONLIB := $(OBJDIR)/commonlib/libcommon.a
@@ -73,7 +73,7 @@ $(OBJDIR):
 	mkdir -p $(OBJDIR)
 
 $(PPETOOLS_OBJDIR)/ppetracepp: $(PPETOOLS_OBJDIR)
-	g++ -O3 -w -g -I$(PPETRACEPP_DIR)/ $(PPETRACEPP_DIR)/ppetracepp.C -o $(PPETOOLS_OBJDIR)/ppetracepp
+	g++ -O3 -w -g -I$(PPETRACEPP_DIR)/.. -I$(PPETRACEPP_DIR)/ $(PPETRACEPP_DIR)/ppetracepp.C -o $(PPETOOLS_OBJDIR)/ppetracepp
 
 $(PPETOOLS_OBJDIR):
 	mkdir -p $(PPETOOLS_OBJDIR)
@@ -95,7 +95,7 @@ $(OCCLIB):
 ifdef P2P_ENABLE
 $(P2PLIB):
 	$(MAKE) -I $(IMAGE_SRCDIR) -C $(P2P_SRCDIR)
-endif 
+endif
 
 # collect all of the trace hash files for this image into a single trexStringFile
 .PHONY : tracehash

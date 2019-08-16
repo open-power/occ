@@ -5,7 +5,7 @@
 #
 # OpenPOWER OnChipController Project
 #
-# Contributors Listed Below - COPYRIGHT 2015,2017
+# Contributors Listed Below - COPYRIGHT 2015,2019
 # [+] International Business Machines Corp.
 #
 #
@@ -32,7 +32,7 @@
         .nolist
 #include "pk.h"
         .list
-        
+
 /// \fn void __pk_thread_context_initialize(PkThread *thread, PkThreadRoutine thread_routine, void *private)
 /// \brief Create the initial thread context on the stack
 ///
@@ -44,12 +44,12 @@
 /// that when the thread returns, it will return to the entry point of \c
 /// pk_complete().
 #ifdef DOXYGEN_ONLY
-void 
-__pk_thread_context_initialize(PkThread        *thread, 
-                                PkThreadRoutine thread_routine, 
+void
+__pk_thread_context_initialize(PkThread        *thread,
+                                PkThreadRoutine thread_routine,
                                 void             *private);
 #endif
-        
+
 /// \cond
 
         .global_function __pk_thread_context_initialize
@@ -71,7 +71,7 @@ __pk_thread_context_initialize:
         ## the LR = pk_complete(), R3 has the private parameter.
 
         lwz     %r6, PK_THREAD_OFFSET_SAVED_STACK_POINTER(%r3)
-        
+
         stwu    %r6, -PK_CTX_SIZE(%r6)
 
         li      %r7, 0
@@ -106,9 +106,9 @@ __pk_thread_context_initialize:
 
         ## Initialize the non-volatile context on the thread stack.
 
-        _gpr_init PK_CTX_GPR, 28, 0x2828       
-        _gpr_init PK_CTX_GPR, 29, 0x2929       
-        _gpr_init PK_CTX_GPR, 30, 0x3030       
+        _gpr_init PK_CTX_GPR, 28, 0x2828
+        _gpr_init PK_CTX_GPR, 29, 0x2929
+        _gpr_init PK_CTX_GPR, 30, 0x3030
         _gpr_init PK_CTX_GPR, 31, 0x3131
 
 #ifdef HWMACRO_GPE

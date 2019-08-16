@@ -5,7 +5,7 @@
 #
 # OpenPOWER OnChipController Project
 #
-# Contributors Listed Below - COPYRIGHT 2015,2017
+# Contributors Listed Below - COPYRIGHT 2015,2019
 # [+] International Business Machines Corp.
 #
 #
@@ -22,16 +22,26 @@
 # permissions and limitations under the License.
 #
 # IBM_PROLOG_END_TAG
-
-#  @file pkppe42files.mk
+#  @file  pkppe42files.mk
 #
 #  @brief mk for including ppe42 object files
-
+#
+#  @page ChangeLogs Change Logs
+#  @section pkppe42files.mk
+#  @verbatim
+#
+#
+# Change Log ******************************************************************
+# Flag     Defect/Feature  User        Date         Description
+# ------   --------------  ----------  ------------ -----------
+#
+# @endverbatim
+#
 ##########################################################################
 # Include Files
 ##########################################################################
 
-			
+
 
 ##########################################################################
 # Object Files
@@ -40,17 +50,10 @@ PPE42-C-SOURCES = ppe42_core.c \
 		  ppe42_init.c \
 		  ppe42_irq_core.c\
 		  ppe42_irq_init.c\
-		  ppe42_gcc.c\
-		  ppe42_scom.c\
-		  eabi.c\
-		  math.c\
-		  ppe42_string.c
 
 PPE42-S-SOURCES =  ppe42_boot.S \
 		   ppe42_exceptions.S\
-		   div64.S\
 		   ppe42_timebase.S\
-		   div32.S
 
 PPE42-TIMER-C-SOURCES =
 PPE42-TIMER-S-SOURCES =

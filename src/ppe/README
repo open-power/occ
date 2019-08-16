@@ -1,0 +1,5 @@
+kernels:   iota/pk, cannot use both on the same engine
+ppetrace:  ppe trace macro previously known as pk_trace, can be used by either kernel
+baselib:   basic support library of ppe42 software drivers, required for both iota and pk
+boltonlib: ppe interrupt bolton drivers between different ppe instances: gpe/sbe/qme/etc
+powmanlib: power managerment related include header shared between occ and/or ppes

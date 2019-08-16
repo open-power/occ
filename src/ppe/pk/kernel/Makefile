@@ -5,7 +5,7 @@
 #
 # OpenPOWER OnChipController Project
 #
-# Contributors Listed Below - COPYRIGHT 2015,2016
+# Contributors Listed Below - COPYRIGHT 2015,2019
 # [+] International Business Machines Corp.
 #
 #
@@ -33,7 +33,7 @@ PK_OBJECTS += ${PK-TIMER-C-SOURCES:.c=.o}
 endif
 
 ifeq "$(PK_THREAD_SUPPORT)" "1"
-PK_OBJECTS += ${PK-THREAD-C-SOURCES:.c=.o} 
+PK_OBJECTS += ${PK-THREAD-C-SOURCES:.c=.o}
 endif
 
 OBJS := $(addprefix $(OBJDIR)/, $(PK_OBJECTS))
@@ -48,4 +48,3 @@ $(OBJDIR):
 ifneq ($(MAKECMDGOALS),clean)
 -include $(OBJS:.o=.d)
 endif
-

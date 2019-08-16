@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -39,7 +39,7 @@
 /// \param initial_count The initial count of the semaphore
 ///
 /// \param max_count The maximum count allowed in the semaphore, for error
-/// checking 
+/// checking
 ///
 /// Semaphores are created (initialized) by a call of \c
 /// pk_semaphore_create(), using an application-provided instance of an \c
@@ -71,21 +71,22 @@
 ///
 /// \retval 0 Successful completion
 ///
-/// \retval -PK_INVALID_SEMAPHORE_AT_CREATE The \a semaphore is a null (0) 
+/// \retval -PK_INVALID_SEMAPHORE_AT_CREATE The \a semaphore is a null (0)
 /// pointer.
-/// 
-/// \retval -PK_INVALID_ARGUMENT_SEMAPHORE The \a max_count is non-zero 
+///
+/// \retval -PK_INVALID_ARGUMENT_SEMAPHORE The \a max_count is non-zero
 /// and less than the \a initial_count.
 
 int
-pk_semaphore_create(PkSemaphore      *semaphore,
-                     PkSemaphoreCount initial_count,
-                     PkSemaphoreCount max_count)
+pk_semaphore_create(PkSemaphore*      semaphore,
+                    PkSemaphoreCount initial_count,
+                    PkSemaphoreCount max_count)
 {
-    if (PK_ERROR_CHECK_API) {
+    if (PK_ERROR_CHECK_API)
+    {
         PK_ERROR_IF(semaphore == 0, PK_INVALID_SEMAPHORE_AT_CREATE);
         PK_ERROR_IF((max_count != 0) && (initial_count > max_count),
-                     PK_INVALID_ARGUMENT_SEMAPHORE);
+                    PK_INVALID_ARGUMENT_SEMAPHORE);
     }
 
     __pk_thread_queue_clear(&(semaphore->pending_threads));
@@ -95,7 +96,7 @@ pk_semaphore_create(PkSemaphore      *semaphore,
     return PK_OK;
 }
 
-                             
+
 
 
 

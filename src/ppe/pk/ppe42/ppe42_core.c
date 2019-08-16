@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -128,6 +128,9 @@ __pk_schedule_hardware_timeout(PkTimebase timeout)
         {
             diff = (timeout - now);
 
+            // Makeing the maximum DEC counter too big runs the risk
+            // of the time period being longer than a cycle of the
+            // external time base register.
             if (diff > 0xffff0000ull)
             {
                 new_dec = 0xffff0000;

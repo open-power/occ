@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -36,11 +36,13 @@ PK_DEQUE_SENTINEL_STATIC_CREATE(_pk_bh_queue);
 
 void _pk_process_bh(void)
 {
-    PkBottomHalf *bh;
+    PkBottomHalf* bh;
+
     while((bh = (PkBottomHalf*)pk_deque_pop_front(&_pk_bh_queue)) != 0)
     {
         bh->bh_handler(bh->arg);
     }
+
     return;
 }
 

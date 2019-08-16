@@ -7,6 +7,7 @@
 #
 # Contributors Listed Below - COPYRIGHT 2015,2019
 # [+] International Business Machines Corp.
+# [+] Timothy Pearson
 #
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -33,10 +34,10 @@
 #
 # PK                : Default ..; The path to the PK source code.
 #                      The default is set for building the PK
-#                      subdirectories. 
+#                      subdirectories.
 #
 # PK_THREAD_SUPPORT : (0/1, default 1); Compile PK thread and
-#                      semaphore suppprt 
+#                      semaphore suppprt
 #
 # PK_TIMER_SUPPORT  : (0/1, default 1); Compile PK timer suppprt
 #
@@ -54,7 +55,7 @@
 #                      make GCC-O-LEVEL="-Os -fno-branch-count-reg"
 #
 # GCC-TOOL-PREFIX    : The full path (including executable file prefixes) to
-#                      the GCC cross-development tools to use.  The default is 
+#                      the GCC cross-development tools to use.  The default is
 #                      "ppcnf-mcp5-"
 #
 # CTEPATH            : This variable defaults to the afs/awd CTE tool
@@ -152,7 +153,7 @@ OBJCOPY = $(GCC-TOOL-PREFIX)objcopy
 TCPP    = $(PPETOOLS_OBJDIR)/ppetracepp $(GCC-TOOL-PREFIX)gcc
 THASH	= $(PPETRACEPP_DIR)/tracehash.pl
 CPP     = $(GCC-TOOL-PREFIX)gcc
-TCXX    = $(PPETRACEPP_DIR)/ppetracepp $(GCC-TOOL-PREFIX)g++
+TCXX    = $(PPETOOLS_OBJDIR)/ppetracepp $(GCC-TOOL-PREFIX)g++
 CXX     = $(GCC-TOOL-PREFIX)g++
 
 ifeq "$(PK_TIMER_SUPPORT)" ""
@@ -185,6 +186,8 @@ GCC-DEFS += -DPK_TRACE_SUPPORT=$(PK_TRACE_SUPPORT)
 GCC-DEFS += -DPK_TRACE_HASH_PREFIX=$(PK_TRACE_HASH_PREFIX)
 GCC-DEFS += -DUSE_PK_APP_CFG_H=1
 GCC-DEFS += -D__PK__=1
+# The Instance ID of the occ processor that this application is intended to run on 0-3 -> GPE, 4 -> 405
+GCC-DEFS += -DAPPCFG_OCC_INSTANCE_ID=1
 DEFS += $(GCC-DEFS)
 
 ############################################################################
@@ -194,9 +197,11 @@ INCLUDES += $(GLOBAL_INCLUDES)
 INCLUDES += -I$(PK_SRCDIR)/kernel
 INCLUDES += -I$(PK_SRCDIR)/ppe42
 INCLUDES += -I$(PK_SRCDIR)/trace
-INCLUDES += -I$(PK_SRCDIR)/$(PPE_TYPE)
 INCLUDES += -I$(PK_SRCDIR)/../../include
 INCLUDES += -I$(PK_SRCDIR)/../../include/registers
+INCLUDES += -I$(PK_SRCDIR)/../baselib
+INCLUDES += -I$(PK_SRCDIR)/../boltonlib/$(PPE_TYPE)
+INCLUDES += -I$(PK_SRCDIR)/../ppetrace
 INCLUDES += -I$(OCCLIB_SRCDIR)
 INCLUDES += -I$(COMMONLIB_SRCDIR)
 INCLUDES += -I$(OCC_COMMON_TYPES_DIR)

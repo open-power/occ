@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -24,6 +24,8 @@
 /* IBM_PROLOG_END_TAG                                                     */
 #ifndef __PPE42_CONTEXT_H__
 #define __PPE42_CONTEXT_H__
+
+#include "ppe42.h"
 
 /// \file ppe42_context.h
 /// \brief PPE42 Machine and Thread context for PK
@@ -91,13 +93,13 @@
 // once initialized (with pk_initialize()) PK can simply
 // handle interrupts, reverting back to the non-thread-mode idle loop when
 // there's nothing to do.
-//      
+//
 
         ## ------------------------------------------------------------
         ## Unused registers for embedded PPE42`
         ## ------------------------------------------------------------
 
-        ## Registers GPR2 and GPR13 are never saved or restored.  In ABI and 
+        ## Registers GPR2 and GPR13 are never saved or restored.  In ABI and
         ## EABI applications these registers are constant.
 
         .set    UNUSED_GPR2,  0x2 # Dedicated; EABI read-only small data area
@@ -106,38 +108,37 @@
         ## ------------------------------------------------------------
         ## The PK context layout for Embedded PPE42
         ## ------------------------------------------------------------
-
-        .set    PK_CTX_GPR1,        0x00 # Dedicated; Stack pointer
-        .set    PK_CTX_LINKAGE,     0x04 # Slot for handler to store LR 
-        .set    PK_CTX_GPR3,        0x08 # Volatile;  Parameter; Return Value
-        .set    PK_CTX_GPR4,        0x0c # Volatile;  Parameter
-        .set    PK_CTX_GPR5,        0x10 # Volatile;  Parameter
-        .set    PK_CTX_GPR6,        0x14 # Volatile;  Parameter
-        .set    PK_CTX_CR,          0x18 # Condition register 
-        .set    PK_CTX_LR,          0x1c # Link register
-
-        .set    PK_CTX_GPR7,        0x20 # Volatile;  Parameter
-        .set    PK_CTX_GPR8,        0x24 # Volatile;  Parameter
-        .set    PK_CTX_GPR9,        0x28 # Volatile;  Parameter
-        .set    PK_CTX_GPR10,       0x2c # Volatile;  Parameter
-        .set    PK_CTX_GPR28,       0x30 # Non-volatile
-        .set    PK_CTX_GPR29,       0x34 # Non-volatile
-        .set    PK_CTX_GPR30,       0x38 # Non-volatile
-        .set    PK_CTX_GPR31,       0x3c # Non-volatile
-
-        .set    PK_CTX_XER,         0x40 # Fixed-point exception register
-        .set    PK_CTX_CTR,         0x44 # Count register
-        .set    PK_CTX_SRR0,        0x48 # Save/restore register 0
-        .set    PK_CTX_SRR1,        0x4c # Save/restore register 1
-        .set    PK_CTX_GPR0,        0x50 # Volatile;  Language specific
-        .set    PK_CTX_KERNEL_CTX,  0x54 # Saved __PkKernelContext for IRQ
-
+        .set    PK_CTX_BACK_CHAIN,  0x00 # Pointer to previous frame
+        .set    PK_CTX_LINKAGE,     0x04 # LR slot for called function
 #ifdef HWMACRO_GPE
-        .set    PK_CTX_PBASLVCTLV,  0x58 # PBA slave controller value(8 bytes)
-        .set    PK_CTX_SIZE,        0x60 # Must be 8-byte aligned
+        .set    PK_CTX_PBASLVCTLV,  0x08 # PBA slave controller config(8 bytes)
+        .set    PK_CTX_SIZE,        0x60 # Context size
 #else
-        .set    PK_CTX_SIZE,        0x58
+        .set    PK_CTX_SIZE,        0x58 # Context size
 #endif
+        .set    PK_CTX_CR,          PK_CTX_SIZE - 0x50
+        .set    PK_CTX_KERNEL_CTX,  PK_CTX_SIZE - 0x4c // SPRG0
+        .set    PK_CTX_GPR0,        PK_CTX_SIZE - 0x48
+        .set    PK_CTX_GPR1,        PK_CTX_SIZE - 0x44
+        .set    PK_CTX_GPR3,        PK_CTX_SIZE - 0x40
+        .set    PK_CTX_GPR4,        PK_CTX_SIZE - 0x3c
+        .set    PK_CTX_GPR5,        PK_CTX_SIZE - 0x38
+        .set    PK_CTX_GPR6,        PK_CTX_SIZE - 0x34
+        .set    PK_CTX_GPR7,        PK_CTX_SIZE - 0x30
+        .set    PK_CTX_GPR8,        PK_CTX_SIZE - 0x2c
+        .set    PK_CTX_GPR9,        PK_CTX_SIZE - 0x28
+        .set    PK_CTX_GPR10,       PK_CTX_SIZE - 0x24
+        .set    PK_CTX_XER,         PK_CTX_SIZE - 0x20
+        .set    PK_CTX_CTR,         PK_CTX_SIZE - 0x1c
+        .set    PK_CTX_SRR0,        PK_CTX_SIZE - 0x18
+        .set    PK_CTX_SRR1,        PK_CTX_SIZE - 0x14
+        .set    PK_CTX_GPR28,       PK_CTX_SIZE - 0x10
+        .set    PK_CTX_GPR29,       PK_CTX_SIZE - 0x0c
+        .set    PK_CTX_GPR30,       PK_CTX_SIZE - 0x08
+        .set    PK_CTX_GPR31,       PK_CTX_SIZE - 0x04
+        .set    PK_CTX_PREV_FRAME,  PK_CTX_SIZE - 0x00 // Don't touch
+        .set    PK_CTX_LR,          PK_CTX_SIZE + 0x04
+
 
         ## ------------------------------------------------------------
         ## Push the interrupted context if necessary
@@ -145,21 +146,35 @@
         ## This macro saves off some context in preparation for calling
         ## the pk_ctx_check_discard routine.  This is an attempt to use
         ## the 32 byte cache more efficiently.
-        ## 
-        ## 8 Instructions
+        ##
+        ##
+        ## There is room for up to 8 Instructions
         ## ------------------------------------------------------------
         ##
-
+#if defined(__PPE42A__)
         .macro _pk_ctx_push_as_needed branch_addr:req
 
         stwu    %r1,    -PK_CTX_SIZE(%r1)
         stvd    %d3,    PK_CTX_GPR3(%r1)
-        mfcr    %r3
-        mflr    %r4
-        stvd    %d3,    PK_CTX_CR(%r1)
+        mflr    %r3
+        stw     %r3,    PK_CTX_LR(%r1)
         _liw    %r3,    \branch_addr
+        // prepare to jump to branch_addr
+        mtlr    %r3
         b       ctx_check_discard
         .endm
+#else
+        .macro _pk_ctx_push_as_needed branch_addr:req
+
+        // Store entire context with single instruction
+        stcxtu  %r1,    -PK_CTX_SIZE(%r1)
+        _liw    %r3,    \branch_addr
+        mtlr    %r3
+        mfsprg0 %r4
+        b       ctx_check_discard
+        .endm
+
+#endif
 
 
         ## ------------------------------------------------------------
@@ -167,7 +182,7 @@
         ## ------------------------------------------------------------
 
         ## The kernel context is updated with the currently active
-        ## IRQ in bits 9:15.  
+        ## IRQ in bits 9:15.
 
         .macro  _update_kernel_context irqreg, ctxreg
         rlwimi  \ctxreg, \irqreg, 16, 9, 15 //set the irq #
@@ -179,7 +194,7 @@
         srwi    \ctxreg, \ctxreg, 16
         PK_KERN_TRACE_ASM16("INTERRUPT_CONTEXT(0x%04x)", \ctxreg)
         mr      \irqreg, %r31
-#endif        
+#endif
 
         .endm
 // *INDENT-ON*
@@ -193,33 +208,31 @@
 
 typedef struct
 {
-    uint32_t r1;
+    uint32_t back_chain;
     uint32_t linkage;
+#ifdef HWMACRO_GPE
+    uint32_t pbaslvctlv; // pba slave controller configuration
+#endif
+    uint32_t cr;
+    uint32_t sprg0;
+    uint32_t r0;
+    uint32_t r1;
     uint32_t r3;
     uint32_t r4;
     uint32_t r5;
     uint32_t r6;
-    uint32_t cr;
-    uint32_t lr;
-
     uint32_t r7;
     uint32_t r8;
     uint32_t r9;
     uint32_t r10;
-    uint32_t r28;
-    uint32_t r29;
-    uint32_t r30;
-    uint32_t r31;
-
     uint32_t xer;
     uint32_t ctr;
     uint32_t srr0;
     uint32_t srr1;
-    uint32_t r0;
-    uint32_t sprg0;
-#ifdef HWMACRO_GPE
-    uint64_t pbaslvctlv;
-#endif
+    uint32_t r28;
+    uint32_t r29;
+    uint32_t r30;
+    uint32_t r31;
 } PkThreadContext;
 
 

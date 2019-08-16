@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -33,13 +33,13 @@ void
 __pk_thread_map(PkThread* thread);
 
 void
-__pk_thread_unmap(PkThread *thread);
+__pk_thread_unmap(PkThread* thread);
 
 
 // Interrupts must be disabled at entry.
 
 static inline int
-__pk_thread_is_active(PkThread *thread)
+__pk_thread_is_active(PkThread* thread)
 {
     return ((thread->state != PK_THREAD_STATE_COMPLETED) &&
             (thread->state != PK_THREAD_STATE_DELETED));
@@ -49,7 +49,7 @@ __pk_thread_is_active(PkThread *thread)
 // Interrupts must be disabled at entry.
 
 static inline int
-__pk_thread_is_mapped(PkThread *thread)
+__pk_thread_is_mapped(PkThread* thread)
 {
     return (thread->state == PK_THREAD_STATE_MAPPED);
 }
@@ -58,7 +58,7 @@ __pk_thread_is_mapped(PkThread *thread)
 // Interrupts must be disabled at entry. This is only called on mapped threads.
 
 static inline int
-__pk_thread_is_runnable(PkThread *thread)
+__pk_thread_is_runnable(PkThread* thread)
 {
     return __pk_thread_queue_member(&__pk_run_queue, thread->priority);
 }

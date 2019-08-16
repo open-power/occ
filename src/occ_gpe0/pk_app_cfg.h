@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -46,10 +46,6 @@
 #define APPCFG_EXT_IRQS_CONFIG \
     OCCHW_IRQ_IPI0_HI_PRIORITY          OCCHW_IRQ_TYPE_EDGE     OCCHW_IRQ_POLARITY_RISING   OCCHW_IRQ_MASKED \
     OCCHW_IRQ_IPI0_LO_PRIORITY          OCCHW_IRQ_TYPE_EDGE     OCCHW_IRQ_POLARITY_RISING   OCCHW_IRQ_MASKED
-
-/// The Instance ID of the occ processor that this application is intended to run on
-/// 0-3 -> GPE, 4 -> 405
-#define APPCFG_OCC_INSTANCE_ID 0
 
 // This application will statically initialize it's external interrupt table
 #define STATIC_IRQ_TABLE

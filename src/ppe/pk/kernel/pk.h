@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -34,30 +34,48 @@
 /// assembly.
 
 #ifndef __ASSEMBLER__
-#include <stdint.h>
-#include <stddef.h>
+    #include <stdint.h>
+    #include <stddef.h>
 #endif  /* __ASSEMBLER__ */
 
 #ifndef __PK__
-#define __PK__ 1
+    #define __PK__ 1
+#endif
+
+// The latest ppe compiler emits __PPE42X__ for ppe42x and __PPE42A__ for
+// the original ppe42 engine . This is here for older versions of the PPE
+// compiler.
+#if defined(__PPE42__) && !defined(__PPE42X__) && !defined(__PPE42A__)
+    #define __PPE42A__ 1
 #endif
 
 /// The application environment specifies whether or not it will provide an
 /// application configuration file, which must be named "pk_app_cfg.h".
 
 #ifndef USE_PK_APP_CFG_H
-#define USE_PK_APP_CFG_H 0
+    #define USE_PK_APP_CFG_H 0
 #endif
 
 #if USE_PK_APP_CFG_H
-#include "pk_app_cfg.h"
+    #include "pk_app_cfg.h"
+#endif
+
+#ifndef APPCFG_TRACE
+    #define APPCFG_TRACE PK_TRACE
+#endif
+
+#ifndef APPCFG_PANIC
+    #define APPCFG_PANIC PK_PANIC
 #endif
 
 #include "pk_macros.h"
 #include "pk_api.h"
-#include "pk_port.h"
+#include "ppe_port.h"
 #include "pk_kernel.h"
 //#include "pk_io.h"
+
+#define compile_assert(name,e) \
+    enum { compile_assert__##name = 1/(e) };
 
 #ifndef __ASSEMBLER__
 
@@ -88,7 +106,7 @@
             __y++;                              \
         }                                       \
         __y;})
-    
+
 
 #define POW2_32(x) ((uint32_t)1 << (x))
 #define POW2_64(x) ((uint64_t)1 << (x))
@@ -113,7 +131,7 @@
 /// initialized. Otherwise it confuses the linker which wants to put
 /// uninitialized data into .bss sections.
 ///
-/// \code 
+/// \code
 ///
 /// int foo     SECTION_ATTRIBUTE(".noncacheable") = 0;
 /// int bar[10] SECTION_ATTRIBUTE(".noncacheable") = {0};
@@ -126,14 +144,14 @@
 /// This is required for example to avoid "function unused" warnings when a
 /// function is declared static but only referenced by inline assembler:
 ///
-/// \code 
-/// 
+/// \code
+///
 /// static USED_ATTRIBUTE void
-/// _checkstop(void* arg, PkIrqId irq, int priority) 
+/// _checkstop(void* arg, PkIrqId irq, int priority)
 /// {
 ///     PK_PANIC(VALIDATION_CHECKSTOP);
 /// }
-/// 
+///
 /// PK_IRQ_FAST2FULL(_validationCheckstopHandler, _checkstop);
 ///
 /// \endcode

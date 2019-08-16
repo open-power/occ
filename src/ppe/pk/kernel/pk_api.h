@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -467,16 +467,14 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#define SECTION(s) __attribute__ ((section (s)))
+
+// These can be common between PK instances, so don't put in small data area.
+
 /// The timebase frequency in Hz; A parameter to pk_initialize()
-extern uint32_t __pk_timebase_frequency_hz;
+extern uint32_t __pk_timebase_frequency_hz SECTION(".data");
 
-extern uint8_t __pk_timebase_rshift;
-
-/// The timebase frequency in KHz
-extern uint32_t __pk_timebase_frequency_khz;  //never set or used. Delete?
-
-/// The timebase frequency in Mhz
-extern uint32_t __pk_timebase_frequency_mhz;  //never set or used. Delete?
+extern uint8_t __pk_timebase_rshift SECTION(".data");
 
 
 typedef unsigned long int PkAddress;
@@ -964,7 +962,7 @@ pk_deque_delete(PkDeque* element)
 
 // Bottom Half APIs
 
-extern PkDeque _pk_bh_queue;
+extern PkDeque _pk_bh_queue SECTION(".sdata.pk");
 
 static inline void
 pk_bh_schedule(PkBottomHalf* bottom_half)
@@ -983,7 +981,7 @@ pk_bh_schedule(PkBottomHalf* bottom_half)
     }
 
 #define PK_BH_STATIC_CREATE(bh_name, handler, arg) \
-    PkBottomHalf bh_name  __attribute__((section (".sdata"))) = \
+    PkBottomHalf bh_name  __attribute__((section (".sdata.pk"))) = \
             PK_BH_INIT(handler, arg)
 
 
@@ -995,6 +993,8 @@ void pk_trace_big(uint32_t i_hash_and_count,
 void pk_trace_binary(uint32_t i_hash_and_size, void* bufp);
 void pk_trace_set_timebase(PkTimebase timebase);
 
+// set the frequency (hz) of the timebase for trace timestamps
+void pk_trace_set_freq(uint32_t i_frequency);
 
 /// Cast a pointer to another type, in a way that won't cause warnings
 

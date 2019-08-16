@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -116,24 +116,30 @@ timer_active(PkTimer* timer)
 //  timeout.  This will happen naturally when the current timeout expires.
 
 int
-__pk_timer_cancel(PkTimer *timer)
+__pk_timer_cancel(PkTimer* timer)
 {
     int rc;
     PkDeque* timer_deque = (PkDeque*)timer;
     PkTimeQueue* tq = &__pk_time_queue;
 
-    if (!timer_active(timer)) {
+    if (!timer_active(timer))
+    {
 
         rc = -PK_TIMER_NOT_ACTIVE;
 
-    } else {
+    }
+    else
+    {
 
-        if (timer_deque == tq->cursor) {
+        if (timer_deque == tq->cursor)
+        {
             tq->cursor = tq->cursor->next;
         }
+
         pk_deque_delete(timer_deque);
         rc = 0;
     }
+
     return rc;
 }
 
@@ -154,24 +160,28 @@ __pk_timer_schedule(PkTimer* timer)
 {
     PkTimeQueue* tq = &__pk_time_queue;
 
-    if (!timer_active(timer)) {
+    if (!timer_active(timer))
+    {
         pk_deque_push_back((PkDeque*)tq, (PkDeque*)timer);
     }
 
-    if (timer->timeout < tq->next_timeout) {
+    if (timer->timeout < tq->next_timeout)
+    {
         tq->next_timeout = timer->timeout;
-        if (tq->cursor == 0) {
+
+        if (tq->cursor == 0)
+        {
             __pk_schedule_hardware_timeout(tq->next_timeout);
         }
     }
 }
-        
+
 
 // The tickless timer mechanism has timed out.  Note that due to timer
 // deletions and other factors, there may not actually be a timer in the queue
 // that has timed out - but it doesn't matter (other than for efficiency).
 //
-// This routine must not be entered reentrantly. 
+// This routine must not be entered reentrantly.
 //
 // First, time out any timers that have expired.  Timers in the queue are
 // unordered, so we have to check every one.  Since passing through the
@@ -191,7 +201,7 @@ __pk_timer_schedule(PkTimer* timer)
 // handlers may invoke time queue operations, we need to establish a pointer
 // to the next entry to be examined (tq->cursor) before enabling interupts.
 // It's possible that this pointer will be changed by other interrupt handlers
-// that cancel the timer pointed to by tq->cursor. 
+// that cancel the timer pointed to by tq->cursor.
 //
 // The main loop iterates on the PkDeque form of the time queue, casting each
 // element back up to the PkTimer as it is processed.
@@ -209,30 +219,35 @@ __pk_timer_bh_handler(void* arg)
     tq = &__pk_time_queue;
 
     // Check if we entered the function while it was running in another context.
-    if (PK_ERROR_CHECK_KERNEL) {
-        if (tq->cursor != 0) {
+    if (PK_ERROR_CHECK_KERNEL)
+    {
+        if (tq->cursor != 0)
+        {
             PK_PANIC(PK_TIMER_HANDLER_INVARIANT);
         }
     }
 
     pk_critical_section_enter(&ctx);
 
-    while ((now = pk_timebase_get()) >= tq->next_timeout) {
+    while ((now = pk_timebase_get()) >= tq->next_timeout)
+    {
         tq->next_timeout = PK_TIMEBASE_MAX;
         timer_deque = ((PkDeque*)tq)->next;
 
         // Iterate through the entire timer list, calling the callback of
         // timed-out elements and finding the timer that will timeout next,
         // which is stored in tq->next_timeout.
-        while (timer_deque != (PkDeque*)tq) {
-    
+        while (timer_deque != (PkDeque*)tq)
+        {
+
             timer = (PkTimer*)timer_deque;
 
             // Setting this to a non-zero value indicates we are in the middle
             // of processing the time queue.
             tq->cursor = timer_deque->next;
 
-            if (timer->timeout <= now) {
+            if (timer->timeout <= now)
+            {
 
                 // The timer timed out.  It is removed from the queue.
                 //
@@ -246,11 +261,15 @@ __pk_timer_bh_handler(void* arg)
                 pk_critical_section_exit(&ctx);
 
                 callback = timer->callback;
-                if (callback) {
-                    callback(timer->arg);
-                }                        
 
-            } else {
+                if (callback)
+                {
+                    callback(timer->arg);
+                }
+
+            }
+            else
+            {
 
                 // This timer has not timed out.  Its timeout will simply
                 // participate in the computation of the next timeout.
@@ -266,7 +285,7 @@ __pk_timer_bh_handler(void* arg)
         // to check the time again and see if enough time has passed
         // that the next timer has timed out too.
     }
-    
+
     pk_critical_section_exit(&ctx);
 
     // This marks that we are no longer processing the time queue
@@ -302,20 +321,21 @@ __pk_timer_handler(void)
 ///
 /// \retval 0 Successful completion
 ///
-/// \retval -PK_INVALID_TIMER_AT_SCHEDULE A a null (0) pointer was provided as 
+/// \retval -PK_INVALID_TIMER_AT_SCHEDULE A a null (0) pointer was provided as
 /// the \a timer argument.
 ///
 
 int
-pk_timer_schedule(PkTimer    *timer, 
-                   PkInterval interval)
+pk_timer_schedule(PkTimer*    timer,
+                  PkInterval interval)
 {
     PkMachineContext ctx;
     PkTimebase  timeout = pk_timebase_get() + PK_INTERVAL_SCALE(interval);
 
     pk_critical_section_enter(&ctx);
 
-    if (PK_ERROR_CHECK_API) {
+    if (PK_ERROR_CHECK_API)
+    {
         PK_ERROR_IF(timer == 0, PK_INVALID_TIMER_AT_SCHEDULE);
     }
 
@@ -332,13 +352,13 @@ pk_timer_schedule(PkTimer    *timer,
 ///
 /// \param timer The PkTimer to cancel.
 ///
-/// Timers can be canceled at any time.  It is never an error to call 
+/// Timers can be canceled at any time.  It is never an error to call
 /// pk_timer_cancel() on an PkTimer object after it is created. Memory used
 /// by an PkTimer can be safely reused for another purpose after a successful
 /// call ofpk_timer_cancel().
 ///
 /// Return values other than PK_OK (0) are not necessarily errors; see \ref
-/// pk_errors 
+/// pk_errors
 ///
 /// The following return codes are non-error codes:
 ///
@@ -354,12 +374,13 @@ pk_timer_schedule(PkTimer    *timer,
 ///
 
 int
-pk_timer_cancel(PkTimer *timer)
+pk_timer_cancel(PkTimer* timer)
 {
     PkMachineContext ctx;
     int rc = PK_OK;
 
-    if (PK_ERROR_CHECK_API) {
+    if (PK_ERROR_CHECK_API)
+    {
         PK_ERROR_IF(timer == 0, PK_INVALID_TIMER_AT_CANCEL);
     }
 
@@ -398,19 +419,23 @@ pk_timer_cancel(PkTimer *timer)
 /// \retval -PK_INVALID_TIMER_AT_INFO The \a timer is a null (0) pointer.
 
 int
-pk_timer_info_get(PkTimer    *timer,
-                   PkTimebase *timeout,
-                   int         *active)
-                   
+pk_timer_info_get(PkTimer*    timer,
+                  PkTimebase* timeout,
+                  int*         active)
+
 {
-    if (PK_ERROR_CHECK_API) {
+    if (PK_ERROR_CHECK_API)
+    {
         PK_ERROR_IF(timer == 0, PK_INVALID_TIMER_AT_INFO);
     }
 
-    if (timeout) {
+    if (timeout)
+    {
         *timeout = timer->timeout;
     }
-    if (active) {
+
+    if (active)
+    {
         *active = timer_active(timer);
     }
 

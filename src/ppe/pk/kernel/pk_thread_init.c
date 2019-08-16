@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -71,56 +71,66 @@
 /// \retval 0 Successful completion
 ///
 /// \retval -PK_INVALID_THREAD_AT_CREATE The \a thread is a null (0) pointer.
-/// 
+///
 /// \retval -PK_INVALID_ARGUMENT_THREAD1 the \a thread_routine is null (0)
 ///
-/// \retval -PK_INVALID_ARGUMENT_THREAD2 the \a priority is invalid, 
+/// \retval -PK_INVALID_ARGUMENT_THREAD2 the \a priority is invalid,
 ///
-/// \retval -PK_INVALID_ARGUMENT_THREAD3 the stack area wraps around 
+/// \retval -PK_INVALID_ARGUMENT_THREAD3 the stack area wraps around
 /// the end of memory.
 ///
 /// \retval -PK_STACK_OVERFLOW The stack area at thread creation is smaller
 /// than the minimum safe size.
 
 int
-pk_thread_create(PkThread         *thread,
-                  PkThreadRoutine  thread_routine,
-                  void              *arg,
-                  PkAddress        stack,
-                  size_t            stack_size,
-                  PkThreadPriority priority)
+pk_thread_create(PkThread*         thread,
+                 PkThreadRoutine  thread_routine,
+                 void*              arg,
+                 PkAddress        stack,
+                 size_t            stack_size,
+                 PkThreadPriority priority)
 {
     int rc;
 
-    if (PK_ERROR_CHECK_API) {
+    if (PK_ERROR_CHECK_API)
+    {
         PK_ERROR_IF(thread == 0, PK_INVALID_THREAD_AT_CREATE);
         PK_ERROR_IF((thread_routine == 0) ||
-                     (priority >= PK_THREADS),
-                     PK_INVALID_ARGUMENT_THREAD1);
+                    (priority >= PK_THREADS),
+                    PK_INVALID_ARGUMENT_THREAD1);
     }
 
     rc = __pk_stack_init(&stack, &stack_size);
-    if (rc) {
+
+    if (rc)
+    {
         return rc;
     }
 
     thread->saved_stack_pointer = stack;
     thread->stack_base = stack;
 
-    if (PK_STACK_DIRECTION < 0) {
+    if (PK_STACK_DIRECTION < 0)
+    {
 
         thread->stack_limit = stack - stack_size;
-        if (PK_ERROR_CHECK_API) {
+
+        if (PK_ERROR_CHECK_API)
+        {
             PK_ERROR_IF(thread->stack_limit > thread->stack_base,
-                         PK_INVALID_ARGUMENT_THREAD2);
+                        PK_INVALID_ARGUMENT_THREAD2);
         }
 
-    } else {
+    }
+    else
+    {
 
         thread->stack_limit = stack + stack_size;
-        if (PK_ERROR_CHECK_API) {
+
+        if (PK_ERROR_CHECK_API)
+        {
             PK_ERROR_IF(thread->stack_limit < thread->stack_base,
-                         PK_INVALID_ARGUMENT_THREAD3);
+                        PK_INVALID_ARGUMENT_THREAD3);
         }
     }
 
@@ -129,25 +139,25 @@ pk_thread_create(PkThread         *thread,
     thread->state = PK_THREAD_STATE_SUSPENDED_RUNNABLE;
     thread->flags = 0;
 
-    pk_timer_create(&(thread->timer), 
-                    __pk_thread_timeout, 
-                    (void *)thread);
+    pk_timer_create(&(thread->timer),
+                    __pk_thread_timeout,
+                    (void*)thread);
 
     __pk_thread_context_initialize(thread, thread_routine, arg);
 
     return rc;
 }
-    
 
-    
 
-    
 
-    
 
-        
 
-    
-        
+
+
+
+
+
+
+
 
 

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -53,6 +53,15 @@
 //  bytes (8 instructions) to an unhandled exception, so any redefinition
 //  would most likely be a branch to an application-defined handler.
 
+// Empty PPE FFDC Handler plugged here, dependent platform needs to plug it in,
+// if specific registers are required to be saved-off during the interupt
+// execution
+// by Default it will not generate any branch instruction in the pk interrupt
+// vector table
+#ifndef PPE_CAPTURE_INTERRUPT_FFDC
+    #define PPE_CAPTURE_INTERRUPT_FFDC
+#endif
+
 #ifndef PPE42_MACHINE_CHECK_HANDLER
     #define PPE42_MACHINE_CHECK_HANDLER PK_PANIC( PPE42_MACHINE_CHECK_PANIC)
 #endif
@@ -88,6 +97,22 @@ typedef void (*PkIrqHandler)(void* arg, PkIrqId irq);
 /// Declare a subroutine as an IRQ handler
 
 #define PK_IRQ_HANDLER(f) void f(void* arg, PkIrqId irq)
+
+#define PK_IRQ_SETUP(irq, polarity, trigger)                           \
+    rc = pk_irq_setup(irq, polarity, trigger);                         \
+    if (rc) {                                                          \
+        PK_TRACE("pk_irq_setup(irq) failed w/rc=0x%08x", rc);          \
+        pk_halt();                                                     \
+    }
+
+#define PK_IRQ_HANDLER_SET(irq, handler, sem)                          \
+    rc = pk_irq_handler_set(irq,                                       \
+                            handler,                                   \
+                            (void*)&sem);                              \
+    if (rc) {                                                          \
+        PK_TRACE("pk_irq_handler_set(irq) failed w/rc=0x%08x", rc);    \
+        pk_halt();                                                     \
+    }
 
 int pk_irq_setup(PkIrqId irq,
                  int      polarity,

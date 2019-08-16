@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -150,6 +150,7 @@ pk_initialize(PkAddress     kernel_stack,
     __pk_kernel_stack = kernel_stack;
     __pk_kernel_stack_size = kernel_stack_size;
 
+#if PK_TRACE_SUPPORT
 #if PK_TIMER_SUPPORT
 
     // Initialize the time queue sentinel as a circular queue, set the next
@@ -159,10 +160,10 @@ pk_initialize(PkAddress     kernel_stack,
     __pk_time_queue.cursor = 0;
     __pk_time_queue.next_timeout = PK_TIMEBASE_MAX;
 
-#if PK_TRACE_SUPPORT
+#endif  /* PK_TIMER_SUPPORT (timed callback)*/
 
     //set the trace timebase HZ
-    g_pk_trace_buf.hz = timebase_frequency_hz;
+    pk_trace_set_freq(timebase_frequency_hz);
 
     if(initial_timebase != PK_TIMEBASE_CONTINUES)
     {
@@ -177,7 +178,6 @@ pk_initialize(PkAddress     kernel_stack,
 
 #endif  /* PK_TRACE_SUPPORT */
 
-#endif  /* PK_TIMER_SUPPORT */
 
 #if PK_THREAD_SUPPORT
 
@@ -212,7 +212,7 @@ pk_timebase_freq_set(uint32_t timebase_frequency_hz)
     pk_set_timebase_rshift(timebase_frequency_hz);
 
 #if PK_TRACE_SUPPORT
-    g_pk_trace_buf.hz = timebase_frequency_hz;
+    pk_trace_set_freq(timebase_frequency_hz);
 #endif
     // Does the initial_timebase need to be reset?
     return PK_OK;
@@ -233,12 +233,3 @@ __pk_main(int argc, char** argv)
     int main(int argc, char** argv);
     main(argc, argv);
 }
-
-
-
-
-
-
-        
-        
-        

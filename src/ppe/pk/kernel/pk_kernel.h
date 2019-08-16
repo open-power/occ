@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -52,28 +52,30 @@
 
 #ifndef __ASSEMBLER__
 
+#define SECTION(s) __attribute__ ((section (s)))
+
 /// This is the stack pointer saved when switching from a thread context to an
 /// interrupt context.
 
 UNLESS__PK_CORE_C__(extern)
 volatile
-PkAddress __pk_saved_sp;
+PkAddress __pk_saved_sp SECTION(".sdata.pk");
 
 /// The kernel stack; constant once defined by the call of
 /// pk_initialize().
 
 UNLESS__PK_CORE_C__(extern)
 volatile
-PkAddress __pk_kernel_stack;
+PkAddress __pk_kernel_stack SECTION(".sdata.pk");
 
 UNLESS__PK_CORE_C__(extern)
 volatile
-PkAddress __pk_kernel_stack_limit;
+PkAddress __pk_kernel_stack_limit SECTION(".sdata.pk");
 
 /// This is the run queue - the queue of mapped runnable tasks.
 UNLESS__PK_CORE_C__(extern)
 volatile
-PkThreadQueue __pk_run_queue;
+PkThreadQueue __pk_run_queue SECTION(".sdata.pk");
 
 /// This flag is set by \c __pk_schedule() if a new highest-priority thread
 /// becomes runnable during an interrupt handler.  The context switch will
@@ -82,7 +84,7 @@ PkThreadQueue __pk_run_queue;
 
 UNLESS__PK_CORE_C__(extern)
 volatile
-int __pk_delayed_switch;
+int __pk_delayed_switch SECTION(".sdata.pk");
 
 /// The currently running thread, or NULL (0) to indicate the idle thread
 ///
@@ -108,7 +110,7 @@ int __pk_delayed_switch;
 /// the kernel stack.
 UNLESS__PK_CORE_C__(extern)
 volatile
-PkThread* __pk_current_thread;
+PkThread* __pk_current_thread SECTION(".sdata.pk");
 
 /// The thread to switch to during the next context switch, or NULL (0).
 ///
@@ -137,14 +139,14 @@ PkThread* __pk_current_thread;
 /// to the thread whose context will be restored at the next context switch.
 UNLESS__PK_CORE_C__(extern)
 volatile
-PkThread* __pk_next_thread;
+PkThread* __pk_next_thread SECTION(".sdata.pk");
 
 /// The priority of \a __pk_next_thread
 ///
 /// If \a __pk_next_thread == 0, the \a __pk_next_priority == PK_THREADS.
 UNLESS__PK_CORE_C__(extern)
 volatile
-PkThreadPriority __pk_next_priority;
+PkThreadPriority __pk_next_priority SECTION(".sdata.pk");
 
 /// This variable holds the default thread machine context for newly created
 /// threads. The idle thread also uses this context. This variable is normally
@@ -152,14 +154,14 @@ PkThreadPriority __pk_next_priority;
 
 UNLESS__PK_CORE_C__(extern)
 volatile
-PkMachineContext __pk_thread_machine_context_default;
+PkMachineContext __pk_thread_machine_context_default SECTION(".sdata.pk");
 
 
 /// The size of the kernel stack (bytes).
 
 UNLESS__PK_CORE_C__(extern)
 volatile
-size_t __pk_kernel_stack_size;
+size_t __pk_kernel_stack_size SECTION(".sdata.pk");
 
 /// This table maps priorities to threads, and contains PK_THREADS + 1
 /// entries. The final entry is for the idle thread and will always be null
@@ -167,7 +169,7 @@ size_t __pk_kernel_stack_size;
 
 UNLESS__PK_CORE_C__(extern)
 volatile
-PkThread* __pk_priority_map[PK_THREADS + 1] __attribute__ ((section (".sdata")));
+PkThread* __pk_priority_map[PK_THREADS + 1] SECTION(".sdata.pk");
 
 /// The PK time queue structure
 ///
@@ -205,7 +207,7 @@ typedef struct
 } PkTimeQueue;
 
 UNLESS__PK_CORE_C__(extern)
-PkTimeQueue __pk_time_queue __attribute__ ((section (".sdata")));
+PkTimeQueue __pk_time_queue SECTION(".sdata.pk");
 
 /// Return a pointer to the PkThread object of the currently running thread,
 /// or NULL (0) if PK is idle or has not been started.

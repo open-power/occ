@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -37,7 +37,7 @@
 extern PkTimebase  ppe42_64bit_timebase;
 
 #if PK_TRACE_SUPPORT
-extern PkTraceBuffer g_pk_trace_buf;
+    extern PkTraceBuffer g_pk_trace_buf;
 #endif
 
 pk_debug_ptrs_t pk_debug_ptrs SECTION_ATTRIBUTE(".debug_ptrs") =
@@ -56,7 +56,7 @@ pk_debug_ptrs_t pk_debug_ptrs SECTION_ATTRIBUTE(".debug_ptrs") =
 #if PK_THREAD_SUPPORT
     .debug_thread_table_ptr     = &__pk_priority_map,
     .debug_thread_table_size    = sizeof(__pk_priority_map),
-    .debug_thread_runq_ptr      = (void*)&__pk_run_queue,
+    .debug_thread_runq_ptr      = (void*)& __pk_run_queue,
     .debug_thread_runq_size     = sizeof(__pk_run_queue),
 #else
     .debug_thread_table_ptr     = 0,

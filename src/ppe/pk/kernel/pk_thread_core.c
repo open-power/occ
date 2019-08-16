@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -53,38 +53,50 @@ __pk_thread_map(PkThread* thread)
     priority = thread->priority;
     __pk_priority_map[priority] = thread;
 
-    if (thread->state == PK_THREAD_STATE_SUSPENDED_RUNNABLE) {
+    if (thread->state == PK_THREAD_STATE_SUSPENDED_RUNNABLE)
+    {
 
         __pk_thread_queue_insert(&__pk_run_queue, priority);
 
-    } else if (thread->flags & PK_THREAD_FLAG_SEMAPHORE_PEND) {
+    }
+    else if (thread->flags & PK_THREAD_FLAG_SEMAPHORE_PEND)
+    {
 
-        if (thread->semaphore->count) {
+        if (thread->semaphore->count)
+        {
 
             thread->semaphore->count--;
             __pk_thread_queue_insert(&__pk_run_queue, priority);
 
-        } else {
+        }
+        else
+        {
 
             __pk_thread_queue_insert(&(thread->semaphore->pending_threads),
-                                      priority);
+                                     priority);
         }
     }
 
     thread->state = PK_THREAD_STATE_MAPPED;
 
-    if (PK_KERNEL_TRACE_ENABLE) {
-        if (__pk_thread_is_runnable(thread)) {
+    if (PK_KERNEL_TRACE_ENABLE)
+    {
+        if (__pk_thread_is_runnable(thread))
+        {
             PK_KERN_TRACE("THREAD_MAPPED_RUNNABLE(%d)", priority);
-        } else if (thread->flags & PK_THREAD_FLAG_SEMAPHORE_PEND) {
+        }
+        else if (thread->flags & PK_THREAD_FLAG_SEMAPHORE_PEND)
+        {
             PK_KERN_TRACE("THREAD_MAPPED_SEMAPHORE_PEND(%d)", priority);
-        } else {
+        }
+        else
+        {
             PK_KERN_TRACE("THREAD_MAPPED_SLEEPING(%d)", priority);
         }
     }
-}            
+}
 
-    
+
 // This routine is only used locally.  Interrupts must be disabled
 // at entry.  This routine is only ever called on threads in the
 // PK_THREAD_STATE_MAPPED. Unmapping a thread removes it from the priority
@@ -93,24 +105,29 @@ __pk_thread_map(PkThread* thread)
 // __pk_thread_unmap().
 
 void
-__pk_thread_unmap(PkThread *thread)
+__pk_thread_unmap(PkThread* thread)
 {
     PkThreadPriority priority;
 
     priority = thread->priority;
     __pk_priority_map[priority] = 0;
 
-    if (__pk_thread_is_runnable(thread)) {
+    if (__pk_thread_is_runnable(thread))
+    {
 
         thread->state = PK_THREAD_STATE_SUSPENDED_RUNNABLE;
         __pk_thread_queue_delete(&__pk_run_queue, priority);
 
-    } else {
+    }
+    else
+    {
 
         thread->state = PK_THREAD_STATE_SUSPENDED_BLOCKED;
-        if (thread->flags & PK_THREAD_FLAG_SEMAPHORE_PEND) {
-            __pk_thread_queue_delete(&(thread->semaphore->pending_threads), 
-                                      priority);
+
+        if (thread->flags & PK_THREAD_FLAG_SEMAPHORE_PEND)
+        {
+            __pk_thread_queue_delete(&(thread->semaphore->pending_threads),
+                                     priority);
         }
     }
 }
@@ -137,16 +154,24 @@ __pk_schedule(void)
     __pk_next_thread = __pk_priority_map[__pk_next_priority];
 
     if ((__pk_next_thread == 0) ||
-        (__pk_next_thread != __pk_current_thread)) {
+        (__pk_next_thread != __pk_current_thread))
+    {
 
-        if (__pk_kernel_mode_thread()) {
-            if (__pk_kernel_context_thread()) {
-                if (__pk_current_thread != 0) {
+        if (__pk_kernel_mode_thread())
+        {
+            if (__pk_kernel_context_thread())
+            {
+                if (__pk_current_thread != 0)
+                {
                     __pk_switch();
-                } else {
+                }
+                else
+                {
                     __pk_next_thread_resume();
                 }
-            } else {
+            }
+            else
+            {
                 __pk_delayed_switch = 1;
             }
         }
@@ -154,7 +179,7 @@ __pk_schedule(void)
 }
 
 
-// This routine is only used locally. 
+// This routine is only used locally.
 //
 // Completion and deletion are pretty much the same thing.  Completion is
 // simply self-deletion of the current thread (which is mapped by
@@ -173,7 +198,7 @@ __pk_schedule(void)
 // tag only encodes the priority, which may be in use by a mapped thread.
 
 void
-__pk_thread_delete(PkThread *thread, PkThreadState final_state)
+__pk_thread_delete(PkThread* thread, PkThreadState final_state)
 {
     PkMachineContext ctx;
     int mapped;
@@ -182,26 +207,34 @@ __pk_thread_delete(PkThread *thread, PkThreadState final_state)
 
     mapped = __pk_thread_is_mapped(thread);
 
-    if (mapped) {
+    if (mapped)
+    {
         __pk_thread_unmap(thread);
     }
 
     __pk_timer_cancel(&(thread->timer));
     thread->state = final_state;
 
-    if (mapped) {
+    if (mapped)
+    {
 
-        if (PK_KERNEL_TRACE_ENABLE) {
-            if (final_state == PK_THREAD_STATE_DELETED) {
+        if (PK_KERNEL_TRACE_ENABLE)
+        {
+            if (final_state == PK_THREAD_STATE_DELETED)
+            {
                 PK_KERN_TRACE("THREAD_DELETED(%d)", thread->priority);
-            } else {
+            }
+            else
+            {
                 PK_KERN_TRACE("THREAD_COMPLETED(%d)", thread->priority);
             }
-        }                
-    
-        if (thread == __pk_current_thread) {
+        }
+
+        if (thread == __pk_current_thread)
+        {
             __pk_current_thread = 0;
         }
+
         __pk_schedule();
     }
 
@@ -226,38 +259,41 @@ __pk_thread_delete(PkThread *thread, PkThreadState final_state)
 // tag only encodes the priority, which may be in use by a mapped thread.
 
 void
-__pk_thread_timeout(void *arg)
+__pk_thread_timeout(void* arg)
 {
     PkMachineContext ctx;
-    PkThread *thread = (PkThread *)arg;
+    PkThread* thread = (PkThread*)arg;
 
     pk_critical_section_enter(&ctx);
 
-    switch (thread->state) {
+    switch (thread->state)
+    {
 
-    case PK_THREAD_STATE_MAPPED:
-        if (!__pk_thread_is_runnable(thread)) {
+        case PK_THREAD_STATE_MAPPED:
+            if (!__pk_thread_is_runnable(thread))
+            {
+                thread->flags |= PK_THREAD_FLAG_TIMED_OUT;
+                __pk_thread_queue_insert(&__pk_run_queue, thread->priority);
+                __pk_schedule();
+            }
+
+            break;
+
+        case PK_THREAD_STATE_SUSPENDED_RUNNABLE:
+            break;
+
+        case PK_THREAD_STATE_SUSPENDED_BLOCKED:
             thread->flags |= PK_THREAD_FLAG_TIMED_OUT;
-            __pk_thread_queue_insert(&__pk_run_queue, thread->priority);
-            __pk_schedule();
-        }
-        break;
+            thread->state = PK_THREAD_STATE_SUSPENDED_RUNNABLE;
+            break;
 
-    case PK_THREAD_STATE_SUSPENDED_RUNNABLE:
-        break;
-
-    case PK_THREAD_STATE_SUSPENDED_BLOCKED:
-        thread->flags |= PK_THREAD_FLAG_TIMED_OUT;
-        thread->state = PK_THREAD_STATE_SUSPENDED_RUNNABLE;
-        break;
-
-    default:
-        PK_PANIC(PK_THREAD_TIMEOUT_STATE);
+        default:
+            PK_PANIC(PK_THREAD_TIMEOUT_STATE);
     }
 
     pk_critical_section_exit(&ctx);
 }
-        
+
 
 // This routine serves as a container for the PK_START_THREADS_HOOK and
 // actually starts threads.  The helper routine __pk_call_pk_start_threads()
@@ -285,7 +321,7 @@ __pk_start_threads(void)
 
     PK_PANIC(PK_START_THREADS_RETURNED);
 }
-    
+
 
 /// Start PK threads
 ///
@@ -306,7 +342,8 @@ __pk_start_threads(void)
 int
 pk_start_threads(void)
 {
-    if (PK_ERROR_CHECK_API) {
+    if (PK_ERROR_CHECK_API)
+    {
         PK_ERROR_IF(__pk_kernel_mode_thread(), PK_ILLEGAL_CONTEXT_THREAD);
     }
 
@@ -327,12 +364,12 @@ pk_start_threads(void)
 /// is currently mapped at the priority assigned to the thread.  PK provides
 /// the pk_thread_at_priority() API which allows an application-level
 /// scheduler to correctly manage multiple threads running at the same
-/// priority.  
+/// priority.
 ///
 /// If the thread was sleeping while suspended it remains asleep. However if
 /// the sleep timer timed out while the thread was suspended it will be
 /// resumed runnable.
-/// 
+///
 /// If the thread was blocked on a semaphore when it was suspended, then when
 /// the thread is resumed it will attempt to reacquire the semaphore.
 /// However, if the thread was blocked on a semaphore with timeout while
@@ -342,44 +379,49 @@ pk_start_threads(void)
 /// It is not an error to call pk_thread_resume() on a mapped
 /// thread.  However it is an error to call pk_thread_resume() on a completed
 /// or deleted thread.
-/// 
+///
 /// Return values other than PK_OK (0) are errors; see \ref pk_errors
 ///
 /// \retval 0 Successful completion, including calls on a \a thread that is
 /// already mapped.
 ///
 /// \retval -PK_INVALID_THREAD_AT_RESUME1 The \a thread is a null (0) pointer.
-/// 
-/// \retval -PK_INVALID_THREAD_AT_RESUME2 The \a thread is not active, 
+///
+/// \retval -PK_INVALID_THREAD_AT_RESUME2 The \a thread is not active,
 /// i.e. has completed or been deleted.
-/// 
-/// \retval -PK_PRIORITY_IN_USE_AT_RESUME Another thread is already mapped at 
+///
+/// \retval -PK_PRIORITY_IN_USE_AT_RESUME Another thread is already mapped at
 /// the priority of the \a thread.
 
 int
-pk_thread_resume(PkThread *thread)
+pk_thread_resume(PkThread* thread)
 {
     PkMachineContext ctx;
 
-    if (PK_ERROR_CHECK_API) {
+    if (PK_ERROR_CHECK_API)
+    {
         PK_ERROR_IF(thread == 0, PK_INVALID_THREAD_AT_RESUME1);
     }
 
     pk_critical_section_enter(&ctx);
 
-    if (PK_ERROR_CHECK_API) {
+    if (PK_ERROR_CHECK_API)
+    {
         PK_ERROR_IF_CRITICAL(!__pk_thread_is_active(thread),
-                              PK_INVALID_THREAD_AT_RESUME2,
-                              &ctx);
+                             PK_INVALID_THREAD_AT_RESUME2,
+                             &ctx);
     }
 
-    if (!__pk_thread_is_mapped(thread)) {
+    if (!__pk_thread_is_mapped(thread))
+    {
 
-        if (PK_ERROR_CHECK_API) {
+        if (PK_ERROR_CHECK_API)
+        {
             PK_ERROR_IF_CRITICAL(__pk_priority_map[thread->priority] != 0,
-                                  PK_PRIORITY_IN_USE_AT_RESUME,
-                                  &ctx);
+                                 PK_PRIORITY_IN_USE_AT_RESUME,
+                                 &ctx);
         }
+
         __pk_thread_map(thread);
         __pk_schedule();
     }
@@ -400,7 +442,7 @@ pk_thread_resume(PkThread *thread)
 ///
 /// If a sleeping thread is suspended, the sleep timer remains active but a
 /// timeout of the timer simply marks the thread as runnable, but does not
-/// resume the thread.  
+/// resume the thread.
 ///
 /// If a thread blocked on a semaphore is suspended, the thread no longer
 /// participates in the semaphore mutual exclusion. If the thread is later
@@ -419,28 +461,31 @@ pk_thread_resume(PkThread *thread)
 /// already suspended.
 ///
 /// \retval -PK_INVALID_THREAD_AT_SUSPEND1 The \a thread is a null (0) pointer
-/// 
-/// \retval -PK_INVALID_THREAD_AT_SUSPEND2 The \a thread is not active, 
+///
+/// \retval -PK_INVALID_THREAD_AT_SUSPEND2 The \a thread is not active,
 /// i.e. has completed or been deleted.
 
 int
-pk_thread_suspend(PkThread *thread)
+pk_thread_suspend(PkThread* thread)
 {
     PkMachineContext ctx;
 
-    if (PK_ERROR_CHECK_API) {
+    if (PK_ERROR_CHECK_API)
+    {
         PK_ERROR_IF((thread == 0), PK_INVALID_THREAD_AT_SUSPEND1);
     }
 
     pk_critical_section_enter(&ctx);
 
-    if (PK_ERROR_CHECK_API) {
+    if (PK_ERROR_CHECK_API)
+    {
         PK_ERROR_IF_CRITICAL(!__pk_thread_is_active(thread),
-                              PK_INVALID_THREAD_AT_SUSPEND2,
-                              &ctx);
+                             PK_INVALID_THREAD_AT_SUSPEND2,
+                             &ctx);
     }
 
-    if (__pk_thread_is_mapped(thread)) {
+    if (__pk_thread_is_mapped(thread))
+    {
 
         PK_KERN_TRACE("THREAD_SUSPENDED(%d)", thread->priority);
         __pk_thread_unmap(thread);
@@ -451,7 +496,7 @@ pk_thread_suspend(PkThread *thread)
 
     return PK_OK;
 }
-    
+
 
 /// Delete a thread
 ///
@@ -470,15 +515,16 @@ pk_thread_suspend(PkThread *thread)
 /// thread deletes itself this API does not return at all.
 ///
 /// \retval 0 Successful completion, including calls on a \a thread that has
-/// completed or had already been deleted. 
+/// completed or had already been deleted.
 ///
 ///
 /// \retval -PK_INVALID_THREAD_AT_DELETE The \a thread is a null (0) pointer.
 
 int
-pk_thread_delete(PkThread *thread)
+pk_thread_delete(PkThread* thread)
 {
-    if (PK_ERROR_CHECK_API) {
+    if (PK_ERROR_CHECK_API)
+    {
         PK_ERROR_IF(thread == 0, PK_INVALID_THREAD_AT_DELETE);
     }
 
@@ -507,7 +553,7 @@ pk_thread_delete(PkThread *thread)
 /// a successful completion this API does not return to the caller, which is
 /// always the thread context being completed.
 ///
-/// \retval -PK_ILLEGAL_CONTEXT_THREAD The API was not called from a thread 
+/// \retval -PK_ILLEGAL_CONTEXT_THREAD The API was not called from a thread
 /// context.
 
 // Note: Casting __pk_current_thread removes the 'volatile' attribute.
@@ -515,12 +561,13 @@ pk_thread_delete(PkThread *thread)
 int
 pk_complete(void)
 {
-    if (PK_ERROR_CHECK_API) {
+    if (PK_ERROR_CHECK_API)
+    {
         PK_ERROR_UNLESS_THREAD_CONTEXT();
     }
 
-    __pk_thread_delete((PkThread *)__pk_current_thread, 
-                        PK_THREAD_STATE_COMPLETED);
+    __pk_thread_delete((PkThread*)__pk_current_thread,
+                       PK_THREAD_STATE_COMPLETED);
 
     return PK_OK;
 }
@@ -552,17 +599,18 @@ pk_complete(void)
 ///
 /// \retval 0 Successful completion.
 ///
-/// \retval -PK_ILLEGAL_CONTEXT_THREAD The API was not called from a thread 
+/// \retval -PK_ILLEGAL_CONTEXT_THREAD The API was not called from a thread
 /// context.
 
 int
-pk_sleep(PkInterval interval) 
+pk_sleep(PkInterval interval)
 {
     PkTimebase  time;
     PkMachineContext ctx;
-    PkThread *current;
+    PkThread* current;
 
-    if (PK_ERROR_CHECK_API) {
+    if (PK_ERROR_CHECK_API)
+    {
         PK_ERROR_UNLESS_THREAD_CONTEXT();
     }
 
@@ -570,7 +618,7 @@ pk_sleep(PkInterval interval)
 
     pk_critical_section_enter(&ctx);
 
-    current = (PkThread *)__pk_current_thread;
+    current = (PkThread*)__pk_current_thread;
 
     current->timer.timeout = time;
     __pk_timer_schedule(&(current->timer));

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -44,9 +44,9 @@
 /// Once created with pk_timer_create() a timer can be scheduled with
 /// pk_timer_schedule() or pk_timer_schedule_absolute(), which queues the
 /// timer in the kernel time queue.  Timers can be cancelled by a call of
-/// pk_timer_cancel(). 
+/// pk_timer_cancel().
 ///
-/// Timers created with pk_timer_create() are always run as 
+/// Timers created with pk_timer_create() are always run as
 /// bottom-half handlers with interrupt preemption enabled. Timer callbacks are
 /// free to enter critical sections if required, but must
 /// always exit with interrupts enabled.
@@ -62,11 +62,12 @@
 /// \retval -PK_INVALID_TIMER_AT_CREATE The \a timer is a null (0) pointer.
 
 int
-pk_timer_create(PkTimer         *timer,
+pk_timer_create(PkTimer*         timer,
                 PkTimerCallback callback,
-                void             *arg)
+                void*             arg)
 {
-    if (PK_ERROR_CHECK_API) {
+    if (PK_ERROR_CHECK_API)
+    {
         PK_ERROR_IF((timer == 0), PK_INVALID_TIMER_AT_CREATE);
     }
 

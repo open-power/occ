@@ -5,7 +5,7 @@
 #
 # OpenPOWER OnChipController Project
 #
-# Contributors Listed Below - COPYRIGHT 2015,2016
+# Contributors Listed Below - COPYRIGHT 2015,2019
 # [+] International Business Machines Corp.
 #
 #
@@ -22,18 +22,28 @@
 # permissions and limitations under the License.
 #
 # IBM_PROLOG_END_TAG
-
 #  @file pkkernelfiles.mk
 #
 #  @brief mk for including architecture independent pk object files
-
+#
+#  @page ChangeLogs Change Logs
+#  @section pkkernelfiles.mk
+#  @verbatim
+#
+#
+# Change Log ******************************************************************
+# Flag     Defect/Feature  User        Date         Description
+# ------   --------------  ----------  ------------ -----------
+#
+# @endverbatim
+#
 ##########################################################################
 # Include
 ##########################################################################
 
 
 ##########################################################################
-# Object Files 
+# Object Files
 ##########################################################################
 PK-C-SOURCES = pk_core.c pk_init.c pk_stack_init.c pk_bh_core.c pk_debug_ptrs.c
 
