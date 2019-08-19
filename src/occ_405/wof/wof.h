@@ -400,15 +400,14 @@ typedef struct __attribute__ ((packed))
     uint32_t ocs_dirty_type1_count;  // count of number of times dirty with type act (1)
 } amec_wof_t;
 
-// Structure for sensors used in g_amec for AMESTER
-// these will contain raw values any clipping for WOF alg will be represented
-// in the parameter above in amec_wof_t
+// Structure for sensors used in g_amec for AMESTER for additional debug
 typedef struct __attribute__ ((packed))
 {
-    sensor_t ceff_ratio_vdd_sensor;
+    sensor_t ceff_ratio_vdd_sensor;  // raw ceff ratio Vdd
     sensor_t ceff_ratio_vdn_sensor;
     sensor_t v_ratio_sensor;
     sensor_t ocs_addr_sensor;
+    sensor_t ceff_ratio_vdd_adj_sensor; // final adjusted ratio should reflect amec_wof_t ceff_ratio_vdd
 } amec_wof_sensors_t;
 
 typedef struct __attribute__ ((packed))

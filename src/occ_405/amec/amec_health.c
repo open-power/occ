@@ -49,22 +49,22 @@ extern bool G_log_gpe1_error;
 //*************************************************************************/
 
 // Have we already called out the dimm for overtemp (bitmap of dimms)?
-dimm_sensor_flags_t G_dimm_overtemp_logged_bitmap = {0};
+dimm_sensor_flags_t G_dimm_overtemp_logged_bitmap = {{0}};
 
 // Have we already called out the dimm for timeout (bitmap of dimms)?
-dimm_sensor_flags_t G_dimm_timeout_logged_bitmap = {0};
+dimm_sensor_flags_t G_dimm_timeout_logged_bitmap = {{0}};
 
 // Are any dimms currently in the timedout state (bitmap of dimm)?
-dimm_sensor_flags_t G_dimm_temp_expired_bitmap = {0};
+dimm_sensor_flags_t G_dimm_temp_expired_bitmap = {{0}};
 
 // Have we already called out the membuf for timeout (bitmap of membufs)
-uint8_t G_membuf_timeout_logged_bitmap = 0;
+uint16_t G_membuf_timeout_logged_bitmap = 0;
 
 // Have we already called out the membuf for overtemp (bitmap of membufs)
-uint8_t G_membuf_overtemp_logged_bitmap = 0;
+uint16_t G_membuf_overtemp_logged_bitmap = 0;
 
-// Are any dimms currently in the timedout state (bitmap of membufs)
-uint8_t G_membuf_temp_expired_bitmap = 0;
+// Are any mem controllers currently in the timedout state (bitmap of membufs)
+uint16_t G_membuf_temp_expired_bitmap = 0;
 
 // Array to store the update tag of each core's temperature sensor
 uint32_t G_core_temp_update_tag[MAX_NUM_CORES] = {0};
@@ -87,8 +87,8 @@ uint64_t amec_mem_get_huid(uint8_t i_membuf, uint8_t i_dimm)
 // that the dimm should be marked.
 void amec_mem_mark_logged(uint8_t i_membuf,
                           uint8_t i_dimm,
-                          uint8_t* i_clog_bitmap,
-                          uint8_t* i_dlog_bitmap)
+                          uint16_t* i_clog_bitmap,
+                          uint8_t*  i_dlog_bitmap)
 {
     if(i_dimm == 0xff)
     {
@@ -116,7 +116,7 @@ void amec_mem_mark_logged(uint8_t i_membuf,
  */
 void amec_health_check_dimm_temp()
 {
-    uint16_t                    l_ot_error, l_cur_temp, l_max_temp;
+    uint16_t                    l_ot_error, l_max_temp;
     sensor_t                    *l_sensor;
     uint8_t                     l_dimm;
     uint8_t                     l_port;
@@ -127,14 +127,14 @@ void amec_health_check_dimm_temp()
 
     // Check to see if any dimms have reached the error temperature that
     // haven't been called out already
-    if(G_dimm_overtemp_bitmap.bigword == G_dimm_overtemp_logged_bitmap.bigword)
+    if( (G_dimm_overtemp_bitmap.dw[0] == G_dimm_overtemp_logged_bitmap.dw[0]) &&
+        (G_dimm_overtemp_bitmap.dw[1] == G_dimm_overtemp_logged_bitmap.dw[1]) )
     {
         return;
     }
 
     l_ot_error = g_amec->thermaldimm.ot_error;
     l_sensor = getSensorByGsid(TEMPDIMMTHRM);
-    l_cur_temp = l_sensor->sample;
     l_max_temp = l_sensor->sample_max;
 
     //iterate over all dimms
@@ -150,11 +150,12 @@ void amec_health_check_dimm_temp()
             continue;
         }
 
-        TRAC_ERR("amec_health_check_dimm_temp: DIMM reached error temp[%d]. current[%d], hist_max[%d], port[%d]",
-                 l_ot_error,
-                 l_cur_temp,
-                 l_max_temp,
-                 l_port);
+        // if the previous port had errors commit it so this port gets new error log
+        if(l_err)
+        {
+           commitErrl(&l_err);
+           l_callouts_count = 0;
+        }
 
         //find the dimm(s) that need to be called out for this port
         for(l_dimm = 0; l_dimm < NUM_DIMMS_PER_OCMB; l_dimm++)
@@ -173,12 +174,17 @@ void amec_health_check_dimm_temp()
             TRAC_ERR("amec_health_check_dimm_temp: DIMM%04X overtemp - %dC",
                      (l_port<<8)|l_dimm, l_fru->cur_temp);
 
-            // Create single elog with up to MAX_CALLOUTS
+            // Create single elog with up to MAX_CALLOUTS for this port
             if(l_callouts_count < ERRL_MAX_CALLOUTS)
             {
                 //If we don't have an error log for the callout, create one
                 if(!l_err)
                 {
+                    TRAC_ERR("amec_health_check_dimm_temp: Creating log for port[%d] OT bitmap[0x%02X] logged bitmap[0x%02X]",
+                             l_port,
+                             G_dimm_overtemp_bitmap.bytes[l_port],
+                             G_dimm_overtemp_logged_bitmap.bytes[l_port]);
+
                     /* @
                      * @errortype
                      * @moduleid    AMEC_HEALTH_CHECK_DIMM_TEMP
@@ -239,7 +245,7 @@ void amec_health_check_dimm_temp()
  */
 void amec_health_check_dimm_timeout()
 {
-    static dimm_sensor_flags_t L_temp_update_bitmap_prev = {0};
+    static dimm_sensor_flags_t L_temp_update_bitmap_prev = {{0}};
     dimm_sensor_flags_t l_need_inc, l_need_clr, l_temp_update_bitmap;
     uint8_t l_dimm, l_port;
     fru_temp_t* l_fru;
@@ -257,20 +263,26 @@ void amec_health_check_dimm_timeout()
         //3) sensor is enabled and updated and was updated on previous check (do nothing)
 
         //Grab snapshot of G_dimm_temp_updated_bitmap and clear it
-        l_temp_update_bitmap.bigword = G_dimm_temp_updated_bitmap.bigword;
-        G_dimm_temp_updated_bitmap.bigword = 0;
+        l_temp_update_bitmap.dw[0] = G_dimm_temp_updated_bitmap.dw[0];
+        l_temp_update_bitmap.dw[1] = G_dimm_temp_updated_bitmap.dw[1];
+        G_dimm_temp_updated_bitmap.dw[0] = 0;
+        G_dimm_temp_updated_bitmap.dw[1] = 0;
 
         //check if we need to increment any timers (haven't been updated in the last second)
-        l_need_inc.bigword = G_dimm_enabled_sensors.bigword & ~l_temp_update_bitmap.bigword;
+        l_need_inc.dw[0] = G_dimm_enabled_sensors.dw[0] & ~l_temp_update_bitmap.dw[0];
+        l_need_inc.dw[1] = G_dimm_enabled_sensors.dw[1] & ~l_temp_update_bitmap.dw[1];
 
         //check if we need to clear any timers (updated now but not updated previously)
-        l_need_clr.bigword = l_temp_update_bitmap.bigword & ~L_temp_update_bitmap_prev.bigword;
+        l_need_clr.dw[0] = l_temp_update_bitmap.dw[0] & ~L_temp_update_bitmap_prev.dw[0];
+        l_need_clr.dw[1] = l_temp_update_bitmap.dw[1] & ~L_temp_update_bitmap_prev.dw[1];
 
         //save off the previous bitmap of updated sensors for next time
-        L_temp_update_bitmap_prev.bigword = l_temp_update_bitmap.bigword;
+        L_temp_update_bitmap_prev.dw[0] = l_temp_update_bitmap.dw[0];
+        L_temp_update_bitmap_prev.dw[1] = l_temp_update_bitmap.dw[1];
 
         //only go further if we actually have work to do here.
-        if(!l_need_inc.bigword && !l_need_clr.bigword)
+        if(!l_need_inc.dw[0] && !l_need_inc.dw[1] &&
+           !l_need_clr.dw[0] && !l_need_clr.dw[1])
         {
             //nothing to do
             break;
@@ -415,7 +427,7 @@ void amec_health_check_dimm_timeout()
         }
 
         //skip clearing if no dimms need it
-        if(!l_need_clr.bigword)
+        if( (!l_need_clr.dw[0]) && (!l_need_clr.dw[1]) )
         {
             break;
         }
@@ -481,7 +493,7 @@ void amec_health_check_membuf_temp()
     sensor_t                    *l_sensor;
     uint32_t                    l_membuf;
     uint32_t                    l_callouts_count = 0;
-    uint8_t                     l_new_callouts;
+    uint16_t                    l_new_callouts;
     uint64_t                    l_huid;
     errlHndl_t                  l_err = NULL;
 
@@ -589,9 +601,9 @@ void amec_health_check_membuf_temp()
  */
 void amec_health_check_membuf_timeout()
 {
-    static uint8_t L_temp_update_bitmap_prev = 0;
-    uint8_t l_need_inc, l_need_clr, l_temp_update_bitmap;
-    uint8_t l_membuf;
+    static uint16_t L_temp_update_bitmap_prev = 0;
+    uint16_t l_need_inc, l_need_clr, l_temp_update_bitmap;
+    uint16_t l_membuf;
     fru_temp_t* l_fru;
     errlHndl_t  l_err = NULL;
     uint32_t    l_callouts_count = 0;

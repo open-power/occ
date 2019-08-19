@@ -1034,10 +1034,10 @@ void dbug_membuf_dump(const cmdh_fsp_cmd_t * i_cmd_ptr,
     uint8_t l_jj=0;
 
     // Determine the size of the data we are returning
-    l_datalen = (sizeof(OcmbMemData) * MAX_NUM_MEMBUFS);
+    l_datalen = (sizeof(OcmbMemData) * MAX_NUM_MEM_CONTROLLERS);
 
     // Fill out the response with the data we are returning
-    for(l_jj=0; l_jj < MAX_NUM_MEMBUFS; l_jj++)
+    for(l_jj=0; l_jj < MAX_NUM_MEM_CONTROLLERS; l_jj++)
     {
         OcmbMemData * l_sensor_cache_ptr = get_membuf_data_ptr(l_jj);
 

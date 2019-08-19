@@ -35,7 +35,7 @@
 // Externs
 //*************************************************************************
 extern dimm_sensor_flags_t G_dimm_temp_expired_bitmap;
-extern uint8_t G_membuf_temp_expired_bitmap;
+extern uint16_t G_membuf_temp_expired_bitmap;
 //*************************************************************************
 // Macros
 //*************************************************************************
@@ -271,7 +271,8 @@ void amec_controller_dimm_thermal()
     // Get TEMPDIMMTHRM sensor value
     l_sensor = getSensorByGsid(TEMPDIMMTHRM);
 
-    if(G_dimm_temp_expired_bitmap.bigword)
+    if(G_dimm_temp_expired_bitmap.dw[0] ||
+       G_dimm_temp_expired_bitmap.dw[1])
     {
        //we were not able to read one or more dimm temperatures.
        //Assume temperature is at the setpoint plus 1 degree C.

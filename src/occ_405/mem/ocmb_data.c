@@ -32,8 +32,6 @@
 #include "memory_data.h"
 
 // Used for specifing buffer allocations
-#define NUM_DATA_BUFF       MAX_NUM_MEMBUFS
-#define NUM_DOUBLE_BUF      1
 #define NUM_DATA_EMPTY_BUF  1
 
 //Notes MemData is defined @
@@ -43,7 +41,7 @@
 //   MemDataSensorCache scache;
 //   } MemData;
 //Global array of membuf data buffers
-GPE_BUFFER(OcmbMemData G_membuf_data[NUM_DATA_BUFF + NUM_DOUBLE_BUF + NUM_DATA_EMPTY_BUF]);
+GPE_BUFFER(OcmbMemData G_membuf_data[MAX_NUM_MEM_CONTROLLERS + NUM_DATA_EMPTY_BUF]);
 
 // parms for call to IPC_ST_MEMBUF_INIT_FUNCID
 GPE_BUFFER(MemBufConfigParms_t G_gpe_membuf_config_args);
@@ -51,10 +49,11 @@ GPE_BUFFER(MemBufConfigParms_t G_gpe_membuf_config_args);
 
 GPE_BUFFER(MemBufConfiguration_t G_membufConfiguration);
 //Global array of membuf data pointers
-OcmbMemData * G_membuf_data_ptrs[MAX_NUM_MEMBUFS] = { &G_membuf_data[0],
-    &G_membuf_data[1], &G_membuf_data[2], &G_membuf_data[3],
-    &G_membuf_data[4], &G_membuf_data[5], &G_membuf_data[6],
-    &G_membuf_data[7]};
+OcmbMemData * G_membuf_data_ptrs[MAX_NUM_MEM_CONTROLLERS] =
+  { &G_membuf_data[0],  &G_membuf_data[1],  &G_membuf_data[2],  &G_membuf_data[3],
+    &G_membuf_data[4],  &G_membuf_data[5],  &G_membuf_data[6],  &G_membuf_data[7],
+    &G_membuf_data[8],  &G_membuf_data[9],  &G_membuf_data[10], &G_membuf_data[11],
+    &G_membuf_data[12], &G_membuf_data[13], &G_membuf_data[14], &G_membuf_data[15]};
 
 //Global structures for gpe get mem data parms
 GPE_BUFFER(MemBufGetMemDataParms_t G_membuf_data_parms);
@@ -81,13 +80,13 @@ typedef struct membuf_data_task membuf_data_task_t;
 membuf_data_task_t G_membuf_data_task = {
     .start_membuf = 0,
     .current_membuf = 0,
-    .end_membuf = 7,
-    .prev_membuf = 7,
-    .membuf_data_ptr = &G_membuf_data[MAX_NUM_MEMBUFS]
+    .end_membuf = MAX_NUM_MEM_CONTROLLERS - 1,
+    .prev_membuf = MAX_NUM_MEM_CONTROLLERS - 1,
+    .membuf_data_ptr = &G_membuf_data[MAX_NUM_MEM_CONTROLLERS]
 };
 
-dimm_sensor_flags_t G_dimm_enabled_sensors = {0};
-dimm_sensor_flags_t G_dimm_present_sensors = {0};
+dimm_sensor_flags_t G_dimm_enabled_sensors = {{0}};
+dimm_sensor_flags_t G_dimm_present_sensors = {{0}};
 
 //AMEC needs to know when data for a membuf has been collected.
 uint32_t G_updated_membuf_mask = 0;
@@ -99,7 +98,7 @@ uint8_t  G_membuf_needs_recovery = 0;
 uint8_t G_membuf_queue_not_idle_traced = 0;
 
 // Mask that is used by procedure to specify which membufs are present
-#define ALL_MEMBUFS_MASK          0x000000ff
+#define ALL_MEMBUFS_MASK          0x0000ffff
 
 //Returns the bitmask for the passed in membuf (uint32_t)
 #define MEMBUF_BY_MASK(occ_membuf_id) \
@@ -124,8 +123,8 @@ void disable_membuf(uint32_t i_membuf)
                  i_membuf, G_present_membufs);
 
         TRAC_IMP("Updated bitmap of enabled dimm temperature sensors: 0x%08X %08X",
-                 G_dimm_enabled_sensors.words[0],
-                 G_dimm_enabled_sensors.words[1]);
+                 (uint32_t)(G_dimm_enabled_sensors.dw[0]>> 32),
+                 (uint32_t)G_dimm_enabled_sensors.dw[0]);
     }
 }
 
@@ -159,7 +158,7 @@ void ocmb_init(void)
 
         // Configure OCC_405 global membuf present and sensor enabled flags
         G_present_membufs = 0;
-        for(membuf_idx=0; membuf_idx<MAX_NUM_MEMBUFS; ++membuf_idx)
+        for(membuf_idx=0; membuf_idx<MAX_NUM_MEM_CONTROLLERS; ++membuf_idx)
         {
             // Check if this membuf is even possible to be present
             if( MEMBUF_BY_MASK(membuf_idx) )
@@ -187,9 +186,11 @@ void ocmb_init(void)
 
         G_dimm_present_sensors = G_dimm_enabled_sensors;
 
-        TRAC_IMP("bitmap of present dimm temperature sensors: 0x%08X%08X",
-                 G_dimm_enabled_sensors.words[0],
-                 G_dimm_enabled_sensors.words[1]);
+        TRAC_IMP("bitmap of present dimm temperature sensors: 0x%08X%08X %08X%08X",
+                 (uint32_t)(G_dimm_enabled_sensors.dw[0]>>32),
+                 (uint32_t)G_dimm_enabled_sensors.dw[0],
+                 (uint32_t)(G_dimm_enabled_sensors.dw[1]>>32),
+                 (uint32_t)G_dimm_enabled_sensors.dw[1]);
 
         // Setup the GPE request to do sensor data collection
         G_membuf_data_parms.error.ffdc = 0;
@@ -271,14 +272,14 @@ OcmbMemData * get_membuf_data_ptr(const uint8_t i_occ_membuf_id)
     //The caller needs to send in a valid OCC membuf id. Since type is uchar
     //so there is no need to check for case less than 0.
     //If membuf id is invalid then returns NULL.
-    if( i_occ_membuf_id < MAX_NUM_MEMBUFS )
+    if( i_occ_membuf_id < MAX_NUM_MEM_CONTROLLERS )
     {
         //Returns a pointer to the most up-to-date membuf data.
         return G_membuf_data_ptrs[i_occ_membuf_id];
     }
     else
     {
-        //Core id outside the range
+        //Memory buffer id outside the range
         TRAC_ERR("get_membuf_data_ptr: Invalid OCC membuf id [0x%x]", i_occ_membuf_id);
         return( NULL );
     }
@@ -564,7 +565,7 @@ void ocmb_data( void )
         // (this is very handy for debug...)
         if( !MEMBUF_PRESENT(l_membuf_data_ptr->current_membuf))
         {
-            G_membuf_data_ptrs[l_membuf_data_ptr->current_membuf] = &G_membuf_data[9];
+            G_membuf_data_ptrs[l_membuf_data_ptr->current_membuf] = &G_membuf_data[MAX_NUM_MEM_CONTROLLERS];
         }
 
         //Update current membuf

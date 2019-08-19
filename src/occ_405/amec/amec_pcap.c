@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -540,8 +540,6 @@ void amec_ppb_fmax_calc(void)
 
     //Set the slaves local copy of ppb_fmax to that received from Master OCC.
     g_amec->proc[0].pwr_votes.ppb_fmax = G_dcom_slv_inbox_doorbell_rx.ppb_fmax;
-    // For debug
-    sensor_update( AMECSENSOR_PTR(PROBE250US0), g_amec->proc[0].pwr_votes.ppb_fmax);
 
     //CALCULATION done by MASTER OCC only.
     if(OCC_MASTER == G_occ_role)

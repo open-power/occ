@@ -100,27 +100,6 @@
     MAIN_MEM_SENSOR(gsid_prefix##5 , smf_mode, master_only)
 
 /**
- * Macro to build main_mem_sensor_t instances for all memory DIMMs.
- */
-#define MAIN_MEM_DIMM_SENSORS(gsid_prefix, smf_mode, master_only) \
-    MAIN_MEM_SENSOR(gsid_prefix##00 , smf_mode, master_only) , \
-    MAIN_MEM_SENSOR(gsid_prefix##01 , smf_mode, master_only) , \
-    MAIN_MEM_SENSOR(gsid_prefix##02 , smf_mode, master_only) , \
-    MAIN_MEM_SENSOR(gsid_prefix##03 , smf_mode, master_only) , \
-    MAIN_MEM_SENSOR(gsid_prefix##04 , smf_mode, master_only) , \
-    MAIN_MEM_SENSOR(gsid_prefix##05 , smf_mode, master_only) , \
-    MAIN_MEM_SENSOR(gsid_prefix##06 , smf_mode, master_only) , \
-    MAIN_MEM_SENSOR(gsid_prefix##07 , smf_mode, master_only) , \
-    MAIN_MEM_SENSOR(gsid_prefix##08 , smf_mode, master_only) , \
-    MAIN_MEM_SENSOR(gsid_prefix##09 , smf_mode, master_only) , \
-    MAIN_MEM_SENSOR(gsid_prefix##10 , smf_mode, master_only) , \
-    MAIN_MEM_SENSOR(gsid_prefix##11 , smf_mode, master_only) , \
-    MAIN_MEM_SENSOR(gsid_prefix##12 , smf_mode, master_only) , \
-    MAIN_MEM_SENSOR(gsid_prefix##13 , smf_mode, master_only) , \
-    MAIN_MEM_SENSOR(gsid_prefix##14 , smf_mode, master_only) , \
-    MAIN_MEM_SENSOR(gsid_prefix##15 , smf_mode, master_only)
-
-/**
  * Macro to build main_mem_sensor_t instances for all memory controllers.
  */
 #define MAIN_MEM_MEMORY_SENSORS(gsid_prefix, smf_mode, master_only) \
@@ -131,7 +110,15 @@
     MAIN_MEM_SENSOR(gsid_prefix##4 , smf_mode, master_only) , \
     MAIN_MEM_SENSOR(gsid_prefix##5 , smf_mode, master_only) , \
     MAIN_MEM_SENSOR(gsid_prefix##6 , smf_mode, master_only) , \
-    MAIN_MEM_SENSOR(gsid_prefix##7 , smf_mode, master_only)
+    MAIN_MEM_SENSOR(gsid_prefix##7 , smf_mode, master_only) , \
+    MAIN_MEM_SENSOR(gsid_prefix##8 , smf_mode, master_only) , \
+    MAIN_MEM_SENSOR(gsid_prefix##9 , smf_mode, master_only) , \
+    MAIN_MEM_SENSOR(gsid_prefix##10, smf_mode, master_only) , \
+    MAIN_MEM_SENSOR(gsid_prefix##11, smf_mode, master_only) , \
+    MAIN_MEM_SENSOR(gsid_prefix##12, smf_mode, master_only) , \
+    MAIN_MEM_SENSOR(gsid_prefix##13, smf_mode, master_only) , \
+    MAIN_MEM_SENSOR(gsid_prefix##14, smf_mode, master_only) , \
+    MAIN_MEM_SENSOR(gsid_prefix##15, smf_mode, master_only)
 
 /**
  * Macro to build main_mem_sensor_t instances for all APSS channels.

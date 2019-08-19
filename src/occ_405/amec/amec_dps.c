@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -376,8 +376,7 @@ void amec_dps_main(void)
         // Find the first valid core and send its frequency
         if (CORE_PRESENT(l_idx) && !CORE_OFFLINE(l_idx))
         {
-            G_dcom_slv_outbox_tx.factual =
-                AMECSENSOR_ARRAY_PTR(FREQREQC0,l_idx)->sample;
+            G_dcom_slv_outbox_tx.factual = g_amec->proc[0].core[l_idx].f_request;
             break;
         }
     }

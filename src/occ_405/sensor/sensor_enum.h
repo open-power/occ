@@ -60,15 +60,6 @@ enum e_gsid
     AMESSdur6,         // Combined duration of the AMEC Master & Slave 6
     AMESSdur7,         // Combined duration of the AMEC Master & Slave 7
 
-    PROBE250US0,       // Internal Sensor for debug via AMESTER
-    PROBE250US1,       // Internal Sensor for debug via AMESTER
-    PROBE250US2,       // Internal Sensor for debug via AMESTER
-    PROBE250US3,       // Internal Sensor for debug via AMESTER
-    PROBE250US4,       // Internal Sensor for debug via AMESTER
-    PROBE250US5,       // Internal Sensor for debug via AMESTER
-    PROBE250US6,       // Internal Sensor for debug via AMESTER
-    PROBE250US7,       // Internal Sensor for debug via AMESTER
-
     GPEtickdur0,       // Duration on the GPE0 Engine
     GPEtickdur1,       // Duration on the GPE1 Engine
     RTLtickdur,        // Duration on the RTL tick interrupt
@@ -77,9 +68,6 @@ enum e_gsid
     // System Sensors
     // ------------------------------------------------------
     PWRSYS,            // System DC Power (from APSS)
-    PWRFAN,            // Fan Power (from APSS)
-    PWRIO,             // IO Subsystem Power (from APSS)
-    PWRSTORE,          // Storage Subsys Power (from APSS)
     PWRGPU,            // GPU Subsystem Power (from APSS) e.g. Nvidia GPU
     PWRAPSSCH0,        // These PWRAPSSCH sensors are used to report the power
     PWRAPSSCH1,        // provided by each of the 16 APSS channels.
@@ -149,32 +137,6 @@ enum e_gsid
     // ------------------------------------------------------
     // Core Sensors
     // ------------------------------------------------------
-
-    FREQREQC0,   // requested frequency
-    FREQREQC1,
-    FREQREQC2,
-    FREQREQC3,
-    FREQREQC4,
-    FREQREQC5,
-    FREQREQC6,
-    FREQREQC7,
-    FREQREQC8,
-    FREQREQC9,
-    FREQREQC10,
-    FREQREQC11,
-    FREQREQC12,
-    FREQREQC13,
-    FREQREQC14,
-    FREQREQC15,
-    FREQREQC16,
-    FREQREQC17,
-    FREQREQC18,
-    FREQREQC19,
-    FREQREQC20,
-    FREQREQC21,
-    FREQREQC22,
-    FREQREQC23,
-
     FREQAC0,     // actual frequency
     FREQAC1,
     FREQAC2,
@@ -461,6 +423,14 @@ enum e_gsid
     MRDM5,
     MRDM6,
     MRDM7,
+    MRDM8,
+    MRDM9,
+    MRDM10,
+    MRDM11,
+    MRDM12,
+    MRDM13,
+    MRDM14,
+    MRDM15,
 
     MWRM0,          // Memory write requests per sec for MC
     MWRM1,
@@ -470,6 +440,14 @@ enum e_gsid
     MWRM5,
     MWRM6,
     MWRM7,
+    MWRM8,
+    MWRM9,
+    MWRM10,
+    MWRM11,
+    MWRM12,
+    MWRM13,
+    MWRM14,
+    MWRM15,
 
     MEMSPM0,        // Current memory throttle level setting for MCA
     MEMSPM1,
@@ -479,6 +457,14 @@ enum e_gsid
     MEMSPM5,
     MEMSPM6,
     MEMSPM7,
+    MEMSPM8,
+    MEMSPM9,
+    MEMSPM10,
+    MEMSPM11,
+    MEMSPM12,
+    MEMSPM13,
+    MEMSPM14,
+    MEMSPM15,
 
     MEMSPSTATM0,    // Static memory throttle level setting for MCA
     MEMSPSTATM1,
@@ -488,24 +474,14 @@ enum e_gsid
     MEMSPSTATM5,
     MEMSPSTATM6,
     MEMSPSTATM7,
-
-    MIRCM0,
-    MIRCM1,
-    MIRCM2,
-    MIRCM3,
-    MIRCM4,
-    MIRCM5,
-    MIRCM6,
-    MIRCM7,
-
-    MLP2M0,         // Number of LP2 exits for memory controller
-    MLP2M1,
-    MLP2M2,
-    MLP2M3,
-    MLP2M4,
-    MLP2M5,
-    MLP2M6,
-    MLP2M7,
+    MEMSPSTATM8,
+    MEMSPSTATM9,
+    MEMSPSTATM10,
+    MEMSPSTATM11,
+    MEMSPSTATM12,
+    MEMSPSTATM13,
+    MEMSPSTATM14,
+    MEMSPSTATM15,
 
     TEMPMEMBUF0,    // Individual Memory Buffer temperatures
     TEMPMEMBUF1,
@@ -515,184 +491,21 @@ enum e_gsid
     TEMPMEMBUF5,
     TEMPMEMBUF6,
     TEMPMEMBUF7,
-
-    TEMPDIMMAXM0,   // Max DIMM temperature for Memory Buffer
-    TEMPDIMMAXM1,
-    TEMPDIMMAXM2,
-    TEMPDIMMAXM3,
-    TEMPDIMMAXM4,
-    TEMPDIMMAXM5,
-    TEMPDIMMAXM6,
-    TEMPDIMMAXM7,
-
-    LOCDIMMAXM0,    // Location of Max DIMM temperature for Memory Buffer
-    LOCDIMMAXM1,
-    LOCDIMMAXM2,
-    LOCDIMMAXM3,
-    LOCDIMMAXM4,
-    LOCDIMMAXM5,
-    LOCDIMMAXM6,
-    LOCDIMMAXM7,
+    TEMPMEMBUF8,
+    TEMPMEMBUF9,
+    TEMPMEMBUF10,
+    TEMPMEMBUF11,
+    TEMPMEMBUF12,
+    TEMPMEMBUF13,
+    TEMPMEMBUF14,
+    TEMPMEMBUF15,
 
     MEMPWRTHROT,    // Count of memory throttled due to power
     MEMOTTHROT,     // Count of memory throttled due to over temperature
 
     // ------------------------------------------------------
-    // Memory Buffers - 8 MemC/Proc - 1 MemB/MemC - 2 PP/MemB
+    // Memory Buffers
     // ------------------------------------------------------
-    MACM0C0P0,
-    MACM0C0P1,
-    MACM1C0P0,
-    MACM1C0P1,
-    MACM2C0P0,
-    MACM2C0P1,
-    MACM3C0P0,
-    MACM3C0P1,
-    MACM4C0P0,
-    MACM4C0P1,
-    MACM5C0P0,
-    MACM5C0P1,
-    MACM6C0P0,
-    MACM6C0P1,
-    MACM7C0P0,
-    MACM7C0P1,
-
-    MPUM0C0P0,
-    MPUM0C0P1,
-    MPUM1C0P0,
-    MPUM1C0P1,
-    MPUM2C0P0,
-    MPUM2C0P1,
-    MPUM3C0P0,
-    MPUM3C0P1,
-    MPUM4C0P0,
-    MPUM4C0P1,
-    MPUM5C0P0,
-    MPUM5C0P1,
-    MPUM6C0P0,
-    MPUM6C0P1,
-    MPUM7C0P0,
-    MPUM7C0P1,
-
-    MIRBM0C0P0,
-    MIRBM0C0P1,
-    MIRBM1C0P0,
-    MIRBM1C0P1,
-    MIRBM2C0P0,
-    MIRBM2C0P1,
-    MIRBM3C0P0,
-    MIRBM3C0P1,
-    MIRBM4C0P0,
-    MIRBM4C0P1,
-    MIRBM5C0P0,
-    MIRBM5C0P1,
-    MIRBM6C0P0,
-    MIRBM6C0P1,
-    MIRBM7C0P0,
-    MIRBM7C0P1,
-
-    MIRLM0C0P0,
-    MIRLM0C0P1,
-    MIRLM1C0P0,
-    MIRLM1C0P1,
-    MIRLM2C0P0,
-    MIRLM2C0P1,
-    MIRLM3C0P0,
-    MIRLM3C0P1,
-    MIRLM4C0P0,
-    MIRLM4C0P1,
-    MIRLM5C0P0,
-    MIRLM5C0P1,
-    MIRLM6C0P0,
-    MIRLM6C0P1,
-    MIRLM7C0P0,
-    MIRLM7C0P1,
-
-    MIRMM0C0P0,
-    MIRMM0C0P1,
-    MIRMM1C0P0,
-    MIRMM1C0P1,
-    MIRMM2C0P0,
-    MIRMM2C0P1,
-    MIRMM3C0P0,
-    MIRMM3C0P1,
-    MIRMM4C0P0,
-    MIRMM4C0P1,
-    MIRMM5C0P0,
-    MIRMM5C0P1,
-    MIRMM6C0P0,
-    MIRMM6C0P1,
-    MIRMM7C0P0,
-    MIRMM7C0P1,
-
-    MIRHM0C0P0,
-    MIRHM0C0P1,
-    MIRHM1C0P0,
-    MIRHM1C0P1,
-    MIRHM2C0P0,
-    MIRHM2C0P1,
-    MIRHM3C0P0,
-    MIRHM3C0P1,
-    MIRHM4C0P0,
-    MIRHM4C0P1,
-    MIRHM5C0P0,
-    MIRHM5C0P1,
-    MIRHM6C0P0,
-    MIRHM6C0P1,
-    MIRHM7C0P0,
-    MIRHM7C0P1,
-
-    MTSM0C0P0,
-    MTSM0C0P1,
-    MTSM1C0P0,
-    MTSM1C0P1,
-    MTSM2C0P0,
-    MTSM2C0P1,
-    MTSM3C0P0,
-    MTSM3C0P1,
-    MTSM4C0P0,
-    MTSM4C0P1,
-    MTSM5C0P0,
-    MTSM5C0P1,
-    MTSM6C0P0,
-    MTSM6C0P1,
-    MTSM7C0P0,
-    MTSM7C0P1,
-
-    M4RDM0C0P0,
-    M4RDM0C0P1,
-    M4RDM1C0P0,
-    M4RDM1C0P1,
-    M4RDM2C0P0,
-    M4RDM2C0P1,
-    M4RDM3C0P0,
-    M4RDM3C0P1,
-    M4RDM4C0P0,
-    M4RDM4C0P1,
-    M4RDM5C0P0,
-    M4RDM5C0P1,
-    M4RDM6C0P0,
-    M4RDM6C0P1,
-    M4RDM7C0P0,
-    M4RDM7C0P1,
-
-    M4WRM0C0P0,
-    M4WRM0C0P1,
-    M4WRM1C0P0,
-    M4WRM1C0P1,
-    M4WRM2C0P0,
-    M4WRM2C0P1,
-    M4WRM3C0P0,
-    M4WRM3C0P1,
-    M4WRM4C0P0,
-    M4WRM4C0P1,
-    M4WRM5C0P0,
-    M4WRM5C0P1,
-    M4WRM6C0P0,
-    M4WRM6C0P1,
-    M4WRM7C0P0,
-    M4WRM7C0P1,
-
     TEMPMEMBUFTHRM, // Hottest memory buffer temperature for this OCC
     TEMPDIMMTHRM,   // Hottest DIMM temperature across all DIMMs for this OCC
 
@@ -718,6 +531,7 @@ enum e_gsid
     CEFFVDNRATIO,
     VRATIO,
     OCS_ADDR,
+    CEFFVDDRATIOADJ,
 
     // ------------------------------------------------------
     // END of Sensor List (this must be last entry)

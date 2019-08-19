@@ -53,9 +53,6 @@
 //*************************************************************************
 // Defines/Enums
 //*************************************************************************
-// This is an arbitrary number of FW probes for use internally.
-#define NUM_AMEC_FW_PROBES  8
-
 // Number of States in the AMEC State Machine (= AMEC_SMH_STATES_PER_LVL)
 #define NUM_AMEC_SMH_STATES AMEC_SMH_STATES_PER_LVL
 
@@ -78,7 +75,6 @@ typedef struct
   sensor_t amessdur[NUM_AMEC_SMH_STATES];
   sensor_t gpetickdur[NUM_GPE_ENGINES];
   sensor_t prcdupdatedur;
-  sensor_t probe250us[NUM_AMEC_FW_PROBES];
   sensor_t voltvddsense;
   sensor_t voltvdnsense;
 
@@ -87,36 +83,6 @@ typedef struct
   uint8_t  dps_no_update_flag;
 
 } amec_fw_t;
-
-//-------------------------------------------------------------
-// Fan Sub-structure
-//-------------------------------------------------------------
-typedef struct
-{
-  // Sensors
-  sensor_t pwr250usfan;
-
-} amec_fans_t;
-
-//-------------------------------------------------------------
-// IO Sub-structure
-//-------------------------------------------------------------
-typedef struct
-{
-  // Sensors
-  sensor_t pwr250usio;
-
-} amec_io_t;
-
-//-------------------------------------------------------------
-// Storage Sub-structure
-//-------------------------------------------------------------
-typedef struct
-{
-  // Sensors
-  sensor_t pwr250usstore;
-
-} amec_store_t;
 
 //-------------------------------------------------------------
 // Proc Sub-structure
@@ -134,28 +100,8 @@ typedef struct
 {
     uint32_t wr_cnt_accum;
     uint32_t rd_cnt_accum;
-    uint32_t pwrup_cnt_accum;
-    uint32_t act_cnt_accum;
-    uint32_t fr2_cnt_accum;
-    uint32_t l4_rd_cnt_accum;
-    uint32_t l4_wr_cnt_accum;
-    uint32_t intreq_base_accum;
-    uint32_t intreq_low_accum;
-    uint32_t intreq_med_accum;
-    uint32_t intreq_high_accum;
-
-    uint16_t fr2_cnt;
-    uint16_t act_cnt;
-    uint16_t pwrup_cnt;
     uint16_t memwrite2ms;
     uint16_t memread2ms;
-    uint16_t l4wr2ms;
-    uint16_t l4rd2ms;
-    uint16_t mirb2ms;
-    uint16_t mirl2ms;
-    uint16_t mirm2ms;
-    uint16_t mirh2ms;
-
 } amec_chpair_perf_counter_t;
 
 //convenient format for storing throttle settings
@@ -171,32 +117,12 @@ typedef union
 
 typedef struct
 {
-  // Sensors
-  sensor_t mac2ms;
-  sensor_t mpu2ms;
-  sensor_t mirb2ms;
-  sensor_t mirl2ms;
-  sensor_t mirm2ms;
-  sensor_t mirh2ms;
-  sensor_t mts2ms;
-  sensor_t m4rd2ms;
-  sensor_t m4wr2ms;
-
   amec_chpair_perf_counter_t perf;
 
   // The most recent throttle value sent to this MBA
   // This is used to only send values to the membuf when it changes.
   amec_mem_speed_t last_mem_speed_sent;
 } amec_portpair_t;
-
-typedef struct
-{
-  uint32_t intreq_highlatency_accum;
-  uint32_t lp2exit_accum;
-
-  uint16_t mirc2ms;
-  uint16_t mlp2_2ms;
-} amec_membuf_perf_counter_t;
 
 #define FRU_SENSOR_STATUS_ERROR         0x02
 #define FRU_SENSOR_STATUS_VALID_OLD     0x04
@@ -222,17 +148,6 @@ typedef struct
       amec_portpair_t       mba[NUM_PORT_PAIRS_PER_MEM_BUF];
   };  // Just a different name to refer to same thing
 
-  // Sensors
-  sensor_t mlp2ms;
-  sensor_t mirc2ms;
-
-  //hottest dimm temperature behind this membuf
-  sensor_t tempdimmax;
-
-  //which of the 8 dimm temperatures was the hottest temperature
-  //(only changes when the max of tempdimmax changes)
-  sensor_t locdimmax;
-
   // Current dimm tempuratures
   fru_temp_t dimm_temps[NUM_DIMMS_PER_OCMB];
 
@@ -244,8 +159,6 @@ typedef struct
 
   // Sensor ID for reporting temperature to BMC and FSP
   uint32_t  temp_sid;
-
-  amec_membuf_perf_counter_t perf;
 
 } amec_membuf_t;
 
@@ -285,7 +198,6 @@ typedef struct
   //-----------------------------------
   // Sensors
   //-----------------------------------
-  sensor_t freq250us;
   sensor_t freqa;
   sensor_t ips4ms;
   sensor_t mcpifd4ms;
@@ -645,15 +557,6 @@ typedef struct
   // Physical Structure
   //
   //---------------------------------------------------------
-  // IO Data
-  amec_io_t     io;
-
-  // Storage Data
-  amec_store_t  storage;
-
-  // Fan Data
-  amec_fans_t   fan;
-
   // Overall System Data
   amec_systemwide_t    sys;
 
@@ -717,7 +620,6 @@ typedef struct
 
   // 32 bit counter of 250usec ticks
   uint32_t      r_cnt;
-  void          * ptr_probe250us[NUM_AMEC_FW_PROBES];       // array holding ptrs to data that is read by probe250us sensors
   // 32-bit ptr to streaming buffer which contains 16 bit elements
   uint16_t      *ptr_stream_buffer;
   // 32-bit index for next write into streaming buffer
@@ -744,9 +646,6 @@ typedef struct
   uint8_t       reset_prep;
   // holds the sum of all the memory power sensors (32msec)
   uint16_t      total_memory_power;
-  uint16_t  probetemp[NUM_AMEC_FW_PROBES];                  // array holding temporary probe data
-  uint8_t       size_probe250us[NUM_AMEC_FW_PROBES];        // size of object pointed at by each probe (1 byte, 2 bytes, or 4 bytes)
-  uint8_t       index_probe250us[NUM_AMEC_FW_PROBES];       // index offset to read object pointed to by each probe (only valid for size > 2)
 
 } amec_sys_t;
 

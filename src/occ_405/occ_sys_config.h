@@ -42,9 +42,9 @@
 #define NUM_CORES_PER_QUAD       4
 #define MAX_THREADS_PER_CORE     4
 #define MAX_NUM_CHIP_MODULES     4
-#define MAX_NUM_MEM_CONTROLLERS  8
-#define MAX_NUM_MEMBUFS          8
-#define MAX_NUM_OCMBS            8
+#define MAX_NUM_MEM_CONTROLLERS  16
+#define MAX_NUM_OCMBS            16
+#define MAX_NUM_CHOM_MEM_CTRL    8  // todo allow 16 RTC: 211908
 #define NUM_PROC_VRMS            2
 #define MAX_GPU_PRES_SIGNALS     6
 #define GPU_PRES_SIGN_PER_OCC    3
@@ -412,8 +412,8 @@ typedef struct
   // --------------------------------------
   // Memory Configuration Data
   // --------------------------------------
-  uint32_t membuf_huids[MAX_NUM_MEMBUFS];
-  uint32_t dimm_huids[MAX_NUM_MEMBUFS][NUM_DIMMS_PER_OCMB];
+  uint32_t membuf_huids[MAX_NUM_OCMBS];
+  uint32_t dimm_huids[MAX_NUM_OCMBS][NUM_DIMMS_PER_OCMB];
   uint8_t mem_type;
   uint8_t ips_mem_pwr_ctl;     // IPS memory power control
   uint8_t default_mem_pwr_ctl; // default memory power control

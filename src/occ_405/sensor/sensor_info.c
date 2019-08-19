@@ -67,15 +67,9 @@
 // representation of the sensor name
 #define SENSOR_W_NUM(sensor_name, num) sensor_name##num
 
-#define SENSOR_W_MEMBUF_NUM_HELPER(sensor_name, memc,membufL,membuf,ppL,pp) sensor_name##memc##membufL##membuf##ppL##pp
-#define SENSOR_W_MEMBUF_NUM(sensor_name, memc,membuf,pp) SENSOR_W_MEMBUF_NUM_HELPER(sensor_name,memc,C,membuf,P,pp)
-
 // These will stringify the enum so to create the sensor name.  This will help
 // save keystrokes, as well as reduce typos & copy paste errors.
 #define SENSOR_STRING(sensor_name) #sensor_name
-
-#define MEMBUF_SENSOR_STRING_HELPER(sensor_name, memc,membufL,membuf,ppL,pp) SENSOR_STRING(sensor_name##memc##membufL##membuf##ppL##pp)
-#define MEMBUF_SENSOR_STRING(sensor_name,memc,membuf,pp)  MEMBUF_SENSOR_STRING_HELPER(sensor_name, memc,C,membuf,P,pp)
 
 // This will create a set of 6 sensor entries into the sensor list table.
 // (one for each quad...)  The base name of the sensor enum must be passed
@@ -148,50 +142,29 @@
   [SENSOR_W_NUM(sensor_name,23)] = {.name = SENSOR_STRING(sensor_name ## 23),   \
                    .sensor = { units, type, location, number, frequency, scaleFactor },}
 
-// This will create a set of 8 sensor entries into the sensor list table.
-// (one for each memc...)  The base name of the sensor enum must be passed
+// This will create a set of 16 sensor entries into the sensor list table.
+// (one for each mem controller...)  The base name of the sensor enum must be passed
 // and this macro will take care of the paste & stringify operations.
 #define SENS_MEMC_ENTRY_SET(sensor_name, units, type, location, number, frequency, scaleFactor)  \
-  [SENSOR_W_NUM(sensor_name,0)] = {.name = SENSOR_STRING(sensor_name ## 0),   \
+  [SENSOR_W_NUM(sensor_name,0)] = {.name = SENSOR_STRING(sensor_name ## 00),   \
                    .sensor = { units, type, location, number, frequency, scaleFactor },}, \
-  [SENSOR_W_NUM(sensor_name,1)] = {.name = SENSOR_STRING(sensor_name ## 1),   \
+  [SENSOR_W_NUM(sensor_name,1)] = {.name = SENSOR_STRING(sensor_name ## 01),   \
                    .sensor = { units, type, location, number, frequency, scaleFactor },}, \
-  [SENSOR_W_NUM(sensor_name,2)] = {.name = SENSOR_STRING(sensor_name ## 2),   \
+  [SENSOR_W_NUM(sensor_name,2)] = {.name = SENSOR_STRING(sensor_name ## 02),   \
                    .sensor = { units, type, location, number, frequency, scaleFactor },}, \
-  [SENSOR_W_NUM(sensor_name,3)] = {.name = SENSOR_STRING(sensor_name ## 3),   \
+  [SENSOR_W_NUM(sensor_name,3)] = {.name = SENSOR_STRING(sensor_name ## 03),   \
                    .sensor = { units, type, location, number, frequency, scaleFactor },}, \
-  [SENSOR_W_NUM(sensor_name,4)] = {.name = SENSOR_STRING(sensor_name ## 4),   \
+  [SENSOR_W_NUM(sensor_name,4)] = {.name = SENSOR_STRING(sensor_name ## 04),   \
                    .sensor = { units, type, location, number, frequency, scaleFactor },}, \
-  [SENSOR_W_NUM(sensor_name,5)] = {.name = SENSOR_STRING(sensor_name ## 5),   \
+  [SENSOR_W_NUM(sensor_name,5)] = {.name = SENSOR_STRING(sensor_name ## 05),   \
                    .sensor = { units, type, location, number, frequency, scaleFactor },}, \
-  [SENSOR_W_NUM(sensor_name,6)] = {.name = SENSOR_STRING(sensor_name ## 6),   \
+  [SENSOR_W_NUM(sensor_name,6)] = {.name = SENSOR_STRING(sensor_name ## 06),   \
                    .sensor = { units, type, location, number, frequency, scaleFactor },}, \
-  [SENSOR_W_NUM(sensor_name,7)] = {.name = SENSOR_STRING(sensor_name ## 7),   \
-                   .sensor = { units, type, location, number, frequency, scaleFactor },}
-
-// This will create a set of 16 sensor entries into the sensor list table.
-// (one for each DIMM...)  The base name of the sensor enum must be passed
-// and this macro will take care of the paste & stringify operations.
-#define SENS_DIMM_ENTRY_SET(sensor_name, units, type, location, number, frequency, scaleFactor)  \
-  [SENSOR_W_NUM(sensor_name,00)] = {.name = SENSOR_STRING(sensor_name ## 00),   \
+  [SENSOR_W_NUM(sensor_name,7)] = {.name = SENSOR_STRING(sensor_name ## 07),   \
                    .sensor = { units, type, location, number, frequency, scaleFactor },}, \
-  [SENSOR_W_NUM(sensor_name,01)] = {.name = SENSOR_STRING(sensor_name ## 01),   \
+  [SENSOR_W_NUM(sensor_name,8)] = {.name = SENSOR_STRING(sensor_name ## 08),   \
                    .sensor = { units, type, location, number, frequency, scaleFactor },}, \
-  [SENSOR_W_NUM(sensor_name,02)] = {.name = SENSOR_STRING(sensor_name ## 02),   \
-                   .sensor = { units, type, location, number, frequency, scaleFactor },}, \
-  [SENSOR_W_NUM(sensor_name,03)] = {.name = SENSOR_STRING(sensor_name ## 03),   \
-                   .sensor = { units, type, location, number, frequency, scaleFactor },}, \
-  [SENSOR_W_NUM(sensor_name,04)] = {.name = SENSOR_STRING(sensor_name ## 04),   \
-                   .sensor = { units, type, location, number, frequency, scaleFactor },}, \
-  [SENSOR_W_NUM(sensor_name,05)] = {.name = SENSOR_STRING(sensor_name ## 05),   \
-                   .sensor = { units, type, location, number, frequency, scaleFactor },}, \
-  [SENSOR_W_NUM(sensor_name,06)] = {.name = SENSOR_STRING(sensor_name ## 06),   \
-                   .sensor = { units, type, location, number, frequency, scaleFactor },}, \
-  [SENSOR_W_NUM(sensor_name,07)] = {.name = SENSOR_STRING(sensor_name ## 07),   \
-                   .sensor = { units, type, location, number, frequency, scaleFactor },}, \
-  [SENSOR_W_NUM(sensor_name,08)] = {.name = SENSOR_STRING(sensor_name ## 08),   \
-                   .sensor = { units, type, location, number, frequency, scaleFactor },}, \
-  [SENSOR_W_NUM(sensor_name,09)] = {.name = SENSOR_STRING(sensor_name ## 09),   \
+  [SENSOR_W_NUM(sensor_name,9)] = {.name = SENSOR_STRING(sensor_name ## 09),   \
                    .sensor = { units, type, location, number, frequency, scaleFactor },}, \
   [SENSOR_W_NUM(sensor_name,10)] = {.name = SENSOR_STRING(sensor_name ## 10),   \
                    .sensor = { units, type, location, number, frequency, scaleFactor },}, \
@@ -204,44 +177,6 @@
   [SENSOR_W_NUM(sensor_name,14)] = {.name = SENSOR_STRING(sensor_name ## 14),   \
                    .sensor = { units, type, location, number, frequency, scaleFactor },}, \
   [SENSOR_W_NUM(sensor_name,15)] = {.name = SENSOR_STRING(sensor_name ## 15),   \
-                   .sensor = { units, type, location, number, frequency, scaleFactor },}
-
-
-// This will create a set of 16 sensor entries into the sensor list table.
-// (one for each membuf...)  The base name of the sensor enum must be passed
-// and this macro will take care of the paste & stringify operations.
-#define SEN_MEMBUF_ENTRY_SET(sensor_name, units, type, location, number, frequency, scaleFactor)  \
-  [SENSOR_W_MEMBUF_NUM(sensor_name,0,0,0)] = {.name = MEMBUF_SENSOR_STRING(sensor_name,0,0,0),   \
-                   .sensor = { units, type, location, number, frequency, scaleFactor },}, \
-  [SENSOR_W_MEMBUF_NUM(sensor_name,0,0,1)] = {.name = MEMBUF_SENSOR_STRING(sensor_name,0,0,1),   \
-                   .sensor = { units, type, location, number, frequency, scaleFactor },}, \
-  [SENSOR_W_MEMBUF_NUM(sensor_name,1,0,0)] = {.name = MEMBUF_SENSOR_STRING(sensor_name,1,0,0),   \
-                   .sensor = { units, type, location, number, frequency, scaleFactor },}, \
-  [SENSOR_W_MEMBUF_NUM(sensor_name,1,0,1)] = {.name = MEMBUF_SENSOR_STRING(sensor_name,1,0,1),   \
-                   .sensor = { units, type, location, number, frequency, scaleFactor },}, \
-  [SENSOR_W_MEMBUF_NUM(sensor_name,2,0,0)] = {.name = MEMBUF_SENSOR_STRING(sensor_name,2,0,0),   \
-                   .sensor = { units, type, location, number, frequency, scaleFactor },}, \
-  [SENSOR_W_MEMBUF_NUM(sensor_name,2,0,1)] = {.name = MEMBUF_SENSOR_STRING(sensor_name,2,0,1),   \
-                   .sensor = { units, type, location, number, frequency, scaleFactor },}, \
-  [SENSOR_W_MEMBUF_NUM(sensor_name,3,0,0)] = {.name = MEMBUF_SENSOR_STRING(sensor_name,3,0,0),   \
-                   .sensor = { units, type, location, number, frequency, scaleFactor },}, \
-  [SENSOR_W_MEMBUF_NUM(sensor_name,3,0,1)] = {.name = MEMBUF_SENSOR_STRING(sensor_name,3,0,1),   \
-                   .sensor = { units, type, location, number, frequency, scaleFactor },}, \
-  [SENSOR_W_MEMBUF_NUM(sensor_name,4,0,0)] = {.name = MEMBUF_SENSOR_STRING(sensor_name,4,0,0),   \
-                   .sensor = { units, type, location, number, frequency, scaleFactor },}, \
-  [SENSOR_W_MEMBUF_NUM(sensor_name,4,0,1)] = {.name = MEMBUF_SENSOR_STRING(sensor_name,4,0,1),   \
-                   .sensor = { units, type, location, number, frequency, scaleFactor },}, \
-  [SENSOR_W_MEMBUF_NUM(sensor_name,5,0,0)] = {.name = MEMBUF_SENSOR_STRING(sensor_name,5,0,0),   \
-                   .sensor = { units, type, location, number, frequency, scaleFactor },}, \
-  [SENSOR_W_MEMBUF_NUM(sensor_name,5,0,1)] = {.name = MEMBUF_SENSOR_STRING(sensor_name,5,0,1),   \
-                   .sensor = { units, type, location, number, frequency, scaleFactor },}, \
-  [SENSOR_W_MEMBUF_NUM(sensor_name,6,0,0)] = {.name = MEMBUF_SENSOR_STRING(sensor_name,6,0,0),   \
-                   .sensor = { units, type, location, number, frequency, scaleFactor },}, \
-  [SENSOR_W_MEMBUF_NUM(sensor_name,6,0,1)] = {.name = MEMBUF_SENSOR_STRING(sensor_name,6,0,1),   \
-                   .sensor = { units, type, location, number, frequency, scaleFactor },}, \
-  [SENSOR_W_MEMBUF_NUM(sensor_name,7,0,0)] = {.name = MEMBUF_SENSOR_STRING(sensor_name,7,0,0),   \
-                   .sensor = { units, type, location, number, frequency, scaleFactor },}, \
-  [SENSOR_W_MEMBUF_NUM(sensor_name,7,0,1)] = {.name = MEMBUF_SENSOR_STRING(sensor_name,7,0,1),   \
                    .sensor = { units, type, location, number, frequency, scaleFactor },}
 
 
@@ -266,23 +201,12 @@ const sensor_info_t G_sensor_info[]   =
   SENSOR_INFO_T_ENTRY(     AMESSdur5,  "us\0",    AMEC_SENSOR_TYPE_TIME,  AMEC_SENSOR_LOC_OCC, AMEC_SENSOR_NONUM, AMEEFP_EVERY_8TH_TICK_HZ, AMEFP(  1, 0)  ),
   SENSOR_INFO_T_ENTRY(     AMESSdur6,  "us\0",    AMEC_SENSOR_TYPE_TIME,  AMEC_SENSOR_LOC_OCC, AMEC_SENSOR_NONUM, AMEEFP_EVERY_8TH_TICK_HZ, AMEFP(  1, 0)  ),
   SENSOR_INFO_T_ENTRY(     AMESSdur7,  "us\0",    AMEC_SENSOR_TYPE_TIME,  AMEC_SENSOR_LOC_OCC, AMEC_SENSOR_NONUM, AMEEFP_EVERY_8TH_TICK_HZ, AMEFP(  1, 0)  ),
-  SENSOR_INFO_T_ENTRY(   PROBE250US0, "n/a\0", AMEC_SENSOR_TYPE_GENERIC,  AMEC_SENSOR_LOC_OCC, AMEC_SENSOR_NONUM, AMEEFP_EVERY_TICK_HZ,     AMEFP(  1, 0)  ),
-  SENSOR_INFO_T_ENTRY(   PROBE250US1, "n/a\0", AMEC_SENSOR_TYPE_GENERIC,  AMEC_SENSOR_LOC_OCC, AMEC_SENSOR_NONUM, AMEEFP_EVERY_TICK_HZ,     AMEFP(  1, 0)  ),
-  SENSOR_INFO_T_ENTRY(   PROBE250US2, "n/a\0", AMEC_SENSOR_TYPE_GENERIC,  AMEC_SENSOR_LOC_OCC, AMEC_SENSOR_NONUM, AMEEFP_EVERY_TICK_HZ,     AMEFP(  1, 0)  ),
-  SENSOR_INFO_T_ENTRY(   PROBE250US3, "n/a\0", AMEC_SENSOR_TYPE_GENERIC,  AMEC_SENSOR_LOC_OCC, AMEC_SENSOR_NONUM, AMEEFP_EVERY_TICK_HZ,     AMEFP(  1, 0)  ),
-  SENSOR_INFO_T_ENTRY(   PROBE250US4, "n/a\0", AMEC_SENSOR_TYPE_GENERIC,  AMEC_SENSOR_LOC_OCC, AMEC_SENSOR_NONUM, AMEEFP_EVERY_TICK_HZ,     AMEFP(  1, 0)  ),
-  SENSOR_INFO_T_ENTRY(   PROBE250US5, "n/a\0", AMEC_SENSOR_TYPE_GENERIC,  AMEC_SENSOR_LOC_OCC, AMEC_SENSOR_NONUM, AMEEFP_EVERY_TICK_HZ,     AMEFP(  1, 0)  ),
-  SENSOR_INFO_T_ENTRY(   PROBE250US6, "n/a\0", AMEC_SENSOR_TYPE_GENERIC,  AMEC_SENSOR_LOC_OCC, AMEC_SENSOR_NONUM, AMEEFP_EVERY_TICK_HZ,     AMEFP(  1, 0)  ),
-  SENSOR_INFO_T_ENTRY(   PROBE250US7, "n/a\0", AMEC_SENSOR_TYPE_GENERIC,  AMEC_SENSOR_LOC_OCC, AMEC_SENSOR_NONUM, AMEEFP_EVERY_TICK_HZ,     AMEFP(  1, 0)  ),
   SENSOR_INFO_T_ENTRY(   GPEtickdur0,  "us\0",    AMEC_SENSOR_TYPE_TIME,  AMEC_SENSOR_LOC_OCC, AMEC_SENSOR_NONUM, AMEEFP_EVERY_TICK_HZ,     AMEFP(  1, 0)  ),
   SENSOR_INFO_T_ENTRY(   GPEtickdur1,  "us\0",    AMEC_SENSOR_TYPE_TIME,  AMEC_SENSOR_LOC_OCC, AMEC_SENSOR_NONUM, AMEEFP_EVERY_TICK_HZ,     AMEFP(  1, 0)  ),
   SENSOR_INFO_T_ENTRY(    RTLtickdur,  "us\0",    AMEC_SENSOR_TYPE_TIME,  AMEC_SENSOR_LOC_OCC, AMEC_SENSOR_NONUM, AMEEFP_EVERY_TICK_HZ,     AMEFP(  1, 0)  ),
 
   /* ==SystemSensors==     NameString  Units                      Type              Location             Number                Freq      ScaleFactor   */
   SENSOR_INFO_T_ENTRY(         PWRSYS, "W\0",   AMEC_SENSOR_TYPE_POWER,  AMEC_SENSOR_LOC_SYS, AMEC_SENSOR_NONUM, AMEEFP_EVERY_TICK_HZ,   AMEFP(  1, 0)  ),
-  SENSOR_INFO_T_ENTRY(         PWRFAN, "W\0",   AMEC_SENSOR_TYPE_POWER,  AMEC_SENSOR_LOC_SYS, AMEC_SENSOR_NONUM, AMEEFP_EVERY_TICK_HZ,   AMEFP(  1, 0)  ),
-  SENSOR_INFO_T_ENTRY(          PWRIO, "W\0",   AMEC_SENSOR_TYPE_POWER,  AMEC_SENSOR_LOC_SYS, AMEC_SENSOR_NONUM, AMEEFP_EVERY_TICK_HZ,   AMEFP(  1, 0)  ),
-  SENSOR_INFO_T_ENTRY(       PWRSTORE, "W\0",   AMEC_SENSOR_TYPE_POWER,  AMEC_SENSOR_LOC_SYS, AMEC_SENSOR_NONUM, AMEEFP_EVERY_TICK_HZ,   AMEFP(  1, 0)  ),
   SENSOR_INFO_T_ENTRY(         PWRGPU, "W\0",   AMEC_SENSOR_TYPE_POWER,  AMEC_SENSOR_LOC_GPU, AMEC_SENSOR_NONUM, AMEEFP_EVERY_TICK_HZ,   AMEFP(  1, 0)  ),
   SENSOR_INFO_T_ENTRY(     PWRAPSSCH0, "W\0",   AMEC_SENSOR_TYPE_POWER,  AMEC_SENSOR_LOC_SYS, AMEC_SENSOR_NONUM, AMEEFP_EVERY_TICK_HZ,   AMEFP(  1, 0)  ),
   SENSOR_INFO_T_ENTRY(     PWRAPSSCH1, "W\0",   AMEC_SENSOR_TYPE_POWER,  AMEC_SENSOR_LOC_SYS, AMEC_SENSOR_NONUM, AMEEFP_EVERY_TICK_HZ,   AMEFP(  1, 0)  ),
@@ -335,7 +259,6 @@ const sensor_info_t G_sensor_info[]   =
   SENSOR_INFO_T_ENTRY(        TEMPVDD,  "C\0",    AMEC_SENSOR_TYPE_TEMP,  AMEC_SENSOR_LOC_VRM, AMEC_SENSOR_NONUM, AMEEFP_EVERY_4TH_TICK_HZ, AMEFP(  1, 0)  ),
 
   /* ==CoreSensors==       NameString  Units                      Type              Location             Number                Freq          ScaleFactor   */
-  SENS_CORE_ENTRY_SET(       FREQREQC, "MHz\0",   AMEC_SENSOR_TYPE_FREQ, AMEC_SENSOR_LOC_CORE, AMEC_SENSOR_NONUM,      AMEEFP_EVERY_TICK_HZ, AMEFP(  1, 0)  ),
   SENS_CORE_ENTRY_SET(         FREQAC, "MHz\0",   AMEC_SENSOR_TYPE_FREQ, AMEC_SENSOR_LOC_CORE, AMEC_SENSOR_NONUM, AMEEFP_EVERY_16TH_TICK_HZ, AMEFP(  1, 0)  ),
   SENS_CORE_ENTRY_SET(           IPSC, "MIP\0",   AMEC_SENSOR_TYPE_PERF, AMEC_SENSOR_LOC_CORE, AMEC_SENSOR_NONUM, AMEEFP_EVERY_16TH_TICK_HZ, AMEFP(  1, 0)  ),
   SENS_CORE_ENTRY_SET(        NOTBZEC, "cyc\0",   AMEC_SENSOR_TYPE_PERF, AMEC_SENSOR_LOC_CORE, AMEC_SENSOR_NONUM, AMEEFP_EVERY_16TH_TICK_HZ, AMEFP(  1, 0)  ),
@@ -353,25 +276,9 @@ const sensor_info_t G_sensor_info[]   =
   SENS_MEMC_ENTRY_SET(           MWRM, "GBs\0",   AMEC_SENSOR_TYPE_PERF,  AMEC_SENSOR_LOC_MEM, AMEC_SENSOR_NONUM,   AMEEFP_EVERY_8TH_TICK_HZ, AMEFP(128, -5) ),
   SENS_MEMC_ENTRY_SET(         MEMSPM,   "%\0",   AMEC_SENSOR_TYPE_UTIL,  AMEC_SENSOR_LOC_MEM, AMEC_SENSOR_NONUM,   AMEEFP_EVERY_8TH_TICK_HZ, AMEFP(  1, -1) ),
   SENS_MEMC_ENTRY_SET(     MEMSPSTATM,   "%\0",   AMEC_SENSOR_TYPE_UTIL,  AMEC_SENSOR_LOC_MEM, AMEC_SENSOR_NONUM,   AMEEFP_EVERY_8TH_TICK_HZ, AMEFP(  1, -1) ),
-  SENS_MEMC_ENTRY_SET(          MIRCM, "eps\0",   AMEC_SENSOR_TYPE_PERF,  AMEC_SENSOR_LOC_MEM, AMEC_SENSOR_NONUM,   AMEEFP_EVERY_8TH_TICK_HZ, AMEFP(  1, 0) ),
-  SENS_MEMC_ENTRY_SET(          MLP2M, "eps\0",   AMEC_SENSOR_TYPE_PERF,  AMEC_SENSOR_LOC_MEM, AMEC_SENSOR_NONUM,   AMEEFP_EVERY_8TH_TICK_HZ, AMEFP(  1, 0) ),
   SENS_MEMC_ENTRY_SET(     TEMPMEMBUF,   "C\0",   AMEC_SENSOR_TYPE_TEMP,  AMEC_SENSOR_LOC_MEM, AMEC_SENSOR_NONUM, AMEEFP_EVERY_128TH_TICK_HZ, AMEFP(  1, 0) ),
-  SENS_MEMC_ENTRY_SET(    TEMPDIMMAXM,   "C\0",   AMEC_SENSOR_TYPE_TEMP,  AMEC_SENSOR_LOC_MEM, AMEC_SENSOR_NONUM,   AMEEFP_EVERY_8TH_TICK_HZ, AMEFP(  1, 0) ),
-  SENS_MEMC_ENTRY_SET(     LOCDIMMAXM, "loc\0",   AMEC_SENSOR_TYPE_TEMP,  AMEC_SENSOR_LOC_MEM, AMEC_SENSOR_NONUM,   AMEEFP_EVERY_8TH_TICK_HZ, AMEFP(  1, 0) ),
   SENSOR_INFO_T_ENTRY(    MEMPWRTHROT,   "#\0",   AMEC_SENSOR_TYPE_PERF,  AMEC_SENSOR_LOC_MEM, AMEC_SENSOR_NONUM,       AMEEFP_EVERY_TICK_HZ, AMEFP(  1, 0) ),
   SENSOR_INFO_T_ENTRY(     MEMOTTHROT,   "#\0",   AMEC_SENSOR_TYPE_PERF,  AMEC_SENSOR_LOC_MEM, AMEC_SENSOR_NONUM,  AMEEFP_EVERY_64TH_TICK_HZ, AMEFP(  1, 0) ),
-
-  /* ==MembufSensors==     NameString  Units                     Type              Location             Number                Freq            ScaleFactor   */
-  SEN_MEMBUF_ENTRY_SET(          MACM, "rps\0",   AMEC_SENSOR_TYPE_PERF,  AMEC_SENSOR_LOC_MEM, AMEC_SENSOR_NONUM, AMEEFP_EVERY_8TH_TICK_HZ,   AMEFP(  1, 0)  ),
-  SEN_MEMBUF_ENTRY_SET(          MPUM, "rps\0",   AMEC_SENSOR_TYPE_PERF,  AMEC_SENSOR_LOC_MEM, AMEC_SENSOR_NONUM, AMEEFP_EVERY_8TH_TICK_HZ,   AMEFP(  1, 0)  ),
-  SEN_MEMBUF_ENTRY_SET(         MIRBM, "eps\0",   AMEC_SENSOR_TYPE_PERF,  AMEC_SENSOR_LOC_MEM, AMEC_SENSOR_NONUM, AMEEFP_EVERY_8TH_TICK_HZ,   AMEFP(  1, 0)  ),
-  SEN_MEMBUF_ENTRY_SET(         MIRLM, "eps\0",   AMEC_SENSOR_TYPE_PERF,  AMEC_SENSOR_LOC_MEM, AMEC_SENSOR_NONUM, AMEEFP_EVERY_8TH_TICK_HZ,   AMEFP(  1, 0)  ),
-  SEN_MEMBUF_ENTRY_SET(         MIRMM, "eps\0",   AMEC_SENSOR_TYPE_PERF,  AMEC_SENSOR_LOC_MEM, AMEC_SENSOR_NONUM, AMEEFP_EVERY_8TH_TICK_HZ,   AMEFP(  1, 0)  ),
-  SEN_MEMBUF_ENTRY_SET(         MIRHM, "eps\0",   AMEC_SENSOR_TYPE_PERF,  AMEC_SENSOR_LOC_MEM, AMEC_SENSOR_NONUM, AMEEFP_EVERY_8TH_TICK_HZ,   AMEFP(  1, 0)  ),
-  SEN_MEMBUF_ENTRY_SET(          MTSM, "cnt\0",   AMEC_SENSOR_TYPE_PERF,  AMEC_SENSOR_LOC_MEM, AMEC_SENSOR_NONUM, AMEEFP_EVERY_8TH_TICK_HZ,   AMEFP(  1, 0)  ),
-  SEN_MEMBUF_ENTRY_SET(         M4RDM, "GBs\0",   AMEC_SENSOR_TYPE_PERF,  AMEC_SENSOR_LOC_MEM, AMEC_SENSOR_NONUM, AMEEFP_EVERY_8TH_TICK_HZ,   AMEFP(  128, -5)  ),
-  SEN_MEMBUF_ENTRY_SET(         M4WRM, "GBs\0",   AMEC_SENSOR_TYPE_PERF,  AMEC_SENSOR_LOC_MEM, AMEC_SENSOR_NONUM, AMEEFP_EVERY_8TH_TICK_HZ,   AMEFP(  128, -5)  ),
-
 
   /* ==MemSummarySensors== NameString  Units                     Type              Location             Number                Freq            ScaleFactor   */
   SENSOR_INFO_T_ENTRY( TEMPMEMBUFTHRM,   "C\0",   AMEC_SENSOR_TYPE_TEMP,  AMEC_SENSOR_LOC_MEM, AMEC_SENSOR_NONUM,   AMEEFP_EVERY_8TH_TICK_HZ, AMEFP(  1, 0)  ),
@@ -392,7 +299,8 @@ const sensor_info_t G_sensor_info[]   =
   SENSOR_INFO_T_ENTRY(   CEFFVDDRATIO,  "%\0",   AMEC_SENSOR_TYPE_WOF,  AMEC_SENSOR_LOC_PROC, AMEC_SENSOR_NONUM, AMEEFP_EVERY_8TH_TICK_HZ, AMEFP(  1,-2)  ),
   SENSOR_INFO_T_ENTRY(   CEFFVDNRATIO,  "%\0",   AMEC_SENSOR_TYPE_WOF,  AMEC_SENSOR_LOC_PROC, AMEC_SENSOR_NONUM, AMEEFP_EVERY_8TH_TICK_HZ, AMEFP(  1,-2)  ),
   SENSOR_INFO_T_ENTRY(   VRATIO,        " \0",   AMEC_SENSOR_TYPE_WOF,  AMEC_SENSOR_LOC_PROC, AMEC_SENSOR_NONUM, AMEEFP_EVERY_8TH_TICK_HZ, AMEFP(  1, 0)  ),
-  SENSOR_INFO_T_ENTRY(   OCS_ADDR,      "%\0",   AMEC_SENSOR_TYPE_WOF,  AMEC_SENSOR_LOC_PROC, AMEC_SENSOR_NONUM, AMEEFP_EVERY_8TH_TICK_HZ, AMEFP(  1, -2)  ),
+  SENSOR_INFO_T_ENTRY(   OCS_ADDR,      "%\0",   AMEC_SENSOR_TYPE_WOF,  AMEC_SENSOR_LOC_PROC, AMEC_SENSOR_NONUM, AMEEFP_EVERY_8TH_TICK_HZ, AMEFP(  1,-2)  ),
+  SENSOR_INFO_T_ENTRY(   CEFFVDDRATIOADJ, "%\0", AMEC_SENSOR_TYPE_WOF,  AMEC_SENSOR_LOC_PROC, AMEC_SENSOR_NONUM, AMEEFP_EVERY_8TH_TICK_HZ, AMEFP(  1,-2)  ),
 };
 
 // Cause a compile error if we don't have all the sensors in the enum in the initialization list.

@@ -1538,6 +1538,8 @@ void calculate_ceff_ratio_vdd( void )
             // Now check the raw ceff ratio to prevent Over current by clipping to max of 100%
             // this is saved to the parameter used by the rest of the wof alg
             g_wof->ceff_ratio_vdd = prevent_over_current(l_raw_ceff_ratio);
+            // save the final adjusted Ceff ratio to a sensor
+            sensor_update(AMECSENSOR_PTR(CEFFVDDRATIOADJ), (uint16_t)g_wof->ceff_ratio_vdd);
         }
     }  // else v_ratio != 0
 #endif

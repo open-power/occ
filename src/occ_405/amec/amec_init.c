@@ -292,18 +292,6 @@ void amec_init_gamec_struct(void)
   g_amec->stream_vector_delay=0;     // Delay in msec before recording can begin
   g_amec->stream_vector_rate=0xff;   // Invalid setting: requires IPMI command to select initial rate
 
-  for(l_idx=0; l_idx<NUM_AMEC_FW_PROBES; l_idx++)
-  {
-     g_amec->ptr_probe250us[l_idx] = &g_amec->sys.pwrsys.sample;
-     g_amec->size_probe250us[l_idx] = 2;     // Size of object pointed to by probe is 2 bytes
-     g_amec->index_probe250us[l_idx] = 0;    // Initialize all offsets to 0 (used only if size > 2)
-  }
-
-  g_amec->ptr_probe250us[1] = &g_amec->sys.pwrsys.sample;
-  g_amec->ptr_probe250us[2] = &g_amec->r_cnt;
-  g_amec->ptr_probe250us[2] = g_amec->ptr_probe250us[2]+2;  // Point to low 16 bits of r_cnt
-  g_amec->ptr_probe250us[3] = &g_amec->r_cnt;
-
   // Initialize the current_mem_pwr_ctl to indicate that memory power control is not supported
   // update memory control registers only if new ips/default memory power control is different
   g_amec->sys.current_mem_pwr_ctl = MEM_PWR_CTL_NO_SUPPORT;

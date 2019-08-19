@@ -28,7 +28,7 @@
 
 #include "occ_sys_config.h"
 
-#define MEMBUF0_PRESENT_MASK      0x00000080ul
+#define MEMBUF0_PRESENT_MASK      0x00008000ul
 
 typedef enum
 {
@@ -51,14 +51,22 @@ typedef enum
 // Enum for specifying each MemBuf
 enum eOccMemBuf
 {
-  MEMBUF_0  = 0,
-  MEMBUF_1  = 1,
-  MEMBUF_2  = 2,
-  MEMBUF_3  = 3,
-  MEMBUF_4  = 4,
-  MEMBUF_5  = 5,
-  MEMBUF_6  = 6,
-  MEMBUF_7  = 7,
+  MEMBUF_0   = 0,
+  MEMBUF_1   = 1,
+  MEMBUF_2   = 2,
+  MEMBUF_3   = 3,
+  MEMBUF_4   = 4,
+  MEMBUF_5   = 5,
+  MEMBUF_6   = 6,
+  MEMBUF_7   = 7,
+  MEMBUF_8   = 8,
+  MEMBUF_9   = 9,
+  MEMBUF_10  = 10,
+  MEMBUF_11  = 11,
+  MEMBUF_12  = 12,
+  MEMBUF_13  = 13,
+  MEMBUF_14  = 14,
+  MEMBUF_15  = 15,
 };
 
 //per slot/mba throttle values used for dimm/membuf control
@@ -69,14 +77,12 @@ typedef struct
     uint16_t min_n_per_mba;      //from config data
 } memory_throttle_t;
 
-// 64 bits encoding different bit fields corresponding to dimms
-// (allows 8 dimms on 8 membufs)
+// 128 bits encoding different bit fields corresponding to dimms
 typedef union
 {
-    uint64_t bigword;
-    uint32_t words[2];
-    uint8_t  bytes[8];
-}dimm_sensor_flags_t;
+    uint64_t dw[2];
+    uint8_t  bytes[16];
+} dimm_sensor_flags_t;
 
 
 //Memory data collect structures used for task data pointers
@@ -105,13 +111,13 @@ extern dimm_sensor_flags_t G_dimm_temp_updated_bitmap;
 extern dimm_sensor_flags_t G_dimm_timeout_logged_bitmap;
 
 //global bitmap flagging the membufs which we already calledout due to timeout (bitmap of membufs)
-extern uint8_t G_membuf_timeout_logged_bitmap;
+extern uint16_t G_membuf_timeout_logged_bitmap;
 
 //global bitmap of membufs that have ever gone over the error temperature
-extern uint8_t G_membuf_overtemp_bitmap;
+extern uint16_t G_membuf_overtemp_bitmap;
 
 //global bitmap of membuf temperatures that have been updated
-extern uint8_t G_membuf_temp_updated_bitmap;
+extern uint16_t G_membuf_temp_updated_bitmap;
 
 
 extern uint16_t G_configured_mbas;

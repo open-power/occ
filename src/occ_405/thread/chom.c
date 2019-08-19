@@ -170,7 +170,7 @@ void chom_update_sensors()
     uint16_t l_mem_rw = 0;
     uint16_t l_sample = 0;
 
-    static uint32_t L_memBWNumSamples[NUM_CHOM_MODES][MAX_NUM_MEM_CONTROLLERS] = {{0}};
+    static uint32_t L_memBWNumSamples[NUM_CHOM_MODES][MAX_NUM_CHOM_MEM_CTRL] = {{0}};
 
     // Use FMF as default
     static uint32_t * L_curNumSamplePtr = L_memBWNumSamples[CHOM_MODE_FMF];
@@ -287,7 +287,7 @@ void chom_update_sensors()
         }
 
         // update memory bandwidth
-        for ( j = 0; j < MAX_NUM_MEM_CONTROLLERS; j++)
+        for ( j = 0; j < MAX_NUM_CHOM_MEM_CTRL; j++)
         {
             l_mem_rw = G_dcom_slv_outbox_rx[i].mrd[j] +
                        G_dcom_slv_outbox_rx[i].mwr[j];
