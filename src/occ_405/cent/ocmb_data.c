@@ -81,11 +81,11 @@ void ocmb_init(void)
                 // enabled.
                 if(G_membufConfiguration.dts_config & CONFIG_MEMDTS0(membuf_idx))
                 {
-                    G_dimm_enabled_sensors.bytes[membuf_idx] = DIMM_SENSOR0;
+                    G_dimm_enabled_sensors.bytes[membuf_idx] |= DIMM_SENSOR0;
                 }
                 if(G_membufConfiguration.dts_config & CONFIG_MEMDTS1(membuf_idx))
                 {
-                    G_dimm_enabled_sensors.bytes[membuf_idx] = (DIMM_SENSOR0 >> 1);
+                    G_dimm_enabled_sensors.bytes[membuf_idx] |= (DIMM_SENSOR0 >> 1);
                 }
                 TRAC_INFO("ocmb_init: Membuf[%d] Found.",
                           membuf_idx);
