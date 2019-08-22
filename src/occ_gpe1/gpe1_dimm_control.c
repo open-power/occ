@@ -108,9 +108,37 @@ void gpe_scom_nvdimms_nimbus(ipc_msg_t* cmd, void* arg)
 
     PK_TRACE("gpe_scom_nvdimms_nimbus: configured_mbas: 0x%04x", args->configured_mbas );
 
-    // Step 1: Stop mcbist, select all ports (or just the ports with NVDIMM, but we are going down anyways so who cares)
+    // Step 1: Clear MCFGP_VALID bit
     //
-    // MC01.MCBIST.MBA_SCOMFIR.MCB_CNTLQ - MCBIST Control Register
+    // MC23.PBI23.SCOMFIR.MCFGP - MC Primary Memory Configuration Register
+    //     bit 0:       MCFGP_VALID
+    //
+    regAddr = 0x0301088A;
+    rc = getscom_abs(regAddr, &regValue);
+    if (rc)
+    {
+        PK_TRACE("E>gpe_scom_nvdimms_nimbus: Failed to read MCFGP Reg:0x%08X, rc:0x%08x",
+                 regAddr, rc);
+    }
+    else
+    {
+        regValue &= 0x7FFFFFFFFFFFFFFF; // clear valid bit
+        PK_TRACE("gpe_scom_nvdimms_nimbus: Writing MCFGP (0x%08X) to 0x%08X%08X",
+                 regAddr, WORD_HIGH(regValue), WORD_LOW(regValue));
+        rc = putscom_abs(regAddr, regValue);
+        if (rc)
+        {
+            PK_TRACE("E>gpe_scom_nvdimms_nimbus: Failed to update MCFGP"
+                     " Reg:0x%08X, Data:0x%08X %08X, rc:0x%08x",
+                     regAddr, WORD_HIGH(regValue), WORD_LOW(regValue), rc);
+            gpe_set_ffdc(&(args->error), regAddr,
+                         GPE_RC_SCOM_PUT_FAILED, rc);
+        }
+    }
+
+    // Step 2: Stop mcbist, select all ports (or just the ports with NVDIMM, but we are going down anyways so who cares)
+    //
+    // MC23.MCBIST.MBA_SCOMFIR.MCB_CNTLQ - MCBIST Control Register
     //     bit 0:       start bit
     //     bit 1:       stop bit
     //     bit 2:5      ports to run MCBIST
@@ -138,9 +166,9 @@ void gpe_scom_nvdimms_nimbus(ipc_msg_t* cmd, void* arg)
         }
     }
 
-    // Step 2: Enable maint. addr and broadcast
+    // Step 3: Enable maint. addr and broadcast
     //
-    // MC01.MCBIST.MBA_SCOMFIR.MCBAGRAQ - Address Generator Configuration Register
+    // MC23.MCBIST.MBA_SCOMFIR.MCBAGRAQ - Address Generator Configuration Register
     //     bit 10       enable maint address mode
     //     bit 11       enable maint_addr_mode to broadcast commands to multiple ports
     regAddr = 0x070123D6 + (MCA_MCPAIR_SPACE * mc);
@@ -166,9 +194,9 @@ void gpe_scom_nvdimms_nimbus(ipc_msg_t* cmd, void* arg)
         }
     }
 
-    // Step 3: Enable sync for broadcast
+    // Step 4: Enable sync for broadcast
     //
-    // MC01.MCBIST.MBA_SCOMFIR.MCBCFGQ - MCBIST Configuration Register
+    // MC23.MCBIST.MBA_SCOMFIR.MCBCFGQ - MCBIST Configuration Register
     //     bit 0        Enable sync for broadcast
     regAddr = 0x070123E0 + (MCA_MCPAIR_SPACE * mc);
     rc = getscom_abs(regAddr, &regValue);
@@ -193,9 +221,9 @@ void gpe_scom_nvdimms_nimbus(ipc_msg_t* cmd, void* arg)
         }
     }
 
-    // Step 4: required for DDR_RESETn
+    // Step 5: required for DDR_RESETn
     //
-    // MC01.MCBIST.MBA_SCOMFIR.CCS_MODEQ - Configured Command Sequence Mode Register
+    // MC23.MCBIST.MBA_SCOMFIR.CCS_MODEQ - Configured Command Sequence Mode Register
     //     bit 60       Idle pattern for CCS DDR Address Bank Bit 2
     regAddr = 0x070123A7 + (MCA_MCPAIR_SPACE * mc);
     rc = getscom_abs(regAddr, &regValue);
@@ -220,9 +248,9 @@ void gpe_scom_nvdimms_nimbus(ipc_msg_t* cmd, void* arg)
         }
     }
 
-    // Step 5: Enable CCS address mux and allow RESETn per NVDIMM port
+    // Step 6: Enable CCS address mux and allow RESETn per NVDIMM port
     //
-    // MC01.PORT0.SRQ.MBA_FARB5Q - DDR Interface SCOM Control
+    // MC23.PORT0.SRQ.MBA_FARB5Q - DDR Interface SCOM Control
     //      bit 5:      CCS Addresss Mux Sel
     //      bit 6:      CSS_INST_ARR0 will be driven out to DDR Resetn
 
@@ -269,9 +297,9 @@ void gpe_scom_nvdimms_nimbus(ipc_msg_t* cmd, void* arg)
         mask = mask >> 1;
     } // for each MBA port
 
-    // Step 6: Start CCS
+    // Step 7: Start CCS
     //
-    // MC01.MCBIST.MBA_SCOMFIR.CCS_CNTLQ - Configured Command Sequence Control Register
+    // MC23.MCBIST.MBA_SCOMFIR.CCS_CNTLQ - Configured Command Sequence Control Register
     //     bit 0:       start bit
     //
     regAddr = 0x070123A5 + (MCA_MCPAIR_SPACE * mc);
