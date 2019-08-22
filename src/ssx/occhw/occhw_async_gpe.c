@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -251,6 +251,7 @@ gpe_run_method(AsyncRequest* async_request)
     //having failed.
     if(rc)
     {
+        SSX_TRACE("E>gpe_run_method - ipc_send_cmd failed with 0x%08X", rc);
         gpe_error_method(async_request);
         async_request->completion_state = ASYNC_REQUEST_STATE_FAILED;
         rc = -ASYNC_REQUEST_COMPLETE;

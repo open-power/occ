@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -167,6 +167,7 @@ void busy_wait(uint32_t i_microseconds)
     uint32_t change_timeout = 0;
     uint32_t end_count =
         PK_INTERVAL_SCALE((uint32_t)PK_MICROSECONDS(i_microseconds));
+    static bool L_traced = false;
 
     while((current_count + timebase_zero_adjust) < end_count)
     {
@@ -179,13 +180,22 @@ void busy_wait(uint32_t i_microseconds)
             ++change_timeout;
             if(change_timeout > 32)
             {
-                PK_TRACE("TIMEBASE is not moving!");
+                if (!L_traced)
+                {
+                    PK_TRACE("busy_wait: TIMEBASE is not moving! (current_count=%d)");
+                    L_traced = true;
+                }
                 // timebase is not moving
                 break;
             }
         }
         else
         {
+            if (L_traced)
+            {
+                PK_TRACE("busy_wait: TIMEBASE is moving again! (current_count=%d, prev_count=%d, change_timeout=%d)", current_count, prev_count, change_timeout);
+                L_traced = false;
+            }
             change_timeout = 0;
         }
     }

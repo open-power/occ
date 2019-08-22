@@ -35,12 +35,12 @@
 #include <state.h>
 #include <apss.h>
 #include <mem_structs.h>
+#include <p10_hcd_memmap_base.H>
 
 #define MAX_NUM_OCC              4
 #define MAX_NUM_NODES            4
 #define MAX_NUM_CORES           24
 #define NUM_CORES_PER_QUAD       4
-#define MAX_THREADS_PER_CORE     4
 #define MAX_NUM_CHIP_MODULES     4
 #define MAX_NUM_MEM_CONTROLLERS  16
 #define MAX_NUM_OCMBS            16

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -33,6 +33,7 @@
 #include "gpe_util.h"
 
 #define MAX_EXECUTION_TIMER (PK_INTERVAL_SCALE((uint32_t)PK_MICROSECONDS(250)))
+#define PK_TO_USEC(time) ((time)/PK_MICROSECONDS(1))
 
 extern uint8_t G_apss_mode;
 extern gpe_shared_data_t * G_gpe_shared_data;
@@ -193,8 +194,8 @@ void apss_start_pwr_meas_read(ipc_msg_t* cmd, void* arg)
 
         if(diff_time > MAX_EXECUTION_TIMER)
         {
-            PK_TRACE("apss_start_pwr_meas_read took longer than expected. Delta OTBR: %x",
-                     diff_time);
+            PK_TRACE("apss_start_pwr_meas_read took longer than expected. Delta: %d us",
+                     PK_TO_USEC(diff_time));
         }
     }
 
@@ -358,8 +359,8 @@ void apss_continue_pwr_meas_read(ipc_msg_t* cmd, void* arg)
 
         if(diff_time > MAX_EXECUTION_TIMER)
         {
-            PK_TRACE("apss_continue took longer than expected. Delta OTBR: %x",
-                     diff_time);
+            PK_TRACE("apss_continue took longer than expected. Delta: %d us",
+                     PK_TO_USEC(diff_time));
         }
     }
 
@@ -463,8 +464,8 @@ void apss_complete_pwr_meas_read(ipc_msg_t* cmd, void* arg)
 
         if(diff_time > MAX_EXECUTION_TIMER)
         {
-            PK_TRACE("apss_complete took longer than expected. Delta OTBR: %x",
-                     diff_time);
+            PK_TRACE("apss_complete took longer than expected. Delta: %d us",
+                     PK_TO_USEC(diff_time));
         }
     }
 

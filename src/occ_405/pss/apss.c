@@ -23,7 +23,7 @@
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
 
-#define APSS_DEBUG
+//#define APSS_DEBUG
 
 #include "ssx.h"
 
@@ -290,7 +290,6 @@ void task_apss_start_pwr_meas(struct task *i_self)
     static bool     L_ffdc_collected    = FALSE;
 
     // Create/schedule GPE_start_pwr_meas_read (non-blocking)
-    INTR_TRAC_ERR("CJC: GPE_start_pwr_meas_read started");
     APSS_DBG("GPE_start_pwr_meas_read started");
 
     do
@@ -904,8 +903,6 @@ errlHndl_t initialize_apss(void)
     uint8_t    l_retryCount = 0;
     // Initialize APSS
 
-    TRAC_INFO("CJC: initialize_apss()");
-
     while ( l_retryCount < APSS_MAX_NUM_INIT_RETRIES )
     {
         // Setup the GPIO init structure to pass to the PPE program
@@ -992,13 +989,12 @@ errlHndl_t initialize_apss(void)
                 TRAC_ERR("initialize_apss: Timeout communicating with PPE for APSS Init");
             }
 
-            TRAC_INFO("initialize_apss: GPE_apss_set_mode completed w/rc=0x%08x",
-                          G_init_mode_request.request.completion_state);
-
             //Continue only if mode set was successful.
             if ((ASYNC_REQUEST_STATE_COMPLETE != G_init_mode_request.request.completion_state) ||
                 (G_gpe_apss_set_mode_args.error.rc != ERRL_RC_SUCCESS))
             {
+                TRAC_ERR("initialize_apss: GPE_apss_set_mode completed w/rc=0x%08x",
+                         G_init_mode_request.request.completion_state);
                 /*
                  * @errortype
                  * @moduleid    PSS_MID_APSS_INIT
@@ -1025,6 +1021,10 @@ errlHndl_t initialize_apss(void)
 
                 // Returning an error log will cause us to go to safe
                 // state so we can report error to FSP
+            }
+            else
+            {
+                TRAC_INFO("initialize_apss: GPE_apss_set_mode completed");
             }
         }
         else

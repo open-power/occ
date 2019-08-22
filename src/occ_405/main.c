@@ -28,7 +28,6 @@
 #include "ipc_api.h"                //ipc base interfaces
 #include "occhw_async.h"            //async (GPE, OCB, etc) interfaces
 #include "simics_stdio.h"
-//#include "heartbeat.h"
 #include <thread.h>
 #include <sensor.h>
 #include <threadSch.h>
@@ -46,7 +45,6 @@
 #include <amec_sys.h>
 #include <cmdh_fsp.h>
 #include <proc_pstate.h>
-//#include <vrm.h>
 #include <chom.h>
 #include <homer.h>
 #include <amec_health.h>
@@ -59,8 +57,9 @@
 #include <wof.h>
 #include "pgpe_service_codes.h"
 #include <common.h>
-//#include "p9_memmap_occ_sram.h"
+#include "p10_hcd_memmap_occ_sram.H"
 #include "pstate_pgpe_occ_api.h"
+#include "misc_scom_addresses.h"
 
 // Used to indicate if OCC was started during IPL, in which case OCC's only
 // job is to look for checkstops. This flag is set by hostboot in OCC's header
@@ -204,13 +203,6 @@ void check_runtime_environment(void)
         // model is configured.
         G_shared_gpe_data.spipss_spec_p9 =
             (0 != (flags & 0x0000000000000002) ) ? FALSE : TRUE;
-
-        // TODO - RTC 213675 - determine what is needed
-        if (G_shared_gpe_data.spipss_spec_p9)
-        {
-            MAIN_TRAC_ERR("CJC: spipss_spec_p9 was true.  Clearing it");
-            G_shared_gpe_data.spipss_spec_p9 = FALSE;
-        }
     }
     else
     {
@@ -1177,8 +1169,6 @@ void read_hcode_headers()
  */
 void gpe_reset(uint32_t instance_id)
 {
-    // TODO - RTC 213672 - SRAM addresses not found and regs need to be per GPE
-#if 0
 #define XCR_CMD_HRESET      0x60000000
 #define XCR_CMD_TOGGLE_XSR  0x40000000
 #define XCR_CMD_RESUME      0x20000000
@@ -1191,13 +1181,12 @@ void gpe_reset(uint32_t instance_id)
 
     }
 
-    out32(GPE_OCB_GPEIVPR, l_gpe_sram_addr);
+    out32(GPE_GPENIVPR(instance_id), l_gpe_sram_addr);
 
-    out32(GPE_OCB_GPEXIXCR, XCR_CMD_HRESET);
-    out32(GPE_OCB_GPEXIXCR, XCR_CMD_TOGGLE_XSR);
-    out32(GPE_OCB_GPEXIXCR, XCR_CMD_TOGGLE_XSR);
-    out32(GPE_OCB_GPEXIXCR, XCR_CMD_RESUME);
-#endif
+    out32(GPE_GPENXIXCR(instance_id), XCR_CMD_HRESET);
+    out32(GPE_GPENXIXCR(instance_id), XCR_CMD_TOGGLE_XSR);
+    out32(GPE_GPENXIXCR(instance_id), XCR_CMD_TOGGLE_XSR);
+    out32(GPE_GPENXIXCR(instance_id), XCR_CMD_RESUME);
 }
 
 /*
@@ -1205,14 +1194,12 @@ void gpe_reset(uint32_t instance_id)
  */
 void set_shared_gpe_data()
 {
-    // TODO - RTC 213672 - OFFSET not found and regs need to be per GPE
-#if 0
     uint32_t sram_addr;
 
-    sram_addr = in32(GPE_OCB_GPEIVPR);
+    sram_addr = in32(GPE_GPENIVPR(OCCHW_INST_ID_GPE0));
     if(0 != sram_addr)
     {
-        sram_addr += GPE_DEBUG_PTRS_OFFSET;
+        sram_addr += GPE_DEBUG_PTR_OFFSET;
 
         G_shared_gpe_data.gpe0_tb_ptr =
             *((uint32_t *)(sram_addr + PK_TRACE_PTR_OFFSET));
@@ -1220,39 +1207,16 @@ void set_shared_gpe_data()
             *((uint32_t *)(sram_addr + PK_TRACE_SIZE_OFFSET));
     }
 
-    sram_addr = in32(GPE_OCB_GPEIVPR);
+    sram_addr = in32(GPE_GPENIVPR(OCCHW_INST_ID_GPE1));
     if(0 != sram_addr)
     {
-        sram_addr += GPE_DEBUG_PTRS_OFFSET;
+        sram_addr += GPE_DEBUG_PTR_OFFSET;
 
         G_shared_gpe_data.gpe1_tb_ptr =
             *((uint32_t *)(sram_addr + PK_TRACE_PTR_OFFSET));
         G_shared_gpe_data.gpe1_tb_sz =
             *((uint32_t *)(sram_addr + PK_TRACE_SIZE_OFFSET));
     }
-
-    sram_addr = in32(GPE_OCB_GPEIVPR);
-    if(0 != sram_addr)
-    {
-        sram_addr += PGPE_DEBUG_PTRS_OFFSET;
-
-        G_shared_gpe_data.pgpe_tb_ptr =
-            *((uint32_t *)(sram_addr + PK_TRACE_PTR_OFFSET));
-        G_shared_gpe_data.pgpe_tb_sz =
-            *((uint32_t *)(sram_addr + PK_TRACE_SIZE_OFFSET));
-    }
-
-    sram_addr = in32(GPE_OCB_GPEIVPR);
-    if(0 != sram_addr)
-    {
-        sram_addr += SGPE_DEBUG_PTRS_OFFSET;
-
-        G_shared_gpe_data.sgpe_tb_ptr =
-            *((uint32_t *)(sram_addr + PK_TRACE_PTR_OFFSET));
-        G_shared_gpe_data.sgpe_tb_sz =
-            *((uint32_t *)(sram_addr + PK_TRACE_SIZE_OFFSET));
-    }
-#endif
 }
 
 /*
@@ -1712,16 +1676,14 @@ void Main_thread_routine(void *private)
         // TEMP Hack to enable Active State, until PGPE is ready
         G_proc_pstate_status = PSTATES_ENABLED;
 
-        if(G_ppmr_header.magic_number == 0)
+        if(G_oppb.frequency_max_khz == 0)
         {
-            MAIN_TRAC_INFO("Main_thread_routine: Could not load hcode_headers\n");
+            MAIN_TRAC_INFO("Main_thread_routine: Could not load all hcode_headers\n");
             CHECKPOINT(OPPB_IMAGE_HEADER_READ);
 
             // Temp hack to Set up Key Globals for use by proc_freq2pstate functions
-            //G_oppb.frequency_max_khz  = 4322500;
-            //G_oppb.frequency_min_khz  = 2028250;
-            G_oppb.frequency_max_khz  = 2600000;
-            G_oppb.frequency_min_khz  = 2000000;
+            G_oppb.frequency_max_khz  = 4322500;
+            G_oppb.frequency_min_khz  = 2028250;
             G_oppb.frequency_step_khz = 16667;
             G_oppb.pstate_min         = PMAX +
                 ((G_oppb.frequency_max_khz - G_oppb.frequency_min_khz)/G_oppb.frequency_step_khz);

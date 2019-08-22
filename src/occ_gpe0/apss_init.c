@@ -29,7 +29,7 @@
 #include "pss_constants.h"
 #include <apss_structs.h>       //H file common with occ_405
 #include "gpe_util.h"
-//#include "p9_misc_scom_addresses.h"
+#include "misc_scom_addresses.h"
 
 // PV_CP0_P_PRV_GPIO2
 #define APSS_RESET_GPIO (0x2000000000000000ull)
@@ -211,8 +211,6 @@ void apss_init_gpio(ipc_msg_t* cmd, void* arg)
             break;
         }
 
-// TODO - RTC 213672 - MISSING PU_GPIO_OUTPUT
-#if 0
         // Enable GPIO that's used for APSS resets
         //
         // Set APSS_RESET_GPIO output high before enabling it's output
@@ -245,7 +243,6 @@ void apss_init_gpio(ipc_msg_t* cmd, void* arg)
             gpe_set_ffdc(&(args->error), 0, GPE_RC_SCOM_PUT_FAILED, rc);
             break;
         }
-#endif
 
     }while(0);
 
@@ -410,8 +407,6 @@ void apss_toggle_hw_reset(ipc_msg_t* cmd, void* arg)
     ipc_async_cmd_t     *async_cmd = (ipc_async_cmd_t*)cmd;
     initGpioArgs_t      *args = (initGpioArgs_t*)async_cmd->cmd_data;
 
-// TODO - RTC 213672 - MISSING PU_GPIO_OUTPUT
-#if 0
     static int g_apss_reset_state = ~(0);
     uint32_t apss_reset_address;
     if(g_apss_reset_state) // not in reset
@@ -433,7 +428,6 @@ void apss_toggle_hw_reset(ipc_msg_t* cmd, void* arg)
         PK_TRACE("apss_toggle_hw_reset: APSS_RESET_GPIO_OUTPUT toggle failed. rc:0x%08x",rc);
         gpe_set_ffdc(&(args->error), 0, GPE_RC_SCOM_PUT_FAILED, rc);
     }
-#endif
 
     // send back a successful response.  OCC will check rc and ffdc
     rc = ipc_send_rsp(cmd, IPC_RC_SUCCESS);

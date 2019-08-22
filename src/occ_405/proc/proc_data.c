@@ -52,7 +52,7 @@ GPE_BUFFER(ipc_core_data_parms_t G_high_cores_data_parms);
 //Globals for 24x7 collection
 GPE_BUFFER(gpe_24x7_args_t G_24x7_parms);
 GpeRequest G_24x7_request;
-bool G_24x7_disabled = FALSE;
+bool G_24x7_disabled = TRUE;
 
 // IPC Gpe request structure for gathering nest dts temps
 GpeRequest G_nest_dts_gpe_req;

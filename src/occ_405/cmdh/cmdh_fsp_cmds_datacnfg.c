@@ -516,7 +516,7 @@ errlHndl_t data_store_freq_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
            l_table[OCC_MODE_NOMINAL] < l_table[OCC_MODE_PWRSAVE] ||
            l_table[OCC_MODE_PWRSAVE] < l_table[OCC_MODE_MIN_FREQUENCY])
         {
-            CMDH_TRAC_ERR("Inconsistent Frequency points - UT-T=0x%x, NOM-PS=0x%x, MIN=0x%x",
+            CMDH_TRAC_ERR("Inconsistent Frequency points - UT,T=0x%08X, NOM,PS=0x%08X, MIN=0x%04X",
                           (l_table[OCC_MODE_UTURBO] << 16)  + l_table[OCC_MODE_TURBO],
                           (l_table[OCC_MODE_NOMINAL] << 16) + l_table[OCC_MODE_PWRSAVE],
                           l_table[OCC_MODE_MIN_FREQUENCY]);
@@ -1166,7 +1166,7 @@ errlHndl_t data_store_apss_config_v20(const cmdh_apss_config_v20_t * i_cmd_ptr,
                 G_pwr_reading_type = PWR_READING_TYPE_APSS;
             }
         }
-        TRAC_INFO("data_store_apss_config_v20: Channel %d: FuncID[0x%02X] SID[0x%08X]",
+        CNFG_DBG("data_store_apss_config_v20: Channel %d: FuncID[0x%02X] SID[0x%08X]",
                  l_channel, i_cmd_ptr->adc[l_channel].assignment, i_cmd_ptr->adc[l_channel].ipmisensorId);
         CNFG_DBG("data_store_apss_config_v20: Channel %d: GND[0x%02X] Gain[0x%08X] Offst[0x%08X]",
                  l_channel, G_sysConfigData.apss_cal[l_channel].gnd_select, G_sysConfigData.apss_cal[l_channel].gain,
@@ -1668,8 +1668,6 @@ errlHndl_t data_store_role(const cmdh_fsp_cmd_t * i_cmd_ptr,
     uint8_t    l_old_role = G_occ_role;
     ERRL_RC    l_rc       = ERRL_RC_SUCCESS;
 
-    CMDH_TRAC_IMP("CJC: data_store_role()");
-
     // Cast the command to the struct for this format
     cmdh_set_role_t * l_cmd_ptr = (cmdh_set_role_t *)i_cmd_ptr;
 
@@ -1682,8 +1680,6 @@ errlHndl_t data_store_role(const cmdh_fsp_cmd_t * i_cmd_ptr,
         if( OCC_MASTER == l_new_role )
         {
             G_occ_role = OCC_MASTER;
-
-            CMDH_TRAC_IMP("CJC: data_store_role: calling master_occ_init()");
 
             // Run master initializations if we just became master
             extern void  master_occ_init(void);

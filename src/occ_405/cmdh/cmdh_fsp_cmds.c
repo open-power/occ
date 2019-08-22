@@ -1198,7 +1198,7 @@ errlHndl_t cmdh_tmgt_setmodestate(const cmdh_fsp_cmd_t * i_cmd_ptr,
         // -------------------------------------------------
         // Act on State & Mode Changes
         // -------------------------------------------------
-        CMDH_TRAC_INFO("SMS Mode=%d, State=%d\n",l_cmd_ptr->occ_mode, l_cmd_ptr->occ_state);
+        CMDH_TRAC_INFO("SMS Mode=%d, State=%d",l_cmd_ptr->occ_mode, l_cmd_ptr->occ_state);
 
         G_occ_external_req_mode  = l_cmd_ptr->occ_mode;
         G_occ_external_req_state = l_cmd_ptr->occ_state;

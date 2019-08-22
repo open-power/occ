@@ -90,6 +90,10 @@ NEEDED_IMAGES = \
      $(OBJDIR)/$(OCC_BOOTLOADER_DIR_NAME)/$(OCC_BOOTLOADER_NAME).out
 endif
 
+ifdef P10_HW_BUILD
+export GCC-DEFS += -DP10_HW_BUILD=1
+endif
+
 .PHONY : all
 all: ppetools $(NEEDED_IMAGES) combineImage tracehash
 

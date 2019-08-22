@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2018                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -23,10 +23,19 @@
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
 #define GLOBAL_CFG_USE_IPC  // have lib/occlib/ipc_structs.h use "ipc_func_ids.h"
-#define OCCHW_IRQ_ROUTE_OWNER 3
 
-/// All GPE's will use the external timebase register
+// Define IRQ Owner (4=405, 2=PGPE, 1=GPE1, 0=GPE0)
+#ifdef P10_HW_BUILD
+#define OCCHW_IRQ_ROUTE_OWNER 2 // PGPE
+#else
+#define OCCHW_IRQ_ROUTE_OWNER 4 // 405 will own until PGPE running in Simics
+#endif
+
+#ifdef P10_HW_BUILD
+// Physical HW will use the external timebase register
 #define APPCFG_USE_EXT_TIMEBASE
+#endif
+// Simics will use internal timebase (external not implemented)
 
 #define DEFAULT_NEST_FREQ_HZ 600000000
 #define DEFAULT_EXT_CLK_FREQ_HZ 37500000
