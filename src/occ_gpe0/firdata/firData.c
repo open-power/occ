@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2018                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -823,6 +823,7 @@ void FirData_addTrgtsToPnor( FirData_t * io_fd )
     uint32_t i = 0;
     for ( i = 0; i < io_fd->hData->chipCount; i++ )
     {
+        TRAC_IMP("FirData_addTrgtsToPnor: chip %d", i);
         // Keep a pointer of the current chip header.
         HOMER_Chip_t * chipHdr = (HOMER_Chip_t *) byteIdx;
         byteIdx += sizeof(HOMER_Chip_t);

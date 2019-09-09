@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -37,6 +37,7 @@
 
 void fsi_recovery()
 {
+    TRAC_IMP(">>fsi_recovery");
     int32_t rc = SUCCESS;
 
     /* Clear out OPB error */
@@ -48,8 +49,8 @@ void fsi_recovery()
     /* Check if we have any errors left */
     rc |= xscom_read( OPB_REG_STAT, &scom_data );
 
-    TRACFCOMP( "PIB2OPB Status after cleanup = %08X%08X (rc=%d)",
-               (uint32_t)(scom_data >> 32), (uint32_t)scom_data, rc );
+    TRAC_IMP( "<<fsi_recovery: PIB2OPB Status after cleanup = %08X%08X (rc=%d)",
+              (uint32_t)(scom_data >> 32), (uint32_t)scom_data, rc );
 }
 
 /**

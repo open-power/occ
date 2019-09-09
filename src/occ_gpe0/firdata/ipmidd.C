@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ_405/firdata/ipmidd.C $                                */
+/* $Source: src/occ_gpe0/firdata/ipmidd.C $                               */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2018                             */
+/* Contributors Listed Below - COPYRIGHT 2018,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -107,7 +107,7 @@ int IpmiDD::writeLPC(const uint32_t i_addr,
  */
 int IpmiDD::pollCtrl(void)
 {
-    IPMI_TRAC(">>pollCtrl" );
+    //IPMI_TRAC(">>pollCtrl" );
     int rc = 0;
 
     uint8_t ctrl = 0;
@@ -237,9 +237,11 @@ int IpmiDD::send(void)
             break;
         }
 
+#if 0
         IPMI_TRAC("I> write %x:%x seq %x len %x",
                   iv_netfun, iv_cmd, iv_seq,
                   iv_data_len);
+#endif
 
         // If all is well, alert the host we sent bits.
         err = writeLPC(REG_CONTROL, CTRL_H2B_ATN);
@@ -374,11 +376,13 @@ int IpmiDD::receive(void)
     }
 
 
+#if 0
     IPMI_TRAC("I> read b2h %x:%x seq %x cc %x",
               iv_netfun,
               iv_cmd,
               iv_seq,
               iv_cc);
+#endif
 
     return err;
 }

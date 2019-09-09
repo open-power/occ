@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ_405/firdata/lpc.c $                                   */
+/* $Source: src/occ_gpe0/firdata/lpc.c $                                  */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -241,7 +241,11 @@ errorHndl_t lpc_read( LpcTransType i_type,
         /* Poll for completion */
         StatusReg_t lpc_status;
         l_err = pollComplete( &lpc_cmd, &lpc_status );
-        if( l_err ) { break; }
+        if( l_err )
+        {
+            TRAC_ERR("lpc_read: pollComplete failed rc=0x%08x", (uint32_t)l_err);
+            break;
+        }
 
         // Read data from the LPC_DATA_REG
         l_err = SCOM_getScom(l_target, LPC_DATA_REG, &l_ret);

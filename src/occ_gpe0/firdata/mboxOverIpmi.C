@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ_405/firdata/mboxOverIpmi.C $                          */
+/* $Source: src/occ_gpe0/firdata/mboxOverIpmi.C $                         */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2018                             */
+/* Contributors Listed Below - COPYRIGHT 2018,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -62,11 +62,17 @@ int ipmi_sendCommand(mboxMessage_t *io_msg, int i_arg_size)
 
     do
     {
+#if 0
+        rc = l_ipmidd.pollCtrl();
+        TRAC_ERR("ipmi_sendCommand: DUMMY RECEIVE returned rc=%d", rc);
+#endif
+
         for(i = 0; i < IPMI_MAX_TRIES; ++i)
         {
             rc = l_ipmidd.send();
             if(rc != RC_IPMIDD_NOT_IDLE)
             {
+                // command was sent
                 break;
             }
             busy_wait(100); // 100 us

@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ_405/firdata/sbe_fifo.c $                              */
+/* $Source: src/occ_gpe0/firdata/sbe_fifo.c $                             */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2017                             */
+/* Contributors Listed Below - COPYRIGHT 2017,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -159,6 +159,7 @@ uint32_t upFifoReset(SCOM_Trgt_t* i_target)
             l_rc = getfsi(i_target, l_addr, &l_data);
             if(l_rc != SUCCESS)
             {
+                TRAC_ERR("upFifoReset:getfsi(0x%08X) failed. rc = %d", l_addr, l_rc);
                 break;
             }
 
@@ -200,7 +201,7 @@ uint32_t writeRequest(SCOM_Trgt_t* i_target, uint32_t* i_fifoRequest)
     l_rc = putfsi(i_target, l_addr, l_data);
     if(l_rc != SUCCESS)
     {
-        TRAC_ERR("writeRequest: failed to putfsi to addr 0x%08x",
+        TRAC_ERR("<<writeRequest: failed to putfsi to addr 0x%08x",
                  l_addr);
         return l_rc;
     }
@@ -217,6 +218,7 @@ uint32_t writeRequest(SCOM_Trgt_t* i_target, uint32_t* i_fifoRequest)
         l_rc = waitUpFifoReady(i_target);
         if(l_rc != SUCCESS)
         {
+            TRAC_ERR("<<writeRequest waitUpFifoReady[%d] rc=%d", i, l_rc);
             return l_rc;
         }
 
@@ -224,8 +226,8 @@ uint32_t writeRequest(SCOM_Trgt_t* i_target, uint32_t* i_fifoRequest)
         l_rc = putfsi(i_target, l_addr, *l_sent);
         if(l_rc != SUCCESS)
         {
-            TRAC_ERR("writeRequest: failed to putfsi to addr 0x%08x",
-                     l_addr);
+            TRAC_ERR("<<writeRequest: failed to putfsi[%d] to addr 0x%08x",
+                     i, l_addr);
             return l_rc;
         }
 
@@ -236,6 +238,7 @@ uint32_t writeRequest(SCOM_Trgt_t* i_target, uint32_t* i_fifoRequest)
     l_rc = waitUpFifoReady(i_target);
     if(l_rc != SUCCESS)
     {
+        TRAC_ERR("<<writeRequest waitUpFifoReady rc=%d", l_rc);
         return l_rc;
     }
 
@@ -244,7 +247,7 @@ uint32_t writeRequest(SCOM_Trgt_t* i_target, uint32_t* i_fifoRequest)
     l_rc = putfsi(i_target, l_addr, l_data);
     if(l_rc != SUCCESS)
     {
-        TRAC_ERR("writeRequest: failed to putfsi to addr 0x%08x", l_addr);
+        TRAC_ERR("<<writeRequest: failed to putfsi to addr 0x%08x, rc=%d", l_addr, l_rc);
     }
 
     return l_rc;
@@ -293,6 +296,21 @@ uint32_t readResponse( SCOM_Trgt_t* i_target, FifoCmd_t* i_fifoReqCmd,
 
     memset( o_responseData, 0, sizeof(uint64_t) ); // Just in case.
 
+    // NORMAL RESPONSE:
+    //
+    // 0: SCOM_WORD_0
+    // 1: SCOM_WORD_1
+    // 2: 0: RespStatus.magic
+    //    2: RespStatus.command.class
+    //    3: RespStatus.command.type
+    // 3: 0: RespStatus.primaryStatus
+    //    2: RespStatus.secondaryStatus
+    // 4: DISTANCE
+    // 5: EOT (ignored - does not need to be stored in buffer)
+    //
+    // If there is a scom error, FFDC may get returned which would be larger than
+    // the normal expected 5 words which would result in RC_RESP_DATA_OVERFLOW
+
     uint32_t readBuffer[READ_BUFFER_SIZE];
     uint32_t wordsReceived = 0;
 
@@ -303,6 +321,7 @@ uint32_t readResponse( SCOM_Trgt_t* i_target, FifoCmd_t* i_fifoReqCmd,
         l_rc = waitDnFifoReady( i_target, &l_status );
         if ( SUCCESS != l_rc )
         {
+            TRAC_ERR("readResponse: waitDnFifoReady failed, rc=%d, status=%d", l_rc, l_status);
             return l_rc;
         }
 
@@ -321,7 +340,7 @@ uint32_t readResponse( SCOM_Trgt_t* i_target, FifoCmd_t* i_fifoReqCmd,
         {
             TRAC_ERR( "readResponse: data overflow without EOT. "
                       "wordsReceived=%u", wordsReceived );
-            printBuffer( readBuffer, wordsReceived );
+            //printBuffer( readBuffer, wordsReceived );
             return RC_RESP_DATA_OVERFLOW;
         }
 
@@ -354,7 +373,7 @@ uint32_t readResponse( SCOM_Trgt_t* i_target, FifoCmd_t* i_fifoReqCmd,
     {
         TRAC_ERR( "readResponse: minimum response size is invalid. "
                   "wordsReceived=%u", wordsReceived );
-        printBuffer( readBuffer, wordsReceived );
+        //printBuffer( readBuffer, wordsReceived );
         return RC_RESP_MIN_SIZE_INVALID;
     }
 
@@ -365,7 +384,7 @@ uint32_t readResponse( SCOM_Trgt_t* i_target, FifoCmd_t* i_fifoReqCmd,
     {
         TRAC_ERR( "readResponse: invalid response distance. wordsReceived=%u "
                   "distance=%u", wordsReceived, distance );
-        printBuffer( readBuffer, wordsReceived );
+        //printBuffer( readBuffer, wordsReceived );
         return RC_RESP_DISTANCE_INVALID;
     }
 
@@ -377,7 +396,7 @@ uint32_t readResponse( SCOM_Trgt_t* i_target, FifoCmd_t* i_fifoReqCmd,
     {
         TRAC_ERR( "readResponse: invalid magic word. magic=0x%04x",
                   status->magic );
-        printBuffer( readBuffer, wordsReceived );
+        //printBuffer( readBuffer, wordsReceived );
         return RC_RESP_MAGIC_WORD_INVALID;
     }
 
@@ -386,7 +405,7 @@ uint32_t readResponse( SCOM_Trgt_t* i_target, FifoCmd_t* i_fifoReqCmd,
     {
         TRAC_ERR( "readResponse: unexpected response command. cmd=0x%08x",
                   status->command.u );
-        printBuffer( readBuffer, wordsReceived );
+        //printBuffer( readBuffer, wordsReceived );
         return RC_RESP_UNEXPECTED_CMD;
     }
 
@@ -414,7 +433,7 @@ uint32_t readResponse( SCOM_Trgt_t* i_target, FifoCmd_t* i_fifoReqCmd,
                   "primaryStatus=0x%08x secondaryStatus=0x%08x",
                   i_fifoReqCmd->u, status->primaryStatus,
                   status->secondaryStatus );
-        printBuffer( readBuffer, wordsReceived );
+        //printBuffer( readBuffer, wordsReceived );
         return RC_RESP_SCOM_ERROR;
     }
 
@@ -425,7 +444,7 @@ uint32_t readResponse( SCOM_Trgt_t* i_target, FifoCmd_t* i_fifoReqCmd,
         TRAC_ERR( "readResponse: unexpected response data size. cmd=0x%08x "
                   "wordsReceived=%u distance=%u", i_fifoReqCmd->u,
                   wordsReceived, distance );
-        printBuffer( readBuffer, wordsReceived );
+        //printBuffer( readBuffer, wordsReceived );
         return RC_RESP_UNEXPECTED_DATA_SIZE;
     }
 
@@ -475,6 +494,7 @@ int32_t putFifoScom(SCOM_Trgt_t* i_target, uint64_t i_addr, uint64_t i_data)
 int32_t getFifoScom(SCOM_Trgt_t* i_target, uint64_t i_addr, uint64_t* o_data)
 {
     uint32_t l_rc = SUCCESS;
+    unsigned int l_cmd_attempts = 0;
 
     struct fifoGetScomRequest  l_fifoRequest;
     l_fifoRequest.wordCnt = GET_SCOM_REQUEST_WORD_CNT;
@@ -482,6 +502,7 @@ int32_t getFifoScom(SCOM_Trgt_t* i_target, uint64_t i_addr, uint64_t* o_data)
     l_fifoRequest.command.s.class = SBE_FIFO_CLASS_SCOM_ACCESS;
     l_fifoRequest.command.s.type  = SBE_FIFO_CMD_GET_SCOM;
     l_fifoRequest.address = i_addr;
+    static unsigned int L_throttle_trace = 0;
 
     do
     {
@@ -506,13 +527,31 @@ int32_t getFifoScom(SCOM_Trgt_t* i_target, uint64_t i_addr, uint64_t* o_data)
             break;
         }
 
+        ++l_cmd_attempts;
         if ( l_rc != SUCCESS )
         {
+            if (L_throttle_trace < 5)
+            {
+                TRAC_ERR("getFifoScom: readResponse(0x%08X) try #%d failed with %d...  Calling upFifoReset() #%d",
+                         i_addr, l_cmd_attempts, l_rc, L_throttle_trace);
+            }
+
             // Reset the FIFO for subsequent SCOMs
             uint32_t resetRc = upFifoReset(i_target);
             if(resetRc == RC_FIFO_TIMEOUT_RESET)
             {
                 // timeout msg already traced, Return original fail rc.
+                break;
+            }
+
+            if (l_cmd_attempts >= 2)
+            {
+                if (L_throttle_trace < 5)
+                {
+                    ++L_throttle_trace;
+                    TRAC_ERR("getFifoScom: returning FIFO_TIMEOUT_DN (skipping additional retries)");
+                }
+                l_rc = RC_FIFO_TIMEOUT_DN;
                 break;
             }
         }

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2018                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -396,6 +396,11 @@ int32_t SCOM_getScom( SCOM_Trgt_t i_trgt, uint32_t i_addr, uint64_t * o_val )
         }
     }
 
+    if (rc != SUCCESS)
+    {
+        TRAC_ERR("SCOM_getScom(0x%08X): returning %d", i_addr, rc);
+    }
+
     return rc;
 }
 
@@ -466,7 +471,11 @@ int32_t SCOM_getIdScom( SCOM_Trgt_t i_trgt, uint64_t i_addr, uint32_t * o_val )
         {
             rc = getscom_abs(trans_addr, &(scomout.data64));
         }
-        if ( SUCCESS != rc ) return rc;
+        if ( SUCCESS != rc )
+        {
+            TRAC_ERR("SCOM_getIdScom(0x%08X): returning %d", i_addr, rc);
+            return rc;
+        }
 
         /* Check for PIB error. */
         if ( scomout.piberr )
