@@ -163,16 +163,6 @@ extern uint8_t g_trac_err_buffer[];
 
 void create_tlb_entry(uint32_t address, uint32_t size);
 
-//Macro creates a 'bridge' handler that converts the initial fast-mode to full
-//mode interrupt handler
-
-
-FIR_HEAP_BUFFER(uint8_t G_fir_heap[FIR_HEAP_SECTION_SIZE]);
-FIR_PARMS_BUFFER(uint8_t G_fir_data_parms[FIR_PARMS_SECTION_SIZE]);
-uint32_t G_fir_master = FIR_OCC_NOT_FIR_MASTER;
-bool G_fir_collection_request_created = FALSE;
-GpeRequest G_fir_collection_request;
-
 /*
  * Function Specification
  *
@@ -1816,59 +1806,6 @@ void Main_thread_routine(void *private)
             task_misc_405_checks(NULL);
         }
 
-        static bool L_fir_collection_completed = FALSE;
-        uint32_t l_rc = 0;
-
-        // Look for FIR collection flag and status
-        if (G_fir_collection_required && !L_fir_collection_completed)
-        {
-            // If this OCC is the FIR master and PNOR access is allowed perform
-            // FIR collection
-            if (OCC_IS_FIR_MASTER())
-            {
-                TRAC_IMP("fir data collection starting");
-
-                //Need to schedule a task on GPE to start fir collection
-                if(!G_fir_collection_request_created) //Only need to create request once
-                {
-                    TRAC_IMP("fir data collection: creating gpe request");
-                    l_rc = gpe_request_create(&G_fir_collection_request,//Request
-                                              &G_async_gpe_queue0,     //Queue
-                                              IPC_ST_FIR_COLLECTION,   //Function ID
-                                              NULL,                    //GPE arguments
-                                              SSX_SECONDS(5),          //Timeout
-                                              NULL,                    //Callback function
-                                              NULL,                    //Callback args
-                                              ASYNC_REQUEST_BLOCKING); //Options
-                    if(l_rc == 0)
-                    {
-                        G_fir_collection_request_created = TRUE;
-                        TRAC_IMP("fir data collection: scheduling gpe request");
-                        l_rc = gpe_request_schedule(&G_fir_collection_request);
-                        if(l_rc != SUCCESS)
-                        {
-                            TRAC_IMP("failed to schedule fir data collection"
-                                     " job. RC = %x", (uint32_t)l_rc);
-                        }
-
-                        L_fir_collection_completed = TRUE;
-                        G_fir_collection_required = FALSE;
-                    }
-                }
-                TRAC_IMP("fir data collection done");
-            }
-
-            // Error reporting is skipped while FIR collection is required so we
-            // don't get reset in flight.  If anyone is listening send the
-            // error alert now.
-            // If this system is using PSIHB complex, send an interrupt to Host so that
-            // Host can inform HTMGT to collect the error log
-            if (G_occ_interrupt_type == PSIHB_INTERRUPT)
-            {
-                notify_host(INTR_REASON_HTMGT_SERVICE_REQUIRED);
-            }
-        }
-
         if( l_ssxrc == SSX_OK)
         {
             // Wait for health monitor semaphore
@@ -2251,84 +2188,7 @@ int main(int argc, char **argv)
                                l_ssxrc,
                                l_occ_int_type);
 
-        // Get the FIR Master indicator
-        uint32_t l_fir_master = FIR_OCC_NOT_FIR_MASTER;
-        l_homerrc = homer_hd_map_read_unmap(HOMER_FIR_MASTER,
-                                            &l_fir_master,
-                                            &l_ssxrc);
-
-        if (((HOMER_SUCCESS == l_homerrc) || (HOMER_SSX_UNMAP_ERR == l_homerrc))
-            &&
-            (FIR_OCC_IS_FIR_MASTER == l_fir_master))
-        {
-            OCC_SET_FIR_MASTER(FIR_OCC_IS_FIR_MASTER);
-        }
-        else
-        {
-            OCC_SET_FIR_MASTER(FIR_OCC_NOT_FIR_MASTER);
-        }
-
-        TRAC_IMP("HOMER accessed, rc=%d, FIR master=%d, ssx_rc=%d",
-                 l_homerrc, l_fir_master, l_ssxrc);
-
-        // Handle any errors from the FIR master access
-        homer_log_access_error(l_homerrc,
-                               l_ssxrc,
-                               l_fir_master);
-
-        // If this OCC is the FIR master read in the FIR collection parms
-        if (OCC_IS_FIR_MASTER())
-        {
-            // Read the FIR parms buffer
-            l_homerrc = homer_hd_map_read_unmap(HOMER_FIR_PARMS,
-                                                &G_fir_data_parms[0],
-                                                &l_ssxrc);
-
-            TRAC_IMP("HOMER accessed, rc=%d, FIR parms buffer 0x%x, ssx_rc=%d",
-                     l_homerrc, &G_fir_data_parms[0], l_ssxrc);
-
-            // Handle any errors from the FIR master access
-            homer_log_access_error(l_homerrc,
-                                   l_ssxrc,
-                                   (uint32_t)&G_fir_data_parms[0]);
-        }
-
-
-        // Get the SMF mode indicator
-        uint32_t l_smf_mode = SMF_MODE_NOT_ENABLED;
-        l_homerrc = homer_hd_map_read_unmap(HOMER_SMF_MODE,
-                                            &l_smf_mode,
-                                            &l_ssxrc);
-
-        if (((HOMER_SUCCESS == l_homerrc) || (HOMER_SSX_UNMAP_ERR == l_homerrc)) &&
-            (SMF_MODE_ENABLED == l_smf_mode))
-        {
-            G_smf_mode = true;
-        }
-        else
-        {
-            G_smf_mode = false;
-        }
-
-        TRAC_IMP("HOMER accessed, rc=%d, SMF mode=%d, ssx_rc=%d",
-                 l_homerrc, l_smf_mode, l_ssxrc);
-
-        // Handle any errors
-        homer_log_access_error(l_homerrc,
-                               l_ssxrc,
-                               l_smf_mode);
-
     }//G_ipl_time
-    else
-    {
-        // No access to HOMER. Set this occ as FIR master
-        TRAC_IMP("I am the FIR master");
-        OCC_SET_FIR_MASTER(FIR_OCC_IS_FIR_MASTER);
-    }
-
-    //Set the fir_heap and fir_params pointer in the shared buffer
-    G_shared_gpe_data.fir_heap_buffer_ptr   = (uint32_t)G_fir_heap;
-    G_shared_gpe_data.fir_params_buffer_ptr = (uint32_t)G_fir_data_parms;
 
     // enable IPC and start GPEs
     CHECKPOINT(INITIALIZING_IPC);

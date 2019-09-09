@@ -60,12 +60,6 @@ extern char _TRACE_BUFFERS_START_BASE[];
 #define GPE_BUFFER(declaration) \
         declaration __attribute__ ((__aligned__ (8))) __attribute__ ((section (".noncacheable")))
 
-#define FIR_HEAP_BUFFER(declaration) \
-        declaration __attribute__ ((section (".firHeap")))
-
-#define FIR_PARMS_BUFFER(declaration) \
-        declaration __attribute__ ((section (".firParms")))
-
 #define LINEAR_WINDOW_WR_BUFFER(declaration) \
         declaration __attribute__ ((section (".linear_wr")))
 

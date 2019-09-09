@@ -45,7 +45,7 @@
 uint64_t        G_kernel_stack[KERNEL_STACK_SIZE/8];
 
 //Point to the GPE shared structure
-#define GPE_SHARED_DATA_ADDR 0xFFFB3C00
+#define GPE_SHARED_DATA_ADDR 0xFFFF6000
 #define GPE_SHARED_DATA_SIZE 256
 
 gpe_shared_data_t * G_gpe_shared_data = (gpe_shared_data_t*) GPE_SHARED_DATA_ADDR;

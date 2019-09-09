@@ -127,12 +127,6 @@ homer_rc_t __attribute__((optimize("O1"))) homer_hd_map_read_unmap(const homer_r
                     //*(uint32_t *)o_host_data = l_hdcfg_data->occInterruptType;
                     *(uint32_t *)o_host_data = FSP_SUPPORTED_OCC; // TODO - RTC 213675
                     break;
-                case HOMER_FIR_MASTER:
-                    //*(uint32_t *)o_host_data = l_hdcfg_data->firMaster;
-                    break;
-                case HOMER_FIR_PARMS:
-                    //memcpy(o_host_data, &(l_hdcfg_data->firParms[0]), HOMER_FIR_PARM_SIZE);
-                    break;
                 case HOMER_SMF_MODE:
                     //*(uint32_t *)o_host_data = l_hdcfg_data->smfMode;
                     break;

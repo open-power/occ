@@ -75,7 +75,7 @@ typedef uint32_t trace_hash_val;
 // NOTE!  Increment this when new components are added!
 #define TRAC_NUM_TRACE_COMPONENTS           1
 
-#define TRACE_BUFFER_SIZE                   8192
+#define TRACE_BUFFER_SIZE                   9216
 #define NUMBER_TRACE_BUFFERS                3
 #define ALL_TRACE_BUFFERS_SZ                (TRACE_BUFFER_SIZE * NUMBER_TRACE_BUFFERS)
 

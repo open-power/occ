@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -35,7 +35,7 @@
 uint8_t        G_kernel_stack[KERNEL_STACK_SIZE];
 
 //Point to the GPE shared structure
-#define GPE_SHARED_DATA_ADDR 0xFFFB3C00
+#define GPE_SHARED_DATA_ADDR 0xFFFF60000
 #define GPE_SHARED_DATA_SIZE 256
 
 gpe_shared_data_t * G_gpe_shared_data = (gpe_shared_data_t*) GPE_SHARED_DATA_ADDR;
@@ -77,7 +77,7 @@ int main(int argc, char **argv)
 
     PK_TRACE("Kernel init completed, timebase is %d Hz", l_timebase);
 
-    // Disable IPC's and register the IPC interrupt handler 
+    // Disable IPC's and register the IPC interrupt handler
     rc = ipc_init();
     if(rc)
     {

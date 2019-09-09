@@ -1389,12 +1389,6 @@ uint8_t SMGR_validate_get_valid_states(void)
        l_valid_states |= SMGR_MASK_MASTER_OCC;
     }
 
-    // Indicate if this OCC is the FIR master.
-    if (OCC_IS_FIR_MASTER())
-    {
-        l_valid_states |= OCC_ROLE_FIR_MASTER_MASK;
-    }
-
     if(G_simics_environment)
     {
         l_valid_states |= OCC_SIMICS_ENVIRONMENT;

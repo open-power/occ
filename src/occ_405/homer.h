@@ -36,7 +36,6 @@
 #define HOMER_HD_OFFSET       0x000C0000
 #define HOMER_HD_ADDRESS     (HOMER_BASE_ADDRESS+HOMER_HD_OFFSET)
 #define HOMER_HD_SZ           (128 * 1024)
-#define HOMER_FIR_PARM_SIZE   (3 * 1024)
 
 // OPAL table address in HOMER
 #define OPAL_OFFSET_HOMER   0x000E2000 // Offset address of OPAL relative to HOMER
@@ -66,16 +65,6 @@
 // PPMR Header space
 #define PPMR_OFFSET_HOMER    0x00300000                             // PPMR image HOMER offset
 #define PPMR_ADDRESS_HOMER   (HOMER_BASE_ADDRESS+PPMR_OFFSET_HOMER) // PPMR image memory address
-
-extern uint32_t G_fir_master;
-#define OCC_SET_FIR_MASTER(_fm_t) (G_fir_master = _fm_t)
-#define OCC_IS_FIR_MASTER()       ((G_fir_master == FIR_OCC_IS_FIR_MASTER) ? TRUE : FALSE)
-
-enum fir_master
-{
-    FIR_OCC_NOT_FIR_MASTER              = 0x00000000,
-    FIR_OCC_IS_FIR_MASTER               = 0x00000001
-};
 
 enum smf_mode_e
 {
@@ -119,10 +108,8 @@ struct occHostConfigDataArea
     uint32_t version;
     uint32_t nestFrequency;
     uint32_t occInterruptType;
-    uint32_t firMaster;
-    uint8_t  firParms[HOMER_FIR_PARM_SIZE];
     uint32_t smfMode;
-    uint8_t  __reserved[HOMER_HD_SZ - (5 * sizeof(uint32_t)) - HOMER_FIR_PARM_SIZE];
+    uint8_t  __reserved2[HOMER_HD_SZ - (4 * sizeof(uint32_t))];
 }__attribute__ ((__packed__));
 typedef struct occHostConfigDataArea occHostConfigDataArea_t;
 

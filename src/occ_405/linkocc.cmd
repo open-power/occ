@@ -61,7 +61,7 @@ OUTPUT_FORMAT(elf32-powerpc);
 //  Define the beginning of SRAM, the location of the PowerPC exception
 //  vectors (must be 64K-aligned) and the location of the boot branch.
 
-//  512 KB SRAM at the top of the 768K SRAM. SRAM starts at 0xfff00000
+//  768 KB SRAM at the top of the 1 MB SRAM. SRAM starts at 0xfff00000
 //  Here we start at 0xfff40000 because the bottom 256K is reserved for
 //  -- IPC Common space (0xfff00000 - 0xfff01000)
 //  -- GPE0 (0xfff01000 - 0xfff10000)
@@ -72,16 +72,16 @@ OUTPUT_FORMAT(elf32-powerpc);
 #define origin            0xfff40000
 #define vectors           0xfff40000
 #define reset             0xffffffec
-#define sram_size         0x00080000
+#define sram_size         0x000c0000
 #define sram_available    sram_size
 
 // The SRAM controller aliases the SRAM at 8 x 128MB boundaries to support
 // real-mode memory attributes using DCCR, ICCR etc.  Noncacheable access is
 // the next-to-last 128MB PPC405 region. Write-though access is the
 // next-to-next-to-last 128MB PPC405 region. For our purposes, this means that:
-// -- 0xF7F00000 - 0xF7FC0000 is our noncacheable SRAM address space
-// -- 0xEFF00000 - 0xEFFC0000 is our writethrough SRAM address space
-// -- 0xFFF00000 - 0xFFFC0000 is cached for both reads and writes
+// -- 0xF7F00000 - 0xF7FFFFEF is our noncacheable SRAM address space
+// -- 0xEFF00000 - 0xEFFFFFEF is our writethrough SRAM address space
+// -- 0xFFF00000 - 0xFFFFFFEF is cached for both reads and writes
 
 #define noncacheable_offset 0x08000000
 #define noncacheable_origin (origin - 0x08000000)
@@ -542,7 +542,6 @@ SECTIONS
 
     _SSX_FREE_END   = _GPE_SHARED_DATA_BASE - 1;
 
-
     ////////////////////////////////
     // Shared GPE data
     //
@@ -551,13 +550,13 @@ SECTIONS
     //       needs to be changed in gpe0_main.c and gpe1_main.c.
     ////////////////////////////////
     __CUR_COUNTER__ = .;
-    _GPE_SHARED_DATA_BASE = 0xfffb3c00;
+    _GPE_SHARED_DATA_BASE = 0xffff6000;
     _GPE_SHARED_DATA_SIZE = 0x100;
     . = _GPE_SHARED_DATA_BASE;
 #if !PPC405_MMU_SUPPORT
     . = . - writethrough_offset;
     _LMA = . + writethrough_offset;
-    .gpe_shared . : AT(_LMA) {*(gpe_shared) . = ALIGN(_GPE_SHARED_DATA_SIZE);}
+    .gpe_shared . : AT(_LMA) {*(gpe_shared) . = ALIGN(128);}
     . = . + writethrough_offset;
 #else
     .gpe_shared . : {*(gpe_shared) . = ALIGN(_GPE_SHARED_DATA_SIZE);} > sram
@@ -573,18 +572,18 @@ SECTIONS
     //
     ////////////////////////////////
     __CUR_COUNTER__ = .;
-    _PING_PONG_BUFFER_BASE = 0xfffb3d00;
-    _PING_BUFFER_BASE = 0xfffb3d00;
+    _PING_PONG_BUFFER_BASE = 0xffff6100;
+    _PING_BUFFER_BASE = 0xffff6100;
     _PING_BUFFER_SIZE = 0x100;
-    _PONG_BUFFER_BASE = 0xfffb3e00;
+    _PONG_BUFFER_BASE = 0xffff6200;
     _PONG_BUFFER_SIZE = 0x100;
     . = _PING_BUFFER_BASE;
 #if !PPC405_MMU_SUPPORT
     . = . - writethrough_offset;
     _LMA = . + writethrough_offset;
-    .vrt_ping_buffer . : AT(_LMA) {*(vrt_ping_buffer) . = ALIGN(_PING_BUFFER_SIZE);}
+    .vrt_ping_buffer . : AT(_LMA) {*(vrt_ping_buffer) . = ALIGN(128);}
     _LMA = . + writethrough_offset;
-    .vrt_pong_buffer . : AT(_LMA) {*(vrt_pong_buffer) . = ALIGN(_PONG_BUFFER_SIZE);}
+    .vrt_pong_buffer . : AT(_LMA) {*(vrt_pong_buffer) . = ALIGN(128);}
     . = . + writethrough_offset;
 #else
     .vrt_ping_buffer . : {*(vrt_ping_buffer) . = ALIGN(_PING_BUFFER_SIZE);} > sram
@@ -601,19 +600,18 @@ SECTIONS
     //
     ////////////////////////////////
     __CUR_COUNTER__ = .;
-    _GLOBAL_DATA_BASE = 0xfffb3f00;
+    _GLOBAL_DATA_BASE = 0xffff6300;
     _GLOBAL_DATA_SIZE = 0x100;
     . = _GLOBAL_DATA_BASE;
 #if !PPC405_MMU_SUPPORT
     . = . - writethrough_offset;
     _LMA = . + writethrough_offset;
-    .global_data . : AT(_LMA) {*(global_data) . = ALIGN(_GLOBAL_DATA_SIZE);}
+    .global_data . : AT(_LMA) {*(global_data) . = ALIGN(128);}
     . = . + writethrough_offset;
 #else
     .global_data . : {*(global_data) . = ALIGN(_GLOBAL_DATA_SIZE);} > sram
 #endif
     . = __CUR_COUNTER__;
-
 
     ////////////////////////////////
     // Trace Buffers
@@ -623,22 +621,22 @@ SECTIONS
     //       the OCC/405 dies unexpectedly.
     ////////////////////////////////
     __CUR_COUNTER__ = .;
-    _ERR_TRACE_BUFFER_BASE = 0xfffb4000;
-    _TRACE_BUFFERS_START_BASE = 0xfffb4000;
-    _ERR_TRACE_BUFFER_SIZE = 0x2000;
-    _INF_TRACE_BUFFER_BASE = 0xfffb6000;
-    _INF_TRACE_BUFFER_SIZE = 0x2000;
-    _IMP_TRACE_BUFFER_BASE = 0xfffb8000;
-    _IMP_TRACE_BUFFER_SIZE = 0x2000;
+    _ERR_TRACE_BUFFER_BASE = 0xffff6400;
+    _TRACE_BUFFERS_START_BASE = 0xffff6400;
+    _ERR_TRACE_BUFFER_SIZE = 0x2400;
+    _INF_TRACE_BUFFER_BASE = 0xffff8800;
+    _INF_TRACE_BUFFER_SIZE = 0x2400;
+    _IMP_TRACE_BUFFER_BASE = 0xffffac00;
+    _IMP_TRACE_BUFFER_SIZE = 0x2400;
     . = _ERR_TRACE_BUFFER_BASE;
 #if !PPC405_MMU_SUPPORT
     . = . - writethrough_offset;
     _LMA = . + writethrough_offset;
-    .err_trac . : AT (_LMA) {*(err_trac) . = ALIGN(_ERR_TRACE_BUFFER_SIZE);}
+    .err_trac . : AT (_LMA) {*(err_trac) . = ALIGN(128);}
     _LMA = . + writethrough_offset;
-    .inf_trac . : AT (_LMA) {*(inf_trac) . = ALIGN(_INF_TRACE_BUFFER_SIZE);}
+    .inf_trac . : AT (_LMA) {*(inf_trac) . = ALIGN(128);}
     _LMA = . + writethrough_offset;
-    .imp_trac . : AT (_LMA) {*(imp_trac) . = ALIGN(_IMP_TRACE_BUFFER_SIZE);}
+    .imp_trac . : AT (_LMA) {*(imp_trac) . = ALIGN(128);}
     . = . + writethrough_offset;
 #else
     .err_trac . : {*(err_trac) . = ALIGN(_ERR_TRACE_BUFFER_SIZE);} > sram
@@ -647,52 +645,15 @@ SECTIONS
 #endif
     . = __CUR_COUNTER__;
 
-    ////////////////////////////////
-    // FIR data heap section
-    ////////////////////////////////
-    __CUR_COUNTER__ = .;
-    _FIR_HEAP_SECTION_BASE = 0xfffba000;
-    _FIR_HEAP_SECTION_SIZE = 0x3000;
-    . = _FIR_HEAP_SECTION_BASE;
-
-#if !PPC405_MMU_SUPPORT
-    . = . - writethrough_offset;
-    _LMA = . + writethrough_offset;
-    .firHeap . : AT (_LMA) {*(firHeap) . = ALIGN(1024);}
-    . = . + writethrough_offset;
-#else
-    .firHeap . : {*(firHeap) . = ALIGN(1024);} > sram
-#endif
-
-    . = __CUR_COUNTER__;
-
-    ////////////////////////////////
-    // FIR data parms section
-    ////////////////////////////////
-    __CUR_COUNTER__ = .;
-    _FIR_PARMS_SECTION_BASE = 0xfffbd000;
-    _FIR_PARMS_SECTION_SIZE = 0x1000;
-    . = _FIR_PARMS_SECTION_BASE;
-
-#if !PPC405_MMU_SUPPORT
-    . = . - noncacheable_offset;
-    _LMA = . + noncacheable_offset;
-    .firParms . : AT (_LMA) {*(firParms) . = ALIGN(1024);}
-    . = . + noncacheable_offset;
-#else
-    .firParms . : {*(firParms) . = ALIGN(1024);} > sram
-#endif
-
-    . = __CUR_COUNTER__;
 
     ////////////////////////////////
     // FSP Command Buffer
     ////////////////////////////////
     __CUR_COUNTER__ = .;
 
-    _LINEAR_WR_WINDOW_SECTION_BASE = 0xfffbe000;
+    _LINEAR_WR_WINDOW_SECTION_BASE = 0xffffd000;
     _LINEAR_WR_WINDOW_SECTION_SIZE = 0x1000;
-    _LINEAR_RD_WINDOW_SECTION_BASE = 0xfffbf000;     // Update FFDC_BUFFER_ADDR if changed
+    _LINEAR_RD_WINDOW_SECTION_BASE = 0xffffe000;     // Update FFDC_BUFFER_ADDR if changed
     _LINEAR_RD_WINDOW_SECTION_SIZE = 0x1000;
     . = _LINEAR_WR_WINDOW_SECTION_BASE;
 #if !PPC405_MMU_SUPPORT
@@ -716,21 +677,6 @@ SECTIONS
 #endif
 
     . = __CUR_COUNTER__;
-
-    ////////////////////////////////
-    //            The init data,
-    //            takes up around 6K.
-    ////////////////////////////////
-    //__CUR_COUNTER__ = .;
-    //INIT_SECTION_BASE = 0xfffbf000;
-    //. = INIT_SECTION_BASE;
-
-    // Section aligned to 128 to make occ main application image 128 bytes
-    // aligned which is requirement for applet manager when traversing through
-    // all the image headers
-    //initSection . :  { *(initSection) init_text . = ALIGN(128);} > sram
-
-    //. = __CUR_COUNTER__;
 
     //////////////////////////////
     // End Of Memory

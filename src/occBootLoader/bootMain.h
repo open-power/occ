@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2014,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2014,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -77,8 +77,8 @@ typedef enum CHKPOINT
 #define SRAM_START_ADDRESS_405      0xFFF40000
 #define SRAM_START_ADDRESS_GPE0     0xFFF01000
 #define SRAM_START_ADDRESS_GPE1     0xFFF10000
-#define SRAM_TEST_END_ADDRESS       0xFFFBFFFF
-#define SRAM_END_ADDRESS_405        0xFFFBFFFF
+#define SRAM_TEST_END_ADDRESS       0xFFFFFFEF
+#define SRAM_END_ADDRESS_405        0xFFFFFFEF
 #define SRAM_END_ADDRESS_GPE0       0xFFF0FFFF
 #define SRAM_END_ADDRESS_GPE1       0xFFF1FFFF
 #define SRAM_TEST_BIT_PATTERN       0xA5A5A5A5
