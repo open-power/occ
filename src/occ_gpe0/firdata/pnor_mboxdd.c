@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ_405/firdata/pnor_mboxdd.c $                           */
+/* $Source: src/occ_gpe0/firdata/pnor_mboxdd.c $                          */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2017                             */
+/* Contributors Listed Below - COPYRIGHT 2017,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -223,7 +223,7 @@ errorHndl_t writeFlash(pnorMbox_t* i_pnorMbox,
                 break;
             }
 
-            //LPC writes are done via LPC scom interface and can only handle 4 
+            //LPC writes are done via LPC scom interface and can only handle 4
             //bytes at a time. We write 256 bytes from the previous functions,
             // so break up the large write into 4 byte writes
             uint32_t l_size_written = 0;

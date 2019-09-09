@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ_405/firdata/ipmidd.H $                                */
+/* $Source: src/occ_gpe0/firdata/ipmidd.H $                               */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2018                             */
+/* Contributors Listed Below - COPYRIGHT 2018,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -91,8 +91,8 @@ enum {
     CTRL_CLR_RD_PTR    = (1 << 1),
     CTRL_CLR_WR_PTR    = (1 << 0),
 
-    IDLE_STATE = (CTRL_B_BUSY | CTRL_B2H_ATN |
-                  CTRL_SMS_ATN | CTRL_H2B_ATN),
+    // Ignore CTRL_SMS_ATN
+    IDLE_STATE = (CTRL_B_BUSY | CTRL_B2H_ATN | CTRL_H2B_ATN),
 
     // Bit in the INMASK register which signals to the BMC
     // to reset it's end of things.

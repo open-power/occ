@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ_405/firdata/pnor_util.c $                             */
+/* $Source: src/occ_gpe0/firdata/pnor_util.c $                            */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -51,6 +51,14 @@ int32_t pnor_write_8B( uint64_t i_data )
 {
     int32_t rc = SUCCESS;
 
+    // ensure current index is within range
+    if (g_write_cache_index > PAGE_PROGRAM_BYTES)
+    {
+        TRAC_ERR("pnor_write_8B: ERROR - g_write_cache_index > PAGE_PROGRAM_BYTES!");
+        g_write_cache_index = 0;
+        g_next_byte = 0xFFFFFFFF;
+    }
+
     if ( (g_next_byte == 0xFFFFFFFF) || /* initialized data */
          ((g_next_byte + g_pnor_size) < (g_next_byte + 9)) ) /* make sure there is room */
     {
@@ -92,7 +100,7 @@ int32_t pnor_write_8B( uint64_t i_data )
                                       g_write_cache );
         if ( NO_ERROR != tmp )
         {
-            TRACFCOMP("pnor_write_8B> writeFlash failed");
+            TRAC_IMP("pnor_write_8B> writeFlash failed");
             /* hit an error, stop any more writes from happening */
             g_next_byte = 0xFFFFFFFF;
             g_pnor_size = 0;
@@ -171,6 +179,7 @@ int32_t PNOR_writeFirData( HOMER_PnorInfo_t i_pnorInfo,
         uint64_t dataChunk  = 0;
         uint32_t sz_dataChunk = sizeof(uint64_t);
 
+        TRAC_IMP("PNOR_writeFirData: writing %d bytes (%d byte chunks)", i_bufSize, sz_dataChunk);
         /* Add PNOR data 8 bytes at a time. */
         for ( idx = 0; idx < i_bufSize; idx += sz_dataChunk )
         {
@@ -180,7 +189,7 @@ int32_t PNOR_writeFirData( HOMER_PnorInfo_t i_pnorInfo,
             rc = pnor_write_8B( dataChunk );
             if ( SUCCESS != rc )
             {
-                TRACFCOMP( "pnor_write_8B() failed during FIR write" );
+                TRAC_ERR( "pnor_write_8B() failed during FIR write" );
                 break;
             }
         }
@@ -201,7 +210,7 @@ int32_t PNOR_writeFirData( HOMER_PnorInfo_t i_pnorInfo,
             rc = pnor_write_8B( dataChunk );
             if ( SUCCESS != rc )
             {
-                TRACFCOMP( "pnor_write_8B() failed during blank fill" );
+                TRAC_ERR( "pnor_write_8B() failed during blank fill" );
                 break;
             }
         }
@@ -215,14 +224,14 @@ int32_t PNOR_writeFirData( HOMER_PnorInfo_t i_pnorInfo,
             rc = pnor_write_8B( dataChunk );
             if ( SUCCESS != rc )
             {
-                TRACFCOMP( "pnor_write_8B() failed during ECC fill" );
+                TRAC_ERR( "pnor_write_8B() failed during ECC fill" );
                 break;
             }
         }
 
     } while (0);
 
-    TRACFCOMP("<<PNOR_writeFirData");
+    TRAC_IMP("<<PNOR_writeFirData returning %d", rc);
     return rc;
 }
 

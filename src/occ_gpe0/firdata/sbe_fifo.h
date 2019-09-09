@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ_405/firdata/sbe_fifo.h $                              */
+/* $Source: src/occ_gpe0/firdata/sbe_fifo.h $                             */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2017                             */
+/* Contributors Listed Below - COPYRIGHT 2017,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -51,7 +51,9 @@
 #define SBE_FIFO_DNFIFO_DATA_OUT 0x00002440
 #define NS_PER_MSEC (1000000ull)
 #define MAX_UP_FIFO_TIMEOUT_NS 10*NS_PER_MSEC
-#define READ_BUFFER_SIZE 2048
+// READ_BUFFER_SIZE is number of words when reading scom via SBE
+// (2 words of scom data + 3 words of header)
+#define READ_BUFFER_SIZE 5
 #define FIFO_STATUS_MAGIC 0xC0DE
 #define SBE_PRI_OPERATION_SUCCESSFUL 0x00
 #define SBE_SEC_OPERATION_SUCCESSFUL 0x00
