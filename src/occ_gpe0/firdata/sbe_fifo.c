@@ -37,6 +37,7 @@ enum
     RC_RESP_MAGIC_WORD_INVALID   = 1004,
     RC_RESP_UNEXPECTED_CMD       = 1005,
     RC_RESP_UNEXPECTED_DATA_SIZE = 1006,
+    RC_RESP_DN_FIFO_READY_TIMEDOUT = 1007,
 
     RC_RESP_SCOM_ERROR = 1010,
 
@@ -313,6 +314,42 @@ uint32_t readResponse( SCOM_Trgt_t* i_target, FifoCmd_t* i_fifoReqCmd,
 
     uint32_t readBuffer[READ_BUFFER_SIZE];
     uint32_t wordsReceived = 0;
+    uint32_t delayTicks = 0;
+    uint32_t fifoNotReady = 1;
+
+    do
+    {
+        // Wait to read data or EOT from the FIFO.
+        uint32_t l_status = 0;
+        l_rc = waitDnFifoReady( i_target, &l_status );
+        if ( SUCCESS != l_rc )
+        {
+            TRAC_ERR("readResponse: waitDnFifoReady failed, rc=%d, status=%d", l_rc, l_status);
+            return l_rc;
+        }
+
+        // Check if DN Stram Fifo is Ready to be read
+        if( l_status & DNFIFO_STATUS_FIFO_EMPTY )
+        {
+            // This means that Down stream buffer is not ready yet..wait for
+            // some more time
+            delayTicks++;
+            if(delayTicks < TimeoutForStartOfTrx)
+            {
+                continue;
+            }
+            else
+            {
+                TRAC_ERR("readResponse: Down Stream Fifo Not Ready yet to "
+                        "receive Data, Status Reg [0x%08X]", l_status);
+                return RC_RESP_DN_FIFO_READY_TIMEDOUT;
+            }
+        }
+        else
+        {
+            fifoNotReady = 0; // This will break out of the waiting loop
+        }
+    }while(fifoNotReady); // Waiting loop for start of the transfer
 
     do
     {

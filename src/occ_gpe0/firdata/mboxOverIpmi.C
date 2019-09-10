@@ -86,13 +86,14 @@ int ipmi_sendCommand(mboxMessage_t *io_msg, int i_arg_size)
         // It's not clear if the PK trace can be extracted w/o Cronus.
         if(i == IPMI_MAX_TRIES)
         {
-            PK_TRACE("ipmi_sendCommand: cmd 0x%x TIMEOUT waiting to send",
-                     io_msg->iv_cmd);
             rc = RC_IPMIDD_TIMEOUT;
         }
 
         if( rc )
         {
+            PK_TRACE("ipmi_sendCommand: send of PNOR_CMD failed (cmd 0x%02X, seq=0x%02X, "
+                     "data_size=%d, rc=0x%08X)",
+                     io_msg->iv_cmd, io_msg->iv_seq, l_data_size, rc);
             break;
         }
 

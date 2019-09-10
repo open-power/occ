@@ -67,6 +67,7 @@ errorHndl_t hwInit(pnorMbox_t* i_pnorMbox)
         l_getInfoMsg.iv_cmd = MBOX_C_GET_MBOX_INFO;
         put8(&l_getInfoMsg, 0, 2);
         l_arg_size = 1;
+        TRAC_IMP("hwInit: sending GET_MBOX_INFO");
         l_err = doMessage(&i_pnorMbox->iv_mbox, &l_getInfoMsg, l_arg_size);
         if (l_err)
         {
@@ -92,6 +93,7 @@ errorHndl_t hwInit(pnorMbox_t* i_pnorMbox)
         mboxMessage_t l_getSizeMsg;
         l_getSizeMsg.iv_cmd = MBOX_C_GET_FLASH_INFO;
         l_arg_size = 0;
+        TRAC_IMP("hwInit: sending GET_FLASH_INFO");
         l_err = doMessage(&i_pnorMbox->iv_mbox, &l_getSizeMsg, l_arg_size);
         if (l_err)
         {
