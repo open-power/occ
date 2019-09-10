@@ -52,11 +52,13 @@
 #define NS_PER_MSEC (1000000ull)
 #define MAX_UP_FIFO_TIMEOUT_NS 10*NS_PER_MSEC
 // READ_BUFFER_SIZE is number of words when reading scom via SBE
-// (2 words of scom data + 3 words of header)
-#define READ_BUFFER_SIZE 5
+// (minimum 6: 2 words of scom data + 3 words of header + 1 EOT)
+#define READ_BUFFER_SIZE 8
 #define FIFO_STATUS_MAGIC 0xC0DE
 #define SBE_PRI_OPERATION_SUCCESSFUL 0x00
 #define SBE_SEC_OPERATION_SUCCESSFUL 0x00
+
+#define TimeoutForStartOfTrx 0x1000
 
 typedef union
 {

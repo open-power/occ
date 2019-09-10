@@ -54,7 +54,7 @@ int32_t pnor_write_8B( uint64_t i_data )
     // ensure current index is within range
     if (g_write_cache_index > PAGE_PROGRAM_BYTES)
     {
-        TRAC_ERR("pnor_write_8B: ERROR - g_write_cache_index > PAGE_PROGRAM_BYTES!");
+        TRAC_ERR("pnor_write_8B: ERROR - g_write_cache_index (0x%08X) > PAGE_PROGRAM_BYTES!", g_write_cache_index);
         g_write_cache_index = 0;
         g_next_byte = 0xFFFFFFFF;
     }
@@ -62,8 +62,8 @@ int32_t pnor_write_8B( uint64_t i_data )
     if ( (g_next_byte == 0xFFFFFFFF) || /* initialized data */
          ((g_next_byte + g_pnor_size) < (g_next_byte + 9)) ) /* make sure there is room */
     {
-        PK_TRACE("FAILURE: pnor_write_8B> g_next_byte=%.8X, g_pnor_size=%.8X",
-                  g_next_byte,g_pnor_size);
+        PK_TRACE("pnor_write_8B: Invalid data - g_next_byte=0x%08X, g_pnor_size=0x%08X",
+                  g_next_byte, g_pnor_size);
         /* must have been some error in the prep */
         return FAIL;
     }
@@ -189,7 +189,8 @@ int32_t PNOR_writeFirData( HOMER_PnorInfo_t i_pnorInfo,
             rc = pnor_write_8B( dataChunk );
             if ( SUCCESS != rc )
             {
-                TRAC_ERR( "pnor_write_8B() failed during FIR write" );
+                TRAC_ERR("pnor_write_8B() failed during FIR write (rc=0x%08X, idx=%d of %d)",
+                         rc, idx, i_bufSize);
                 break;
             }
         }
