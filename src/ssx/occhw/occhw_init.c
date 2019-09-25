@@ -324,22 +324,26 @@ __occhw_setup()
     uint64_t owned_actual;
     uint64_t reverse_polarity;
 
-#if (APPCFG_OCC_INSTANCE_ID == OCCHW_IRQ_ROUTE_OWNER)
-    //If this instance is the owner of the interrupt routting registers
-    //then write the routing registers for all OCC interrupts.
-    //This instance must be the first instance to run within the OCC
-    //This will be done while all external interrupts are masked.
-    out32(OCB_OIMR0_OR, 0xffffffff);
-    out32(OCB_OIMR1_OR, 0xffffffff);
-    out32(OCB_OIRR0A, (uint32_t)(g_ext_irqs_routeA >> 32));
-    out32(OCB_OIRR1A, (uint32_t)g_ext_irqs_routeA);
-    out32(OCB_OIRR0B, (uint32_t)(g_ext_irqs_routeB >> 32));
-    out32(OCB_OIRR1B, (uint32_t)g_ext_irqs_routeB);
-    out32(OCB_OIRR0C, (uint32_t)(g_ext_irqs_routeC >> 32));
-    out32(OCB_OIRR1C, (uint32_t)g_ext_irqs_routeC);
+    // If two engines are ever started at about the same time there could be
+    // a race condition, but that would require an ambitious unit tester,
+    // and won't happen in production.  Also,the engines should be writing
+    // the same values anyway.
+    if(0 == (in32(OCB_OIRR0A) | in32(OCB_OIRR1A) | in32(OCB_OIRR0B) |
+             in32(OCB_OIRR1B) | in32(OCB_OIRR0C) | in32(OCB_OIRR1C)))
+    {
+        //This instance must be the first instance to run within the OCC
+        //This will be done while all external interrupts are masked.
+        out32(OCB_OIMR0_OR, 0xffffffff);
+        out32(OCB_OIMR1_OR, 0xffffffff);
+        out32(OCB_OIRR0A, (uint32_t)(g_ext_irqs_routeA >> 32));
+        out32(OCB_OIRR1A, (uint32_t)g_ext_irqs_routeA);
+        out32(OCB_OIRR0B, (uint32_t)(g_ext_irqs_routeB >> 32));
+        out32(OCB_OIRR1B, (uint32_t)g_ext_irqs_routeB);
+        out32(OCB_OIRR0C, (uint32_t)(g_ext_irqs_routeC >> 32));
+        out32(OCB_OIRR1C, (uint32_t)g_ext_irqs_routeC);
 
-    //Note: all interrupts are left in the masked state at this point
-#endif
+        //Note: all interrupts are left in the masked state at this point
+    }
 
     //Determine from the routing registers which irqs are owned by this instance
     //NOTE: If a bit is not set in the routeA register, it is not owned by a GPE

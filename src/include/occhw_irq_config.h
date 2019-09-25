@@ -30,12 +30,6 @@
 ///        and configuration for processors running in the OCC complex.
 ///
 
-/// Designate an instance (GPE 0-3 or 405) to own the routing registers
-/// 0-3 -> GPE, 4 -> 405
-#ifndef OCCHW_IRQ_ROUTE_OWNER
-    #define OCCHW_IRQ_ROUTE_OWNER 2
-#endif
-
 /// This macro should be defined in the pk_app_cfg.h file for external interrupts
 /// that are to be used by the OCC instance.  If not defined elsewhere then
 /// interrupts owned by this instance will have the default configuration and be

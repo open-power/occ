@@ -25,12 +25,6 @@
 #if !defined(__IOTA_APP_CFG__)
 #define __IOTA_APP_CFG__
 
-// GPE3 is the irq route ownder
-#define OCCHW_IRQ_ROUTE_OWNER  3
-// This is GPE2 - see iota.mk
-
-// TODO  get rid of pk_app_cfg.h
-//#include "pk_app_cfg.h"
 #define PLATFORM_PANIC_CODES_H "iota_test_panic_codes.h"
 #include "iota_panic_codes.h"
 

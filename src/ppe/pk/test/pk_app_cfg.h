@@ -30,7 +30,6 @@
 ///
 
 #define GLOBAL_CFG_USE_IPC 1
-#define OCCHW_IRQ_ROUTE_OWNER 1
 
 // All GPE's will use the external timebase register
 #define APPCFG_USE_EXT_TIMEBASE

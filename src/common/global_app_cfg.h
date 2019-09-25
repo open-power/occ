@@ -24,13 +24,6 @@
 /* IBM_PROLOG_END_TAG                                                     */
 #define GLOBAL_CFG_USE_IPC  // have lib/occlib/ipc_structs.h use "ipc_func_ids.h"
 
-// Define IRQ Owner (4=405, 2=PGPE, 1=GPE1, 0=GPE0)
-#ifdef P10_HW_BUILD
-#define OCCHW_IRQ_ROUTE_OWNER 2 // PGPE
-#else
-#define OCCHW_IRQ_ROUTE_OWNER 4 // 405 will own until PGPE running in Simics
-#endif
-
 #ifdef P10_HW_BUILD
 // Physical HW will use the external timebase register
 #define APPCFG_USE_EXT_TIMEBASE
