@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2016,2018                        */
+/* Contributors Listed Below - COPYRIGHT 2016,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -26,8 +26,59 @@
 #include <stdint.h>
 #include <sys/stat.h>
 #include "parser_common.h"
+#include <string.h> // strcpy
+#include <stdlib.h> // getenv
 // NOTE: This tool is to be used when FFDC is dumped by the OCC, and currently
 //       only accepts input files in binary format.
+
+unsigned int G_stack_parser = 0;
+char repo_directory[255] = "";
+
+void lookup_address(uint32_t address)
+{
+    int rc = -1;
+    if (G_stack_parser)
+    {
+        char command[512];
+        sprintf(command, "occ_stack.pl 0x%08X", address);
+        //printf("==> %s", command);
+        fflush(stdout);
+        rc = system(command);
+    }
+    if (rc != 0)
+    {
+        printf("0x%08X\n", address);
+    }
+}
+
+void parse_stack(char * header, uint32_t *stack, unsigned int num)
+{
+    unsigned int i;
+
+    for(i = 0; i < num; i++)
+    {
+        if ((G_stack_parser) && (stack[i] != 0))
+        {
+            char command[512];
+            int rc;
+            printf("%s%d:   ", header, i+1);
+            fflush(stdout);
+            sprintf(command, "occ_stack.pl 0x%08X", stack[i]);
+            //printf("==> %s", command);
+            rc = system(command);
+            fflush(stdout);
+            //printf("...returned %d\n", rc);
+            if (rc != 0)
+            {
+                printf("0x%08X\n", stack[i]);
+            }
+        }
+        else
+        {
+            printf("%s%d:   0x%08X\n", header, i+1, stack[i]);
+        }
+    }
+}
 
 void get_thread_data(FILE* i_fhndl, thread_dump_t * i_thrd)
 {
@@ -62,8 +113,7 @@ void print_thread_data(thread_dump_t * i_thrd, char* i_name)
     printf("\tSRR2: 0x%08X\n", i_thrd->srr2);
     printf("\tSRR3: 0x%08X\n", i_thrd->srr3);
     printf("\tStack Trace\n");
-    for(i = 0; i < 8; i++)
-        printf("\t\t%d:    0x%08X\n", i+1, i_thrd->stack_trace[i]);
+    parse_stack("\t\t", i_thrd->stack_trace, 8);
 }
 
 void dump_ffdc(ffdc_t * data)
@@ -74,7 +124,8 @@ void dump_ffdc(ffdc_t * data)
     printf("Checkpoint: 0x%04X\n", data->ckpt);
     printf("SSX Panic Code: 0x%08X\n", data->ssx_panic);
     printf("Panic Address: 0x%08X\n", data->panic_addr);
-    printf("LR: 0x%08X\n", data->lr);
+    printf("LR: ");
+    lookup_address(data->lr);
     printf("MSR: 0x%08X\n", data->msr);
     printf("CR: 0x%08X\n", data->cr);
     printf("CTR: 0x%08X\n", data->ctr);
@@ -126,8 +177,7 @@ void dump_ffdc(ffdc_t * data)
     print_thread_data(&data->cmdh, "CMDH");
     print_thread_data(&data->dcom, "DCOM");
     printf("Stack Trace:\n");
-    for(i = 0; i < 8; i++)
-        printf("\t%d:   0x%08X\n", i+1, data->stack_trace[i]);
+    parse_stack("\t", data->stack_trace, 8);
 }
 
 int main(int argc, char** argv)
@@ -135,21 +185,74 @@ int main(int argc, char** argv)
     FILE*       ffdc_file = NULL;
     ffdc_t      data = {0};
     uint32_t    i = 0;
+    unsigned int rc;
+
+    rc = system("which occ_stack.pl > /dev/null 2>&1");
+    if (rc == 0)
+    {
+        printf("NOTE: Found occ_stack.pl in $PATH\n");
+        G_stack_parser = 1;
+    }
 
     // Verify a file was passed as an argument
-    if(argc < 2)
+    char bin_filename[255] = "";
+
+    for (i = 1; i < argc; i++)
+    {
+        //printf("arg[%d]: %s\n", i, argv[i]);
+        if (argv[i][0] == '-')
+        {
+            if (strcmp(argv[i], "-g") == 0) // OCC Git Repo
+            {
+                if (i+1 < argc)
+                {
+                    i += 1;
+                    strcpy(repo_directory, argv[i]);
+                }
+                else
+                {
+                    printf("ERROR: -g parameter requires OCC repo directory location\n");
+                    return -2;
+                }
+            }
+            else
+            {
+                printf("WARNING: Ignoring unknown option \"%s\"\n", argv[i]);
+            }
+        }
+        else
+        {
+            if (bin_filename[0] == '\0')
+            {
+                strcpy(bin_filename, argv[i]);
+            }
+            else
+            {
+                printf("WARNING: Ignoring unknown parameter \"%s\"\n", argv[i]);
+            }
+        }
+    }
+
+    if (repo_directory[0] == '\0')
+    {
+        char *occ_repo = getenv("OCCREPO");
+        if (occ_repo != NULL)
+        {
+            strcpy(repo_directory, occ_repo);
+        }
+    }
+
+    if (bin_filename[0] == '\0')
     {
         fprintf(stderr, "ERROR: Requires a file with the binary FFDC data\n");
         return -1;
     }
-    else
+
+    ffdc_file = fopen(bin_filename, "rb");
+    if(ffdc_file == NULL)
     {
-        ffdc_file = fopen(argv[1], "rb");
-        if(ffdc_file == NULL)
-        {
-            fprintf(stderr, "ERROR: %s cannot be opened or does not exist\n", argv[1]);
-            return -1;
-        }
+        fprintf(stderr, "ERROR: %s cannot be opened or does not exist\n", bin_filename);
+        return -1;
     }
 
     // Get file size

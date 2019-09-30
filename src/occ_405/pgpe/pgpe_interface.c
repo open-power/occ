@@ -23,6 +23,8 @@
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
 
+//#define PGPE_DEBUG
+
 #include "occ_common.h"
 #include "occhw_async.h"
 #include "pgpe_interface.h"
@@ -416,6 +418,7 @@ int pgpe_set_clip_blocking(Pstate_t i_pstate)
     uint8_t      wait_time = 0;
     int          rc = 0;  // Return code: 0 means success, otherwise an error.
 
+    PGPE_DBG("<<pgpe_set_clip_blocking(pstate 0x%02X)", i_pstate);
     do
     {
         // verify that the clip update IPC task is not currently running
@@ -564,142 +567,114 @@ int pgpe_clip_update(void)
     int schedule_rc = 0;         // return code from PGPE schedule
     errlHndl_t  err = NULL;      // Error handler
     uint32_t    l_wait_time = 0;
-    static uint64_t L_last_list = 0xFFFFFFFFFFFFFFFF;
+    static unsigned int L_last_pstate = 0xFF;
     static bool L_first_trace = TRUE;
 
-    do
+    PGPE_DBG("<<pgpe_clip_update()");
+    // Caller must check the completion of previous invocation of clip updates.
+    // This check is a safety feature in case caller didn't check IPC is idle.
+    while(!async_request_is_idle(&G_clip_update_req.request))
     {
-        // Caller must check the completion of previous invocation of clip updates.
-        // This check is a safety feature in case caller didn't check IPC is idle.
-        while(!async_request_is_idle(&G_clip_update_req.request))
+        if(l_wait_time > CLIP_UPDATE_TIMEOUT)
         {
-            if(l_wait_time > CLIP_UPDATE_TIMEOUT)
+            // only trace and log an error if we are not to ignore
+            if(!ignore_pgpe_error())
             {
-                // only trace and log an error if we are not to ignore
-                if(!ignore_pgpe_error())
-                {
-                    // an earlier clip update IPC call has not completed, trace and log an error
-                    TRAC_ERR("pgpe_clip_update: clip update IPC task is not Idle");
+                // an earlier clip update IPC call has not completed, trace and log an error
+                TRAC_ERR("pgpe_clip_update: clip update IPC task is not Idle");
 
-                    /*
-                     * @errortype
-                     * @moduleid    PGPE_CLIP_UPDATE_MOD
-                     * @reasoncode  PGPE_FAILURE
-                     * @userdata1   0
-                     * @userdata4   ERC_PGPE_CLIP_NOT_IDLE
-                     * @devdesc     pgpe clip update not idle
-                     */
-                    err = createPgpeErrl(PGPE_CLIP_UPDATE_MOD,            //ModId
-                                         PGPE_FAILURE,                    //Reasoncode
-                                         ERC_PGPE_CLIP_NOT_IDLE,          //Extended reason code
-                                         ERRL_SEV_PREDICTIVE,             //Severity
-                                         0,                               //Userdata1
-                                         0);                              //Userdata2
+                /*
+                 * @errortype
+                 * @moduleid    PGPE_CLIP_UPDATE_MOD
+                 * @reasoncode  PGPE_FAILURE
+                 * @userdata1   0
+                 * @userdata4   ERC_PGPE_CLIP_NOT_IDLE
+                 * @devdesc     pgpe clip update not idle
+                 */
+                err = createPgpeErrl(PGPE_CLIP_UPDATE_MOD,            //ModId
+                                     PGPE_FAILURE,                    //Reasoncode
+                                     ERC_PGPE_CLIP_NOT_IDLE,          //Extended reason code
+                                     ERRL_SEV_PREDICTIVE,             //Severity
+                                     0,                               //Userdata1
+                                     0);                              //Userdata2
 
-                    // Callout firmware
-                    addCalloutToErrl(err,
-                                     ERRL_CALLOUT_TYPE_COMPONENT_ID,
-                                     ERRL_COMPONENT_ID_FIRMWARE,
-                                     ERRL_CALLOUT_PRIORITY_HIGH);
+                // Callout firmware
+                addCalloutToErrl(err,
+                                 ERRL_CALLOUT_TYPE_COMPONENT_ID,
+                                 ERRL_COMPONENT_ID_FIRMWARE,
+                                 ERRL_CALLOUT_PRIORITY_HIGH);
 
-                    commitErrl(&err);
-                }
-
-                ext_rc = ERC_PGPE_CLIP_NOT_IDLE;
-                break;
+                commitErrl(&err);
             }
 
-            // Sleep for 1us (allows context switching)
-            ssx_sleep(SSX_MICROSECONDS(1));
-
-            l_wait_time++;
+            ext_rc = ERC_PGPE_CLIP_NOT_IDLE;
+            break;
         }
 
-        if (!G_simics_environment)
+        // Sleep for 1us (allows context switching)
+        ssx_sleep(SSX_MICROSECONDS(1));
+
+        l_wait_time++;
+    }
+
+    const unsigned int pstate = G_desired_pstate[0];
+
+    // Set clip bounds
+    G_clip_update_parms.ps_val_clip_min = proc_freq2pstate(g_amec->sys.fmin);
+    G_clip_update_parms.ps_val_clip_max = pstate;
+
+    // Always send request on PowerVM, on OPAL only send the request if there was a change or need to force a send
+    if( (pstate != L_last_pstate) || (!G_sysConfigData.system_type.kvm) || (G_set_pStates) )
+    {
+        G_set_pStates = FALSE;
+        if (L_first_trace)
         {
-            unsigned int quad = 0;
-            uint64_t pstate_list = 0;
-            for (quad = 0; quad < MAXIMUM_QUADS; quad++)
-            {
-                pstate_list |= ((uint64_t) G_desired_pstate[quad] << ((7-quad)*8));
-
-// TODO - RTC 213672 - ps_val_clip_min/max are no longer arrays
-#if 0
-                // Set clip bounds
-                G_clip_update_parms.ps_val_clip_min[quad] = proc_freq2pstate(g_amec->sys.fmin);
-                G_clip_update_parms.ps_val_clip_max[quad] = G_desired_pstate[quad];
-#endif
-            }
-
-            // Always send request on PowerVM, on OPAL only send the request if there was a change or need to force a send
-            if( (pstate_list != L_last_list) || (!G_sysConfigData.system_type.kvm) || (G_set_pStates) )
-            {
-                G_set_pStates = FALSE;
-                if (L_first_trace)
-                {
-                    TRAC_IMP("pgpe_clip_update: Scheduling clip update: min[0x%02X], max[0x%08X%04X]",
-// TODO - RTC 213672 - ps_val_clip_min/max are no longer arrays
-#if 0
-                             G_clip_update_parms.ps_val_clip_min[0],
-#else
-                             0,
-#endif
-                             WORD_HIGH(pstate_list), WORD_LOW(pstate_list)>>16);
-                    L_first_trace = FALSE;
-                }
-                // always trace change on PowerVM since setting clips is very rare with PowerVM which uses PMCR set
-                else if( (G_allow_trace_flags & ALLOW_CLIP_TRACE) || (!G_sysConfigData.system_type.kvm) )
-                {
-                    TRAC_INFO("pgpe_clip_update: Scheduling clip update: min[0x%02X], max[0x%08X%04X]",
-//  TODO - RTC 213672 - ps_val_clip_min/max are no longer arrays
-#if 0
-                              G_clip_update_parms.ps_val_clip_min[0],
-#else
-                               0,
-#endif
-                               WORD_HIGH(pstate_list), WORD_LOW(pstate_list)>>16);
-                }
-                L_last_list = pstate_list;
-
-                // Schedule PGPE clip update IPC task
-                schedule_rc = pgpe_request_schedule(&G_clip_update_req);
-            }
+            TRAC_IMP("pgpe_clip_update: Scheduling clip update: min[0x%02X], max[0x%02X]",
+                     G_clip_update_parms.ps_val_clip_min, pstate);
+            //L_first_trace = FALSE;
         }
-        else
+        // always trace change on PowerVM since setting clips is very rare with PowerVM which uses PMCR set
+        else if( (G_allow_trace_flags & ALLOW_CLIP_TRACE) || (!G_sysConfigData.system_type.kvm) )
         {
-            G_start_suspend_parms.msg_cb.rc = PGPE_RC_SUCCESS;
-            ext_rc = 0;
+            TRAC_INFO("pgpe_clip_update: Scheduling clip update: min[0x%02X], max[0x%02X]",
+                      G_clip_update_parms.ps_val_clip_min, pstate);
         }
-        // Confirm Successfull completion of PGPE clip update task
-        if(schedule_rc != 0)
-        {
-            //Error in scheduling pgpe clip update task
-            TRAC_ERR("pgpe_clip_update: Failed to schedule clip update pgpe task rc=%x",
-                     schedule_rc);
+        L_last_pstate = pstate;
 
-            /* @
-             * @errortype
-             * @moduleid    PGPE_CLIP_UPDATE_MOD
-             * @reasoncode  GPE_REQUEST_SCHEDULE_FAILURE
-             * @userdata1   rc - gpe_request_schedule return code
-             * @userdata2   0
-             * @userdata4   ERC_PGPE_CLIP_FAILURE
-             * @devdesc     OCC Failed to schedule a GPE job for clip update
-             */
-            err = createPgpeErrl(PGPE_CLIP_UPDATE_MOD,            // modId
-                                 GPE_REQUEST_SCHEDULE_FAILURE,    // reasoncode
-                                 ERC_PGPE_CLIP_FAILURE,           // Extended reason code
-                                 ERRL_SEV_UNRECOVERABLE,          // Severity
-                                 schedule_rc,                     // userdata1
-                                 0);                              //Userdata2
+        // Schedule PGPE clip update IPC task
+        schedule_rc = pgpe_request_schedule(&G_clip_update_req);
+    }
 
-            ext_rc = ERC_PGPE_CLIP_FAILURE;
-            REQUEST_RESET(err);   //This will add a firmware callout for us
-        }
-    }while(0);
+    // Confirm Successfull completion of PGPE clip update task
+    if(schedule_rc != 0)
+    {
+        //Error in scheduling pgpe clip update task
+        TRAC_ERR("pgpe_clip_update: Failed to schedule clip update pgpe task rc=%x",
+                 schedule_rc);
+
+        /* @
+         * @errortype
+         * @moduleid    PGPE_CLIP_UPDATE_MOD
+         * @reasoncode  GPE_REQUEST_SCHEDULE_FAILURE
+         * @userdata1   rc - gpe_request_schedule return code
+         * @userdata2   max pstate
+         * @userdata4   ERC_PGPE_CLIP_FAILURE
+         * @devdesc     OCC Failed to schedule a GPE job for clip update
+         */
+        err = createPgpeErrl(PGPE_CLIP_UPDATE_MOD,            // modId
+                             GPE_REQUEST_SCHEDULE_FAILURE,    // reasoncode
+                             ERC_PGPE_CLIP_FAILURE,           // Extended reason code
+                             ERRL_SEV_UNRECOVERABLE,          // Severity
+                             schedule_rc,                     // userdata1
+                             pstate);                         // Userdata2
+
+        ext_rc = ERC_PGPE_CLIP_FAILURE;
+        REQUEST_RESET(err);   //This will add a firmware callout for us
+    }
 
     return ext_rc;
-}
+
+} // end pgpe_clip_update()
 
 
 // Function Specification
@@ -811,7 +786,9 @@ int pgpe_start_suspend(uint8_t action, PMCR_OWNER owner)
        G_start_suspend_parms.action     = action;
        G_start_suspend_parms.pmcr_owner = owner;
 
+#if OCCHW_IRQ_ROUTE_OWNER == 4 // 405
        if (!G_simics_environment)
+#endif
        {
            // set the G_proc_pstate_status to indicate transition
            G_proc_pstate_status = PSTATES_IN_TRANSITION;
@@ -867,10 +844,12 @@ int pgpe_start_suspend(uint8_t action, PMCR_OWNER owner)
            }
       }
 
+#if OCCHW_IRQ_ROUTE_OWNER == 4 // 405
       if (G_simics_environment)
       {
           pgpe_start_suspend_callback();
       }
+#endif
     }
 
     return ext_rc;
@@ -932,7 +911,9 @@ int pgpe_pmcr_set(void)
             break;
         }
 
+#if OCCHW_IRQ_ROUTE_OWNER == 4 // 405
         if (!G_simics_environment)
+#endif
         {
             // Schedule PGPE PMCR update IPC task
             schedule_rc = pgpe_request_schedule(&G_pmcr_set_req);
@@ -1093,6 +1074,7 @@ int pgpe_request_schedule(GpeRequest* request)
     // configured
     if( G_present_cores != 0 )
     {
+        PGPE_DBG("<<pgpe_request_schedule - calling gpe_request_schedule()");
         rc = gpe_request_schedule(request);
     }
     else

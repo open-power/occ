@@ -950,10 +950,13 @@ void read_pgpe_produced_wof_values( void )
     uint32_t l_freq = 0;
 
     pgpe_wof_values_t l_PgpeWofValues;
+    // TODO - RTC 209558
+#if 0
     l_PgpeWofValues.dw0.value = in64(G_pgpe_header.pgpe_produced_wof_values_addr);
     l_PgpeWofValues.dw1.value = in64(G_pgpe_header.pgpe_produced_wof_values_addr + 0x08);
     l_PgpeWofValues.dw2.value = in64(G_pgpe_header.pgpe_produced_wof_values_addr + 0x10);
     l_PgpeWofValues.dw3.value = in64(G_pgpe_header.pgpe_produced_wof_values_addr + 0x18);
+#endif
 
     // save Vdd voltage to sensor
     l_voltage = (uint16_t)l_PgpeWofValues.dw2.fields.vdd_avg_mv;

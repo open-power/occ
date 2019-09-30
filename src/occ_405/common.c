@@ -53,15 +53,12 @@ void task_misc_405_checks(task_t *i_self)
     }
 
     // Check for checkstops
-    ocb_oisr0_t  l_oisr0_status;       // OCC Interrupt Source 0 Register
     ocb_oisr1_t  l_oisr1_status;       // OCC Interrupt Source 1 Register
 
     static bool L_checkstop_traced    = false;
     uint8_t     l_reason_code         = 0;
     bool        l_create_errl         = false;
     static unsigned int L_delay_cstop = TICKS_TO_DELAY_CHECKSTOP_PROCESSING;
-    static uint32_t L_last0 = 0;
-    static uint32_t L_last1 = 0;
 
     do
     {
@@ -74,17 +71,6 @@ void task_misc_405_checks(task_t *i_self)
         // halted.  This check also looks for an interrupt status flag that
         // indicates if the system has check-stopped.
         l_oisr1_status.value = in32(OCB_OISR1); // read high order 32 bits of OISR1
-        if (L_last1 != l_oisr1_status.value) {
-            TRAC_IMP("task_misc_405_checks: OISR1=0x%08X", l_oisr1_status.value);
-            L_last1 = l_oisr1_status.value;
-        }
-
-        // TODO - RTC 213675 - any reason to check any OISR0 bits??
-        l_oisr0_status.value = in32(OCB_OISR0); // read high order 32 bits of OISR0
-        if (L_last0 != l_oisr0_status.value) {
-            TRAC_IMP("task_misc_405_checks: OISR0=0x%08X", l_oisr0_status.value);
-            L_last0 = l_oisr0_status.value;
-        }
 
         // We're only interested in system checkstop during IPL, so only check
         // for that if the IPL flag is set (in 405 main.c). If gpe0/1_error is
@@ -132,6 +118,9 @@ void task_misc_405_checks(task_t *i_self)
         {
             errlHndl_t l_err = NULL;
 
+            ocb_oisr0_t l_oisr0_status; // OCC Interrupt Source 0 Register
+            l_oisr0_status.value = in32(OCB_OISR0);
+
             if (l_oisr1_status.fields.gpe0_error)
             {
                 TRAC_IMP("task_misc_405_checks: Frozen GPE0 detected by RTL: OISR1[0x%08x]",
@@ -148,6 +137,7 @@ void task_misc_405_checks(task_t *i_self)
                  * @moduleid    MAIN_SYSTEM_HALTED_MID
                  * @reasoncode  OCC_GPE_HALTED
                  * @userdata1   OCB_OISR1
+                 * @userdata2   OCB_OISR0
                  * @devdesc     OCC detected frozen GPE
                  */
                 l_reason_code = OCC_GPE_HALTED;
@@ -162,6 +152,7 @@ void task_misc_405_checks(task_t *i_self)
                  * @moduleid    MAIN_SYSTEM_HALTED_MID
                  * @reasoncode  OCC_SYSTEM_HALTED
                  * @userdata1   OCB_OISR1
+                 * @userdata2   OCB_OISR0
                  * @devdesc     OCC detected system checkstop
                  */
                 l_reason_code = OCC_SYSTEM_HALTED;
@@ -176,7 +167,7 @@ void task_misc_405_checks(task_t *i_self)
                                NULL,
                                DEFAULT_TRACE_SIZE,
                                l_oisr1_status.value,
-                               0 );
+                               l_oisr0_status.value);
 
             // The commit code will check for the frozen GPE0 and system
             // checkstop conditions and take appropriate actions.

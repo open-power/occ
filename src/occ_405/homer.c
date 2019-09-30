@@ -67,7 +67,8 @@ homer_rc_t __attribute__((optimize("O1"))) homer_hd_map_read_unmap(const homer_r
 #endif
 
     homer_rc_t l_rc = HOMER_SUCCESS;
-    occHostConfigDataArea_t *l_hdcfg_data = (occHostConfigDataArea_t *) HOMER_HD_ADDRESS;
+    // TODO - RTC 213675
+    //occHostConfigDataArea_t *l_hdcfg_data = (occHostConfigDataArea_t *) HOMER_HD_ADDRESS;
 
     // Validate the pointers
     if (!o_host_data || !o_ssx_rc || ((uint32_t)o_host_data % 4))
@@ -115,25 +116,25 @@ homer_rc_t __attribute__((optimize("O1"))) homer_hd_map_read_unmap(const homer_r
                 switch (i_id)
                 {
                 case HOMER_VERSION:
-                    *(uint32_t *)o_host_data = l_hdcfg_data->version;
+                    //*(uint32_t *)o_host_data = l_hdcfg_data->version;
                     *(uint32_t *)o_host_data = HOMER_VERSION_P9; // TODO - RTC 213675
                     break;
                 case HOMER_NEST_FREQ:
-                    *(uint32_t *)o_host_data = l_hdcfg_data->nestFrequency;
+                    //*(uint32_t *)o_host_data = l_hdcfg_data->nestFrequency;
                     *(uint32_t *)o_host_data = PPC405_TIMEBASE_HZ; // TODO - RTC 213675
                     break;
                 case HOMER_INT_TYPE:
-                    *(uint32_t *)o_host_data = l_hdcfg_data->occInterruptType;
+                    //*(uint32_t *)o_host_data = l_hdcfg_data->occInterruptType;
                     *(uint32_t *)o_host_data = FSP_SUPPORTED_OCC; // TODO - RTC 213675
                     break;
                 case HOMER_FIR_MASTER:
-                    *(uint32_t *)o_host_data = l_hdcfg_data->firMaster;
+                    //*(uint32_t *)o_host_data = l_hdcfg_data->firMaster;
                     break;
                 case HOMER_FIR_PARMS:
-                    memcpy(o_host_data, &(l_hdcfg_data->firParms[0]), HOMER_FIR_PARM_SIZE);
+                    //memcpy(o_host_data, &(l_hdcfg_data->firParms[0]), HOMER_FIR_PARM_SIZE);
                     break;
                 case HOMER_SMF_MODE:
-                    *(uint32_t *)o_host_data = l_hdcfg_data->smfMode;
+                    //*(uint32_t *)o_host_data = l_hdcfg_data->smfMode;
                     break;
                 default:
                     l_rc = HOMER_UNKNOWN_ID;

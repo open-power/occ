@@ -160,6 +160,8 @@ typedef struct
     uint32_t            pstate_min;           // Pstate reflecting frequency_min_khz
     uint32_t            occ_complex_frequency_mhz;
 
+    uint8_t reserved[64];
+
 } OCCPstateParmBlock_t __attribute__((aligned(128))) ;
 
 #ifdef __cplusplus

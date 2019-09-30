@@ -39,6 +39,8 @@
 #include "sensor.h"
 #include "gpe_24x7_structs.h"
 
+extern bool G_simics_environment;
+
 //Global array of core data buffers
 GPE_BUFFER(CoreData G_core_data[MAX_NUM_FW_CORES+NUM_CORE_DATA_DOUBLE_BUF+NUM_CORE_DATA_EMPTY_BUF]) = {{{0}}};
 
@@ -353,81 +355,91 @@ void proc_core_init( void )
         PROC_DBG("G_present_hw_cores =[%x] and G_present_cores =[%x]",
                 G_present_hw_cores, G_present_cores);
 
-        //Initializes the GpeRequest object for low core data collection
-        l_rc = gpe_request_create(&G_low_cores.gpe_req,            // GpeRequest for the task
-                                  &G_async_gpe_queue0,             // Queue
-                                  IPC_ST_GET_CORE_DATA_FUNCID,     // Function ID
-                                  &G_low_cores_data_parms,         // Task parameters
-                                  SSX_WAIT_FOREVER,                // Timeout (none)
-                                  NULL,                            // Callback
-                                  NULL,                            // Callback arguments
-                                  0 );                             // Options
-
-        if( l_rc )
+        if (G_simics_environment)
         {
-            // If we failed to create the GpeRequest then there is a serious problem.
-            MAIN_TRAC_ERR("proc_core_init: Failure creating the low core data GpeRequest. [RC=0x%08x]", l_rc );
-
-            /*
-             * @errortype
-             * @moduleid    PROC_CORE_INIT_MOD
-             * @reasoncode  SSX_GENERIC_FAILURE
-             * @userdata1   gpe_request_create return code
-             * @userdata4   ERC_LOW_CORE_GPE_REQUEST_CREATE_FAILURE
-             * @devdesc     Failure to create low cores GpeRequest object
-             */
-            l_err = createErrl(
-                    PROC_CORE_INIT_MOD,                      //ModId
-                    SSX_GENERIC_FAILURE,                     //Reasoncode
-                    ERC_LOW_CORE_GPE_REQUEST_CREATE_FAILURE, //Extended reason code
-                    ERRL_SEV_PREDICTIVE,                     //Severity
-                    NULL,                                    //Trace Buf
-                    DEFAULT_TRACE_SIZE,                      //Trace Size
-                    l_rc,                                    //Userdata1
-                    0                                        //Userdata2
-            );
-
-            CHECKPOINT_FAIL_AND_HALT(l_err);
-            break;
+            MAIN_TRAC_INFO("G_present_hw_cores =[%x] and G_present_cores =[%x]",
+                           G_present_hw_cores, G_present_cores);
+            MAIN_TRAC_INFO("SIMICS: Skipping schedule of core data collection");
+            // TODO: RTC 207919
         }
-
-        //Initializes high cores data GpeRequest object
-        l_rc = gpe_request_create(&G_high_cores.gpe_req,           // GpeRequest for the task
-                                  &G_async_gpe_queue0,             // Queue
-                                  IPC_ST_GET_CORE_DATA_FUNCID,     // Function ID
-                                  &G_high_cores_data_parms,        // Task parameters
-                                  SSX_WAIT_FOREVER,                // Timeout (none)
-                                  NULL,                            // Callback
-                                  NULL,                            // Callback arguments
-                                  0 );                             // Options
-
-        if( l_rc )
+        else
         {
-            // If we failed to create the GpeRequest then there is a serious problem.
-            MAIN_TRAC_ERR("proc_core_init: Failure creating the high core data GpeRequest. [RC=0x%08x]", l_rc );
+            //Initializes the GpeRequest object for low core data collection
+            l_rc = gpe_request_create(&G_low_cores.gpe_req,            // GpeRequest for the task
+                                      &G_async_gpe_queue0,             // Queue
+                                      IPC_ST_GET_CORE_DATA_FUNCID,     // Function ID
+                                      &G_low_cores_data_parms,         // Task parameters
+                                      SSX_WAIT_FOREVER,                // Timeout (none)
+                                      NULL,                            // Callback
+                                      NULL,                            // Callback arguments
+                                      0 );                             // Options
 
-            /*
-             * @errortype
-             * @moduleid    PROC_CORE_INIT_MOD
-             * @reasoncode  SSX_GENERIC_FAILURE
-             * @userdata1   gpe_request_create return code
-             * @userdata4   ERC_HIGH_CORE_GPE_REQUEST_CREATE_FAILURE
-             * @devdesc     Failure to create high core GpeRequest object
-             */
-            l_err = createErrl(
-                                PROC_CORE_INIT_MOD,                       //ModId
-                                SSX_GENERIC_FAILURE,                      //Reasoncode
-                                ERC_HIGH_CORE_GPE_REQUEST_CREATE_FAILURE, //Extended reason code
-                                ERRL_SEV_PREDICTIVE,                      //Severity
-                                NULL,                                     //Trace Buf
-                                DEFAULT_TRACE_SIZE,                       //Trace Size
-                                l_rc,                                     //Userdata1
-                                0                                         //Userdata2
-            );
+            if( l_rc )
+            {
+                // If we failed to create the GpeRequest then there is a serious problem.
+                MAIN_TRAC_ERR("proc_core_init: Failure creating the low core data GpeRequest. [RC=0x%08x]", l_rc );
 
-            CHECKPOINT_FAIL_AND_HALT(l_err);
-            break;
-        }
+                /*
+                 * @errortype
+                 * @moduleid    PROC_CORE_INIT_MOD
+                 * @reasoncode  SSX_GENERIC_FAILURE
+                 * @userdata1   gpe_request_create return code
+                 * @userdata4   ERC_LOW_CORE_GPE_REQUEST_CREATE_FAILURE
+                 * @devdesc     Failure to create low cores GpeRequest object
+                 */
+                l_err = createErrl(
+                                   PROC_CORE_INIT_MOD,                      //ModId
+                                   SSX_GENERIC_FAILURE,                     //Reasoncode
+                                   ERC_LOW_CORE_GPE_REQUEST_CREATE_FAILURE, //Extended reason code
+                                   ERRL_SEV_PREDICTIVE,                     //Severity
+                                   NULL,                                    //Trace Buf
+                                   DEFAULT_TRACE_SIZE,                      //Trace Size
+                                   l_rc,                                    //Userdata1
+                                   0                                        //Userdata2
+                                  );
+
+                CHECKPOINT_FAIL_AND_HALT(l_err);
+                break;
+            }
+
+            //Initializes high cores data GpeRequest object
+            l_rc = gpe_request_create(&G_high_cores.gpe_req,           // GpeRequest for the task
+                                      &G_async_gpe_queue0,             // Queue
+                                      IPC_ST_GET_CORE_DATA_FUNCID,     // Function ID
+                                      &G_high_cores_data_parms,        // Task parameters
+                                      SSX_WAIT_FOREVER,                // Timeout (none)
+                                      NULL,                            // Callback
+                                      NULL,                            // Callback arguments
+                                      0 );                             // Options
+
+            if( l_rc )
+            {
+                // If we failed to create the GpeRequest then there is a serious problem.
+                MAIN_TRAC_ERR("proc_core_init: Failure creating the high core data GpeRequest. [RC=0x%08x]", l_rc );
+
+                /*
+                 * @errortype
+                 * @moduleid    PROC_CORE_INIT_MOD
+                 * @reasoncode  SSX_GENERIC_FAILURE
+                 * @userdata1   gpe_request_create return code
+                 * @userdata4   ERC_HIGH_CORE_GPE_REQUEST_CREATE_FAILURE
+                 * @devdesc     Failure to create high core GpeRequest object
+                 */
+                l_err = createErrl(
+                                   PROC_CORE_INIT_MOD,                       //ModId
+                                   SSX_GENERIC_FAILURE,                      //Reasoncode
+                                   ERC_HIGH_CORE_GPE_REQUEST_CREATE_FAILURE, //Extended reason code
+                                   ERRL_SEV_PREDICTIVE,                      //Severity
+                                   NULL,                                     //Trace Buf
+                                   DEFAULT_TRACE_SIZE,                       //Trace Size
+                                   l_rc,                                     //Userdata1
+                                   0                                         //Userdata2
+                                  );
+
+                CHECKPOINT_FAIL_AND_HALT(l_err);
+                break;
+            }
+        } // end !G_simics_environment
 
         //Initialize 24x7 data collection GpeRequest object
         l_rc = gpe_request_create(&G_24x7_request,           // GpeRequest for the task
@@ -712,7 +724,9 @@ void task_24x7(task_t * i_task)
     static bool    L_logged_disable = FALSE;
 
     // Schedule 24x7 task if it hasn't been disabled
-    if( (!G_24x7_disabled) && !(G_internal_flags & INT_FLAG_DISABLE_24X7))
+    if ( (!G_24x7_disabled) &&
+         !(G_internal_flags & INT_FLAG_DISABLE_24X7) &&
+         (!G_simics_environment) ) // TODO: RTC 207919
     {
         // Schedule 24x7 task if idle
         if (!async_request_is_idle(&G_24x7_request.request))

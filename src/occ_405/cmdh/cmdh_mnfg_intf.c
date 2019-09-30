@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -434,9 +434,6 @@ uint8_t cmdh_mnfg_list_sensors(const cmdh_fsp_cmd_t * i_cmd_ptr,
         }
         else
         {
-            TRAC_INFO("cmdh_mnfg_list_sensors: Numbers of sensors found[%u]",
-                      l_num_of_sensors);
-
             if (l_num_of_sensors > MFG_MAX_NUM_SENSORS)
             {
                 // Got too many sensors back, need to truncate the list
@@ -449,6 +446,9 @@ uint8_t cmdh_mnfg_list_sensors(const cmdh_fsp_cmd_t * i_cmd_ptr,
             }
             else
             {
+                TRAC_INFO("cmdh_mnfg_list_sensors: Numbers of sensors found[%u]",
+                          l_num_of_sensors);
+
                 l_resp_ptr->truncated = 0;
             }
 

@@ -250,6 +250,13 @@ extern void dumpHexString(const void *i_data, const unsigned int len, const char
   #define MEM_DBG_HEXDUMP(data, len, string)
 #endif
 
+#ifdef PGPE_DEBUG
+  #define PGPE_DBG(frmt,args...)  \
+          DBG_PRINT(frmt,##args)
+#else
+  #define PGPE_DBG(frmt,args...)
+#endif
+
 #else // NO_TRAC_STRINGS
 
 #define TRAC_ERR(frmt,args...)
