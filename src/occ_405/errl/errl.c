@@ -46,9 +46,6 @@ uint8_t     G_errslot3[MAX_ERRL_ENTRY_SZ] = {0};
 uint8_t     G_errslot4[MAX_ERRL_ENTRY_SZ] = {0};
 uint8_t     G_errslot5[MAX_ERRL_ENTRY_SZ] = {0};
 uint8_t     G_errslot6[MAX_ERRL_ENTRY_SZ] = {0};
-uint8_t     G_errslot7[MAX_ERRL_ENTRY_SZ] = {0};
-
-uint8_t     G_infoslot[MAX_ERRL_ENTRY_SZ] = {0};
 
 uint8_t     G_callslot[MAX_ERRL_CALL_HOME_SZ] = {0};
 
@@ -59,8 +56,6 @@ errlHndl_t  G_occErrSlots[ERRL_MAX_SLOTS] = {
                 (errlHndl_t) G_errslot4,
                 (errlHndl_t) G_errslot5,
                 (errlHndl_t) G_errslot6,
-                (errlHndl_t) G_errslot7,
-                (errlHndl_t) G_infoslot,
                 (errlHndl_t) G_callslot
                 };
 
@@ -74,6 +69,12 @@ extern uint8_t G_occ_interrupt_type;
 extern bool G_fir_collection_required;
 extern amec_sys_t g_amec_sys;
 
+
+
+unsigned int leastSignificantErrlID();
+
+
+
 // Function Specification
 //
 // Name:  getErrSlotNumAndErrId
@@ -81,74 +82,98 @@ extern amec_sys_t g_amec_sys;
 // Description: Get Error Slot Number and Error Id
 //
 // End Function Specification
-uint8_t getErrSlotNumAndErrId(
-            ERRL_SEVERITY i_severity,
-            uint8_t *o_errlId,
-            uint64_t *o_timeStamp
-            )
+uint8_t getErrSlotNumAndErrId(ERRL_SEVERITY i_severity,
+                              uint8_t      *o_errlId,
+                              uint64_t     *o_timeStamp,
+                              uint16_t     *o_maxSize)
 {
     uint8_t     l_rc = ERRL_INVALID_SLOT;
-    uint32_t    l_mask = ERRL_SLOT_MASK_DEFAULT;
 
-    //Use severity to determine what slots are available for the given
-    //type of errorlog severity.
-    switch ( i_severity )
+    uint32_t    l_mask = ERRL_SLOT_MASK_OCC_ERROR;
+    uint16_t    l_maxSize = MAX_ERRL_ENTRY_SZ;
+    if (ERRL_SEV_CALLHOME_DATA == i_severity)
     {
-        case ERRL_SEV_INFORMATIONAL:
-            l_mask = ERRL_SLOT_MASK_INFORMATIONAL;
-            break;
-        case ERRL_SEV_PREDICTIVE:
-            l_mask = ERRL_SLOT_MASK_PREDICTIVE;
-            break;
-        case ERRL_SEV_UNRECOVERABLE:
-            l_mask = ERRL_SLOT_MASK_UNRECOVERABLE;
-            break;
-        case ERRL_SEV_CALLHOME_DATA:
-            l_mask = ERRL_SLOT_MASK_CALL_HOME_DATA;
-            break;
-    };
+        // Call Home logs have a dedicated slot
+        l_mask = ERRL_SLOT_MASK_CALL_HOME_DATA;
+        l_maxSize = MAX_ERRL_CALL_HOME_SZ;
+    }
 
+    // 1.  Find an available slot
+    //     l_slotBitWord represents the available slots given the severity type.
+    uint8_t             l_slot = ERRL_INVALID_SLOT;
+    uint32_t            l_slotBitWord = ~(G_occErrSlotBits | l_mask);
+    SsxMachineContext   l_ctx;
 
-    // we have a valid mask
-    if ( l_mask != ERRL_SLOT_MASK_DEFAULT )
+    // 2. use assembly cntlzw (count leading zeros) to get available slot based on
+    // severity type, and (disable/enable interrupts)
+    ssx_critical_section_enter(SSX_NONCRITICAL, &l_ctx);
+    __asm__ __volatile__ ( "cntlzw %0, %1;" : "=r" (l_slot) : "r" (l_slotBitWord));
+    ssx_critical_section_exit(&l_ctx);
+
+    // A slot is available and valid
+    if ( l_slot < ERRL_MAX_SLOTS )
     {
-        // 1.  Find an available slot
-        //     l_slotBitWord represents the available slots given the severity type.
-        uint8_t             l_slot = ERRL_INVALID_SLOT;
-        uint32_t            l_slotBitWord = ~(G_occErrSlotBits | l_mask);
-        SsxMachineContext   l_ctx;
-
-        // 2. use assembly cntlzw (count leading zeros) to get available slot based on
-        // severity type, and (disable/enable interrupts)
         ssx_critical_section_enter(SSX_NONCRITICAL, &l_ctx);
-        __asm__ __volatile__ ( "cntlzw %0, %1;" : "=r" (l_slot) : "r" (l_slotBitWord));
+        // 3.  Get time stamp & save off timestamp
+        //     Internal caller so assuming valid pointer
+        *o_timeStamp = ssx_timebase_get();
+        // save of counter and then increment it
+        // Note: Internal caller so assuming valid pointer
+
+        //Provide next ErrorId; G_occErrIdCounter should never be 0.
+        *o_errlId = ((++G_occErrIdCounter) == 0) ? ++G_occErrIdCounter : G_occErrIdCounter;
+
+        //Set slot bit in list of used up slots.
+        G_occErrSlotBits |= (ERRL_SLOT_SHIFT >> l_slot);
         ssx_critical_section_exit(&l_ctx);
 
-        // A slot is available and valid
-        if ( l_slot < ERRL_MAX_SLOTS )
+        // return the maximum size
+        *o_maxSize = l_maxSize;
+
+        l_rc = l_slot;
+    }
+    else if ((ERRL_SEV_INFORMATIONAL != i_severity) &&
+             (ERRL_SEV_CALLHOME_DATA != i_severity))
+    {
+        // Slot was not found for critical error.  Check for an INFO error that can be replaced
+        l_slot = leastSignificantErrlID();
+        if (l_slot != ERRL_MAX_SLOTS)
         {
-            ssx_critical_section_enter(SSX_NONCRITICAL, &l_ctx);
-            // 3.  Get time stamp & save off timestamp
-            //     Internal caller so assuming valid pointer
-            *o_timeStamp = ssx_timebase_get();
-            // save of counter and then increment it
-            // Note: Internal caller so assuming valid pointer
+            TRAC_ERR("getErrSlotNumAndErrId: Slots full, but overriding INFO log in slot %d", l_slot);
+            {
+                ssx_critical_section_enter(SSX_NONCRITICAL, &l_ctx);
 
-            //Provide next ErrorId; G_occErrIdCounter should never be 0.
-            *o_errlId = ((++G_occErrIdCounter) == 0) ? ++G_occErrIdCounter : G_occErrIdCounter;
+                // Override this elog slot (uncommit so does not get added to poll)
+                G_occErrSlots[l_slot]->iv_userDetails.iv_committed = FALSE;
 
-            //Set slot bit in list of used up slots.
-            G_occErrSlotBits |= (ERRL_SLOT_SHIFT >> l_slot);
-            ssx_critical_section_exit(&l_ctx);
+                // 3.  Get time stamp & save off timestamp
+                //     Internal caller so assuming valid pointer
+                *o_timeStamp = ssx_timebase_get();
+                // save of counter and then increment it
+                // Note: Internal caller so assuming valid pointer
 
-            l_rc =  l_slot;
+                //Provide next ErrorId; G_occErrIdCounter should never be 0.
+                *o_errlId = ((++G_occErrIdCounter) == 0) ? ++G_occErrIdCounter : G_occErrIdCounter;
 
+                // No need to set used slot bit (since already was being used)
+                ssx_critical_section_exit(&l_ctx);
+            }
+
+            // clear out space in that slot
+            const unsigned int l_length = G_occErrSlots[l_slot]->iv_userDetails.iv_entrySize;
+            memset(G_occErrSlots[l_slot], 0, l_length);
+
+            *o_maxSize = l_maxSize;
+
+            l_rc = l_slot;
         }
     }
 
     // return slot
     return l_rc;
-}
+
+} // end getErrSlotNumAndErrId()
+
 
 // Function Specification
 //
@@ -278,6 +303,46 @@ uint8_t getOldestErrlID()
 
 // Function Specification
 //
+// Name:  leastSignificantErrlID
+//
+// Description: find the least significant info elog to use for critical error
+//
+// End Function Specification
+unsigned int leastSignificantErrlID()
+{
+    unsigned int i = 0;
+    uint64_t l_info_timestamp = 0;
+    // Poll finds/reports elogs by using getOldestErrlID(), so do NOT want to take that slot
+    const unsigned int l_oldest = getOldestErrlID();
+    unsigned int slot_to_use = ERRL_MAX_SLOTS;
+
+    for (i = 0; i < ERRL_MAX_SLOTS; i++)
+    {
+        if (G_occErrSlots[i]->iv_userDetails.iv_committed) // slot is used
+        {
+            if (l_oldest != G_occErrSlots[i]->iv_entryId) // slot not reported in POLL response
+            {
+                if (ERRL_SEV_INFORMATIONAL == G_occErrSlots[i]->iv_severity) // slot has INFO elog
+                {
+                    // Use the slot from the most recently created INFO log
+                    if ((l_info_timestamp == 0) ||
+                        (G_occErrSlots[i]->iv_userDetails.iv_timeStamp > l_info_timestamp) )
+                    {
+                        // Use this slot
+                        l_info_timestamp = G_occErrSlots[i]->iv_userDetails.iv_timeStamp;
+                        slot_to_use = i;
+                    }
+                }
+            }
+        }
+    }
+
+    return slot_to_use;
+}
+
+
+// Function Specification
+//
 // Name:  createErrl
 //
 // Description: Create an Error Log
@@ -296,17 +361,21 @@ errlHndl_t createErrl(
 {
     errlHndl_t  l_rc = INVALID_ERR_HNDL;
     uint64_t    l_time = 0;
+    uint16_t    l_maxSize = 0;
     uint8_t     l_id = 0;
-    uint8_t     l_errSlot = getErrSlotNumAndErrId( i_sev, &l_id, &l_time);
+    uint8_t     l_errSlot = getErrSlotNumAndErrId( i_sev, &l_id, &l_time, &l_maxSize);
     static uint8_t L_traceCount = 5;
 
 
     if ( l_errSlot != ERRL_INVALID_SLOT )
     {
-        TRAC_INFO("createErrl: Creating error log in slot [%d]", l_errSlot);
+        TRAC_INFO("createErrl: Creating error log in slot[%d] max size[%d]", l_errSlot, l_maxSize);
 
         // get slot pointer
         l_rc = G_occErrSlots[ l_errSlot ];
+
+        // save off maximum error log size
+        l_rc->iv_maxSize = l_maxSize;
 
         // save off default size
         l_rc->iv_userDetails.iv_entrySize = sizeof( ErrlEntry_t );
@@ -377,14 +446,15 @@ errlHndl_t createPgpeErrl(const uint16_t i_modId,
 {
     errlHndl_t  l_err = INVALID_ERR_HNDL;
     uint64_t    l_time = 0;
+    uint16_t    l_maxSize = 0;
     uint8_t     l_id = 0;
-    uint8_t     l_errSlot = getErrSlotNumAndErrId( i_sev, &l_id, &l_time);
+    uint8_t     l_errSlot = getErrSlotNumAndErrId(ERRL_SEV_PGPE_ERROR, &l_id, &l_time, &l_maxSize);
     static uint8_t L_traceCount = 5;
 
 
     if ( l_errSlot != ERRL_INVALID_SLOT )
     {
-        TRAC_INFO("createPgpeErrl: Creating error log in slot [%d]", l_errSlot);
+        TRAC_INFO("createPgpeErrl: Creating error log in slot[%d] max size[%d]", l_errSlot, l_maxSize);
 
        // Trace a few regs for PGPE debug
        uint32_t l_oisr0_status; // OCC Interrupt Source 0 Register
@@ -398,6 +468,9 @@ errlHndl_t createPgpeErrl(const uint16_t i_modId,
 
         // get slot pointer
         l_err = G_occErrSlots[ l_errSlot ];
+
+        // save off maximum error log size
+        l_err->iv_maxSize = l_maxSize;
 
         // save off default size
         l_err->iv_userDetails.iv_entrySize = sizeof( ErrlEntry_t );
@@ -509,7 +582,7 @@ void addTraceToErrl(
         (io_err != INVALID_ERR_HNDL) &&
         (io_err->iv_userDetails.iv_committed == 0) &&
         (i_traceSz != 0) &&
-        ((io_err->iv_userDetails.iv_entrySize + sizeof(ErrlUserDetailsEntry_t)) < MAX_ERRL_ENTRY_SZ ) &&
+        ((io_err->iv_userDetails.iv_entrySize + sizeof(ErrlUserDetailsEntry_t)) < io_err->iv_maxSize) &&
         ((i_trace==&g_des_array[INF_TRACE_DESCRIPTOR]) ||
          (i_trace==&g_des_array[ERR_TRACE_DESCRIPTOR]) ||
          (i_trace==&g_des_array[IMP_TRACE_DESCRIPTOR]) ||
@@ -520,7 +593,7 @@ void addTraceToErrl(
         uint16_t l_headerSz = sizeof( l_usrDtlsEntry );
 
         //adjust user details entry size to available size (word align )
-        uint16_t l_availableSize = MAX_ERRL_ENTRY_SZ - (io_err->iv_userDetails.iv_entrySize + l_headerSz );
+        uint16_t l_availableSize = io_err->iv_maxSize - (io_err->iv_userDetails.iv_entrySize + l_headerSz );
         l_usrDtlsEntry.iv_size = ( i_traceSz < l_availableSize ) ? i_traceSz : l_availableSize;
 
         //set type
@@ -655,7 +728,7 @@ void addErrHistory(errlHndl_t io_err)
     if( (io_err != NULL) &&
         (io_err != INVALID_ERR_HNDL) &&
         (io_err->iv_userDetails.iv_committed == 0) &&
-        ((io_err->iv_userDetails.iv_entrySize + sizeof(ErrlUserDetailsEntry_t) + sizeof(G_error_history)) < MAX_ERRL_ENTRY_SZ ) )
+        ((io_err->iv_userDetails.iv_entrySize + sizeof(ErrlUserDetailsEntry_t) + sizeof(G_error_history)) < io_err->iv_maxSize ) )
     {
         void * l_errPtr = io_err;
         ErrlUserDetailsEntry_t l_usrDtlsEntry;
@@ -703,31 +776,28 @@ void addErrHistory(errlHndl_t io_err)
 // End Function Specification
 void addPgpeDataToErrl(errlHndl_t io_err)
 {
-    // Build buffer with the data from PM Hcode
     // Add PGPE PK trace
-    uint8_t l_buffer[MAX_PGPE_DBUG_DATA] = {0};
     uint32_t l_trace_sram_addr = in32(PGPE_DEBUG_PTRS_ADDR + PGPE_DEBUG_TRACE_ADDR_OFFSET);
     // use non-cachable address
     l_trace_sram_addr &= 0xF7FFFFFF;
 
     // get the data length, we will clip to our allowed max size if needed
     uint32_t l_data_length = in32(PGPE_DEBUG_PTRS_ADDR + PGPE_DEBUG_TRACE_SIZE_OFFSET);
+
+    // determine if pgpe data needs to be clipped
     if(l_data_length > MAX_PGPE_DBUG_DATA)
     {
         TRAC_INFO("addPgpeDataToErrl: clipping pgpe trace size from %d to %d",
                    l_data_length, MAX_PGPE_DBUG_DATA);
         l_data_length = MAX_PGPE_DBUG_DATA;
     }
+
     // make sure address and length are non-zero
     if(l_trace_sram_addr && l_data_length)
     {
-       memcpy( (void *) &l_buffer[0],
-               (void *) l_trace_sram_addr,
-               (size_t) l_data_length );
-
        // Add the data to the error log
        addUsrDtlsToErrl( io_err,
-                        (uint8_t*)l_buffer,
+                        (uint8_t*)l_trace_sram_addr,
                         (uint16_t)l_data_length,
                         ERRL_USR_DTL_STRUCT_VERSION_1,
                         ERRL_USR_DTL_PGPE_PK_TRACE);
@@ -859,7 +929,7 @@ void commitErrl( errlHndl_t *io_err )
             (*io_err)->iv_checkSum = l_sum;
 
             // Flush error log out to SRAM since the FSP will directly read it
-            dcache_flush( *io_err, MAX_ERRL_ENTRY_SZ );
+            dcache_flush( *io_err, (*io_err)->iv_maxSize );
 
             // report error to FSP
             reportErrorLog( *io_err, l_size );
@@ -1003,9 +1073,6 @@ void addUsrDtlsToErrl(
             const uint8_t i_version,
             const ERRL_USR_DETAIL_TYPE i_type)
 {
-    // Locals
-    uint16_t l_maxSize = (i_type == ERRL_USR_DTL_CALLHOME_DATA) ? MAX_ERRL_CALL_HOME_SZ : MAX_ERRL_ENTRY_SZ;
-
     // 1.  check if handle is valid
     // 2.  NOT empty
     // 3.  not committed
@@ -1017,14 +1084,14 @@ void addUsrDtlsToErrl(
         (io_err->iv_userDetails.iv_committed == 0) &&
         (i_size != 0) &&
         (i_dataPtr != NULL) &&
-        ((io_err->iv_userDetails.iv_entrySize) < l_maxSize))
+        ((io_err->iv_userDetails.iv_entrySize) < io_err->iv_maxSize))
     {
         //local copy of the usr details entry
         ErrlUserDetailsEntry_t l_usrDtlsEntry;
         uint16_t l_headerSz = sizeof( l_usrDtlsEntry );
 
         //adjust user details entry size to available size (word align )
-        uint16_t l_availableSize = l_maxSize - (io_err->iv_userDetails.iv_entrySize + l_headerSz );
+        uint16_t l_availableSize = io_err->iv_maxSize - (io_err->iv_userDetails.iv_entrySize + l_headerSz );
         l_usrDtlsEntry.iv_size = ( i_size < l_availableSize ) ? i_size : l_availableSize;
 
         //set type

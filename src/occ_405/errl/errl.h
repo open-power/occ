@@ -39,17 +39,17 @@ static const uint32_t ERRL_SLOT_SHIFT = 0x80000000;
 // Used for defaulting handle to invalid
 static const uint32_t INVALID_ERR = 0xFFFFFFFF;
 
-// Max size of non call home data logs (2048 bytes)
-#define MAX_ERRL_ENTRY_SZ 0x800
+// Max size of non call home data logs (3616 bytes)
+#define MAX_ERRL_ENTRY_SZ 0xE20
 
 // Max size of call home data log (3072 bytes)
 #define MAX_ERRL_CALL_HOME_SZ 0xC00
 
-// Max size of callouts
+// Max number of callouts
 #define ERRL_MAX_CALLOUTS 6
 
-// Max number of error logs
-#define ERRL_MAX_SLOTS 9
+// Max number of error logs (6 normal and 1 call-home)
+#define ERRL_MAX_SLOTS 7
 
 // Used to default a old/bad error handle
 #define INVALID_ERR_HNDL (errlHndl_t)INVALID_ERR
@@ -58,19 +58,17 @@ static const uint32_t INVALID_ERR = 0xFFFFFFFF;
 #define NUM_OF_TRACE_TYPE 3
 
 // maximum size of PGPE debug data will be added for ERRL_USR_DTL_PGPE_PK_TRACE
-#define MAX_PGPE_DBUG_DATA 0x300
+#define MAX_PGPE_DBUG_DATA 0x860
 
-// These bits are used to acquire a slot number.  When used with the global
-// slot bit mask, we are able to get 7 slots for predictive/unrecoverable errors,
-// 1 slot for informational logs, and 1 slot for call home data log
 /* Slot Masks */
+// These bits are used to acquire a slot number.  When used with the global
+// slot bit mask, we are able to get 6 slots for any OCC/PGPE errors and
+// one slot for call home data log
 typedef enum
 {
     ERRL_SLOT_MASK_DEFAULT        = 0xFFFFFFFF,
-    ERRL_SLOT_MASK_INFORMATIONAL  = 0xFEFFFFFF,
-    ERRL_SLOT_MASK_PREDICTIVE     = 0x01FFFFFF,
-    ERRL_SLOT_MASK_UNRECOVERABLE  = 0x01FFFFFF,
-    ERRL_SLOT_MASK_CALL_HOME_DATA = 0xFF7FFFFF,
+    ERRL_SLOT_MASK_OCC_ERROR      = 0x03FFFFFF, // first 6 slots
+    ERRL_SLOT_MASK_CALL_HOME_DATA = 0xFDFFFFFF  // last slot
 } ERRL_SLOT_MASK;
 
 // These are the possible sources that an error log can be coming from
@@ -87,10 +85,11 @@ typedef enum
 /* Error Severity */
 typedef enum
 {
-    ERRL_SEV_INFORMATIONAL  = 0x00,
-    ERRL_SEV_PREDICTIVE     = 0x01,
-    ERRL_SEV_UNRECOVERABLE  = 0x02,
-    ERRL_SEV_CALLHOME_DATA  = 0x03,
+    ERRL_SEV_INFORMATIONAL  = 0x00,  // Used by TMGT
+    ERRL_SEV_PREDICTIVE     = 0x01,  // Used by TMGT
+    ERRL_SEV_UNRECOVERABLE  = 0x02,  // Used by TMGT
+    ERRL_SEV_CALLHOME_DATA  = 0x03,  // internal OCC use. Not used by TMGT
+    ERRL_SEV_PGPE_ERROR     = 0x04,  // internal OCC use. Not used by TMGT
 } ERRL_SEVERITY;
 
 // These are the possible actions that an error log can have.
@@ -263,8 +262,8 @@ struct ErrlEntry
         };
         uint8_t word;
     } iv_actions;
-    // Reserved for extended reason code for uniquely identifying error if needed
-    uint16_t            iv_reserved;
+    // Maximum size for the whole error log including all user details
+    uint16_t            iv_maxSize;
     uint16_t            iv_extendedRC;
     // Log Callout Number
     uint8_t             iv_numCallouts;
@@ -357,8 +356,6 @@ extern uint8_t      G_errslot3[MAX_ERRL_ENTRY_SZ];
 extern uint8_t      G_errslot4[MAX_ERRL_ENTRY_SZ];
 extern uint8_t      G_errslot5[MAX_ERRL_ENTRY_SZ];
 extern uint8_t      G_errslot6[MAX_ERRL_ENTRY_SZ];
-extern uint8_t      G_errslot7[MAX_ERRL_ENTRY_SZ];
-extern uint8_t      G_infoslot[MAX_ERRL_ENTRY_SZ];
 extern uint8_t      G_callslot[MAX_ERRL_CALL_HOME_SZ];
 
 /* Create an Error Log */
@@ -403,7 +400,6 @@ void commitErrl( errlHndl_t * io_err );
 errlHndl_t deleteErrl( errlHndl_t * io_err);
 
 /* Add Callout to Error Log */
-// @jh001c
 void addCalloutToErrl(
             errlHndl_t io_err,
             const ERRL_CALLOUT_TYPE i_type,

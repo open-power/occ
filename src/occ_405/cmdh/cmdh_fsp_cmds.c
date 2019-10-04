@@ -1030,80 +1030,71 @@ errlHndl_t cmdh_clear_elog (const   cmdh_fsp_cmd_t * i_cmd_ptr,
     o_rsp_ptr->data_length[1] = 0;
     do
     {
-       // must support old and new version 1 until (H)TMGT removes support for old version
-       // old version didn't have a version number, use data length to determine version
-       if(l_data_length == CLEAR_ELOG_V0_CMD_LEN)
-       {
-          l_elog_id = l_cmd_ptr->elog_id;
-          // version 0 only supported elogs from the 405
-          l_elog_source = ERRL_SOURCE_405;
-       }
-       else if( (l_data_length == CLEAR_ELOG_V1_CMD_LEN) &&
-                (l_cmd_version_ptr->version == 1) )
-       {
-          l_elog_id = l_cmd_version_ptr->elog_id;
-          l_elog_source = l_cmd_version_ptr->elog_source;
-       }
-
-       else
-       {
-          CMDH_TRAC_ERR("cmdh_clear_elog: Invalid version 0x%02X or data length 0x%02X",
+        if( (l_data_length == CLEAR_ELOG_V1_CMD_LEN) &&
+            (l_cmd_version_ptr->version == 1) )
+        {
+            l_elog_id = l_cmd_version_ptr->elog_id;
+            l_elog_source = l_cmd_version_ptr->elog_source;
+        }
+        else
+        {
+            CMDH_TRAC_ERR("cmdh_clear_elog: Invalid version 0x%02X or data length 0x%02X",
                           l_cmd_version_ptr->version, l_data_length);
-          l_rc = ERRL_RC_INVALID_DATA;
-          break;
-       }
+            l_rc = ERRL_RC_INVALID_DATA;
+            break;
+        }
 
-       // process the clear command based on elog source
-       switch(l_elog_source)
-       {
-           case ERRL_SOURCE_405:
-               // Get Errl Array index
-               l_SlotNum = getErrSlotNumByErrId(l_elog_id);
+        // process the clear command based on elog source
+        switch(l_elog_source)
+        {
+            case ERRL_SOURCE_405:
+                // Get Errl Array index
+                l_SlotNum = getErrSlotNumByErrId(l_elog_id);
 
-               // Get ERRL address
-               l_oci_address = (errlHndl_t)getErrSlotOCIAddr(l_SlotNum);
+                // Get ERRL address
+                l_oci_address = (errlHndl_t)getErrSlotOCIAddr(l_SlotNum);
 
-               if ((l_oci_address != NULL) &&
-                   (l_oci_address != INVALID_ERR_HNDL))
-               {
-                   // clear only one Errl by ID
-                   l_err = deleteErrl(&l_oci_address);
-               }
-               else
-               {
-                   CMDH_TRAC_ERR("cmdh_clear_elog: 405 error log ID[0x%02X] not found", l_elog_id);
-                   l_rc = ERRL_RC_INVALID_DATA;
-               }
-               break;
+                if ((l_oci_address != NULL) &&
+                    (l_oci_address != INVALID_ERR_HNDL))
+                {
+                    // clear only one Errl by ID
+                    l_err = deleteErrl(&l_oci_address);
+                }
+                else
+                {
+                    CMDH_TRAC_ERR("cmdh_clear_elog: 405 error log ID[0x%02X] not found", l_elog_id);
+                    l_rc = ERRL_RC_INVALID_DATA;
+                }
+                break;
 
-           default: // non-405 error log
-               {
-                   unsigned int index = 0;
-                   for (; index < G_hcode_elog_table_slots; ++index)
-                   {
-                       hcode_elog_entry_t elog_entry;
-                       elog_entry.dw0.value = in64(&G_hcode_elog_table[index]);
-                       if ((elog_entry.dw0.fields.errlog_id == l_elog_id) && (elog_entry.dw0.fields.errlog_src == l_elog_source))
-                       {
-                           CMDH_TRAC_INFO("cmdh_clear_elog: Clearing HCODE elog id 0x%02X from source 0x%02X",
-                                          l_elog_id, l_elog_source);
+            default: // non-405 error log
+                {
+                    unsigned int index = 0;
+                    for (; index < G_hcode_elog_table_slots; ++index)
+                    {
+                        hcode_elog_entry_t elog_entry;
+                        elog_entry.dw0.value = in64(&G_hcode_elog_table[index]);
+                        if ((elog_entry.dw0.fields.errlog_id == l_elog_id) && (elog_entry.dw0.fields.errlog_src == l_elog_source))
+                        {
+                            CMDH_TRAC_INFO("cmdh_clear_elog: Clearing HCODE elog id 0x%02X from source 0x%02X",
+                                           l_elog_id, l_elog_source);
 
-                           // Zero out error log entry in list so hcode can reuse
-                           out64(&G_hcode_elog_table[index], 0);
-                           break;
-                       }
-                   }
-                   if (index == G_hcode_elog_table_slots)
-                   {
-                       // Did not find matching entry in hcode table for non-405 error
-                       CMDH_TRAC_ERR("cmdh_clear_elog: Could not find elog id 0x%02X with source 0x%02X",
-                                     l_elog_id, l_elog_source);
-                       l_rc = ERRL_RC_INVALID_DATA;
-                   }
-                   G_htmgt_notified_of_error = false;
-               }
-               break;
-       }
+                            // Zero out error log entry in list so hcode can reuse
+                            out64(&G_hcode_elog_table[index], 0);
+                            break;
+                        }
+                    }
+                    if (index == G_hcode_elog_table_slots)
+                    {
+                        // Did not find matching entry in hcode table for non-405 error
+                        CMDH_TRAC_ERR("cmdh_clear_elog: Could not find elog id 0x%02X with source 0x%02X",
+                                      l_elog_id, l_elog_source);
+                        l_rc = ERRL_RC_INVALID_DATA;
+                    }
+                    G_htmgt_notified_of_error = false;
+                }
+                break;
+        }
     }while(0);
 
     if ( (l_err == NULL) && (l_rc == ERRL_RC_SUCCESS) )
