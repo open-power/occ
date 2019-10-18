@@ -97,7 +97,6 @@ typedef enum
 /* Error Actions */
 typedef enum
 {
-    ERRL_ACTIONS_CONSOLIDATE_ERRORS       = 0x01, //ignored by tmgt at this time
     ERRL_ACTIONS_MANUFACTURING_ERROR      = 0x08, //tmgt will set severity to predictive while in mfg mode
     ERRL_ACTIONS_FORCE_SEND               = 0x10, //htmgt will force error to be sent to BMC (for info errors to be seen)
     ERRL_ACTIONS_WOF_RESET_REQUIRED       = 0x20, //Soft reset without incrementing permanent safe mode count
@@ -134,7 +133,7 @@ typedef enum
 /* OCC States */
 typedef enum
 {
-    ERRL_OCC_STATE_INVALID          = 0xFF,
+    ERRL_OCC_STATE_INVALID      = 0xFF,
 } ERRL_OCC_STATE;
 
 /* Errl Structure Version */
@@ -153,7 +152,7 @@ typedef enum
 /* Errl Trace Version */
 typedef enum
 {
-    ERRL_TRACE_VERSION_1       = 0x00,
+    ERRL_TRACE_VERSION_1        = 0x01,
 } ERRL_TRACE_VERSION;
 
 /* Type of Callout */
@@ -174,17 +173,16 @@ typedef enum
 } ERRL_COMPONENT_ID;
 
 /* Callout Structure */
-// TMGT_OCC_INTERFACE_v1_2_1
 struct ErrlCallout
 {
-    // Type of callout. NOTE: Users must use ERRL_CALLOUT_TYPE enum
-    uint8_t     iv_type;
     // Callout Value
     uint64_t    iv_calloutValue;
-    // Callout Priority. NOTE: Users must use ERRL_CALLOUT_PRIORITY enum
+    // Type of callout - see ERRL_CALLOUT_TYPE enum
+    uint8_t     iv_type;
+    // Callout Priority - see ERRL_CALLOUT_PRIORITY enum
     uint8_t     iv_priority;
-    // Reserved 1
-    uint16_t    iv_reserved1;
+    // Reserved
+    uint8_t     iv_reserved[6];
 } __attribute__ ((__packed__));
 
 typedef struct ErrlCallout ErrlCallout_t;
@@ -233,7 +231,6 @@ struct ErrlUserDetails
 typedef struct ErrlUserDetails ErrlUserDetails_t;
 
 /* Error Log Structure */
-// TMGT_OCC_INTERFACE_v1_2_1
 struct ErrlEntry
 {
     // Log CheckSum
@@ -244,7 +241,7 @@ struct ErrlEntry
     uint8_t             iv_entryId;
     // Log Reason Code
     uint8_t             iv_reasonCode;
-    // Log Severity - NOTE: Users must use ERRL_SEVERITY enum
+    // Log Severity - see ERRL_SEVERITY enum
     uint8_t             iv_severity;
     // Actions to process the errors
     union
@@ -253,20 +250,19 @@ struct ErrlEntry
         {
             uint8_t reset_required     : 1;  // Error is critical and requires OCC reset
             uint8_t safe_mode_required : 1;  // immediate permanent safe mode (used for checkstops)
-            uint8_t wof_reset_required : 1;
-            uint8_t reserved4          : 1;
+            uint8_t wof_reset_required : 1;  // request soft reset (will not increment counts for safe mode)
+            uint8_t force_send         : 1;  // Force elog to be sent to the BMC
             uint8_t mfg_error          : 1;  // Fan go to max,oversubscription,core above warning,Throttled.
-            uint8_t reserved2          : 1;
-            uint8_t reserved1          : 1;
-            uint8_t consolidate_error  : 1;  // Look for same SRC from all OCCs
+            uint8_t reserved2          : 3;
         };
         uint8_t word;
     } iv_actions;
+    // Max number of callouts that can be returned (internally used for actual callout count until commit)
+    uint8_t             iv_numCallouts;
+    uint16_t            iv_extendedRC;
     // Maximum size for the whole error log including all user details
     uint16_t            iv_maxSize;
-    uint16_t            iv_extendedRC;
-    // Log Callout Number
-    uint8_t             iv_numCallouts;
+    uint32_t            iv_reserved;
     // Callouts
     ErrlCallout_t       iv_callouts[ERRL_MAX_CALLOUTS];
     // User Details section for Log
@@ -423,7 +419,6 @@ void setErrlActions(errlHndl_t io_err, const uint8_t i_mask);
 /* Return Error Log ID to report to TMGT */
 uint8_t getErrlLogId( errlHndl_t io_err );
 
-// @nh004a - start
 /* Get Error Slot Num By Error Id */
 uint8_t getErrSlotNumByErrId( uint8_t  i_errlId);
 
@@ -433,13 +428,11 @@ uint32_t getErrSlotOCIAddr(const uint8_t  i_SlotNum);
 /* Get the oldest error log ID so that we can pass it to TMGT */
 uint8_t getOldestErrlID();
 
-/* Return Length of an Error  Log based on ID, to send to TMGT */
+/* Return Length of an Error Log based on ID, to send to TMGT */
 uint16_t getErrlLengthByID(const uint8_t i_id);
 
 /* Return Address of an Error Log based on ID, to send to TMGT */
 uint32_t getErrlOCIAddrByID(const uint8_t i_id);
 
-// NOTE: Not defining these in the .h since they are INTERNAL
-//       methods!
 
 #endif //_ERRL_H

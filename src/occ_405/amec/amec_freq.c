@@ -922,9 +922,6 @@ void amec_slv_check_perf(void)
                                     ERRL_CALLOUT_PRIORITY_LOW
                                 );
 
-                // and sets the consolidate action flag
-                setErrlActions( l_errl, ERRL_ACTIONS_CONSOLIDATE_ERRORS );
-
                 // Commit Error
                 commitErrl(&l_errl);
 
@@ -1007,9 +1004,6 @@ void amec_slv_check_perf(void)
                                     G_sysConfigData.apss_huid,
                                     ERRL_CALLOUT_PRIORITY_HIGH
                                 );
-
-                // and sets the consolidate action flag
-                setErrlActions( l_errl, ERRL_ACTIONS_CONSOLIDATE_ERRORS );
 
                 // then l_pcap_sev to informational
                 l_pcap_sev = ERRL_SEV_INFORMATIONAL;
