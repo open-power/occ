@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -976,8 +976,7 @@ int set_nominal_pstate(void)
    do
    {
        // Make sure we have received the frequency config data to know what nominal is
-       if( (!(DATA_get_present_cnfgdata() & DATA_MASK_FREQ_PRESENT)) ||
-           (G_sysConfigData.sys_mode_freq.table[OCC_MODE_NOMINAL] == 0) )
+       if( (G_sysConfigData.sys_mode_freq.table[OCC_MODE_WOF_BASE] == 0) )
        {
             TRAC_ERR("set_nominal_pstate: WOF_BASE frequency not known!");
             l_rc = ERC_FW_ZERO_FREQ_LIMIT;

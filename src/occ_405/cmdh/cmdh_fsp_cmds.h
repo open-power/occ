@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -48,8 +48,7 @@ typedef enum
     CMDH_SETCONFIGDATA          = 0x21,
     CMDH_SET_USER_PCAP          = 0x22,
     CMDH_RESET_PREP             = 0x25,
-    CMDH_SNAPSHOT_SYNC          = 0x26,
-    CMDH_GET_SNAPSHOT_BUFFER    = 0x35,
+    CMDH_SEND_AMBIENT_TEMP      = 0x30,
     CMDH_DEBUGPT                = 0x40,
     CMDH_AME_PASS_THROUGH       = 0x41,
     CMDH_GET_FIELD_DEBUG_DATA   = 0x42,
@@ -104,9 +103,9 @@ typedef struct __attribute__ ((packed)) cmdh_poll_resp_v20
         struct
         {
             uint8_t master_occ     : 1;   // 1 => master, 0 => slave
-            uint8_t fir_master     : 1;   // 1 => fir master.
+            uint8_t _reserved_6    : 1;
             uint8_t _reserved_5    : 1;
-            uint8_t _reserved_4    : 1;
+            uint8_t pmcr_owner     : 1;   // 1 => Indicates OCC sets the PMCR / Pstates
             uint8_t simics         : 1;   // 1 => running in SIMICS environment
             uint8_t _reserved_2    : 1;
             uint8_t obs_ready      : 1;   // 1 => OCC received all data to support obs state.
@@ -124,9 +123,7 @@ typedef struct __attribute__ ((packed)) cmdh_poll_resp_v20
             uint8_t mthrot_due_to_ot   : 1;   // 1 => OCC throttled memory due to an over temp.
             uint8_t n_power            : 1;   // 1 => Server running without redundant power.
             uint8_t dvfs_due_to_vdd_ot : 1;   // 1 => OCC clipped max Pstate due to VRM Vdd over temp.
-            uint8_t _reserved_2        : 1;
-            uint8_t _reserved_1        : 1;
-            uint8_t _reserved_0        : 1;
+            uint8_t gpu_throttle       : 3;   // 1 => Bitmask of GPUs being throttled. LSB = GPU0. MSB = GPU2.
         };
         uint8_t word;
     } ext_status;
@@ -187,9 +184,9 @@ typedef struct __attribute__ ((packed)) cmdh_poll_sensor_datablock
 
 typedef struct __attribute__ ((packed)) cmdh_poll_temp_sensor
 {
-    uint32_t id;     // Sensor id.
+    uint32_t id;       // Sensor id.
     uint8_t  fru_type;
-    uint8_t  value;  // current temperature sensor reading in degrees C
+    uint8_t  value;    // current temperature sensor reading in degrees C
 } cmdh_poll_temp_sensor_t;
 
 typedef struct __attribute__ ((packed)) cmdh_poll_freq_sensor
@@ -272,8 +269,8 @@ extern uint8_t G_apss_ch_to_function[MAX_APSS_ADC_CHANNELS];
 // Set Mode And State Command
 //---------------------------------------------------------
 
-// Query packet used by the FSP for setting the TPMF state, version 0.
-struct smgr_setmodestate_v0_query
+// Query packet used by the FSP for setting the OCC state, version 0x30.
+typedef struct __attribute__ ((__packed__)) smgr_setmodestate_v30_query
 {
     // Standard TMGT
     struct    cmdh_fsp_cmd_header;
@@ -283,23 +280,15 @@ struct smgr_setmodestate_v0_query
     uint8_t       occ_state;
     // New mode from OCC_MODE_*
     uint8_t       occ_mode;
-} __attribute__ ((__packed__));
+    // Additional mode parameter
+    uint16_t      mode_parm;
 
-typedef struct smgr_setmodestate_v0_query smgr_setmodestate_v0_query_t;
-
-#define SMGR_SETMODESTATE_CMD_LEN    3
-
-// Complete Response packet for a set mode / state command
-#define SMGR_SETMODESTATE_RESP_LEN   0
-typedef cmdh_fsp_rsp_t smgr_setmodestate_resp_t;
-
-// Set-mode-state TMGT command version
-#define SMGR_SMS_CMD_VERSION         0
+    uint8_t       _reserved;
+} smgr_setmodestate_v30_query_t;
 
 //---------------------------------------------------------
 // Clear Elog Command
 //---------------------------------------------------------
-#define CLEAR_ELOG_V0_CMD_LEN    1
 #define CLEAR_ELOG_V1_CMD_LEN    4
 
 // Used by TMGT to clear elog data state, version 0.
@@ -375,6 +364,24 @@ typedef struct __attribute__ ((packed)) cmdh_reset_prep
     // Reason
     uint8_t   reason;
 }cmdh_reset_prep_t;
+
+//---------------------------------------------------------
+// Send Ambient Temperature
+//---------------------------------------------------------
+
+#define SEND_AMBIENT_VERSION_0 0x00
+
+typedef struct __attribute__ ((packed)) cmdh_send_ambient_temp
+{
+    // Standard TMGT Header
+    struct cmdh_fsp_cmd_header;
+    // Command Version
+    uint8_t version;
+    // Ambient Reading Status (0x00 = Sucess, 0xFF = Failure)
+    uint8_t status;
+    // Ambient Temperature Reading
+    uint8_t reading;
+} cmdh_send_ambient_temp_t;
 
 //---------------------------------------------------------
 // Get Field Debug Data
@@ -545,7 +552,8 @@ errlHndl_t cmdh_tmgt_get_field_debug_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
 errlHndl_t cmdh_set_user_pcap(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                     cmdh_fsp_rsp_t * o_rsp_ptr);
 
-
+errlHndl_t cmdh_send_ambient_temp(const cmdh_fsp_cmd_t * i_cmd_ptr,
+                                        cmdh_fsp_rsp_t * o_rsp_ptr);
 //------------------------------------------------------------------------------------
 // Commands supported via in-band interface must have additional inputs/output/return
 // Any out of band commands that are to be supported in-band should change to this

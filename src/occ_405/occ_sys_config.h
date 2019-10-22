@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -39,7 +39,7 @@
 
 #define MAX_NUM_OCC              4
 #define MAX_NUM_NODES            4
-#define MAX_NUM_CORES           24
+#define MAX_NUM_CORES           32
 #define NUM_CORES_PER_QUAD       4
 #define MAX_NUM_CHIP_MODULES     4
 #define MAX_NUM_MEM_CONTROLLERS  16
@@ -251,8 +251,6 @@ typedef struct
 typedef struct
 {
     uint16_t table[OCC_MODE_COUNT];  // Table w/ freq for each mode
-    uint8_t  update_count;           //
-    uint8_t  _reserved;              // Align to 2 b/c we may use it in PBAX broadcast
 } freqConfig_t;
 
 // Power Cap Structures
@@ -280,17 +278,17 @@ typedef struct
     uint16_t    min_n_per_mba;           //minimum value
     uint16_t    min_mem_power;           //Max mem Power @min (x0.01W)
 
-    uint16_t    turbo_n_per_mba;         //max mba value for Turbo
-    uint16_t    turbo_n_per_chip;        //Static per chip numerator @Turbo
-    uint16_t    turbo_mem_power;         //max memory power @Turbo
+    uint16_t    wof_n_per_mba;         //max mba value for WOF
+    uint16_t    wof_n_per_chip;        //Static per chip numerator for WOF
+    uint16_t    wof_mem_power;         //max memory power for WOF
 
     uint16_t    pcap_n_per_mba;         //max mba value for Power Cap
     uint16_t    pcap_n_per_chip;        //Static per chip numerator @PCAP
     uint16_t    pcap_mem_power;         //max memory power @PCAP
 
-    uint16_t    nom_n_per_mba;           //max mba value for nominal mode
-    uint16_t    nom_n_per_chip;          //chip setting for nominal mode
-    uint16_t    nom_mem_power;           //max memory power @nominal
+    uint16_t    fmax_n_per_mba;           //max mba value @fmax
+    uint16_t    fmax_n_per_chip;          //chip setting @fmax
+    uint16_t    fmax_mem_power;           //max memory power @fmax
 
     uint16_t    reserved1;               //reserved
     uint16_t    reserved2;               //reserved
@@ -339,6 +337,9 @@ typedef struct
   // Processor HUID - HUID for this OCC processor, used by OCC for processor error call out
   uint32_t proc_huid;
 
+  // Processor Frequency HUID - HUID for this OCC processor frequency, used by OCC to report proc frequency
+  uint32_t proc_freq_huid;
+
   // Backplane HUID - Used by OCC for system backplane error call out (i.e. VRM errors will call out backplane)
   uint32_t backplane_huid;
 
@@ -375,7 +376,6 @@ typedef struct
 
   // AVS Bus config
   avsbusData_t avsbus_vdd;
-  uint16_t     proc_power_adder;
   uint32_t     vdd_current_rollover_10mA;
   uint32_t     vdd_max_current_10mA;
 
@@ -426,7 +426,7 @@ typedef struct
   //   mem_throt_limits[membuf][mba]
   //           membuf=0-8, mba = 0/1 for mba01/mba23
   //              (only first two columns populated)
-  mem_throt_config_data_t mem_throt_limits[MAX_NUM_MEM_CONTROLLERS][MAX_NUM_MCU_PORTS];
+  mem_throt_config_data_t mem_throt_limits[MAX_NUM_MEM_CONTROLLERS];
 
   // --------------------------------------
   // GPU Information for error callout and GPU power capping

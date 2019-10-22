@@ -5,7 +5,7 @@
 #
 # OpenPOWER OnChipController Project
 #
-# Contributors Listed Below - COPYRIGHT 2019
+# Contributors Listed Below - COPYRIGHT 2019,2020
 # [+] International Business Machines Corp.
 #
 #
@@ -2423,34 +2423,46 @@ def occ_to_active(flg_pgpe, flg_run, flg_verbose):
     RC = send_occ_cmd(0x00, "20", flg_verbose);
 
     print("\n#### SET SYSTEM CONFIG ###################################################################################");
-    cmdData="0f2001" # single node
-    cmdData=cmdData+"00000001" # proc sensor
-    cmdData=cmdData+"0100000101000002" # core0 temp sensor / freq sensor
-    cmdData=cmdData+"0100010101000102"
-    cmdData=cmdData+"0100020101000202"
-    cmdData=cmdData+"0100030101000302"
-    cmdData=cmdData+"0100040101000402"
-    cmdData=cmdData+"0100050101000502"
-    cmdData=cmdData+"0100060101000602"
-    cmdData=cmdData+"0100070101000702"
-    cmdData=cmdData+"0100080101000802"
-    cmdData=cmdData+"0100090101000902"
-    cmdData=cmdData+"0100100101001002"
-    cmdData=cmdData+"0100110101001102"
-    cmdData=cmdData+"0100120101001202"
-    cmdData=cmdData+"0100130101001302"
-    cmdData=cmdData+"0100140101001402"
-    cmdData=cmdData+"0100150101001502"
-    cmdData=cmdData+"0100160101001602"
-    cmdData=cmdData+"0100170101001702"
-    cmdData=cmdData+"0100180101001802"
-    cmdData=cmdData+"0100190101001902"
-    cmdData=cmdData+"0100200101002002"
-    cmdData=cmdData+"0100210101002102"
-    cmdData=cmdData+"0100220101002202"
-    cmdData=cmdData+"0100230101002302"
+    cmdData="0F3001" # single node
+    cmdData=cmdData+"00000001" # proc sensor id
+    cmdData=cmdData+"00000002" # proc frequency sensor id
+    cmdData=cmdData+"01000001" # core0 temp sensor id
+    cmdData=cmdData+"01000101"
+    cmdData=cmdData+"01000201"
+    cmdData=cmdData+"01000301"
+    cmdData=cmdData+"01000401"
+    cmdData=cmdData+"01000501"
+    cmdData=cmdData+"01000601"
+    cmdData=cmdData+"01000701"
+    cmdData=cmdData+"01000801"
+    cmdData=cmdData+"01000901"
+    cmdData=cmdData+"01001001"
+    cmdData=cmdData+"01001101"
+    cmdData=cmdData+"01001201"
+    cmdData=cmdData+"01001301"
+    cmdData=cmdData+"01001401"
+    cmdData=cmdData+"01001501"
+    cmdData=cmdData+"01001601"
+    cmdData=cmdData+"01001701"
+    cmdData=cmdData+"01001801"
+    cmdData=cmdData+"01001901"
+    cmdData=cmdData+"01002001"
+    cmdData=cmdData+"01002101"
+    cmdData=cmdData+"01002201"
+    cmdData=cmdData+"01002301"
+    cmdData=cmdData+"01002401"
+    cmdData=cmdData+"01002501"
+    cmdData=cmdData+"01002601"
+    cmdData=cmdData+"01002701"
+    cmdData=cmdData+"01002801"
+    cmdData=cmdData+"01002901"
+    cmdData=cmdData+"01003001"
+    cmdData=cmdData+"01003101"
     cmdData=cmdData+"02000001" # backplane sensor
     cmdData=cmdData+"03000001" # APSS sensor
+    cmdData=cmdData+"04000001" # VRM VDD Sensor ID
+    cmdData=cmdData+"05000001" # VRM VDD Temp Sensor ID
+    cmdData=cmdData+"0000000000000000" # Reserved
     RC = send_occ_cmd(0x21, cmdData, flg_verbose);
 
     print("\n#### SET APSS CONFIG #####################################################################################");
@@ -2486,27 +2498,24 @@ def occ_to_active(flg_pgpe, flg_run, flg_verbose):
     RC = send_occ_cmd(0x00, "20", flg_verbose);
 
     print("\n#### SET MEMORY CONFIG ###################################################################################");
-    RC = send_occ_cmd(0x21, "052000", flg_verbose);
+    RC = send_occ_cmd(0x21, "0521000000", flg_verbose);
 
     print("\n#### SET THERMAL THRESHOLDS (TCT) ########################################################################");
-    RC = send_occ_cmd(0x21, "1320140A0200FF5FFFFFFF02FF48FFFF1E", flg_verbose);
+    RC = send_occ_cmd(0x21, "1330140A080200FF5FFFFFFF02FF48FFFF1E", flg_verbose);
 
     print("\n#### SET AVSBUS CONFIG ###################################################################################");
-    RC = send_occ_cmd(0x21, "1401FF000000FF010001", flg_verbose);
-
-    print("\n#### SET FREQUENCY POINTS ################################################################################");
-    RC = send_occ_cmd(0x21, "02200BB80DAC09C40ED80AF00000", flg_verbose);
+    RC = send_occ_cmd(0x21, "1430FF00000000000000", flg_verbose);
 
     print("\n#### SET PCAP DATA #######################################################################################");
     RC = send_occ_cmd(0x21, "0720011F012C07E907C2", flg_verbose);
 
     print("\n#### SET MEMORY THROTTLE #################################################################################");
-    cmdData="122004"
-    #                              TURBO       PCAP        NOMINAL     reserved
+    cmdData="123004"
+    #                            WOF-BASE    PCAP        FMAX        reserved
     cmdData=cmdData+"000044440100233334440120233334440110233334440130EEEEEEEEEEEE"
-    cmdData=cmdData+"000144440101455556660121233334440111677778880131EEEEEEEEEEEE"
-    cmdData=cmdData+"000244440102455556660122233334440112677778880132EEEEEEEEEEEE"
-    cmdData=cmdData+"000344440103455556660123233334440113677778880133EEEEEEEEEEEE"
+    cmdData=cmdData+"010044440101455556660121233334440111677778880131EEEEEEEEEEEE"
+    cmdData=cmdData+"020044440102455556660122233334440112677778880132EEEEEEEEEEEE"
+    cmdData=cmdData+"030044440103455556660123233334440113677778880133EEEEEEEEEEEE"
     RC = send_occ_cmd(0x21, cmdData, flg_verbose);
 
     print("\n#### SET GPU CONFIG ######################################################################################");
@@ -2516,13 +2525,13 @@ def occ_to_active(flg_pgpe, flg_run, flg_verbose):
     RC = send_occ_cmd(0x00, "20", flg_verbose);
 
     print("\n#### SET STATE - ACTIVE ##################################################################################");
-    RC = send_occ_cmd(0x20, "000300", flg_verbose);
+    RC = send_occ_cmd(0x20, "300300000000", flg_verbose);
 
     print("\n#### VALIDATE POLL DATA ##################################################################################");
     RC = send_occ_cmd(0x00, "20", flg_verbose);
 
     print("\n#### SET NOMINAL MODE ####################################################################################");
-    RC = send_occ_cmd(0x20, "000001", flg_verbose);
+    RC = send_occ_cmd(0x20, "300001000000", flg_verbose);
 
     print("\n#### VALIDATE POLL DATA ##################################################################################");
     RC = send_occ_cmd(0x00, "20", flg_verbose);

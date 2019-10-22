@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -84,8 +84,6 @@ typedef enum homer_read_var
     HOMER_VERSION,
     HOMER_NEST_FREQ,
     HOMER_INT_TYPE,
-    HOMER_FIR_MASTER,
-    HOMER_FIR_PARMS,
     HOMER_SMF_MODE,
     HOMER_LAST_VAR
 } homer_read_var_t;

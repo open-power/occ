@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -71,7 +71,7 @@
 // save keystrokes, as well as reduce typos & copy paste errors.
 #define SENSOR_STRING(sensor_name) #sensor_name
 
-// This will create a set of 6 sensor entries into the sensor list table.
+// This will create a set of 8 sensor entries into the sensor list table.
 // (one for each quad...)  The base name of the sensor enum must be passed
 // and this macro will take care of the paste & stringify operations.
 #define SENS_QUAD_ENTRY_SET(sensor_name, units, type, location, number, frequency, scaleFactor)  \
@@ -86,10 +86,14 @@
   [SENSOR_W_NUM(sensor_name,4)] = {.name = SENSOR_STRING(sensor_name ## 4),   \
                    .sensor = { units, type, location, number, frequency, scaleFactor },}, \
   [SENSOR_W_NUM(sensor_name,5)] = {.name = SENSOR_STRING(sensor_name ## 5),   \
+                   .sensor = { units, type, location, number, frequency, scaleFactor },}, \
+  [SENSOR_W_NUM(sensor_name,6)] = {.name = SENSOR_STRING(sensor_name ## 6),   \
+                   .sensor = { units, type, location, number, frequency, scaleFactor },}, \
+  [SENSOR_W_NUM(sensor_name,7)] = {.name = SENSOR_STRING(sensor_name ## 7),   \
                    .sensor = { units, type, location, number, frequency, scaleFactor },}
 
 
-// This will create a set of 24 sensor entries into the sensor list table.
+// This will create a set of 32 sensor entries into the sensor list table.
 // (one for each core...)  The base name of the sensor enum must be passed
 // and this macro will take care of the paste & stringify operations.
 #define SENS_CORE_ENTRY_SET(sensor_name, units, type, location, number, frequency, scaleFactor)  \
@@ -140,6 +144,22 @@
   [SENSOR_W_NUM(sensor_name,22)] = {.name = SENSOR_STRING(sensor_name ## 22),   \
                    .sensor = { units, type, location, number, frequency, scaleFactor },}, \
   [SENSOR_W_NUM(sensor_name,23)] = {.name = SENSOR_STRING(sensor_name ## 23),   \
+                   .sensor = { units, type, location, number, frequency, scaleFactor },}, \
+  [SENSOR_W_NUM(sensor_name,24)] = {.name = SENSOR_STRING(sensor_name ## 24),   \
+                   .sensor = { units, type, location, number, frequency, scaleFactor },}, \
+  [SENSOR_W_NUM(sensor_name,25)] = {.name = SENSOR_STRING(sensor_name ## 25),   \
+                   .sensor = { units, type, location, number, frequency, scaleFactor },}, \
+  [SENSOR_W_NUM(sensor_name,26)] = {.name = SENSOR_STRING(sensor_name ## 26),   \
+                   .sensor = { units, type, location, number, frequency, scaleFactor },}, \
+  [SENSOR_W_NUM(sensor_name,27)] = {.name = SENSOR_STRING(sensor_name ## 27),   \
+                   .sensor = { units, type, location, number, frequency, scaleFactor },}, \
+  [SENSOR_W_NUM(sensor_name,28)] = {.name = SENSOR_STRING(sensor_name ## 28),   \
+                   .sensor = { units, type, location, number, frequency, scaleFactor },}, \
+  [SENSOR_W_NUM(sensor_name,29)] = {.name = SENSOR_STRING(sensor_name ## 29),   \
+                   .sensor = { units, type, location, number, frequency, scaleFactor },}, \
+  [SENSOR_W_NUM(sensor_name,30)] = {.name = SENSOR_STRING(sensor_name ## 30),   \
+                   .sensor = { units, type, location, number, frequency, scaleFactor },}, \
+  [SENSOR_W_NUM(sensor_name,31)] = {.name = SENSOR_STRING(sensor_name ## 31),   \
                    .sensor = { units, type, location, number, frequency, scaleFactor },}
 
 // This will create a set of 16 sensor entries into the sensor list table.
@@ -249,7 +269,6 @@ const sensor_info_t G_sensor_info[]   =
   SENSOR_INFO_T_ENTRY(    PROCOTTHROT,   "#\0",    AMEC_SENSOR_TYPE_PERF, AMEC_SENSOR_LOC_PROC, AMEC_SENSOR_NONUM, AMEEFP_EVERY_64TH_TICK_HZ, AMEFP(  1, 0)  ),
 
   SENS_QUAD_ENTRY_SET(          TEMPQ,   "C\0",    AMEC_SENSOR_TYPE_TEMP, AMEC_SENSOR_LOC_QUAD, AMEC_SENSOR_NONUM, AMEEFP_EVERY_16TH_TICK_HZ, AMEFP(  1, 0)  ),
-  SENS_QUAD_ENTRY_SET(  VOLTDROOPCNTQ,   "#\0", AMEC_SENSOR_TYPE_VOLTAGE, AMEC_SENSOR_LOC_QUAD, AMEC_SENSOR_NONUM, AMEEFP_EVERY_16TH_TICK_HZ, AMEFP(  1, 0)  ),
 
   /* ==ReguSensors==       NameString  Units                      Type              Location             Number                Freq          ScaleFactor   */
   SENSOR_INFO_T_ENTRY(        VOLTVDD, "mV\0", AMEC_SENSOR_TYPE_VOLTAGE,  AMEC_SENSOR_LOC_VRM, AMEC_SENSOR_NONUM, AMEEFP_EVERY_4TH_TICK_HZ, AMEFP(  1, -1)  ),

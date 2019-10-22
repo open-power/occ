@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -200,6 +200,8 @@ void avsbus_init()
             bus1_monitoring = TRUE;
         }
     }
+
+    // @TODO Add support for bus2 monitoring (RTC 246411)
 
     // Write O2SCTRLF_[a][n]
     //  o2s_frame_size = 0x20 (32d)
@@ -645,6 +647,7 @@ void initiate_avsbus_read_status()
         {
             bus = G_sysConfigData.avsbus_vdd.bus;
         }
+
         if (bus != 0xFF)
         {
 #ifdef AVSDEBUG

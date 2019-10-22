@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -64,7 +64,15 @@ extern amec_sys_t g_amec_sys;
   [SENSOR_W_NUM(sensor,20)] = ptrbase[20].ptrmember, \
   [SENSOR_W_NUM(sensor,21)] = ptrbase[21].ptrmember, \
   [SENSOR_W_NUM(sensor,22)] = ptrbase[22].ptrmember, \
-  [SENSOR_W_NUM(sensor,23)] = ptrbase[23].ptrmember
+  [SENSOR_W_NUM(sensor,23)] = ptrbase[23].ptrmember, \
+  [SENSOR_W_NUM(sensor,24)] = ptrbase[24].ptrmember, \
+  [SENSOR_W_NUM(sensor,25)] = ptrbase[25].ptrmember, \
+  [SENSOR_W_NUM(sensor,26)] = ptrbase[26].ptrmember, \
+  [SENSOR_W_NUM(sensor,27)] = ptrbase[27].ptrmember, \
+  [SENSOR_W_NUM(sensor,28)] = ptrbase[28].ptrmember, \
+  [SENSOR_W_NUM(sensor,29)] = ptrbase[29].ptrmember, \
+  [SENSOR_W_NUM(sensor,30)] = ptrbase[30].ptrmember, \
+  [SENSOR_W_NUM(sensor,31)] = ptrbase[31].ptrmember
 
 // Will define a set of "quad sensor pointers" by passing in base sensor name
 // and ptr to [0] entry of array of 6 quad sensors
@@ -74,7 +82,9 @@ extern amec_sys_t g_amec_sys;
   [SENSOR_W_NUM(sensor, 2)] = ptrbase[ 2].ptrmember, \
   [SENSOR_W_NUM(sensor, 3)] = ptrbase[ 3].ptrmember, \
   [SENSOR_W_NUM(sensor, 4)] = ptrbase[ 4].ptrmember, \
-  [SENSOR_W_NUM(sensor, 5)] = ptrbase[ 5].ptrmember
+  [SENSOR_W_NUM(sensor, 5)] = ptrbase[ 5].ptrmember, \
+  [SENSOR_W_NUM(sensor, 6)] = ptrbase[ 6].ptrmember, \
+  [SENSOR_W_NUM(sensor, 7)] = ptrbase[ 7].ptrmember
 
 
 // Will define a set of "memory controller sensor pointers" by passing in
@@ -127,7 +137,15 @@ extern amec_sys_t g_amec_sys;
   [SENSOR_W_NUM(sensor,20)] = ptr[20], \
   [SENSOR_W_NUM(sensor,21)] = ptr[21], \
   [SENSOR_W_NUM(sensor,22)] = ptr[22], \
-  [SENSOR_W_NUM(sensor,23)] = ptr[23]
+  [SENSOR_W_NUM(sensor,23)] = ptr[23], \
+  [SENSOR_W_NUM(sensor,24)] = ptr[24], \
+  [SENSOR_W_NUM(sensor,25)] = ptr[25], \
+  [SENSOR_W_NUM(sensor,26)] = ptr[26], \
+  [SENSOR_W_NUM(sensor,27)] = ptr[27], \
+  [SENSOR_W_NUM(sensor,28)] = ptr[28], \
+  [SENSOR_W_NUM(sensor,29)] = ptr[29], \
+  [SENSOR_W_NUM(sensor,30)] = ptr[30], \
+  [SENSOR_W_NUM(sensor,31)] = ptr[31]
 
 // every sensor must have a mini-sensor.
 #define CORE_MINI_SENSOR_PTRS_NULL(sensor) \
@@ -154,7 +172,15 @@ extern amec_sys_t g_amec_sys;
   [SENSOR_W_NUM(sensor,20)] = NULL, \
   [SENSOR_W_NUM(sensor,21)] = NULL, \
   [SENSOR_W_NUM(sensor,22)] = NULL, \
-  [SENSOR_W_NUM(sensor,23)] = NULL
+  [SENSOR_W_NUM(sensor,23)] = NULL, \
+  [SENSOR_W_NUM(sensor,24)] = NULL, \
+  [SENSOR_W_NUM(sensor,25)] = NULL, \
+  [SENSOR_W_NUM(sensor,26)] = NULL, \
+  [SENSOR_W_NUM(sensor,27)] = NULL, \
+  [SENSOR_W_NUM(sensor,28)] = NULL, \
+  [SENSOR_W_NUM(sensor,29)] = NULL, \
+  [SENSOR_W_NUM(sensor,30)] = NULL, \
+  [SENSOR_W_NUM(sensor,31)] = NULL
 
 // Will define a set of "quad mini-sensor pointers" by passing in base
 // sensor name and ptr to [0] entry of array of quad sensors
@@ -164,7 +190,9 @@ extern amec_sys_t g_amec_sys;
   [SENSOR_W_NUM(sensor, 2)] = ptr[ 2], \
   [SENSOR_W_NUM(sensor, 3)] = ptr[ 3], \
   [SENSOR_W_NUM(sensor, 4)] = ptr[ 4], \
-  [SENSOR_W_NUM(sensor, 5)] = ptr[ 5]
+  [SENSOR_W_NUM(sensor, 5)] = ptr[ 5], \
+  [SENSOR_W_NUM(sensor, 6)] = ptr[ 6], \
+  [SENSOR_W_NUM(sensor, 7)] = ptr[ 7]
 
 // every sensor must have a mini-sensor.
 #define QUAD_MINI_SENSOR_PTRS_NULL(sensor) \
@@ -173,7 +201,9 @@ extern amec_sys_t g_amec_sys;
   [SENSOR_W_NUM(sensor, 2)] = NULL, \
   [SENSOR_W_NUM(sensor, 3)] = NULL, \
   [SENSOR_W_NUM(sensor, 4)] = NULL, \
-  [SENSOR_W_NUM(sensor, 5)] = NULL
+  [SENSOR_W_NUM(sensor, 5)] = NULL, \
+  [SENSOR_W_NUM(sensor, 6)] = NULL, \
+  [SENSOR_W_NUM(sensor, 7)] = NULL
 
 // Will define a set of "memory controller mini sensor ptrs" by passing in
 // base sensor nameand ptr to [0] entry of array of 16 memcontroller sensors
@@ -294,7 +324,6 @@ const sensor_ptr_t G_amec_sensor_list[] =
   // Quad Sensors (6 each)
   // ------------------------------------------------------
   QUAD_SENSOR_PTRS( TEMPQ,           &g_amec_sys.proc[0].quad, tempq),
-  QUAD_SENSOR_PTRS( VOLTDROOPCNTQ,   &g_amec_sys.proc[0].quad, voltdroopcntq),
 
   // ------------------------------------------------------
   // Regulator Sensors
@@ -448,7 +477,6 @@ const minisensor_ptr_t G_amec_mini_sensor_list[] INIT_SECTION =
   // Quad Sensors (6 each)
   // ------------------------------------------------------
   QUAD_MINI_SENSOR_PTRS_NULL( TEMPQ ),
-  QUAD_MINI_SENSOR_PTRS_NULL( VOLTDROOPCNTQ),
 
   // ------------------------------------------------------
   // Regulator Sensors

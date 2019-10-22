@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -43,6 +43,7 @@
 
 extern uint8_t G_occ_interrupt_type;
 extern uint16_t G_proc_fmax_mhz;   // max(turbo,uturbo) frequencies
+extern data_cnfg_t * G_data_cnfg;
 
 dcom_timing_t G_dcomTime;
 
@@ -442,8 +443,6 @@ void dcom_build_occfw_msg( const dcom_error_type_t i_which_msg )
 // End Function Specification
 void task_dcom_parse_occfwmsg(task_t *i_self)
 {
-    errlHndl_t l_errl = NULL;
-
     if(G_occ_role == OCC_MASTER)
     {
         // Local slave index counter
@@ -484,107 +483,6 @@ void task_dcom_parse_occfwmsg(task_t *i_self)
             G_occ_master_state = G_dcom_slv_inbox_rx.occ_fw_mailbox[0];
             G_occ_master_mode  = G_dcom_slv_inbox_rx.occ_fw_mailbox[1];
             ssx_semaphore_post(&G_dcomThreadWakeupSem);
-        }
-    }
-
-    // If we are master, we don't want to update based on
-    // the data sent to us, because it corrupts the 'golden' data
-    // If we are in standby, we don't want to update because
-    // the data may not have been set up yet, and would be set to zero.
-    if(OCC_MASTER != G_occ_role )
-    {
-        // Update the system mode frequencies if they have changed
-        int l_mode    = 0;
-        bool l_change = FALSE;
-        bool l_all_zero = TRUE;
-
-        // Check if all values are zero
-        for(l_mode = 0; l_mode<OCC_MODE_COUNT; l_mode++)
-        {
-            if( (0 != G_dcom_slv_inbox_rx.sys_mode_freq.table[l_mode]) )
-            {
-                l_all_zero = FALSE;
-                break;
-            }
-        }
-
-        extern data_cnfg_t * G_data_cnfg;
-        if( l_all_zero == FALSE)
-        {
-            for(l_mode =0; l_mode<OCC_MODE_COUNT; l_mode++)
-            {
-                // Don't trust a frequency of 0x0000 except for oversubscription, VRM N and Ultra Turbo
-                if( (0 != G_dcom_slv_inbox_rx.sys_mode_freq.table[l_mode]) ||
-                    (l_mode == OCC_MODE_OVERSUB) ||
-                    (l_mode == OCC_MODE_VRM_N)   ||
-                    (l_mode == OCC_MODE_UTURBO) )
-                {
-                    if(G_sysConfigData.sys_mode_freq.table[l_mode]
-                            != G_dcom_slv_inbox_rx.sys_mode_freq.table[l_mode])
-                    {
-                        TRAC_INFO("New Frequency for Mode %d: Old: %d MHz -> New: %d MHz",l_mode,
-                                G_sysConfigData.sys_mode_freq.table[l_mode],
-                                G_dcom_slv_inbox_rx.sys_mode_freq.table[l_mode]);
-
-                        // Update mode frequency
-                        G_sysConfigData.sys_mode_freq.table[l_mode] =
-                            G_dcom_slv_inbox_rx.sys_mode_freq.table[l_mode];
-
-                        l_change = TRUE;
-                    }
-                }
-            }
-
-            if(l_change)
-            {
-                // If Ultra Turbo is 0, disable WOF, else enable
-                if(G_sysConfigData.sys_mode_freq.table[OCC_MODE_UTURBO] == 0)
-                {
-                    set_clear_wof_disabled( SET,
-                                            WOF_RC_UTURBO_IS_ZERO,
-                                            ERC_WOF_UTURBO_IS_ZERO );
-                }
-                else
-                {
-                    set_clear_wof_disabled( CLEAR,
-                                            WOF_RC_UTURBO_IS_ZERO,
-                                            ERC_WOF_UTURBO_IS_ZERO );
-                    set_clear_wof_disabled( CLEAR,
-                                            WOF_RC_OCC_WOF_DISABLED,
-                                            ERC_WOF_OCC_WOF_DISABLED );
-                }
-
-                if(G_sysConfigData.sys_mode_freq.table[OCC_MODE_UTURBO] > G_sysConfigData.sys_mode_freq.table[OCC_MODE_TURBO])
-                {
-                    G_proc_fmax_mhz = G_sysConfigData.sys_mode_freq.table[OCC_MODE_UTURBO];
-                }
-                else
-                {
-                    G_proc_fmax_mhz = G_sysConfigData.sys_mode_freq.table[OCC_MODE_TURBO];
-                }
-
-                // Update "update count" for debug purposes
-                G_sysConfigData.sys_mode_freq.update_count =
-                    G_dcom_slv_inbox_rx.sys_mode_freq.update_count;
-
-                // Change Data Request Mask to indicate we got this data
-                extern data_cnfg_t * G_data_cnfg;
-                G_data_cnfg->data_mask |= DATA_MASK_FREQ_PRESENT;
-
-                // Notify AMEC that the frequencies have changed
-                l_errl = AMEC_data_change(DATA_MASK_FREQ_PRESENT);
-                if(l_errl)
-                {
-                  // Commit log
-                  commitErrl(&l_errl);
-                }
-            }
-        }
-        else
-        {
-            // Clear Data Request Mask and data
-            G_data_cnfg->data_mask &= (~DATA_MASK_FREQ_PRESENT);
-            memset(&G_sysConfigData.sys_mode_freq.table[0], 0, sizeof(G_sysConfigData.sys_mode_freq.table));
         }
     }
 

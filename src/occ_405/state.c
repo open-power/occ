@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -394,7 +394,7 @@ errlHndl_t SMGR_characterization_to_observation()
         }
 
         // set clips to legacy turbo
-        l_pstate = proc_freq2pstate(G_sysConfigData.sys_mode_freq.table[OCC_MODE_TURBO]);
+        l_pstate = proc_freq2pstate(G_sysConfigData.sys_mode_freq.table[OCC_MODE_WOF_BASE]);
         rc = pgpe_set_clip_blocking(l_pstate);
         if(rc)
         {
@@ -612,8 +612,8 @@ errlHndl_t SMGR_observation_to_active()
                 {
                      // OCC controls frequency via clip
                      // set clip to nominal/turbo until WOF is fully enabled
-                     if(G_sysConfigData.sys_mode_freq.table[OCC_MODE_TURBO] > G_sysConfigData.sys_mode_freq.table[OCC_MODE_NOMINAL])
-                         l_freq = G_sysConfigData.sys_mode_freq.table[OCC_MODE_TURBO];
+                     if(G_sysConfigData.sys_mode_freq.table[OCC_MODE_WOF_BASE] > G_sysConfigData.sys_mode_freq.table[OCC_MODE_NOMINAL])
+                         l_freq = G_sysConfigData.sys_mode_freq.table[OCC_MODE_WOF_BASE];
                      else
                          l_freq = G_sysConfigData.sys_mode_freq.table[OCC_MODE_NOMINAL];
 
@@ -894,7 +894,7 @@ errlHndl_t SMGR_active_to_observation()
         }
 
         // set clips to legacy turbo
-        l_pstate = proc_freq2pstate(G_sysConfigData.sys_mode_freq.table[OCC_MODE_TURBO]);
+        l_pstate = proc_freq2pstate(G_sysConfigData.sys_mode_freq.table[OCC_MODE_WOF_BASE]);
         rc = pgpe_set_clip_blocking(l_pstate);
         if(rc)
         {

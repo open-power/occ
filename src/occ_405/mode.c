@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -39,7 +39,7 @@ errlHndl_t SMGR_mode_transition_to_nominal();
 errlHndl_t SMGR_mode_transition_to_powersave();
 errlHndl_t SMGR_mode_transition_to_dynpowersave();
 errlHndl_t SMGR_mode_transition_to_dynpowersave_fp();
-errlHndl_t SMGR_mode_transition_to_turbo();
+errlHndl_t SMGR_mode_transition_to_static_freq_point();
 errlHndl_t SMGR_mode_transition_to_ffo();
 errlHndl_t SMGR_mode_transition_to_fmf();
 errlHndl_t SMGR_mode_transition_to_nom_perf();
@@ -58,6 +58,8 @@ OCC_MODE           G_occ_external_req_mode = OCC_MODE_NOCHANGE;
 // Mode that TMGT is requesting OCC go to in KVM
 OCC_MODE           G_occ_external_req_mode_kvm = OCC_MODE_NOCHANGE;
 
+// In FFO or Static Frequency Point modes, this extra parameter is used to define the frequency
+uint16_t           G_occ_external_req_mode_parm = OCC_MODE_PARM_NONE;
 // Indicates if we are currently in a mode transition
 bool                G_mode_transition_occuring = FALSE;
 
@@ -77,7 +79,7 @@ const smgr_state_trans_t G_smgr_mode_trans[] =
     {OCC_MODE_ALL,          OCC_MODE_PWRSAVE,           &SMGR_mode_transition_to_powersave},
     {OCC_MODE_ALL,          OCC_MODE_DYN_POWER_SAVE,    &SMGR_mode_transition_to_dynpowersave},
     {OCC_MODE_ALL,          OCC_MODE_DYN_POWER_SAVE_FP, &SMGR_mode_transition_to_dynpowersave_fp},
-    {OCC_MODE_ALL,          OCC_MODE_TURBO,             &SMGR_mode_transition_to_turbo},
+    {OCC_MODE_ALL,          OCC_MODE_STATIC_FREQ_POINT, &SMGR_mode_transition_to_static_freq_point},
     {OCC_MODE_ALL,          OCC_MODE_FFO,               &SMGR_mode_transition_to_ffo},
     {OCC_MODE_ALL,          OCC_MODE_FMF,               &SMGR_mode_transition_to_fmf},
     {OCC_MODE_ALL,          OCC_MODE_NOM_PERFORMANCE,   &SMGR_mode_transition_to_nom_perf},
@@ -376,16 +378,16 @@ errlHndl_t SMGR_mode_transition_to_dynpowersave_fp()
 // Description:
 //
 // End Function Specification
-errlHndl_t SMGR_mode_transition_to_turbo()
+errlHndl_t SMGR_mode_transition_to_static_freq_point()
 {
     errlHndl_t              l_errlHndl = NULL;
 
     TRAC_IMP("SMGR: Mode to Turbo Transition Started");
 
     // Set Freq Mode for AMEC to use
-    l_errlHndl = amec_set_freq_range(OCC_MODE_TURBO);
+    l_errlHndl = amec_set_freq_range(OCC_MODE_STATIC_FREQ_POINT);
 
-    CURRENT_MODE() = OCC_MODE_TURBO;
+    CURRENT_MODE() = OCC_MODE_STATIC_FREQ_POINT;
 
     // WOF is disabled in turbo mode
     set_clear_wof_disabled( SET,

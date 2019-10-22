@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -112,18 +112,14 @@ enum e_gsid
     PWRVDN,         // calculated from AVSBUS data
     PROCPWRTHROT,
     PROCOTTHROT,
-    TEMPQ0,         // Average temperature of quad DTS sensors for processor quad#
+    TEMPQ0,         // Temperature of the racetrack DTS for this specific quad
     TEMPQ1,
     TEMPQ2,
     TEMPQ3,
     TEMPQ4,
     TEMPQ5,
-    VOLTDROOPCNTQ0,
-    VOLTDROOPCNTQ1,
-    VOLTDROOPCNTQ2,
-    VOLTDROOPCNTQ3,
-    VOLTDROOPCNTQ4,
-    VOLTDROOPCNTQ5,
+    TEMPQ6,
+    TEMPQ7,
 
     // ------------------------------------------------------
     // Regulator Sensors
@@ -161,6 +157,14 @@ enum e_gsid
     FREQAC21,
     FREQAC22,
     FREQAC23,
+    FREQAC24,
+    FREQAC25,
+    FREQAC26,
+    FREQAC27,
+    FREQAC28,
+    FREQAC29,
+    FREQAC30,
+    FREQAC31,
 
     IPSC0,
     IPSC1,
@@ -186,6 +190,14 @@ enum e_gsid
     IPSC21,
     IPSC22,
     IPSC23,
+    IPSC24,
+    IPSC25,
+    IPSC26,
+    IPSC27,
+    IPSC28,
+    IPSC29,
+    IPSC30,
+    IPSC31,
 
     NOTBZEC0,
     NOTBZEC1,
@@ -211,6 +223,14 @@ enum e_gsid
     NOTBZEC21,
     NOTBZEC22,
     NOTBZEC23,
+    NOTBZEC24,
+    NOTBZEC25,
+    NOTBZEC26,
+    NOTBZEC27,
+    NOTBZEC28,
+    NOTBZEC29,
+    NOTBZEC30,
+    NOTBZEC31,
 
     NOTFINC0,
     NOTFINC1,
@@ -236,8 +256,16 @@ enum e_gsid
     NOTFINC21,
     NOTFINC22,
     NOTFINC23,
+    NOTFINC24,
+    NOTFINC25,
+    NOTFINC26,
+    NOTFINC27,
+    NOTFINC28,
+    NOTFINC29,
+    NOTFINC30,
+    NOTFINC31,
 
-    TEMPPROCTHRMC0,     // Combined weighted core/quad temperature for core#
+    TEMPPROCTHRMC0,     // Combination of the relevant weighted core/L3/racetrack DTSs
     TEMPPROCTHRMC1,
     TEMPPROCTHRMC2,
     TEMPPROCTHRMC3,
@@ -261,6 +289,14 @@ enum e_gsid
     TEMPPROCTHRMC21,
     TEMPPROCTHRMC22,
     TEMPPROCTHRMC23,
+    TEMPPROCTHRMC24,
+    TEMPPROCTHRMC25,
+    TEMPPROCTHRMC26,
+    TEMPPROCTHRMC27,
+    TEMPPROCTHRMC28,
+    TEMPPROCTHRMC29,
+    TEMPPROCTHRMC30,
+    TEMPPROCTHRMC31,
 
     UTILC0,
     UTILC1,
@@ -286,6 +322,14 @@ enum e_gsid
     UTILC21,
     UTILC22,
     UTILC23,
+    UTILC24,
+    UTILC25,
+    UTILC26,
+    UTILC27,
+    UTILC28,
+    UTILC29,
+    UTILC30,
+    UTILC31,
 
     NUTILC0,
     NUTILC1,
@@ -311,6 +355,14 @@ enum e_gsid
     NUTILC21,
     NUTILC22,
     NUTILC23,
+    NUTILC24,
+    NUTILC25,
+    NUTILC26,
+    NUTILC27,
+    NUTILC28,
+    NUTILC29,
+    NUTILC30,
+    NUTILC31,
 
     TEMPC0,         // Average temperature of core DTS sensors for processor core#
     TEMPC1,
@@ -336,6 +388,14 @@ enum e_gsid
     TEMPC21,
     TEMPC22,
     TEMPC23,
+    TEMPC24,
+    TEMPC25,
+    TEMPC26,
+    TEMPC27,
+    TEMPC28,
+    TEMPC29,
+    TEMPC30,
+    TEMPC31,
 
     STOPDEEPREQC0,
     STOPDEEPREQC1,
@@ -361,6 +421,14 @@ enum e_gsid
     STOPDEEPREQC21,
     STOPDEEPREQC22,
     STOPDEEPREQC23,
+    STOPDEEPREQC24,
+    STOPDEEPREQC25,
+    STOPDEEPREQC26,
+    STOPDEEPREQC27,
+    STOPDEEPREQC28,
+    STOPDEEPREQC29,
+    STOPDEEPREQC30,
+    STOPDEEPREQC31,
 
     STOPDEEPACTC0,
     STOPDEEPACTC1,
@@ -386,6 +454,14 @@ enum e_gsid
     STOPDEEPACTC21,
     STOPDEEPACTC22,
     STOPDEEPACTC23,
+    STOPDEEPACTC24,
+    STOPDEEPACTC25,
+    STOPDEEPACTC26,
+    STOPDEEPACTC27,
+    STOPDEEPACTC28,
+    STOPDEEPACTC29,
+    STOPDEEPACTC30,
+    STOPDEEPACTC31,
 
     VOLTDROOPCNTC0,
     VOLTDROOPCNTC1,
@@ -411,6 +487,14 @@ enum e_gsid
     VOLTDROOPCNTC21,
     VOLTDROOPCNTC22,
     VOLTDROOPCNTC23,
+    VOLTDROOPCNTC24,
+    VOLTDROOPCNTC25,
+    VOLTDROOPCNTC26,
+    VOLTDROOPCNTC27,
+    VOLTDROOPCNTC28,
+    VOLTDROOPCNTC29,
+    VOLTDROOPCNTC30,
+    VOLTDROOPCNTC31,
 
     // ------------------------------------------------------
     // Memory Sensors

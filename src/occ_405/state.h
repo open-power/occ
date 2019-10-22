@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -104,7 +104,6 @@ typedef enum
 
 #define SMGR_VALIDATE_DATA_ACTIVE_MASK_HARDCODES \
     (SMGR_VALIDATE_DATA_OBSERVATION_MASK_HARDCODES | \
-     DATA_MASK_FREQ_PRESENT | \
      DATA_MASK_PCAP_PRESENT )
 
 

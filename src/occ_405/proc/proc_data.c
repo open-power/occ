@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -42,10 +42,10 @@
 extern bool G_simics_environment;
 
 //Global array of core data buffers
-GPE_BUFFER(CoreData G_core_data[MAX_NUM_FW_CORES+NUM_CORE_DATA_DOUBLE_BUF+NUM_CORE_DATA_EMPTY_BUF]) = {{{0}}};
+GPE_BUFFER(CoreData G_core_data[MAX_CORES+NUM_CORE_DATA_DOUBLE_BUF+NUM_CORE_DATA_EMPTY_BUF]) = {{{0}}};
 
 // Pointers to the actual core data buffers
-CoreData * G_core_data_ptrs[MAX_NUM_FW_CORES] = {0};
+CoreData * G_core_data_ptrs[MAX_CORES] = {0};
 
 //Global structures for gpe get core data parms
 GPE_BUFFER(ipc_core_data_parms_t G_low_cores_data_parms);
@@ -68,13 +68,13 @@ bulk_core_data_task_t G_low_cores = {
             0,                                  // Low core to start with (min)
             0,                                  // Low core to start with (current)
             CORE_MID_POINT - 1,                 // Low core to end with
-            &G_core_data[MAX_NUM_FW_CORES]      // Pointer to holding area for low coredata
+            &G_core_data[MAX_CORES]      // Pointer to holding area for low coredata
     };
 bulk_core_data_task_t G_high_cores = {
             CORE_MID_POINT,                     // High core to start with (min)
             CORE_MID_POINT,                     // High core to start with (current)
-            MAX_NUM_FW_CORES - 1,               // High core to end with
-            &G_core_data[MAX_NUM_FW_CORES+1] }; // Pointer to holding area for high coredata
+            MAX_CORES - 1,               // High core to end with
+            &G_core_data[MAX_CORES+1] }; // Pointer to holding area for high coredata
 
 //Keeps track of if Nest DTS data has been collected in last 4ms
 bool G_nest_dts_data_valid = FALSE;
@@ -94,17 +94,13 @@ uint32_t G_core_offline_mask = 0;
 //(1 = present, 0 = not present. Core 0 has the most significant bit)
 uint32_t G_present_cores = 0;
 
-//Global G_present_hw_cores is bitmask of all hardware cores
-//(1 = present, 0 = not present. Core 0 has the most significant bit)
-uint32_t G_present_hw_cores = 0;
-
 //Flag to keep track of one time trace for GPE running case
 //for task core data.
 bool    G_queue_not_idle_traced = FALSE;
 
 // Global to track the maximum time elapsed between pore flex schedules of
 // per core get_per_core_data tasks.  The array is indexed by core number.
-uint32_t G_get_per_core_data_max_schedule_intervals[MAX_NUM_HW_CORES] = {0,};
+uint32_t G_get_per_core_data_max_schedule_intervals[MAX_CORES] = {0};
 
 // Declaration of debug functions
 #ifdef PROC_DEBUG
@@ -210,7 +206,8 @@ void task_core_data( task_t * i_task )
         // so that we don't use old/stale data from a leftover G_core_data
         if( !CORE_PRESENT(l_bulk_core_data_ptr->current_core))
         {
-            G_core_data_ptrs[l_bulk_core_data_ptr->current_core] = &G_core_data[MAX_NUM_FW_CORES+NUM_CORE_DATA_DOUBLE_BUF+NUM_CORE_DATA_EMPTY_BUF-1];
+            G_core_data_ptrs[l_bulk_core_data_ptr->current_core] =
+                &G_core_data[MAX_CORES+NUM_CORE_DATA_DOUBLE_BUF+NUM_CORE_DATA_EMPTY_BUF-1];
         }
         else if(l_parms->error.rc != 0)
         {
@@ -255,7 +252,7 @@ void task_core_data( task_t * i_task )
 
             // Static array to record the last timestamp a get_per_core_data task was
             // scheduled for a core.
-            static SsxTimebase L_last_get_per_core_data_scheduled_time[MAX_NUM_HW_CORES] = {0,};
+            static SsxTimebase L_last_get_per_core_data_scheduled_time[MAX_CORES] = {0};
             uint8_t l_current_core = l_bulk_core_data_ptr->current_core;
             SsxTimebase l_now = ssx_timebase_get();
             // If the last scheduled timestamp is 0, record time and continue to schedule
@@ -335,7 +332,7 @@ void proc_core_init( void )
     uint8_t     i = 0;
 
     // Setup the array of CoreData pointers
-    for( i = 0; i < MAX_NUM_FW_CORES; i++ )
+    for( i = 0; i < MAX_CORES; i++ )
     {
         G_core_data_ptrs[i] = &G_core_data[i];
     }
@@ -349,97 +346,85 @@ void proc_core_init( void )
         MAIN_TRAC_INFO("proc_core_init: CCSR read 0x%08X%08X",
                        (uint32_t) (l_ccsr_val>>32), (uint32_t) l_ccsr_val);
 
-        G_present_hw_cores = ((uint32_t) (l_ccsr_val >> 32)) & HW_CORES_MASK;
-        G_present_cores = G_present_hw_cores;
+        G_present_cores = ((uint32_t) (l_ccsr_val >> 32)) & HW_CORES_MASK;
 
-        PROC_DBG("G_present_hw_cores =[%x] and G_present_cores =[%x]",
-                G_present_hw_cores, G_present_cores);
+        MAIN_TRAC_INFO("G_present_cores =[%x]", G_present_cores);
 
-        if (G_simics_environment)
+        //Initializes the GpeRequest object for low core data collection
+        l_rc = gpe_request_create(&G_low_cores.gpe_req,            // GpeRequest for the task
+                                  &G_async_gpe_queue0,             // Queue
+                                  IPC_ST_GET_CORE_DATA_FUNCID,     // Function
+                                  &G_low_cores_data_parms,         // Task parameters
+                                  SSX_WAIT_FOREVER,                // Timeout (none)
+                                  NULL,                            // Callback
+                                  NULL,                            // Callback arguments
+                                  0 );                             // Options
+
+        if( l_rc )
         {
-            MAIN_TRAC_INFO("G_present_hw_cores =[%x] and G_present_cores =[%x]",
-                           G_present_hw_cores, G_present_cores);
-            MAIN_TRAC_INFO("SIMICS: Skipping schedule of core data collection");
-            // TODO: RTC 207919
+            // If we failed to create the GpeRequest then there is a serious problem.
+            MAIN_TRAC_ERR("proc_core_init: Failure creating the low core data GpeRequest. [RC=0x%08x]", l_rc );
+
+            /*
+             * @errortype
+             * @moduleid    PROC_CORE_INIT_MOD
+             * @reasoncode  SSX_GENERIC_FAILURE
+             * @userdata1   gpe_request_create return code
+             * @userdata4   ERC_LOW_CORE_GPE_REQUEST_CREATE_FAILURE
+             * @devdesc     Failure to create low cores GpeRequest object
+             */
+            l_err = createErrl(
+                               PROC_CORE_INIT_MOD,                      //ModId
+                               SSX_GENERIC_FAILURE,                     //Reasoncode
+                               ERC_LOW_CORE_GPE_REQUEST_CREATE_FAILURE, //Extended reason code
+                               ERRL_SEV_PREDICTIVE,                     //Severity
+                               NULL,                                    //Trace Buf
+                               DEFAULT_TRACE_SIZE,                      //Trace Size
+                               l_rc,                                    //Userdata1
+                               0                                        //Userdata2
+                               );
+
+            CHECKPOINT_FAIL_AND_HALT(l_err);
+            break;
         }
-        else
+
+        //Initializes high cores data GpeRequest object
+        l_rc = gpe_request_create(&G_high_cores.gpe_req,           // GpeRequest for the task
+                                  &G_async_gpe_queue0,             // Queue
+                                  IPC_ST_GET_CORE_DATA_FUNCID,     // Function ID
+                                  &G_high_cores_data_parms,        // Task parameters
+                                  SSX_WAIT_FOREVER,                // Timeout (none)
+                                  NULL,                            // Callback
+                                  NULL,                            // Callback arguments
+                                  0 );                             // Options
+
+        if( l_rc )
         {
-            //Initializes the GpeRequest object for low core data collection
-            l_rc = gpe_request_create(&G_low_cores.gpe_req,            // GpeRequest for the task
-                                      &G_async_gpe_queue0,             // Queue
-                                      IPC_ST_GET_CORE_DATA_FUNCID,     // Function ID
-                                      &G_low_cores_data_parms,         // Task parameters
-                                      SSX_WAIT_FOREVER,                // Timeout (none)
-                                      NULL,                            // Callback
-                                      NULL,                            // Callback arguments
-                                      0 );                             // Options
+            // If we failed to create the GpeRequest then there is a serious problem.
+            MAIN_TRAC_ERR("proc_core_init: Failure creating the high core data GpeRequest. [RC=0x%08x]", l_rc );
 
-            if( l_rc )
-            {
-                // If we failed to create the GpeRequest then there is a serious problem.
-                MAIN_TRAC_ERR("proc_core_init: Failure creating the low core data GpeRequest. [RC=0x%08x]", l_rc );
+            /*
+             * @errortype
+             * @moduleid    PROC_CORE_INIT_MOD
+             * @reasoncode  SSX_GENERIC_FAILURE
+             * @userdata1   gpe_request_create return code
+             * @userdata4   ERC_HIGH_CORE_GPE_REQUEST_CREATE_FAILURE
+             * @devdesc     Failure to create high core GpeRequest object
+             */
+            l_err = createErrl(
+                               PROC_CORE_INIT_MOD,                       //ModId
+                               SSX_GENERIC_FAILURE,                      //Reasoncode
+                               ERC_HIGH_CORE_GPE_REQUEST_CREATE_FAILURE, //Extended reason code
+                               ERRL_SEV_PREDICTIVE,                      //Severity
+                               NULL,                                     //Trace Buf
+                               DEFAULT_TRACE_SIZE,                       //Trace Size
+                               l_rc,                                     //Userdata1
+                               0                                         //Userdata2
+                               );
 
-                /*
-                 * @errortype
-                 * @moduleid    PROC_CORE_INIT_MOD
-                 * @reasoncode  SSX_GENERIC_FAILURE
-                 * @userdata1   gpe_request_create return code
-                 * @userdata4   ERC_LOW_CORE_GPE_REQUEST_CREATE_FAILURE
-                 * @devdesc     Failure to create low cores GpeRequest object
-                 */
-                l_err = createErrl(
-                                   PROC_CORE_INIT_MOD,                      //ModId
-                                   SSX_GENERIC_FAILURE,                     //Reasoncode
-                                   ERC_LOW_CORE_GPE_REQUEST_CREATE_FAILURE, //Extended reason code
-                                   ERRL_SEV_PREDICTIVE,                     //Severity
-                                   NULL,                                    //Trace Buf
-                                   DEFAULT_TRACE_SIZE,                      //Trace Size
-                                   l_rc,                                    //Userdata1
-                                   0                                        //Userdata2
-                                  );
-
-                CHECKPOINT_FAIL_AND_HALT(l_err);
-                break;
-            }
-
-            //Initializes high cores data GpeRequest object
-            l_rc = gpe_request_create(&G_high_cores.gpe_req,           // GpeRequest for the task
-                                      &G_async_gpe_queue0,             // Queue
-                                      IPC_ST_GET_CORE_DATA_FUNCID,     // Function ID
-                                      &G_high_cores_data_parms,        // Task parameters
-                                      SSX_WAIT_FOREVER,                // Timeout (none)
-                                      NULL,                            // Callback
-                                      NULL,                            // Callback arguments
-                                      0 );                             // Options
-
-            if( l_rc )
-            {
-                // If we failed to create the GpeRequest then there is a serious problem.
-                MAIN_TRAC_ERR("proc_core_init: Failure creating the high core data GpeRequest. [RC=0x%08x]", l_rc );
-
-                /*
-                 * @errortype
-                 * @moduleid    PROC_CORE_INIT_MOD
-                 * @reasoncode  SSX_GENERIC_FAILURE
-                 * @userdata1   gpe_request_create return code
-                 * @userdata4   ERC_HIGH_CORE_GPE_REQUEST_CREATE_FAILURE
-                 * @devdesc     Failure to create high core GpeRequest object
-                 */
-                l_err = createErrl(
-                                   PROC_CORE_INIT_MOD,                       //ModId
-                                   SSX_GENERIC_FAILURE,                      //Reasoncode
-                                   ERC_HIGH_CORE_GPE_REQUEST_CREATE_FAILURE, //Extended reason code
-                                   ERRL_SEV_PREDICTIVE,                      //Severity
-                                   NULL,                                     //Trace Buf
-                                   DEFAULT_TRACE_SIZE,                       //Trace Size
-                                   l_rc,                                     //Userdata1
-                                   0                                         //Userdata2
-                                  );
-
-                CHECKPOINT_FAIL_AND_HALT(l_err);
-                break;
-            }
-        } // end !G_simics_environment
+            CHECKPOINT_FAIL_AND_HALT(l_err);
+            break;
+        }
 
         //Initialize 24x7 data collection GpeRequest object
         l_rc = gpe_request_create(&G_24x7_request,           // GpeRequest for the task
@@ -494,16 +479,16 @@ void proc_core_init( void )
 //
 // Description: Returns a pointer to the most up-to-date bulk core data for
 //              the core associated with the specified OCC core id. Returns
-//              NULL for core ID outside the range of 0 to 11.
+//              NULL for core ID outside the range of 0 to 31.
 //
 // End Function Specification
 CoreData * proc_get_bulk_core_data_ptr( const uint8_t i_occ_core_id )
 {
-    //The caller needs to send in a valid OCC core id. Since type is uchar
+    //The caller needs to send in a valid OCC core id. Since type is uint8_t
     //so there is no need to check for case less than 0.
     //If core id is invalid then returns NULL.
 
-    if( i_occ_core_id < MAX_NUM_FW_CORES  )
+    if( i_occ_core_id < MAX_CORES  )
     {
         //Returns a pointer to the most up-to-date bulk core data.
         return G_core_data_ptrs[i_occ_core_id];

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -155,10 +155,6 @@ uint32_t dcom_build_slv_inbox(void)
         G_dcom_slv_inbox_tx[l_slv_idx].tb_record = g_amec_tb_record;
 
         G_dcom_slv_inbox_tx[l_slv_idx].counter++;
-
-        memcpy( &G_dcom_slv_inbox_tx[l_slv_idx].sys_mode_freq,
-                &G_sysConfigData.sys_mode_freq,
-                sizeof( freqConfig_t ));
     }
 
     // Clear the tunable parameter overwrite once we collect the new values

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -167,6 +167,7 @@ const uint8_t G_tick1_seq[] = {
                                 TASK_ID_CORE_DATA_LOW,
                                 TASK_ID_GPU_SM,
                                 TASK_ID_APSS_CONT,
+                                TASK_ID_CORE_DATA_HIGH,
                                 TASK_ID_APSS_DONE,
                                 TASK_ID_MEMORY_CONTROL,
                                 TASK_ID_CORE_DATA_CONTROL,
@@ -215,6 +216,7 @@ const uint8_t G_tick3_seq[] = {
                                 TASK_ID_APSS_START,
                                 TASK_ID_GET_TOD,
                                 TASK_ID_NEST_DTS,
+                                TASK_ID_CORE_DATA_LOW,
                                 TASK_ID_GPU_SM,
                                 TASK_ID_APSS_CONT,
                                 TASK_ID_CORE_DATA_HIGH,
@@ -268,6 +270,7 @@ const uint8_t G_tick5_seq[] = {
                                 TASK_ID_CORE_DATA_LOW,
                                 TASK_ID_GPU_SM,
                                 TASK_ID_APSS_CONT,
+                                TASK_ID_CORE_DATA_HIGH,
                                 TASK_ID_APSS_DONE,
                                 TASK_ID_MEMORY_CONTROL,
                                 TASK_ID_CORE_DATA_CONTROL,
@@ -315,6 +318,7 @@ const uint8_t G_tick7_seq[] = {
                                 TASK_ID_SEND_VRT_TO_PGPE,
                                 TASK_ID_APSS_START,
                                 TASK_ID_GET_TOD,
+                                TASK_ID_CORE_DATA_LOW,
                                 TASK_ID_GPU_SM,
                                 TASK_ID_APSS_CONT,
                                 TASK_ID_CORE_DATA_HIGH,
@@ -368,6 +372,7 @@ const uint8_t G_tick9_seq[] = {
                                 TASK_ID_CORE_DATA_LOW,
                                 TASK_ID_GPU_SM,
                                 TASK_ID_APSS_CONT,
+                                TASK_ID_CORE_DATA_HIGH,
                                 TASK_ID_APSS_DONE,
                                 TASK_ID_MEMORY_CONTROL,
                                 TASK_ID_CORE_DATA_CONTROL,
@@ -415,6 +420,7 @@ const uint8_t G_tick11_seq[] = {
                                 TASK_ID_SEND_VRT_TO_PGPE,
                                 TASK_ID_APSS_START,
                                 TASK_ID_GET_TOD,
+                                TASK_ID_CORE_DATA_LOW,
                                 TASK_ID_GPU_SM,
                                 TASK_ID_APSS_CONT,
                                 TASK_ID_CORE_DATA_HIGH,
@@ -468,6 +474,7 @@ const uint8_t G_tick13_seq[] = {
                                 TASK_ID_CORE_DATA_LOW,
                                 TASK_ID_GPU_SM,
                                 TASK_ID_APSS_CONT,
+                                TASK_ID_CORE_DATA_HIGH,
                                 TASK_ID_APSS_DONE,
                                 TASK_ID_MEMORY_CONTROL,
                                 TASK_ID_CORE_DATA_CONTROL,
@@ -515,6 +522,7 @@ const uint8_t G_tick15_seq[] = {
                                 TASK_ID_SEND_VRT_TO_PGPE,
                                 TASK_ID_APSS_START,
                                 TASK_ID_GET_TOD,
+                                TASK_ID_CORE_DATA_LOW,
                                 TASK_ID_GPU_SM,
                                 TASK_ID_APSS_CONT,
                                 TASK_ID_CORE_DATA_HIGH,

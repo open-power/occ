@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -137,6 +137,9 @@ typedef struct
     uint8_t  flags;
     // Sensor ID for reporting temperature to BMC and FSP
     uint32_t temp_sid;
+
+    // Type of thermal sensor this represents
+    eConfigDataFruType  temp_type;
 }fru_temp_t;
 
 typedef struct
@@ -159,7 +162,6 @@ typedef struct
 
   // Sensor ID for reporting temperature to BMC and FSP
   uint32_t  temp_sid;
-
 } amec_membuf_t;
 
 typedef struct
@@ -303,8 +305,8 @@ typedef struct
   // Current Memory Power Control values (applied last through GPE1)
   uint8_t current_mem_pwr_ctl;
 
-  // Current VRM Fault status as recieved from VRM fault config data packet
-  uint8_t vrm_fault_status;
+  // Current system ambient temperature (deg C)
+  uint8_t ambient;
 } amec_systemwide_t;
 
 
@@ -342,7 +344,6 @@ typedef struct
 typedef struct
 {
     sensor_t tempq;
-    sensor_t voltdroopcntq;
 } amec_quad_t;
 
 //-------------------------------------------------------------

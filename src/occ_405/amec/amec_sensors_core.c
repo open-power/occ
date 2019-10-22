@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -263,17 +263,18 @@ void amec_calc_dts_sensors(CoreData * i_core_data_ptr, uint8_t i_core)
     uint32_t      l_coreTemp = 0;
     uint8_t       k = 0;
     uint16_t      l_coreDts[DTS_PER_CORE] = {0};
-    uint16_t      l_quadDts[QUAD_DTS_PER_CORE] = {0};
-    uint16_t      l_quadDtsTemp = 0;  // The one Quad DTS temp closest to the core
     BOOLEAN       l_update_sensor = FALSE;
     uint16_t      l_core_hot = 0;
     uint8_t       l_coreDtsCnt = 0; // Number of valid Core DTSs
-    uint8_t       l_quadDtsCnt = 0; // Number of valid Quad DTSs
+    uint8_t       l_L3Dts = 0;
+    uint8_t       l_L3DtsCnt = 0;
+    uint8_t       l_raceTrackDts = 0;
+    uint8_t       l_racetrackDtsCnt = 0;
     uint32_t      l_dtsAvg = 0;     // Average of the two core or quad dts readings
 
     uint8_t       cWt = 0;        // core weight: zero unless at least one valid core dts reading
-    uint8_t       qWt = 0;        // quad weight: zero unless we have a valid quad dts reading
-
+    uint8_t       l3Wt = 0;       // L3 cache weight: zero unless we have a valid L3 cache dts reading
+    uint8_t       rtWt = 0;       // racetrack weight: zero unless we have a valid racetrack dts reading
     uint8_t       l_quad = 0;     // Quad this core resides in
 
     static bool   L_bad_read_trace = FALSE;
@@ -310,10 +311,27 @@ void amec_calc_dts_sensors(CoreData * i_core_data_ptr, uint8_t i_core)
             }
         } //for loop
 
-        // The core DTSs are considered only if we have at least 1 valid core DTS and
-        // a non-zero G_coreWeight. However we want to keep track of the raw core DTS
+        // Set the L3 DTS reading if it is valid
+        if( i_core_data_ptr->dts.cache.fields.valid &&
+            (i_core_data_ptr->dts.cache.fields.reading > 0) )
+        {
+            l_L3Dts = i_core_data_ptr->dts.cache.fields.reading;
+            l_L3DtsCnt++;
+        }
+
+        // Set the racetrack DTS reading if it valid
+        if( i_core_data_ptr->dts.racetrack.fields.valid &&
+            (i_core_data_ptr->dts.racetrack.fields.reading > 0) )
+        {
+            l_raceTrackDts = i_core_data_ptr->dts.racetrack.fields.reading;
+            l_racetrackDtsCnt++;
+        }
+
+        // The core DTSs are considered only if we have at least 1 valid DTS value
+        // between the L3 DTS and the 2 core DTSs along with a non-zero weight for
+        // the respective DTS. However we want to keep track of the raw core DTS
         // values regardless of weight.
-        if (l_coreDtsCnt)
+        if (l_coreDtsCnt || l_L3DtsCnt)
         {
             if (G_data_cnfg->thrm_thresh.proc_core_weight)
             {
@@ -321,60 +339,36 @@ void amec_calc_dts_sensors(CoreData * i_core_data_ptr, uint8_t i_core)
                 cWt = G_data_cnfg->thrm_thresh.proc_core_weight;
             }
 
+            if(G_data_cnfg->thrm_thresh.proc_L3_weight)
+            {
+                l_update_sensor = TRUE;
+                l3Wt = G_data_cnfg->thrm_thresh.proc_L3_weight;
+            }
+
             // Update the raw core DTS reading (average of the two)
-            l_dtsAvg = (l_coreDts[0] + l_coreDts[1]) / l_coreDtsCnt;
+            l_dtsAvg = (l_coreDts[0] + l_coreDts[1] + l_L3Dts) / (l_coreDtsCnt + l_L3DtsCnt);
             sensor_update( AMECSENSOR_ARRAY_PTR(TEMPC0, i_core), l_dtsAvg);
         }
 
-        // In P10 there is one l3cache DTS and one Racetrack DTS -  TODO RTC 207919
-        // i_core_data_ptr->dts.cache.fields.reading
-        // i_core_data_ptr->dts.racetrack.fields.reading
-#if defined(_TODO_)
-        // The Quad DTS value is considered only if we have a valid Quad DTS and
-        // a non-zero quad weight. However we want to keep track of the raw Quad
+        // The Quad/racetrack DTS value is considered only if we have a valid racetrack DTS and
+        // a non-zero racetrack weight. However we want to keep track of the raw Quad/racetrack
         // DTS values regardless of weight.
-        for (k = 0; k < QUAD_DTS_PER_CORE; k++)
+        if(l_racetrackDtsCnt)
         {
-            // temperature is only 8 bits of reading field
-            l_quadDtsTemp = (i_core_data_ptr->dts.cache[k].fields.reading & 0xFF);
-
-            if( (i_core_data_ptr->dts.cache[k].fields.valid) &&
-                ((l_quadDtsTemp & DTS_INVALID_MASK) != DTS_INVALID_MASK) &&
-                (l_quadDtsTemp != 0) )
-            {
-                l_quadDts[k] = l_quadDtsTemp;
-                l_quadDtsCnt++;
-            }
-        }
-#endif
-
-        l_quadDtsTemp = 0;
-
-        if(l_quadDtsCnt)
-        {
-            if (G_data_cnfg->thrm_thresh.proc_quad_weight)
+            if (G_data_cnfg->thrm_thresh.proc_racetrack_weight)
             {
                 l_update_sensor = TRUE;
-                qWt = G_data_cnfg->thrm_thresh.proc_quad_weight;
+                rtWt = G_data_cnfg->thrm_thresh.proc_racetrack_weight;
             }
 
             // Determine the quad this core resides in.
             l_quad = i_core / 4;
 
-            // Update the raw quad DTS reading (average of the two)
-            l_dtsAvg = (l_quadDts[0] + l_quadDts[1]) / l_quadDtsCnt;
-            sensor_update( AMECSENSOR_ARRAY_PTR(TEMPQ0, l_quad), l_dtsAvg);
+            // Update the quad sensor reading with the racetrack DTS
+            sensor_update( AMECSENSOR_ARRAY_PTR(TEMPQ0, l_quad), l_raceTrackDts);
 
-            // Pick the 1 quad DTS closest to the core for updating the thermal sensor
-            // only want 1 quad DTS to handle case when 2 cores from same EX are offline
-            // last 2 cores use dts1, first 2 cores use dts0
-            if(i_core & 0x02)
-                 l_quadDtsTemp = l_quadDts[1];
-            else
-                 l_quadDtsTemp = l_quadDts[0];
-
-            if(l_quadDtsTemp == 0)
-                 qWt = 0;  // No quad temp to include in average
+            if(l_raceTrackDts == 0)
+                 rtWt = 0;  // No quad temp to include in average
         }
 
         // Update the thermal sensor associated with this core
@@ -383,13 +377,14 @@ void amec_calc_dts_sensors(CoreData * i_core_data_ptr, uint8_t i_core)
             do
             {
                 // Make sure data is valid
-                if ( !((cWt && l_coreDtsCnt) || qWt) )
+                if ( !((cWt && l_coreDtsCnt) || rtWt || l3Wt) )
                 {
                     if(FALSE == L_bad_read_trace)
                     {
                         TRAC_ERR("amec_calc_dts_sensors: updating DTS sensors skipped. "
-                                 "core weight: %d, core DTSs: %d, quad weight: %d ",
-                                 cWt, l_coreDtsCnt, qWt);
+                                 "core weight: %d, core DTSs: %d, racetrack weight: %d "
+                                 "L3 weight: %d",
+                                 cWt, l_coreDtsCnt, rtWt, l3Wt);
                         L_bad_read_trace = TRUE;
                     }
 
@@ -398,16 +393,17 @@ void amec_calc_dts_sensors(CoreData * i_core_data_ptr, uint8_t i_core)
                 }
 
                 //Formula:
-                //                (cWt(CoreDTS1 + CoreDTS2) + qWt(QuadDTS))
-                //                ------------------------------------------
-                //                              (2*cWt + qWt)
+                //                (cWt(CoreDTS1 + CoreDTS2) + rtWt(RaceTrackDTS) + l3Wt(L3DTS) )
+                //                ---------------------------------------------------------------
+                //                                   (2*cWt + rtWt + l3Wt)
 
-                l_coreTemp = ( (cWt * (l_coreDts[0] + l_coreDts[1])) + (qWt * l_quadDtsTemp) ) /
-                //           ---------------------------------------------------------------------------------
-                                            ( (l_coreDtsCnt * cWt) + qWt );
+                l_coreTemp = ( (cWt * (l_coreDts[0] + l_coreDts[1])) + (rtWt * l_raceTrackDts) + (l3Wt * l_L3Dts) ) /
+                //           --------------------------------------------------------------------------------------
+                                                  ( (l_coreDtsCnt * cWt) + rtWt + l3Wt );
 
                 // Update sensors & Interim Data
                 sensor_update( AMECSENSOR_ARRAY_PTR(TEMPPROCTHRMC0,i_core), l_coreTemp);
+
                 g_amec->proc[0].core[i_core].dts_hottest = l_core_hot;
             }  while(0);
         }
@@ -828,23 +824,14 @@ void amec_calc_ips_sensors(CoreData * i_core_data_ptr, uint8_t i_core)
 void amec_calc_droop_sensors(CoreData * i_core_data_ptr, uint8_t i_core)
 {
     //CoreData only has any new droop events since the last time CoreData was read
-    uint32_t l_quad_droops = i_core_data_ptr->droop.v_droop_large;
     uint32_t l_core_droops = i_core_data_ptr->droop.v_droop_small;
-    int l_quad = i_core / 4;
-    sensor_t * l_quad_sensor = AMECSENSOR_ARRAY_PTR(VOLTDROOPCNTQ0, l_quad);
     sensor_t * l_core_sensor = AMECSENSOR_ARRAY_PTR(VOLTDROOPCNTC0, i_core);
-
     sensor_update( l_core_sensor, l_core_droops);
-    sensor_update( l_quad_sensor, l_quad_droops);
 
     // Update ERRH counters so it is known voltage droops are happening in call home data
     if(l_core_droops)
     {
        INCREMENT_ERR_HISTORY(ERRH_CORE_SMALL_DROOP);
-    }
-    if(l_quad_droops)
-    {
-       INCREMENT_ERR_HISTORY(ERRH_CACHE_LARGE_DROOP);
     }
 }
 

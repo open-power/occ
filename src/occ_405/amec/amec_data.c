@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -102,7 +102,7 @@ errlHndl_t AMEC_data_write_fcurr(const OCC_MODE i_mode)
     /*------------------------------------------------------------------------*/
 
     // Load new range into DVFS MIN/MAX,
-    // Use i_mode here since this function understands turbo
+    // Use i_mode here since this function understands static frequency point
     l_err = amec_set_freq_range(i_mode);
 
     if(l_err)
@@ -117,7 +117,7 @@ errlHndl_t AMEC_data_write_fcurr(const OCC_MODE i_mode)
     {
         if(g_amec->wof.wof_disabled)
         {
-            g_amec->sys.fmax = G_sysConfigData.sys_mode_freq.table[OCC_MODE_TURBO];
+            g_amec->sys.fmax = G_sysConfigData.sys_mode_freq.table[OCC_MODE_WOF_BASE];
         }
         else
         {
@@ -152,12 +152,11 @@ errlHndl_t AMEC_data_write_thrm_thresholds(const OCC_MODE i_mode)
     /*------------------------------------------------------------------------*/
     /*  Local Variables                                                       */
     /*------------------------------------------------------------------------*/
-    errlHndl_t                  l_err = NULL;
-    cmdh_thrm_thresholds_t      *l_data = NULL;
-    cmdh_thrm_thresholds_set_t  *l_frudata = NULL;
-    uint8_t                     l_dvfs_temp = 0;
-    uint8_t                     l_error = 0;
-    bool                        l_pm_limits = false;
+    errlHndl_t                      l_err = NULL;
+    cmdh_thrm_thresholds_v30_t     *l_data = NULL;
+    cmdh_thrm_thresholds_set_v30_t *l_frudata = NULL;
+    uint8_t                         l_dvfs_temp = 0;
+    uint8_t                         l_error = 0;
 
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
@@ -174,28 +173,17 @@ errlHndl_t AMEC_data_write_thrm_thresholds(const OCC_MODE i_mode)
 
         l_frudata = l_data->data;
 
+        //
         // Store the processor thermal data
-        if ((i_mode == OCC_MODE_NOMINAL) || (G_sysConfigData.system_type.kvm))
+        //
+        l_dvfs_temp = l_frudata[DATA_FRU_PROC].dvfs;
+        if(OCC_MODE_STATIC_FREQ_POINT == i_mode)
         {
-            // use normal thresholds for Nominal or OPAL
-            l_dvfs_temp = l_frudata[DATA_FRU_PROC].dvfs;
-            l_error = l_frudata[DATA_FRU_PROC].error;
+            l_error = l_dvfs_temp;
         }
         else
         {
-            l_pm_limits = true;
-            TRAC_INFO("AMEC_data_write_thrm_thresholds: Using PM limits");
-
-            l_dvfs_temp = l_frudata[DATA_FRU_PROC].pm_dvfs;
-            if(i_mode == OCC_MODE_TURBO)
-            {
-                //Need to log an error if we dvfs in static turbo mode (for mfg)
-                l_error = l_dvfs_temp;
-            }
-            else
-            {
-                l_error = l_frudata[DATA_FRU_PROC].pm_error;
-            }
+            l_error = l_frudata[DATA_FRU_PROC].error;
         }
         // Store the DVFS thermal setpoint in 0.1 degrees C
         g_amec->thermalproc.setpoint = l_dvfs_temp * 10;
@@ -207,60 +195,31 @@ errlHndl_t AMEC_data_write_thrm_thresholds(const OCC_MODE i_mode)
         TRAC_INFO("AMEC_data_write_thrm_thresholds: Processor setpoints - DVFS: %u, Error: %u",
                   l_dvfs_temp, l_error);
 
+        //
         // Store the membuf thermal data
-        if (!l_pm_limits)
-        {
-            // use normal thresholds for Nominal or OPAL
-            l_dvfs_temp = l_frudata[DATA_FRU_MEMBUF].dvfs;
-            l_error = l_frudata[DATA_FRU_MEMBUF].error;
-        }
-        else
-        {
-            l_dvfs_temp = l_frudata[DATA_FRU_MEMBUF].pm_dvfs;
-            if(i_mode == OCC_MODE_TURBO)
-            {
-                //Need to log an error if we throttle in static turbo mode (for mfg)
-                l_error = l_dvfs_temp;
-            }
-            else
-            {
-                l_error = l_frudata[DATA_FRU_MEMBUF].pm_error;
-            }
-        }
+        //
 
         // Store the DVFS thermal setpoint in 0.1 degrees C
+        l_dvfs_temp = l_frudata[DATA_FRU_INTERNAL_MEMC_SENS].dvfs;
         g_amec->thermalmembuf.setpoint = l_dvfs_temp * 10;
         // Store the error temperature for OT detection
+        l_error = l_frudata[DATA_FRU_INTERNAL_MEMC_SENS].error;
         g_amec->thermalmembuf.ot_error = l_error;
         // Store the temperature timeout value
-        g_amec->thermalmembuf.temp_timeout = l_frudata[DATA_FRU_MEMBUF].max_read_timeout;
+        g_amec->thermalmembuf.temp_timeout = l_frudata[DATA_FRU_INTERNAL_MEMC_SENS].max_read_timeout;
 
         TRAC_INFO("AMEC_data_write_thrm_thresholds: membuf setpoints - DVFS: %u, Error: %u",
                   l_dvfs_temp, l_error);
 
+        //
         // Store the DIMM thermal data
-        if (!l_pm_limits)
-        {
-            // use normal thresholds for Nominal or OPAL
-            l_dvfs_temp = l_frudata[DATA_FRU_DIMM].dvfs;
-            l_error = l_frudata[DATA_FRU_DIMM].error;
-        }
-        else
-        {
-            l_dvfs_temp = l_frudata[DATA_FRU_DIMM].pm_dvfs;
-            if(i_mode == OCC_MODE_TURBO)
-            {
-                //Need to log an error if we throttle in static turbo mode (for mfg)
-                l_error = l_dvfs_temp;
-            }
-            else
-            {
-                l_error = l_frudata[DATA_FRU_DIMM].pm_error;
-            }
-        }
+        //
+
         // Store the DVFS thermal setpoint in 0.1 degrees C
+        l_dvfs_temp = l_frudata[DATA_FRU_DIMM].dvfs;
         g_amec->thermaldimm.setpoint = l_dvfs_temp * 10;
         // Store the error temperature for OT detection
+        l_error = l_frudata[DATA_FRU_DIMM].error;
         g_amec->thermaldimm.ot_error = l_error;
         // Store the temperature timeout value
         g_amec->thermaldimm.temp_timeout = l_frudata[DATA_FRU_DIMM].max_read_timeout;
@@ -268,27 +227,20 @@ errlHndl_t AMEC_data_write_thrm_thresholds(const OCC_MODE i_mode)
         TRAC_INFO("AMEC_data_write_thrm_thresholds: DIMM setpoints - DVFS: %u, Error: %u",
                   l_dvfs_temp, l_error);
 
+        //
         // Store the VRM Vdd thermal data
-        if (!l_pm_limits)
+        //
+
+        // Store the DVFS thermal setpoint in 0.1 degrees C
+        l_dvfs_temp = l_frudata[DATA_FRU_VRM_VDD].dvfs;
+        if(OCC_MODE_STATIC_FREQ_POINT == i_mode)
         {
-            // use normal thresholds for Nominal or OPAL
-            l_dvfs_temp = l_frudata[DATA_FRU_VRM_VDD].dvfs;
-            l_error = l_frudata[DATA_FRU_VRM_VDD].error;
+            l_error = l_dvfs_temp;
         }
         else
         {
-            l_dvfs_temp = l_frudata[DATA_FRU_VRM_VDD].pm_dvfs;
-            if(i_mode == OCC_MODE_TURBO)
-            {
-                //Need to log an error if we dvfs in static turbo mode (for mfg)
-                l_error = l_dvfs_temp;
-            }
-            else
-            {
-                l_error = l_frudata[DATA_FRU_VRM_VDD].pm_error;
-            }
+            l_error = l_frudata[DATA_FRU_VRM_VDD].error;
         }
-        // Store the DVFS thermal setpoint in 0.1 degrees C
         g_amec->thermalvdd.setpoint = l_dvfs_temp * 10;
         // Store the error temperature for OT detection
         g_amec->thermalvdd.ot_error = l_error;
@@ -379,17 +331,8 @@ errlHndl_t AMEC_data_change(const uint32_t i_data_mask)
     //l_cur_state = CURRENT_STATE();
     l_cur_mode = CURRENT_MODE();
 
-    //If we received the frequency from TMGT
-    if(i_data_mask & DATA_MASK_FREQ_PRESENT)
-    {
-        l_err = AMEC_data_write_fcurr(l_cur_mode);
-
-        if(l_err)
-        {
-            TRAC_ERR("AMEC_data_change: Error writing frequency range!");
-        }
-    }
-    else if(i_data_mask & DATA_MASK_THRM_THRESHOLDS)
+    // TODO: Call AMEC_data_write_fcurr() from main() after reading pstates (RTC 245612)
+    if(i_data_mask & DATA_MASK_THRM_THRESHOLDS)
     {
         l_err = AMEC_data_write_thrm_thresholds(l_cur_mode);
 

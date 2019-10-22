@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -295,9 +295,6 @@ void amec_init_gamec_struct(void)
   // Initialize the current_mem_pwr_ctl to indicate that memory power control is not supported
   // update memory control registers only if new ips/default memory power control is different
   g_amec->sys.current_mem_pwr_ctl = MEM_PWR_CTL_NO_SUPPORT;
-
-  // Initialize to no VRM faults
-  g_amec->sys.vrm_fault_status = 0;
 
   // Initialize wof_disabled
   g_amec->wof.wof_disabled = WOF_RC_OCC_WOF_DISABLED;

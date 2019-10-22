@@ -5,7 +5,7 @@
 #
 # OpenPOWER OnChipController Project
 #
-# Contributors Listed Below - COPYRIGHT 2015,2019
+# Contributors Listed Below - COPYRIGHT 2015,2020
 # [+] International Business Machines Corp.
 #
 #
@@ -48,7 +48,6 @@ TOP-C-SOURCES = amec/amec_controller.c \
                 cmdh/cmdh_fsp_cmds.c \
                 cmdh/cmdh_fsp.c \
                 cmdh/cmdh_mnfg_intf.c \
-                cmdh/cmdh_snapshot.c \
                 cmdh/cmdh_thread.c \
                 cmdh/cmdh_tunable_parms.c \
                 cmdh/ffdc.c \

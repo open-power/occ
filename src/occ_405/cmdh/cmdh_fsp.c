@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -35,7 +35,6 @@
 #include "cmdh_fsp_cmds.h"
 #include "cmdh_mnfg_intf.h"
 #include "cmdh_tunable_parms.h"
-#include "cmdh_snapshot.h"
 #include "homer.h"
 
 // OCB Channel Setup Defines
@@ -931,6 +930,10 @@ errlHndl_t cmdh_processTmgtRequest (const cmdh_fsp_cmd_t * i_cmd_ptr,
             l_err = cmdh_reset_prep(i_cmd_ptr,i_rsp_ptr);
             break;
 
+        case CMDH_SEND_AMBIENT_TEMP:
+            l_err = cmdh_send_ambient_temp(i_cmd_ptr,i_rsp_ptr);
+            break;
+
         case CMDH_MFG_TEST_CMD:
             l_err = cmdh_mnfg_test_parse(i_cmd_ptr,i_rsp_ptr);
             break;
@@ -941,14 +944,6 @@ errlHndl_t cmdh_processTmgtRequest (const cmdh_fsp_cmd_t * i_cmd_ptr,
 
         case CMDH_TUNABLE_PARMS:
             l_err = cmdh_tunable_parms(i_cmd_ptr,i_rsp_ptr);
-            break;
-
-        case CMDH_SNAPSHOT_SYNC:
-            l_err = cmdh_snapshot_sync(i_cmd_ptr,i_rsp_ptr);
-            break;
-
-        case CMDH_GET_SNAPSHOT_BUFFER:
-            l_err = cmdh_get_snapshot_buffer(i_cmd_ptr,i_rsp_ptr);
             break;
 
         case CMDH_SET_USER_PCAP:

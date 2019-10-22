@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -49,6 +49,7 @@
 #include "memory.h"
 #include "memory_data.h"
 #include "gpu.h"
+#include "pstates_occ.H"
 
 extern dimm_sensor_flags_t G_dimm_temp_expired_bitmap;
 extern uint32_t G_first_proc_gpu_config;
@@ -57,7 +58,7 @@ extern bool G_vrm_vdd_temp_expired;
 extern bool G_reset_prep;
 extern uint16_t G_amester_max_data_length;
 extern uint8_t G_occ_interrupt_type;
-
+extern OCCPstateParmBlock_t G_oppb;
 extern opal_proc_voting_reason_t G_amec_opal_proc_throt_reason;
 
 extern bool G_htmgt_notified_of_error;
@@ -348,14 +349,17 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
             //Add entry for membufs.
             uint32_t l_temp_sid = g_amec->proc[0].memctl[l_membuf].membuf.temp_sid;
             l_tempSensorList[l_sensorHeader.count].id = l_temp_sid;
-            l_tempSensorList[l_sensorHeader.count].fru_type = DATA_FRU_MEMBUF;
+            l_tempSensorList[l_sensorHeader.count].fru_type =
+                g_amec->proc[0].memctl[l_membuf].membuf.membuf_hottest.temp_type;
+
             if (G_membuf_timeout_logged_bitmap & (MEMBUF0_PRESENT_MASK >> l_membuf))
             {
                 l_tempSensorList[l_sensorHeader.count].value = 0xFF;
             }
             else
             {
-                l_tempSensorList[l_sensorHeader.count].value = (g_amec->proc[0].memctl[l_membuf].membuf.membuf_hottest.cur_temp) & 0xFF;
+                l_tempSensorList[l_sensorHeader.count].value =
+                    (g_amec->proc[0].memctl[l_membuf].membuf.membuf_hottest.cur_temp & 0xFF);
             }
 
             l_sensorHeader.count++;
@@ -365,11 +369,14 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
             {
                 l_temp_sid = g_amec->proc[0].memctl[l_membuf].membuf.dimm_temps[l_dimm].temp_sid;
 
-                if((FSP_SUPPORTED_OCC == G_occ_interrupt_type) && (l_temp_sid == 0) && (g_amec->proc[0].memctl[l_membuf].membuf.dimm_temps[l_dimm].cur_temp != 0))
+                if((FSP_SUPPORTED_OCC == G_occ_interrupt_type) &&
+                   (l_temp_sid == 0) &&
+                   (g_amec->proc[0].memctl[l_membuf].membuf.dimm_temps[l_dimm].cur_temp != 0))
                 {
                     if (!l_traced_missing_sid)
                     {
-                        CMDH_TRAC_ERR("cmdh_poll_v20: DIMM%04X sensor not defined but temperature was non-zero", ((l_membuf << 8)|l_dimm));
+                        CMDH_TRAC_ERR("cmdh_poll_v20: DIMM%04X sensor not defined but temperature was non-zero",
+                                      ((l_membuf << 8)|l_dimm));
                         l_traced_missing_sid = TRUE;
                     }
                     l_temp_sid = 1 + l_dimm; // If sid is zero them make up a sid for FSP
@@ -378,7 +385,9 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
                 if (l_temp_sid != 0)
                 {
                     l_tempSensorList[l_sensorHeader.count].id = l_temp_sid;
-                    l_tempSensorList[l_sensorHeader.count].fru_type = DATA_FRU_DIMM;
+                    l_tempSensorList[l_sensorHeader.count].fru_type =
+                        g_amec->proc[0].memctl[l_membuf].membuf.dimm_temps[l_dimm].temp_type;
+
                     //If a dimm timed out long enough, we should return 0xFFFF for that sensor.
                     if (G_dimm_temp_expired_bitmap.bytes[l_membuf] & (DIMM_SENSOR0 >> l_dimm))
                     {
@@ -386,7 +395,8 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
                     }
                     else
                     {
-                        l_tempSensorList[l_sensorHeader.count].value = (g_amec->proc[0].memctl[l_membuf].membuf.dimm_temps[l_dimm].cur_temp & 0xFF);
+                        l_tempSensorList[l_sensorHeader.count].value =
+                            (g_amec->proc[0].memctl[l_membuf].membuf.dimm_temps[l_dimm].cur_temp & 0xFF);
                     }
 
                     l_sensorHeader.count++;
@@ -422,7 +432,7 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
         {
             // GPU core temperature
             l_tempSensorList[l_sensorHeader.count].id = G_amec_sensor_list[TEMPGPU0 + k]->ipmi_sid;
-            l_tempSensorList[l_sensorHeader.count].fru_type = DATA_FRU_GPU;
+            l_tempSensorList[l_sensorHeader.count].fru_type = DATA_FRU_GPU_CORE;
             if(g_amec->gpu[k].status.coreTempFailure)
             {
                // failed to read core temperature return 0xFF
@@ -717,7 +727,7 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
     l_extnSensorList[l_sensorHeader.count].data[2] = CONVERT_UINT16_UINT8_LOW(freq);
     l_sensorHeader.count++;
     l_extnSensorList[l_sensorHeader.count].name = EXTN_NAME_FTURBO;
-    freq = G_sysConfigData.sys_mode_freq.table[OCC_MODE_TURBO];
+    freq = G_sysConfigData.sys_mode_freq.table[OCC_MODE_STATIC_FREQ_POINT];
     if (freq > 0)
     {
         l_extnSensorList[l_sensorHeader.count].data[0] = proc_freq2pstate(freq);
@@ -1120,7 +1130,7 @@ errlHndl_t cmdh_tmgt_setmodestate(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                   cmdh_fsp_rsp_t * o_rsp_ptr)
 {
     errlHndl_t                      l_errlHndl     = NULL;
-    smgr_setmodestate_v0_query_t*   l_cmd_ptr      = (smgr_setmodestate_v0_query_t *)i_cmd_ptr;
+    smgr_setmodestate_v30_query_t*  l_cmd_ptr      = (smgr_setmodestate_v30_query_t *)i_cmd_ptr;
     ERRL_RC                         l_rc           = ERRL_RC_INTERNAL_FAIL;
     SsxInterval                     l_timeout      = SSX_SECONDS(15);
     SsxTimebase                     l_start        = ssx_timebase_get();
@@ -1147,7 +1157,7 @@ errlHndl_t cmdh_tmgt_setmodestate(const cmdh_fsp_cmd_t * i_cmd_ptr,
         }
 
         // Command Version Check
-        if(l_cmd_ptr->version != SMGR_SMS_CMD_VERSION)
+        if(l_cmd_ptr->version != 0x30)
         {
             l_rc = ERRL_RC_INVALID_DATA;
             break;
@@ -1155,7 +1165,7 @@ errlHndl_t cmdh_tmgt_setmodestate(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
         // Command Length Check
         if( CMDH_DATALEN_FIELD_UINT16(i_cmd_ptr) !=
-                (sizeof(smgr_setmodestate_v0_query_t) - sizeof(cmdh_fsp_cmd_header_t)))
+                (sizeof(smgr_setmodestate_v30_query_t) - sizeof(cmdh_fsp_cmd_header_t)))
         {
             l_rc = ERRL_RC_INVALID_CMD_LEN;
             break;
@@ -1185,6 +1195,20 @@ errlHndl_t cmdh_tmgt_setmodestate(const cmdh_fsp_cmd_t * i_cmd_ptr,
             break;
         }
 
+        // Verify additional mode parameter
+        bool l_vpd_curve_fit_point = ((l_cmd_ptr->mode_parm >= VPD_CURVE_FIT_POINT_0) && (l_cmd_ptr->mode_parm <= VPD_CURVE_FIT_POINT_7)) ? TRUE : FALSE;
+        bool l_other_mode = ((l_cmd_ptr->mode_parm >= MIN_FREQ_POINT) && (l_cmd_ptr->mode_parm <= FMAX_FREQ_POINT)) ? TRUE : FALSE;
+        bool l_valid_freq = ((l_cmd_ptr->mode_parm >= G_oppb.frequency_min_khz) && (l_cmd_ptr->mode_parm <= G_oppb.frequency_max_khz)) ? TRUE : FALSE;
+
+        if( ((l_cmd_ptr->occ_mode == OCC_MODE_STATIC_FREQ_POINT) && !(l_vpd_curve_fit_point || l_other_mode)) ||
+            ((l_cmd_ptr->occ_mode == OCC_MODE_FFO) && !l_valid_freq))
+        {
+            CMDH_TRAC_ERR("OCC received an invalid additional mode parameter! Mode[0x%02X] Additional Paramater[0x%04X]",
+                          l_cmd_ptr->occ_mode, l_cmd_ptr->mode_parm);
+            l_rc = ERRL_RC_INVALID_DATA;
+            break;
+        }
+
         // -------------------------------------------------
         // Act on State & Mode Changes
         // -------------------------------------------------
@@ -1192,6 +1216,7 @@ errlHndl_t cmdh_tmgt_setmodestate(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
         G_occ_external_req_mode  = l_cmd_ptr->occ_mode;
         G_occ_external_req_state = l_cmd_ptr->occ_state;
+        G_occ_external_req_mode_parm = l_cmd_ptr->mode_parm;
 
         // We need to wait and see if all Slaves correctly make it to state/mode.
         do
@@ -1873,3 +1898,69 @@ uint8_t cmdh_select_sensor_groups(const uint16_t  i_cmd_data_length,
 
     return l_rc;
 }
+
+// Function Specification
+//
+// Name:  cmdh_send_ambient_temp
+//
+// Description: Command to receive the ambient temperature of the system
+//
+// End Function Specification
+errlHndl_t cmdh_send_ambient_temp(const cmdh_fsp_cmd_t * i_cmd_ptr,
+                                        cmdh_fsp_rsp_t * o_rsp_ptr)
+{
+    errlHndl_t                  l_err   = NULL;
+    cmdh_send_ambient_temp_t*   l_cmd   = (cmdh_send_ambient_temp_t *) i_cmd_ptr;
+    ERRL_RC                     l_rc    = ERRL_RC_INTERNAL_FAIL;
+
+    static bool L_trace_fail = FALSE, L_trace_success = FALSE;
+    do
+    {
+        // Verify we got the correct packet version
+        if(SEND_AMBIENT_VERSION_0 != l_cmd->version)
+        {
+            l_rc = ERRL_RC_INVALID_DATA;
+            break;
+        }
+
+        // Check that the reading is valid (if not, just ignore it)
+        if(0xFF == l_cmd->status)
+        {
+            if(!L_trace_fail)
+            {
+                TRAC_ERR("cmdh_send_ambient_temp: first time getting an ambient temperature read failure!");
+                L_trace_fail = TRUE;
+            }
+        }
+        else if(0x00 == l_cmd->status)
+        {
+            if(!L_trace_success)
+            {
+                TRAC_INFO("cmdh_send_ambient_temp: first time getting the ambient temperature successfully");
+                L_trace_success = TRUE;
+            }
+
+            // Store off the current ambient temperature
+            g_amec->sys.ambient = l_cmd->reading; // Deg Celsius
+        }
+        else
+        {
+            TRAC_ERR("cmdh_send_ambient_temp: invalid ambient temp read status! status[0x%02X]", l_cmd->status);
+            l_rc = ERRL_RC_INVALID_DATA;
+            break;
+        }
+
+        // Got command successfully
+        l_rc = ERRL_RC_SUCCESS;
+    }
+    while(0);
+
+    // Send back an error if there was a problem
+    if(l_rc)
+    {
+        cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, l_rc, &l_err);
+    }
+
+    return l_err;
+}
+

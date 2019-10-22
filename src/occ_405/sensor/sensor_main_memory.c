@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2017,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2017,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -170,7 +170,6 @@ main_mem_sensor_t G_main_mem_sensors[] =
     MAIN_MEM_SENSOR              (VOLTVDN,        true,     false),
     MAIN_MEM_SENSOR              (VOLTVDNSENSE,   true,     false),
     MAIN_MEM_CORE_SENSORS        (VOLTDROOPCNTC,  true,     false),
-    MAIN_MEM_QUAD_SENSORS        (VOLTDROOPCNTQ,  true,     false),
 
     // AMEC_SENSOR_TYPE_TEMP:     gsid            smf_mode  master_only
     MAIN_MEM_SENSOR              (TEMPNEST,       false,    false),

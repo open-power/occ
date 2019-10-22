@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -127,7 +127,7 @@ errlHndl_t amec_set_freq_range(const OCC_MODE i_mode)
         // Set Max frequency (turbo if wof off, otherwise max possible (ultra turbo)
         if( g_amec->wof.wof_disabled || (g_amec->wof.wof_init_state != WOF_ENABLED))
         {
-            l_freq_max = G_sysConfigData.sys_mode_freq.table[OCC_MODE_TURBO];
+            l_freq_max = G_sysConfigData.sys_mode_freq.table[OCC_MODE_WOF_BASE];
         }
         else
         {
@@ -146,7 +146,7 @@ errlHndl_t amec_set_freq_range(const OCC_MODE i_mode)
           // clip to turbo if WOF is disabled
           if( g_amec->wof.wof_disabled || (g_amec->wof.wof_init_state != WOF_ENABLED))
           {
-              l_freq_max = G_sysConfigData.sys_mode_freq.table[OCC_MODE_TURBO];
+              l_freq_max = G_sysConfigData.sys_mode_freq.table[OCC_MODE_WOF_BASE];
           }
           else
           {
@@ -267,7 +267,7 @@ void amec_slv_proc_voting_box(void)
     amec_part_t                     *l_part = NULL;
 
     // frequency threshold for reporting throttling
-    uint16_t l_report_throttle_freq = G_sysConfigData.system_type.report_dvfs_nom ?  G_sysConfigData.sys_mode_freq.table[OCC_MODE_NOMINAL] : G_sysConfigData.sys_mode_freq.table[OCC_MODE_TURBO];
+    uint16_t l_report_throttle_freq = G_sysConfigData.sys_mode_freq.table[OCC_MODE_WOF_BASE];
 
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
@@ -296,15 +296,6 @@ void amec_slv_proc_voting_box(void)
             l_chip_fmax = G_sysConfigData.sys_mode_freq.table[OCC_MODE_OVERSUB];
             l_chip_reason = AMEC_VOTING_REASON_OVERSUB;
         }
-    }
-
-    // If there is an active VRM fault and a defined (non 0) VRM N frequency less than max use it
-    if( (g_amec->sys.vrm_fault_status) &&
-        (G_sysConfigData.sys_mode_freq.table[OCC_MODE_VRM_N]) &&
-        (G_sysConfigData.sys_mode_freq.table[OCC_MODE_VRM_N] < l_chip_fmax) )
-    {
-        l_chip_fmax = G_sysConfigData.sys_mode_freq.table[OCC_MODE_VRM_N];
-        l_chip_reason = AMEC_VOTING_REASON_VRM_N;
     }
 
     // PPB_FMAX

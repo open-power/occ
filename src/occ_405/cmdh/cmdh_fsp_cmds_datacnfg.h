@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -42,7 +42,6 @@
 // are sent to OCC over the TMGT<->OCC interface.
 typedef enum
 {
-   DATA_FORMAT_FREQ                  = 0x02,
    DATA_FORMAT_SET_ROLE              = 0x03,
    DATA_FORMAT_APSS_CONFIG           = 0x04,
    DATA_FORMAT_MEM_CFG               = 0x05,
@@ -53,14 +52,12 @@ typedef enum
    DATA_FORMAT_THRM_THRESHOLDS       = 0x13,
    DATA_FORMAT_AVSBUS_CONFIG         = 0x14,
    DATA_FORMAT_GPU                   = 0x15,
-   DATA_FORMAT_VRM_FAULT             = 0x21,
 } eConfigDataFormatVersion;
 
 // Enum of the various Cnfg Data Masks that are used
 // to signal that OCC has received cnfg data
 typedef enum
 {
-   DATA_MASK_FREQ_PRESENT          = 0x00000002,
    DATA_MASK_SET_ROLE              = 0x00000004,
    DATA_MASK_APSS_CONFIG           = 0x00000008,
    DATA_MASK_PCAP_PRESENT          = 0x00000010,
@@ -71,18 +68,19 @@ typedef enum
    DATA_MASK_MEM_CFG               = 0x00000200,
    DATA_MASK_MEM_THROT             = 0x00000400,
    DATA_MASK_GPU                   = 0x00000800,
-   DATA_MASK_VRM_FAULT             = 0x00001000,
 } eConfigDataPriorityMask;
 
 typedef enum
 {
-    DATA_FRU_PROC               = 0x00,
-    DATA_FRU_MEMBUF             = 0x01,
+    DATA_FRU_PROC               = 0x00,  // Processor (hottest core temperature)
+    DATA_FRU_INTERNAL_MEMC_SENS = 0x01,  // Internal memory controller sensor
     DATA_FRU_DIMM               = 0x02,
-    DATA_FRU_VRM_OT_STATUS      = 0x03,  // this is just for the bit and is no longer being supported
-    DATA_FRU_GPU                = 0x04,
+    DATA_FRU_MEMC_AND_DIMM      = 0x03,  // Memory controller + DIMM
+    DATA_FRU_GPU_CORE           = 0x04,
     DATA_FRU_GPU_MEM            = 0x05,
     DATA_FRU_VRM_VDD            = 0x06,  // this is an actual temperature reading for VRM Vdd
+    DATA_FRU_PMIC               = 0x07,
+    DATA_FRU_EXTERNAL_MEMC_SENS = 0x08,  // External memory controller sensor
     DATA_FRU_MAX,
 } eConfigDataFruType;
 
@@ -97,7 +95,6 @@ extern PWR_READING_TYPE  G_pwr_reading_type;
 
 // Set OCC Role Masks
 #define OCC_ROLE_MASTER_MASK        0x01
-#define OCC_ROLE_FIR_MASTER_MASK    0x40
 
 // Bit mask in poll for indicating if OCC thinks
 // it is running in simulation.
@@ -154,6 +151,7 @@ typedef struct __attribute__ ((packed))
 }cmdh_apss_config_v20_t; //New for P9
 
 // Used by TMGT to send OCC the AVS Bus config data.
+// Version 0x30 AVS Bus config data.
 typedef struct __attribute__ ((packed))
 {
     struct cmdh_fsp_cmd_header;
@@ -161,27 +159,8 @@ typedef struct __attribute__ ((packed))
     uint8_t  version;
     uint8_t  vdd_bus;
     uint8_t  vdd_rail;
-    uint16_t reserved1;
-    uint8_t  vdn_bus;
-    uint8_t  vdn_rail;
-    uint16_t proc_power_adder;
-}cmdh_avsbus_config_t;
-
-// Version 2 AVS Bus config data.
-typedef struct __attribute__ ((packed))
-{
-    struct cmdh_fsp_cmd_header;
-    uint8_t  format;
-    uint8_t  version;
-    uint8_t  vdd_bus;
-    uint8_t  vdd_rail;
-    uint16_t reserved1;
-    uint8_t  vdn_bus;
-    uint8_t  vdn_rail;
-    uint16_t proc_power_adder;
-    uint16_t vdd_current_rollover;
-    uint16_t vdd_max_current;
-}cmdh_avsbus_v2_config_t;
+    uint8_t  reserved1[4];
+}cmdh_avsbus_v30_config_t;
 
 // Used by TMGT to send OCC GPU data.
 // Header data for GPU version 2 cfg packet
@@ -254,30 +233,24 @@ typedef struct __attribute__ ((packed))
 
 typedef struct __attribute__ ((packed))
 {
-    uint8_t  system_type;     // General system type
-    uint32_t proc_sid;        // Processor Sensor ID
-    uint32_t core_sid[MAX_CORES * 2];    // 24 cores. 4 bytes for Temp, followed by 4 bytes for Frequency.
-    uint32_t backplane_sid;   // Backplane Sensor ID
-    uint32_t apss_sid;        // APSS Sensor ID
-} cmdh_sys_config_data_v20_t;
+    uint8_t     system_type;                // General system type
+    uint32_t    proc_sid;                   // Processor Sensor ID
+    uint32_t    proc_freq_sid;              // Processor Frequency Sensor ID
+    uint32_t    core_sid[MAX_CORES];        // 32 cores. 4 bytes for each temp sensor ID
+    uint32_t    backplane_sid;              // Backplane Sensor ID
+    uint32_t    apss_sid;                   // APSS Sensor ID
+    uint32_t    vrm_vdd_sid;                // VRM Vdd Sensor ID for hw callout
+    uint32_t    vrm_vdd_temp_sid;           // VRM Vdd Temperature sensor ID
+    uint32_t    _reserved[2];
+} cmdh_sys_config_data_v30_t;
 
 typedef struct __attribute__ ((packed))
 {
     struct cmdh_fsp_cmd_header;
-    uint8_t              format;
-    uint8_t              version;
-    cmdh_sys_config_data_v20_t   sys_config;
-}cmdh_sys_config_v20_t;
-
-typedef struct __attribute__ ((packed))
-{
-    struct cmdh_fsp_cmd_header;
-    uint8_t                      format;
-    uint8_t                      version;
-    cmdh_sys_config_data_v20_t   sys_config;
-    uint32_t                     vrm_vdd_sid;        // VRM Vdd Sensor ID for hw callout
-    uint32_t                     vrm_vdd_temp_sid;   // VRM Vdd Temperature sensor ID
-}cmdh_sys_config_v21_t;
+    uint8_t                     format;
+    uint8_t                     version;
+    cmdh_sys_config_data_v30_t  sys_config;
+}cmdh_sys_config_v30_t;
 
 // Used by TMGT to send OCC the IPS config data.
 typedef struct __attribute__ ((packed))
@@ -301,47 +274,24 @@ typedef struct __attribute__ ((packed))
 
 extern cmdh_ips_config_data_t   G_ips_config_data;
 
-// Used by TMGT to send OCC thermal control thresholds
 typedef struct __attribute__ ((packed))
 {
+    // 0: proc, 1: membuf, 2: dimm, 3: vrm, 4: gpu core, 5: gpu mem,
+    // 6: VRM Vdd, 7: PMIC, 8: External memory controller sensor
     uint8_t              fru_type;
-    uint8_t              dvfs;
-    uint8_t              error;
-    uint8_t              pm_dvfs;
-    uint8_t              pm_error;
-    uint8_t              error_count;
+
+    //  dvfs and error fields define the temperature trigger
+    //  points for DVFS/Throttling and error/FRU callouts, respectively.
+    //  a 0xFF entry indicates that the coresponding temperature trigger
+    //  point is undefined.
+    uint8_t              dvfs;              // OS Controlled sys/PowerVM nominal
+    uint8_t              error;             // OS Controlled sys/PowerVM nominal
+
+    // Max time (s) allowed without having new temp readings before throttling
     uint8_t              max_read_timeout;
-}cmdh_thrm_thresholds_set_t;
 
-// Used by TMGT to send OCC thermal control thresholds
-typedef struct __attribute__ ((packed))
-{
-    struct cmdh_fsp_cmd_header;
-    uint8_t                    format;
-    uint8_t                    version;
-
-    // Weight factor for core DTS used to calculate a core temp
-    uint8_t                    proc_core_weight;
-    uint8_t                    proc_quad_weight;
-
-    uint8_t                    num_data_sets;
-    cmdh_thrm_thresholds_set_t data[DATA_FRU_MAX];
-}cmdh_thrm_thresholds_t;
-
-
-typedef struct __attribute__ ((packed))
-{
-    uint8_t              fru_type; // 0: proc, 1: membuf, 2: dimm, 3: vrm
-//  dvfs/pm_dvfs and error/pm_error fields define the temperature trigger
-//  points for DVFS/Throttling and error/FRU callouts, respectively.
-//  a 0xFF entry indicates that the coresponding temperature trigger
-//  point is undefined.
-    uint8_t              dvfs;     // OS Controlled sys/PowerVM nominal
-    uint8_t              error;    // OS Controlled sys/PowerVM nominal
-    uint8_t              pm_dvfs;  // powerVM sys
-    uint8_t              pm_error; // powerVM sys
-    uint8_t              max_read_timeout;
-}cmdh_thrm_thresholds_set_v20_t;
+    uint8_t              _reserved[2];
+}cmdh_thrm_thresholds_set_v30_t;
 
 typedef struct __attribute__ ((packed))
 {
@@ -349,20 +299,11 @@ typedef struct __attribute__ ((packed))
     uint8_t              format;
     uint8_t              version;
     uint8_t              proc_core_weight;
-    uint8_t              proc_quad_weight;
+    uint8_t              proc_racetrack_weight;
+    uint8_t              proc_L3_weight;
     uint8_t              num_data_sets;
-    cmdh_thrm_thresholds_set_v20_t data[DATA_FRU_MAX];
-}cmdh_thrm_thresholds_v20_t;
-
-
-// Header data for mem cfg packet
-typedef struct __attribute__ ((packed))
-{
-    struct cmdh_fsp_cmd_header;
-    uint8_t                 format;
-    uint8_t                 version;
-    uint8_t                 num_data_sets;
-}cmdh_mem_cfg_header_v20_t;
+    cmdh_thrm_thresholds_set_v30_t data[DATA_FRU_MAX];
+}cmdh_thrm_thresholds_v30_t;
 
 // Header data for mem cfg packet
 typedef struct __attribute__ ((packed))
@@ -375,31 +316,24 @@ typedef struct __attribute__ ((packed))
     uint8_t                 num_data_sets;
 }cmdh_mem_cfg_header_v21_t;
 
-// Config packet definition used by TMGT to
-// send sensor mappings for membufs and dimms
+// Config packet definition used to send
+// sensor mappings for membufs and dimms
 
 typedef struct __attribute__ ((packed))
 {
     uint32_t                   hw_sensor_id;
     uint32_t                   temp_sensor_id;
     uint8_t                    memory_type;
-    uint8_t                    dimm_info1;
-    uint8_t                    dimm_info2;
-    uint8_t                    dimm_info3;
+    uint8_t                    dimm_info1;  // Mem DTS 0 or 1
+    uint8_t                    dimm_info2;  // Temperature type
+    uint8_t                    dimm_info3;  // Reserved
 }cmdh_mem_cfg_data_set_t;
-
-typedef struct __attribute__ ((packed))
-{
-    cmdh_mem_cfg_header_v20_t       header;
-    cmdh_mem_cfg_data_set_t data_set[1];
-}cmdh_mem_cfg_v20_t;
 
 typedef struct __attribute__ ((packed))
 {
     cmdh_mem_cfg_header_v21_t   header;
     cmdh_mem_cfg_data_set_t data_set[1];
 }cmdh_mem_cfg_v21_t;
-
 
 // Header data for mem throttle packet
 typedef struct __attribute__ ((packed))
@@ -415,7 +349,7 @@ typedef struct __attribute__ ((packed))
 typedef struct __attribute__ ((packed))
 {
     uint8_t   membuf_num;            // Physical memory buffer#
-    uint8_t   mba_num;               // unit within memory buffer
+    uint8_t   _reserved;
 } cmdh_mem_throt_info_t;
 
 typedef struct __attribute__ ((packed))
@@ -425,17 +359,17 @@ typedef struct __attribute__ ((packed))
     uint16_t              min_n_per_mba;         // Lowest per MBA allowed numerator
     uint16_t              min_mem_power;         // Max mem Power @min (x0.01W)
 
-    uint16_t              turbo_n_per_mba;       // Static per MBA numerator @Turbo
-    uint16_t              turbo_n_per_chip;      // Static per chip numerator @Turbo
-    uint16_t              turbo_mem_power;       // Max memory power @Turbo (x0.01W)
+    uint16_t              wof_n_per_mba;         // Static per MBA numerator when WOF is enabled
+    uint16_t              wof_n_per_chip;        // Static per chip numerator when WOF is enabled
+    uint16_t              wof_mem_power;         // Max memory power when WOF is enabled (x0.01W)
 
     uint16_t              pcap_n_per_mba;        // Static per MBA numerator @PCAP
     uint16_t              pcap_n_per_chip;       // Static per chip numerator @PCAP
     uint16_t              pcap_mem_power;        // Max memory power @PCAP (x0.01W)
 
-    uint16_t              nom_n_per_mba;         // Static per MBA N for nominal mode
-    uint16_t              nom_n_per_chip;        // Static per chip N for nominal mode
-    uint16_t              nom_mem_power;         // Max memory power @nominal (x0.01W)
+    uint16_t              fmax_n_per_mba;         // Static per MBA N at fmax
+    uint16_t              fmax_n_per_chip;        // Static per chip N at fmax
+    uint16_t              fmax_mem_power;         // Max memory power at fmax (x0.01W)
 
     uint16_t              reserved1;             // reserved
     uint16_t              reserved2;             // reserved
@@ -451,21 +385,11 @@ typedef struct __attribute__ ((packed))
     cmdh_mem_throt_data_set_t    data_set[1];
 } cmdh_mem_throt_t;
 
-// Used by TMGT to send OCC VRM Fault status
-typedef struct __attribute__ ((packed))
-{
-    struct                  cmdh_fsp_cmd_header;
-    uint8_t                 format;
-    uint8_t                 version;
-    uint8_t                 vrm_fault_status;
-    uint8_t                 reserved;
-}cmdh_vrm_fault_t;
-
 // Used to mark present the config data TMGT has sent us.
 typedef struct data_cnfg
 {
     uint32_t                  data_mask;
-    cmdh_thrm_thresholds_t    thrm_thresh;
+    cmdh_thrm_thresholds_v30_t    thrm_thresh;
 } data_cnfg_t;
 
 errlHndl_t DATA_store_cnfgdata (const cmdh_fsp_cmd_t * i_cmd_ptr,
@@ -475,7 +399,7 @@ uint8_t DATA_request_cnfgdata ();
 
 uint32_t DATA_get_present_cnfgdata ();
 
-errlHndl_t DATA_get_thrm_thresholds(cmdh_thrm_thresholds_t **o_thrm_thresh);
+errlHndl_t DATA_get_thrm_thresholds(cmdh_thrm_thresholds_v30_t **o_thrm_thresh);
 
 errlHndl_t DATA_get_ips_cnfg(cmdh_ips_config_data_t **o_ips_cnfg);
 

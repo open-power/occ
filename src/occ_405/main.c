@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -139,6 +139,7 @@ SsxTimer G_mainThrdTimer;
 
 // Variable holding main thread loop count
 uint32_t G_mainThreadLoopCounter = 0x0;
+
 // Global flag indicating FIR collection is required
 bool G_fir_collection_required = FALSE;
 

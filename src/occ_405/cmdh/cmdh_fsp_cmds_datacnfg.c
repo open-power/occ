@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -45,31 +45,25 @@
 #include <wof.h>
 #include <i2c.h>
 
-#define FREQ_FORMAT_BASE_DATA_SZ   (sizeof(cmdh_store_mode_freqs_t) - sizeof(cmdh_fsp_cmd_header_t))
-
-#define FREQ_FORMAT_20_NUM_FREQS   6
-#define DATA_FREQ_VERSION_20       0x20
-#define FREQ_FORMAT_21_NUM_FREQS   8
-#define DATA_FREQ_VERSION_21       0x21
-
 #define DATA_PCAP_VERSION_20       0x20
 
-#define DATA_SYS_VERSION_20        0x20
-#define DATA_SYS_VERSION_21        0x21
+#define DATA_SYS_VERSION_30        0x30
 
 #define DATA_APSS_VERSION20        0x20
 
-#define DATA_THRM_THRES_VERSION_20 0x20
-#define THRM_THRES_BASE_DATA_SZ_20 5
+#define DATA_THRM_THRES_VERSION_30 0x30
+#define THRM_THRES_BASE_DATA_SZ_30 6
 
 #define DATA_IPS_VERSION           0
 
 #define DATA_MEM_CFG_VERSION_20    0x20
 #define DATA_MEM_CFG_VERSION_21    0x21
 
-#define DATA_MEM_THROT_VERSION_20  0x20
+#define DATA_MEM_THROT_VERSION_30  0x30
 
 #define DATA_VRM_FAULT_VERSION     0x01
+
+#define DATA_AVSBUS_VERSION_30     0x30
 
 extern uint8_t G_occ_interrupt_type;
 
@@ -103,7 +97,6 @@ const data_req_table_t G_data_pri_table[] =
     {DATA_MASK_MEM_CFG,               DATA_FORMAT_MEM_CFG},
     {DATA_MASK_GPU,                   DATA_FORMAT_GPU},
     {DATA_MASK_THRM_THRESHOLDS,       DATA_FORMAT_THRM_THRESHOLDS},
-    {DATA_MASK_FREQ_PRESENT,          DATA_FORMAT_FREQ},
     {DATA_MASK_PCAP_PRESENT,          DATA_FORMAT_POWER_CAP},
     {DATA_MASK_MEM_THROT,             DATA_FORMAT_MEM_THROT},
 };
@@ -131,7 +124,7 @@ uint32_t DATA_get_present_cnfgdata(void)
     return G_data_cnfg->data_mask;
 }
 
-errlHndl_t DATA_get_thrm_thresholds(cmdh_thrm_thresholds_t **o_thrm_thresh)
+errlHndl_t DATA_get_thrm_thresholds(cmdh_thrm_thresholds_v30_t **o_thrm_thresh)
 {
     errlHndl_t                  l_err = NULL;
 
@@ -225,10 +218,9 @@ uint8_t DATA_request_cnfgdata ()
             continue;
         }
 
-        // Skip whenever we are trying to request pcap or freq as a slave
-        if(((G_data_pri_table[i].format == DATA_FORMAT_POWER_CAP) ||
-            (G_data_pri_table[i].format == DATA_FORMAT_FREQ)) &&
-            (G_occ_role == OCC_SLAVE))
+        // Skip whenever we are trying to request pcap as a slave
+        if((G_data_pri_table[i].format == DATA_FORMAT_POWER_CAP) &&
+           (G_occ_role == OCC_SLAVE))
         {
             continue;
         }
@@ -243,299 +235,6 @@ uint8_t DATA_request_cnfgdata ()
     }
 
     return(l_req);
-}
-
-// Function Specification
-//
-// Name:  data_store_freq_data
-//
-// Description: Write all of the frequency points from TMGT into G_sysConfigData
-//
-// End Function Specification
-errlHndl_t data_store_freq_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
-                                cmdh_fsp_rsp_t       * o_rsp_ptr)
-{
-    errlHndl_t                      l_err = NULL;
-    cmdh_store_mode_freqs_t*        l_cmdp = (cmdh_store_mode_freqs_t*)i_cmd_ptr;
-    uint8_t*                        l_buf = ((uint8_t*)(l_cmdp)) + sizeof(cmdh_store_mode_freqs_t);
-    uint16_t                        l_data_length;
-    uint32_t                        l_mode_data_sz;
-    uint16_t                        l_freq = 0;
-    uint16_t                        l_table[OCC_MODE_COUNT] = {0};
-    uint16_t                        l_pgpe_max_freq_mhz = (G_oppb.frequency_max_khz / 1000);
-
-    do
-    {
-        l_data_length  = CMDH_DATALEN_FIELD_UINT16(l_cmdp);
-        l_mode_data_sz = l_data_length - FREQ_FORMAT_BASE_DATA_SZ;
-
-        // Sanity Checks
-        // If the datapacket is bigger than what we can store, OR
-        // if the version doesn't equal what we expect, OR
-        // if the expected data length does not agree with the actual data length
-        if( (l_data_length < FREQ_FORMAT_BASE_DATA_SZ) ||
-            ( (DATA_FREQ_VERSION_20 == l_cmdp->version) && (l_mode_data_sz != (FREQ_FORMAT_20_NUM_FREQS * 2)) ) ||
-            ( (DATA_FREQ_VERSION_21 == l_cmdp->version) && (l_mode_data_sz != (FREQ_FORMAT_21_NUM_FREQS * 2)) ) )
-        {
-            CMDH_TRAC_ERR("Invalid Frequency Data packet: data_length[%u] version[%u] l_mode_data_sz[%u]",
-                     l_data_length, l_cmdp->version, l_mode_data_sz);
-            cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
-            break;
-        }
-
-        if(OCC_MASTER != G_occ_role)
-        {
-            // We want to ignore this cnfg data if we are not the master.
-            CMDH_TRAC_INFO("Received a Frequncy Data Packet on a Slave OCC: Ignore!");
-            break;
-        }
-
-        // store frequency data common to all versions
-        // 1) Nominal, 2) Turbo, 3) Minimum,
-        // 4) Ultra Turbo, 5) Static PS, 6) FFO
-        // store under the existing enums.
-
-        // Bytes 3-4 Nominal Frequency Point
-        l_freq = (l_buf[0] << 8 | l_buf[1]);
-
-        //  nominal can not be 0
-        if(!l_freq)
-        {
-            CMDH_TRAC_ERR("Nominal Frequency is 0!!!");
-            cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
-            break;
-        }
-
-        // This should never happen but verify that nominal frequency is <= OPPB max
-        if(l_freq > l_pgpe_max_freq_mhz)
-        {
-            CMDH_TRAC_ERR("Nominal Frequency[%d] (MHz)) is higher than "
-                          "OPPB max[%d], clipping Nominal Frequency",
-                          l_freq, l_pgpe_max_freq_mhz);
-            l_freq = l_pgpe_max_freq_mhz;
-        }
-
-        l_table[OCC_MODE_NOMINAL] = l_freq;
-        CMDH_TRAC_INFO("Nominal frequency = %d MHz", l_freq);
-
-        // Bytes 5-6 Turbo Frequency Point:
-        // also store for DPS modes
-        l_freq = (l_buf[2] << 8 | l_buf[3]);
-        // Verify that turbo frequency is not zero, if it is set to nominal
-        if(!l_freq)
-        {
-            CMDH_TRAC_ERR("Turbo Frequency is 0 setting to nominal %dMHz ",
-                           l_table[OCC_MODE_NOMINAL]);
-            l_freq = l_table[OCC_MODE_NOMINAL];
-        }
-        // Verify that turbo frequency is <= OPPB max
-        else if(l_freq > l_pgpe_max_freq_mhz)
-        {
-            CMDH_TRAC_ERR("Turbo Frequency[%d] (MHz)) is higher than "
-                          "OPPB max[%d], clip Turbo Frequency",
-                          l_freq, l_pgpe_max_freq_mhz);
-            l_freq = l_pgpe_max_freq_mhz;
-        }
-        l_table[OCC_MODE_TURBO] = l_freq;
-        CMDH_TRAC_INFO("Turbo frequency = %d MHz", l_freq);
-
-        // Bytes 7-8 Minimum Frequency Point
-        l_freq = (l_buf[4] << 8 | l_buf[5]);
-        // Verify that minimum frequency is >= G_oppb.frequency_min_khz
-        if(l_freq * 1000 < G_oppb.frequency_min_khz)
-        {
-            CMDH_TRAC_ERR("Minimum Frequency[%d] (Mhz)  is lower than PGPE's "
-                          "G_oppb.frequency_min_khz[%d], clip Minimum Frequency",
-                           l_freq, G_oppb.frequency_min_khz);
-            l_freq = G_oppb.frequency_min_khz / 1000;
-        }
-        l_table[OCC_MODE_MIN_FREQUENCY] = l_freq;
-        CMDH_TRAC_INFO("Minimum frequency = %d MHz", l_freq);
-
-        // Bytes 9-10 Ultr Turbo Frequency Point
-        l_freq = (l_buf[6] << 8 | l_buf[7]);
-        // Verify that ultra turbo frequency is <= OPPB max
-        if(l_freq  > l_pgpe_max_freq_mhz)
-        {
-            CMDH_TRAC_ERR("Ultra Turbo Frequency[%d] (MHz) is higher than PGPE's "
-                          "Max freq (OPPB max[%d]) clip Ultra Turbo Frequency",
-                          l_freq, l_pgpe_max_freq_mhz);
-            l_freq = l_pgpe_max_freq_mhz;
-        }
-
-        // Check if (H)TMGT will let WOF run, else clear flags
-        switch( l_freq )
-        {
-            case WOF_MISSING_ULTRA_TURBO:
-                CMDH_TRAC_INFO("WOF Disabled due to 0 UT value.");
-                set_clear_wof_disabled( SET,
-                                        WOF_RC_UTURBO_IS_ZERO,
-                                        ERC_WOF_UTURBO_IS_ZERO );
-                l_freq = 0;
-                break;
-
-            case WOF_SYSTEM_DISABLED:
-                CMDH_TRAC_INFO("WOF Disabled due to SYSTEM_WOF_DISABLE");
-                set_clear_wof_disabled( SET,
-                                        WOF_RC_SYSTEM_WOF_DISABLE,
-                                        ERC_WOF_SYSTEM_WOF_DISABLE );
-                l_freq = 0;
-                break;
-
-            case WOF_RESET_LIMIT_REACHED:
-                CMDH_TRAC_INFO("WOF Disabled due to reset limit");
-                set_clear_wof_disabled( SET,
-                                        WOF_RC_RESET_LIMIT_REACHED,
-                                        ERC_WOF_RESET_LIMIT_REACHED );
-                l_freq = 0;
-                break;
-
-            case WOF_UNSUPPORTED_FREQ:
-                CMDH_TRAC_INFO("WOF Disabled due to unsupported frequency");
-                set_clear_wof_disabled( SET,
-                                        WOF_RC_UNSUPPORTED_FREQUENCIES,
-                                        ERC_WOF_UNSUPPORTED_FREQUENCIES );
-                l_freq = 0;
-                break;
-
-            default:
-                CMDH_TRAC_INFO("WOF is Enabled! so far...");
-                set_clear_wof_disabled( CLEAR,
-                                        WOF_RC_UTURBO_IS_ZERO,
-                                        ERC_WOF_UTURBO_IS_ZERO );
-                set_clear_wof_disabled( CLEAR,
-                                        WOF_RC_SYSTEM_WOF_DISABLE,
-                                        ERC_WOF_SYSTEM_WOF_DISABLE );
-                set_clear_wof_disabled( CLEAR,
-                                        WOF_RC_RESET_LIMIT_REACHED,
-                                        ERC_WOF_SYSTEM_WOF_DISABLE );
-                set_clear_wof_disabled( CLEAR,
-                                        WOF_RC_UNSUPPORTED_FREQUENCIES,
-                                        ERC_WOF_UNSUPPORTED_FREQUENCIES );
-                set_clear_wof_disabled( CLEAR,
-                                        WOF_RC_OCC_WOF_DISABLED,
-                                        ERC_WOF_OCC_WOF_DISABLED );
-                break;
-        }
-
-        l_table[OCC_MODE_UTURBO] = l_freq;
-        CMDH_TRAC_INFO("UT frequency = %d MHz", l_freq);
-
-        // clip G_proc_fmax_mhz to TMGT's MAX(turbo, ultra turbo) frequency point
-        if(l_table[OCC_MODE_UTURBO] > l_table[OCC_MODE_TURBO])
-        {
-            G_proc_fmax_mhz = l_table[OCC_MODE_UTURBO];
-        }
-        else
-        {
-            G_proc_fmax_mhz = l_table[OCC_MODE_TURBO];
-        }
-
-        // Set dynamic power save frequencies
-        l_table[OCC_MODE_DYN_POWER_SAVE] = G_proc_fmax_mhz;
-        l_table[OCC_MODE_DYN_POWER_SAVE_FP] = G_proc_fmax_mhz;
-
-        // Bytes 11-12 Static Power Save Frequency Point
-        l_freq = (l_buf[8] << 8 | l_buf[9]);
-        // in case min freq was clipped verify power save not below min
-        if(l_freq < l_table[OCC_MODE_MIN_FREQUENCY])
-        {
-            l_freq = l_table[OCC_MODE_MIN_FREQUENCY];
-        }
-
-        l_table[OCC_MODE_PWRSAVE] = l_freq;
-        CMDH_TRAC_INFO("Static Power Save frequency = %d MHz", l_freq);
-
-        // Bytes 13-14 FFO Frequency Point
-        l_freq = (l_buf[10] << 8 | l_buf[11]);
-        if (l_freq != 0)
-        {
-            // Check and make sure that FFO freq is within valid range
-            const uint16_t l_req_freq = l_freq;
-            if (l_freq  < l_table[OCC_MODE_MIN_FREQUENCY])
-            {
-                l_freq = l_table[OCC_MODE_MIN_FREQUENCY];
-            }
-            else if (l_freq > G_proc_fmax_mhz)
-            {
-                l_freq = G_proc_fmax_mhz;
-            }
-
-            // Log an error if we could not honor the requested FFO frequency, but keep going.
-            if (l_req_freq != l_freq)
-            {
-                TRAC_ERR("FFO Frequency out of range. requested %d MHz, but using %d MHz",
-                          l_req_freq,  l_freq);
-                /* @
-                 * @errortype
-                 * @moduleid    DATA_STORE_FREQ_DATA
-                 * @reasoncode  INVALID_INPUT_DATA
-                 * @userdata1   requested frequency
-                 * @userdata2   frequency used
-                 * @userdata4   OCC_NO_EXTENDED_RC
-                 * @devdesc     OCC recieved an invalid FFO frequency
-                 */
-                l_err = createErrl(DATA_STORE_FREQ_DATA,
-                                   INVALID_INPUT_DATA,
-                                   OCC_NO_EXTENDED_RC,
-                                   ERRL_SEV_INFORMATIONAL,
-                                   NULL,
-                                   DEFAULT_TRACE_SIZE,
-                                   l_req_freq,
-                                   l_freq);
-                commitErrl(&l_err);
-            }
-        }
-        l_table[OCC_MODE_FFO] = l_freq;
-       CMDH_TRAC_INFO("FFO Frequency = %d Mhz", l_freq);
-
-        // Only version 0x21 has additional oversubscription freq
-        if(DATA_FREQ_VERSION_21 == l_cmdp->version)
-        {
-            // Bytes 15-16 Oversubscription Max Frequency
-            l_freq = (l_buf[12] << 8 | l_buf[13]);
-            l_table[OCC_MODE_OVERSUB] = l_freq;
-            // Bytes 17-18 VRM N mode Max Frequency
-            l_freq = (l_buf[14] << 8 | l_buf[15]);
-            l_table[OCC_MODE_VRM_N] = l_freq;
-        }
-        else
-        {
-            // Version 0x20 limit oversubscription and VRM N mode frequency to turbo
-            l_table[OCC_MODE_OVERSUB] = l_table[OCC_MODE_TURBO];
-            l_table[OCC_MODE_VRM_N] = l_table[OCC_MODE_TURBO];
-        }
-
-        CMDH_TRAC_INFO("Oversubscription max frequency = %d MHz", l_table[OCC_MODE_OVERSUB]);
-        CMDH_TRAC_INFO("VRM N mode max frequency = %d MHz", l_table[OCC_MODE_VRM_N]);
-
-        // inconsistent Frequency Points?
-        if((l_table[OCC_MODE_UTURBO] < l_table[OCC_MODE_TURBO] && l_table[OCC_MODE_UTURBO]) ||
-           l_table[OCC_MODE_TURBO]   < l_table[OCC_MODE_NOMINAL] ||
-           l_table[OCC_MODE_NOMINAL] < l_table[OCC_MODE_PWRSAVE] ||
-           l_table[OCC_MODE_PWRSAVE] < l_table[OCC_MODE_MIN_FREQUENCY])
-        {
-            CMDH_TRAC_ERR("Inconsistent Frequency points - UT,T=0x%08X, NOM,PS=0x%08X, MIN=0x%04X",
-                          (l_table[OCC_MODE_UTURBO] << 16)  + l_table[OCC_MODE_TURBO],
-                          (l_table[OCC_MODE_NOMINAL] << 16) + l_table[OCC_MODE_PWRSAVE],
-                          l_table[OCC_MODE_MIN_FREQUENCY]);
-        }
-
-    }while(0);
-
-
-
-    // Change Data Request Mask to indicate we got this data
-    if(!l_err && (G_occ_role == OCC_MASTER))
-    {
-        // Copy all of the frequency updates to the global and notify
-        // dcom of the new frequenies.
-        memcpy(G_sysConfigData.sys_mode_freq.table, l_table, sizeof(l_table));
-        G_sysConfigData.sys_mode_freq.update_count++;
-        G_data_cnfg->data_mask |= DATA_MASK_FREQ_PRESENT;
-    }
-
-    return l_err;
 }
 
 // Function Specification
@@ -1306,21 +1005,17 @@ errlHndl_t data_store_avsbus_config(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                     cmdh_fsp_rsp_t * o_rsp_ptr)
 {
     errlHndl_t l_err = NULL;
-    const uint8_t  AVSBUS_VERSION_1 = 0x01;
-    const uint8_t  AVSBUS_VERSION_2 = 0x02;
-    const uint16_t AVSBUS_V1_LENGTH = sizeof(cmdh_avsbus_config_t) - sizeof(cmdh_fsp_cmd_header_t);
-    const uint16_t AVSBUS_V2_LENGTH = sizeof(cmdh_avsbus_v2_config_t) - sizeof(cmdh_fsp_cmd_header_t);
+    const uint16_t AVSBUS_V30_LENGTH = sizeof(cmdh_avsbus_v30_config_t) - sizeof(cmdh_fsp_cmd_header_t);
     bool l_invalid_data = FALSE;
 
-    cmdh_avsbus_config_t *l_cmd_ptr = (cmdh_avsbus_config_t *)i_cmd_ptr;
+    cmdh_avsbus_v30_config_t *l_cmd_ptr = (cmdh_avsbus_v30_config_t *)i_cmd_ptr;
     uint16_t l_data_length = CMDH_DATALEN_FIELD_UINT16(l_cmd_ptr);
 
-    if ( ((AVSBUS_VERSION_1 == l_cmd_ptr->version) && (AVSBUS_V1_LENGTH == l_data_length)) ||
-         ((AVSBUS_VERSION_2 == l_cmd_ptr->version) && (AVSBUS_V2_LENGTH == l_data_length)) )
+    if ( ((DATA_AVSBUS_VERSION_30 == l_cmd_ptr->version) && (AVSBUS_V30_LENGTH == l_data_length)) )
     {
         // common code for all versions
         // Validate Vdd
-        if ((l_cmd_ptr->vdd_bus == 0) || (l_cmd_ptr->vdd_bus == 1))
+        if ((l_cmd_ptr->vdd_bus >= 0) && (l_cmd_ptr->vdd_bus <= 2))
         {
             if ((l_cmd_ptr->vdd_rail >= 0) && (l_cmd_ptr->vdd_rail <= 15))
             {
@@ -1377,24 +1072,9 @@ errlHndl_t data_store_avsbus_config(const cmdh_fsp_cmd_t * i_cmd_ptr,
     }
     else
     {
-        G_sysConfigData.proc_power_adder = l_cmd_ptr->proc_power_adder;
-
-        // Vdd Current roll over workaround is enabled if we received Version 2
-        if(AVSBUS_VERSION_2 == l_cmd_ptr->version)
-        {
-            cmdh_avsbus_v2_config_t *l_cmd_ptr_v2 = (cmdh_avsbus_v2_config_t *)i_cmd_ptr;
-            G_sysConfigData.vdd_current_rollover_10mA = (uint32_t)l_cmd_ptr_v2->vdd_current_rollover;
-            G_sysConfigData.vdd_max_current_10mA = (uint32_t)l_cmd_ptr_v2->vdd_max_current;
-        }
-        else
-        {
-            // Vdd Current roll over workaround is disabled
-            G_sysConfigData.vdd_current_rollover_10mA = 0xFFFF;  // no rollover
-            G_sysConfigData.vdd_max_current_10mA = 0xFFFF;
-        }
-
-        CMDH_TRAC_INFO("data_store_avsbus_config: Vdd Current roll over at 0x%08X max 0x%08X",
-                        G_sysConfigData.vdd_current_rollover_10mA, G_sysConfigData.vdd_max_current_10mA);
+        // Vdd Current roll over workaround is disabled
+        G_sysConfigData.vdd_current_rollover_10mA = 0xFFFF;  // no rollover
+        G_sysConfigData.vdd_max_current_10mA = 0xFFFF;
 
         // We can use vdd/vdn. Clear NO_VDD_VDN_READ mask
         set_clear_wof_disabled( CLEAR,
@@ -1818,7 +1498,7 @@ errlHndl_t data_store_power_cap(const cmdh_fsp_cmd_t * i_cmd_ptr,
     }
     else
     {
-        if(l_cmd_ptr->version == DATA_SYS_VERSION_20)
+        if(l_cmd_ptr->version == DATA_PCAP_VERSION_20)
         {
             // Copy power cap limits data into G_master_pcap_data
             cmdh_pcap_config_t * l_cmd2_ptr = (cmdh_pcap_config_t *)i_cmd_ptr;
@@ -1859,7 +1539,7 @@ errlHndl_t data_store_sys_config(const cmdh_fsp_cmd_t * i_cmd_ptr,
     errlHndl_t                      l_err = NULL;
 
     // Cast the command to the struct for this format
-    cmdh_sys_config_v21_t * l_cmd_ptr = (cmdh_sys_config_v21_t *)i_cmd_ptr;
+    cmdh_sys_config_v30_t * l_cmd_ptr = (cmdh_sys_config_v30_t *)i_cmd_ptr;
     uint16_t                        l_data_length = 0;
     uint32_t                        l_sys_data_sz = 0;
     bool                            l_invalid_input = TRUE; //Assume bad input
@@ -1868,17 +1548,9 @@ errlHndl_t data_store_sys_config(const cmdh_fsp_cmd_t * i_cmd_ptr,
     l_data_length = CMDH_DATALEN_FIELD_UINT16(l_cmd_ptr);
 
     // Check length and version
-    if(l_cmd_ptr->version == DATA_SYS_VERSION_20)
+    if(l_cmd_ptr->version == DATA_SYS_VERSION_30)
     {
-        l_sys_data_sz = sizeof(cmdh_sys_config_v20_t) - sizeof(cmdh_fsp_cmd_header_t);
-        if(l_sys_data_sz == l_data_length)
-        {
-            l_invalid_input = FALSE;
-        }
-    }
-    else if(l_cmd_ptr->version == DATA_SYS_VERSION_21)
-    {
-        l_sys_data_sz = sizeof(cmdh_sys_config_v21_t) - sizeof(cmdh_fsp_cmd_header_t);
+        l_sys_data_sz = sizeof(cmdh_sys_config_v30_t) - sizeof(cmdh_fsp_cmd_header_t);
         if(l_sys_data_sz == l_data_length)
         {
             l_invalid_input = FALSE;
@@ -1887,9 +1559,10 @@ errlHndl_t data_store_sys_config(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
     if(l_invalid_input)
     {
-        CMDH_TRAC_ERR("data_store_sys_config: Invalid System Data packet! Version[0x%02X] Data_size[%u]",
+        CMDH_TRAC_ERR("data_store_sys_config: Invalid System Data packet! Version[0x%02X] Data_size[%u] Expected Size[%u]",
                  l_cmd_ptr->version,
-                 l_data_length);
+                 l_data_length,
+                 l_sys_data_sz);
 
         /* @
          * @errortype
@@ -1922,9 +1595,11 @@ errlHndl_t data_store_sys_config(const cmdh_fsp_cmd_t * i_cmd_ptr,
         G_sysConfigData.backplane_huid      = l_cmd_ptr->sys_config.backplane_sid;
         G_sysConfigData.apss_huid           = l_cmd_ptr->sys_config.apss_sid;
         G_sysConfigData.proc_huid           = l_cmd_ptr->sys_config.proc_sid;
-        CNFG_DBG("data_store_sys_config: SystemType[0x%02X] BPSID[0x%08X] APSSSID[0x%08X] ProcSID[0x%08X]",
-                  G_sysConfigData.system_type.byte, G_sysConfigData.backplane_huid, G_sysConfigData.apss_huid,
-                  G_sysConfigData.proc_huid);
+        G_sysConfigData.proc_freq_huid      = l_cmd_ptr->sys_config.proc_freq_sid;
+
+        CNFG_DBG("data_store_sys_config: SystemType[0x%02X] BPSID[0x%08X] APSSSID[0x%08X] ProcSID[0x%08X]"
+                 "ProcFreqSID[0x%08X]", G_sysConfigData.system_type.byte, G_sysConfigData.backplane_huid,
+                 G_sysConfigData.apss_huid, G_sysConfigData.proc_huid, G_sysConfigData.proc_freq_huid);
 
         // Check to see if we have to disable WOF due to no mode set yet on PowerVM
         if( !G_sysConfigData.system_type.kvm &&
@@ -1939,18 +1614,15 @@ errlHndl_t data_store_sys_config(const cmdh_fsp_cmd_t * i_cmd_ptr,
         //Core Temp and Freq sensors are always in sequence in the table
         for (l_coreIndex = 0; l_coreIndex < MAX_CORES; l_coreIndex++)
         {
-            AMECSENSOR_PTR(TEMPPROCTHRMC0 + l_coreIndex)->ipmi_sid = l_cmd_ptr->sys_config.core_sid[(l_coreIndex * 2)];
-            AMECSENSOR_PTR(FREQAC0 + l_coreIndex)->ipmi_sid = l_cmd_ptr->sys_config.core_sid[(l_coreIndex * 2) + 1];
+            AMECSENSOR_PTR(TEMPPROCTHRMC0 + l_coreIndex)->ipmi_sid = l_cmd_ptr->sys_config.core_sid[l_coreIndex];
+
             CNFG_DBG("data_store_sys_config: Core[%d] TempSID[0x%08X] FreqSID[0x%08X]", l_coreIndex,
                      AMECSENSOR_PTR(TEMPPROCTHRMC0 + l_coreIndex)->ipmi_sid, AMECSENSOR_PTR(FREQAC0 + l_coreIndex)->ipmi_sid);
         }
 
-        if(l_cmd_ptr->version == DATA_SYS_VERSION_21)
-        {
-            // Copy the additional data for version 21
-            G_sysConfigData.vrm_vdd_huid      = l_cmd_ptr->vrm_vdd_sid;
-            AMECSENSOR_PTR(TEMPVDD)->ipmi_sid = l_cmd_ptr->vrm_vdd_temp_sid;
-        }
+        // Store the VRM Vdd Sensor IDs
+        G_sysConfigData.vrm_vdd_huid      = l_cmd_ptr->sys_config.vrm_vdd_sid;
+        AMECSENSOR_PTR(TEMPVDD)->ipmi_sid = l_cmd_ptr->sys_config.vrm_vdd_temp_sid;
 
         // Change Data Request Mask to indicate we got this data
         G_data_cnfg->data_mask |= DATA_MASK_SYS_CNFG;
@@ -1978,7 +1650,7 @@ errlHndl_t data_store_thrm_thresholds(const cmdh_fsp_cmd_t * i_cmd_ptr,
     uint16_t                        l_data_length = 0;
     uint16_t                        l_exp_data_length = 0;
     uint8_t                         l_frutype = 0;
-    cmdh_thrm_thresholds_v20_t*     l_cmd_ptr = (cmdh_thrm_thresholds_v20_t*)i_cmd_ptr;
+    cmdh_thrm_thresholds_v30_t*     l_cmd_ptr = (cmdh_thrm_thresholds_v30_t*)i_cmd_ptr;
     uint8_t                         l_num_data_sets = 0;
     bool                            l_invalid_input = TRUE; //Assume bad input
 
@@ -1991,15 +1663,15 @@ errlHndl_t data_store_thrm_thresholds(const cmdh_fsp_cmd_t * i_cmd_ptr,
         //  * the version doesn't match what we expect,  OR
         //  * the actual data length does not match the expected data length, OR
         //  * the core and quad weights are both zero.
-        if(l_cmd_ptr->version == DATA_THRM_THRES_VERSION_20)
+        if(l_cmd_ptr->version == DATA_THRM_THRES_VERSION_30)
         {
             l_num_data_sets = l_cmd_ptr->num_data_sets;
-            l_exp_data_length = THRM_THRES_BASE_DATA_SZ_20 +
-                (l_num_data_sets * sizeof(cmdh_thrm_thresholds_set_v20_t));
+            l_exp_data_length = THRM_THRES_BASE_DATA_SZ_30 +
+                (l_num_data_sets * sizeof(cmdh_thrm_thresholds_set_v30_t));
 
             if((l_exp_data_length == l_data_length) &&
-               (l_data_length >= THRM_THRES_BASE_DATA_SZ_20) &&
-               (l_cmd_ptr->proc_core_weight || l_cmd_ptr->proc_quad_weight))
+               (l_data_length >= THRM_THRES_BASE_DATA_SZ_30) &&
+               (l_cmd_ptr->proc_core_weight || l_cmd_ptr->proc_racetrack_weight || l_cmd_ptr->proc_L3_weight) )
             {
                 l_invalid_input = FALSE;
             }
@@ -2021,15 +1693,14 @@ errlHndl_t data_store_thrm_thresholds(const cmdh_fsp_cmd_t * i_cmd_ptr,
             G_data_cnfg->thrm_thresh.data[i].fru_type = i;
             G_data_cnfg->thrm_thresh.data[i].dvfs     = 0xFF;
             G_data_cnfg->thrm_thresh.data[i].error    = 0xFF;
-            G_data_cnfg->thrm_thresh.data[i].pm_dvfs  = 0xFF;
-            G_data_cnfg->thrm_thresh.data[i].pm_error = 0xFF;
             G_data_cnfg->thrm_thresh.data[i].max_read_timeout = 0xFF;
         }
 
         // Store the base data
         G_data_cnfg->thrm_thresh.version          = l_cmd_ptr->version;
         G_data_cnfg->thrm_thresh.proc_core_weight = l_cmd_ptr->proc_core_weight;
-        G_data_cnfg->thrm_thresh.proc_quad_weight = l_cmd_ptr->proc_quad_weight;
+        G_data_cnfg->thrm_thresh.proc_racetrack_weight = l_cmd_ptr->proc_racetrack_weight;
+        G_data_cnfg->thrm_thresh.proc_L3_weight = l_cmd_ptr->proc_L3_weight;
         G_data_cnfg->thrm_thresh.num_data_sets    = l_cmd_ptr->num_data_sets;
 
         // Store the FRU related data
@@ -2044,17 +1715,8 @@ errlHndl_t data_store_thrm_thresholds(const cmdh_fsp_cmd_t * i_cmd_ptr,
                 G_data_cnfg->thrm_thresh.data[l_frutype].fru_type = l_frutype;
                 G_data_cnfg->thrm_thresh.data[l_frutype].dvfs     = l_cmd_ptr->data[i].dvfs;
                 G_data_cnfg->thrm_thresh.data[l_frutype].error    = l_cmd_ptr->data[i].error;
-                G_data_cnfg->thrm_thresh.data[l_frutype].pm_dvfs  = l_cmd_ptr->data[i].pm_dvfs;
-                G_data_cnfg->thrm_thresh.data[l_frutype].pm_error = l_cmd_ptr->data[i].pm_error;
                 G_data_cnfg->thrm_thresh.data[l_frutype].max_read_timeout =
                     l_cmd_ptr->data[i].max_read_timeout;
-
-                // VRM OT status is no longer supported since the OCC supports reading Vdd temperature
-                // Trace if VRM OT status FRU type is received and just ignore it
-                if(l_frutype == DATA_FRU_VRM_OT_STATUS)
-                {
-                    CMDH_TRAC_IMP("data_store_thrm_thresholds: Received deprecated VRM OT STATUS type will be ignored");
-                }
 
                 // Useful trace for debugging
                 //CMDH_TRAC_INFO("data_store_thrm_thresholds: FRU_type[0x%.2X] T_control[%u] DVFS[%u] Error[%u]",
@@ -2124,143 +1786,116 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
             }
         }
 
-        // Process data based on version
-        if( l_cmd_ptr->header.version == DATA_MEM_CFG_VERSION_20 ||
-            l_cmd_ptr->header.version == DATA_MEM_CFG_VERSION_21 )
-        {
-            if(l_cmd_ptr->header.version == DATA_MEM_CFG_VERSION_21)
-            {
-                G_sysConfigData.ips_mem_pwr_ctl = l_cmd_ptr->header.ips_mem_pwr_ctl;
-                G_sysConfigData.default_mem_pwr_ctl = l_cmd_ptr->header.default_mem_pwr_ctl;
-
-                num_data_sets = ((cmdh_mem_cfg_v21_t*) l_cmd_ptr)->header.num_data_sets;
-
-                // Verify the actual data length matches the expected data length for this version
-                l_exp_data_length = sizeof(cmdh_mem_cfg_header_v21_t) - sizeof(cmdh_fsp_cmd_header_t) +
-                    (num_data_sets * sizeof(cmdh_mem_cfg_data_set_t));
-
-            }
-
-            else if(l_cmd_ptr->header.version == DATA_MEM_CFG_VERSION_20)
-            {
-                // OFF memory power control means none of the
-                //  memory control registers are ever updated.
-                G_sysConfigData.ips_mem_pwr_ctl     = MEM_PWR_CTL_NO_SUPPORT;
-                G_sysConfigData.default_mem_pwr_ctl = MEM_PWR_CTL_NO_SUPPORT;
-
-                num_data_sets = ((cmdh_mem_cfg_v20_t*) l_cmd_ptr)->header.num_data_sets;
-
-                // Verify the actual data length matches the expected data length for this version
-                l_exp_data_length = sizeof(cmdh_mem_cfg_header_v20_t) - sizeof(cmdh_fsp_cmd_header_t) +
-                    (num_data_sets * sizeof(cmdh_mem_cfg_data_set_t));
-            }
-
-
-            if(l_exp_data_length != l_data_length)
-            {
-               CMDH_TRAC_ERR("data_store_mem_cfg: Invalid mem config data packet: "
-                             "data_length[%u] exp_length[%u] version[0x%02X] num_data_sets[%u]",
-                             l_data_length,
-                             l_exp_data_length,
-                             l_cmd_ptr->header.version,
-                             num_data_sets);
-
-               cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
-               break;
-            }
-
-            if (num_data_sets > 0)
-            {
-                if (G_internal_flags & INT_FLAG_ENABLE_MEMORY_CONFIG)
-                {
-                    // Store the memory type.  Memory must all be the same type, save from first and verify remaining
-                    G_sysConfigData.mem_type = MEM_TYPE_OCM;
-
-                    // Store the hardware sensor ID and the temperature sensor ID
-                    for(i=0; i<num_data_sets; i++)
-                    {
-                        cmdh_mem_cfg_data_set_t* l_data_set;
-
-                        if(l_cmd_ptr->header.version == DATA_MEM_CFG_VERSION_21)
-                        {
-                            cmdh_mem_cfg_v21_t*      l_cmd2_ptr = (cmdh_mem_cfg_v21_t*)i_cmd_ptr;
-                            l_data_set = &l_cmd2_ptr->data_set[i];
-                        }
-                        else       // DATA_MEM_CFG_VERSION_20
-                        {
-                            cmdh_mem_cfg_v20_t*      l_cmd2_ptr = (cmdh_mem_cfg_v20_t*)i_cmd_ptr;
-                            l_data_set = &l_cmd2_ptr->data_set[i];
-                        }
-
-                        // Verify matching memory type and process based on memory type
-                        if (IS_OCM_MEM_TYPE(l_data_set->memory_type))
-                        {
-                            unsigned int l_membuf_num = l_data_set->memory_type;
-                            l_dimm_num = l_data_set->dimm_info1;
-
-                            // Get the physical location from type
-                            l_membuf_num &= OCMB_TYPE_LOCATION_MASK;
-
-                            // Validate the memory buffer and dimm count for this data set
-                            if ((l_membuf_num >= MAX_NUM_OCMBS) ||
-                                ((l_dimm_num != 0xFF) && (l_dimm_num >= NUM_DIMMS_PER_OCMB)))
-                            {
-                                CMDH_TRAC_ERR("data_store_mem_cfg: Invalid memory data for type 0x%02X "
-                                              "(entry %d: type/mem_buf[0x%02X], dimm[0x%02X])",
-                                              G_sysConfigData.mem_type, i, l_data_set->memory_type, l_dimm_num);
-                                cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
-                                break;
-                            }
-
-                            if(l_dimm_num == 0xFF) // sensors are for the Memory Buffer itself
-                            {
-                                // Store the hardware sensor ID
-                                G_sysConfigData.membuf_huids[l_membuf_num] = l_data_set->hw_sensor_id;
-
-                                // Store the temperature sensor ID
-                                g_amec->proc[0].memctl[l_membuf_num].membuf.temp_sid = l_data_set->temp_sensor_id;
-
-                                G_present_membufs |= MEMBUF0_PRESENT_MASK >> l_membuf_num;
-
-                                l_num_mem_bufs++;
-                            }
-                            else // individual DIMM
-                            {
-                                // Store the hardware sensor ID
-                                G_sysConfigData.dimm_huids[l_membuf_num][l_dimm_num] = l_data_set->hw_sensor_id;
-
-                                // Store the temperature sensor ID
-                                g_amec->proc[0].memctl[l_membuf_num].membuf.dimm_temps[l_dimm_num].temp_sid =
-                                    l_data_set->temp_sensor_id;
-
-                                l_num_dimms++;
-                            }
-                        } // end OCMB Memory
-                        else
-                        {
-                            // MISMATCH ON MEMORY TYPE!!
-                            CMDH_TRAC_ERR("data_store_mem_cfg: Invalid memory type at index %d (0x%02X vs 0x%02X)",
-                                          i, G_sysConfigData.mem_type, l_data_set->memory_type);
-
-                            cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
-                            break;
-                        }
-                    } // for each data set
-                }
-                else
-                {
-                    CMDH_TRAC_IMP("data_store_mem_cfg: IGNORING MEMORY CONFIG due to internal flags (%d sets)", num_data_sets);
-                    num_data_sets = 0;
-                }
-            } // else no data sets given
-        } // version 0x20
-        else  // version not supported
+        // Verify the version
+        if(l_cmd_ptr->header.version != DATA_MEM_CFG_VERSION_21)
         {
             CMDH_TRAC_ERR("data_store_mem_cfg: Invalid mem config data packet: version[0x%02X]",
                           l_cmd_ptr->header.version);
 
             cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
+            break;
         }
+
+        // Store the mem config data
+        G_sysConfigData.ips_mem_pwr_ctl = l_cmd_ptr->header.ips_mem_pwr_ctl;
+        G_sysConfigData.default_mem_pwr_ctl = l_cmd_ptr->header.default_mem_pwr_ctl;
+
+        num_data_sets = ((cmdh_mem_cfg_v21_t*) l_cmd_ptr)->header.num_data_sets;
+
+        // Verify the actual data length matches the expected data length for this version
+        l_exp_data_length = sizeof(cmdh_mem_cfg_header_v21_t) - sizeof(cmdh_fsp_cmd_header_t) +
+                            (num_data_sets * sizeof(cmdh_mem_cfg_data_set_t));
+
+        if(l_exp_data_length != l_data_length)
+        {
+            CMDH_TRAC_ERR("data_store_mem_cfg: Invalid mem config data packet: "
+                          "data_length[%u] exp_length[%u] version[0x%02X] num_data_sets[%u]",
+                          l_data_length,
+                          l_exp_data_length,
+                          l_cmd_ptr->header.version,
+                          num_data_sets);
+
+            cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
+            break;
+        }
+
+        if (num_data_sets > 0)
+        {
+            if (G_internal_flags & INT_FLAG_ENABLE_MEMORY_CONFIG)
+            {
+                // Store the memory type.  Memory must all be the same type, save from first and verify remaining
+                G_sysConfigData.mem_type = MEM_TYPE_OCM;
+
+                // Store the hardware sensor ID and the temperature sensor ID
+                for(i=0; i<num_data_sets; i++)
+                {
+                    cmdh_mem_cfg_data_set_t* l_data_set;
+                    cmdh_mem_cfg_v21_t*      l_cmd2_ptr = (cmdh_mem_cfg_v21_t*)i_cmd_ptr;
+                    l_data_set = &l_cmd2_ptr->data_set[i];
+
+                    // Verify matching memory type and process based on memory type
+                    if (IS_OCM_MEM_TYPE(l_data_set->memory_type))
+                    {
+                        unsigned int l_membuf_num = l_data_set->memory_type;
+                        l_dimm_num = l_data_set->dimm_info1;
+
+                        // Get the physical location from type
+                        l_membuf_num &= OCMB_TYPE_LOCATION_MASK;
+
+                        // Validate the memory buffer and dimm count for this data set
+                        if ((l_membuf_num >= MAX_NUM_OCMBS) ||
+                            ((l_dimm_num != 0xFF) && (l_dimm_num >= NUM_DIMMS_PER_OCMB)))
+                        {
+                            CMDH_TRAC_ERR("data_store_mem_cfg: Invalid memory data for type 0x%02X "
+                                          "(entry %d: type/mem_buf[0x%02X], dimm[0x%02X])",
+                                          G_sysConfigData.mem_type, i, l_data_set->memory_type, l_dimm_num);
+                            cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
+                            break;
+                        }
+
+                        if(l_dimm_num == 0xFF) // sensors are for the Memory Buffer itself
+                        {
+                            // Store the hardware sensor ID
+                            G_sysConfigData.membuf_huids[l_membuf_num] = l_data_set->hw_sensor_id;
+
+                            // Store the temperature sensor ID
+                            g_amec->proc[0].memctl[l_membuf_num].membuf.temp_sid = l_data_set->temp_sensor_id;
+
+                            // Store the thermal sensor type
+                            g_amec->proc[0].memctl[l_membuf_num].membuf.membuf_hottest.temp_type = l_data_set->dimm_info2;
+
+                            G_present_membufs |= MEMBUF0_PRESENT_MASK >> l_membuf_num;
+
+                            l_num_mem_bufs++;
+                        }
+                        else // individual DIMM
+                        {
+                            // Store the hardware sensor ID
+                            G_sysConfigData.dimm_huids[l_membuf_num][l_dimm_num] = l_data_set->hw_sensor_id;
+
+                            // Store the temperature sensor ID
+                            g_amec->proc[0].memctl[l_membuf_num].membuf.dimm_temps[l_dimm_num].temp_sid =
+                                l_data_set->temp_sensor_id;
+
+                            // Store the thermal sensor type
+                            g_amec->proc[0].memctl[l_membuf_num].membuf.dimm_temps[l_dimm_num].temp_type =
+                                l_data_set->dimm_info2;
+
+                            l_num_dimms++;
+                        }
+                    } // end OCMB Memory
+                    else
+                    {
+                        // MISMATCH ON MEMORY TYPE!!
+                        CMDH_TRAC_ERR("data_store_mem_cfg: Invalid memory type at index %d (0x%02X vs 0x%02X)",
+                                      i, G_sysConfigData.mem_type, l_data_set->memory_type);
+
+                        cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
+                        break;
+                    }
+                } // for each data set
+            }
+        } // else no data sets given
     } while(0);
 
     if(!l_err)
@@ -2317,10 +1952,10 @@ errlHndl_t data_store_mem_throt(const cmdh_fsp_cmd_t * i_cmd_ptr,
     uint16_t                        l_data_length = 0;
     uint16_t                        l_exp_data_length = 0;
     uint8_t                         i;
-    uint16_t                        l_configured_mbas = 0;
+    uint16_t                        l_configured_membufs = 0;
     bool                            l_invalid_input = TRUE; //Assume bad input
-    uint32_t                        l_total_turbo_mem_power = 0;
-    uint32_t                        l_total_nominal_mem_power = 0;
+    uint32_t                        l_total_wof_mem_power = 0;
+    uint32_t                        l_total_fmax_mem_power = 0;
     uint32_t                        l_total_pcap_mem_power = 0;
 
     do
@@ -2330,7 +1965,7 @@ errlHndl_t data_store_mem_throt(const cmdh_fsp_cmd_t * i_cmd_ptr,
         // Sanity checks on input data, break if:
         //  * the version doesn't match what we expect,  OR
         //  * the actual data length does not match the expected data length.
-        if(l_cmd_ptr->header.version == DATA_MEM_THROT_VERSION_20)
+        if(l_cmd_ptr->header.version == DATA_MEM_THROT_VERSION_30)
         {
             l_exp_data_length = sizeof(cmdh_mem_throt_header_t) - sizeof(cmdh_fsp_cmd_header_t) +
                 (l_cmd_ptr->header.num_data_sets * sizeof(cmdh_mem_throt_data_set_t));
@@ -2362,20 +1997,18 @@ errlHndl_t data_store_mem_throt(const cmdh_fsp_cmd_t * i_cmd_ptr,
                 cmdh_mem_throt_data_set_t* l_data_set = &l_cmd_ptr->data_set[i];
                 uint16_t * l_n_ptr;
 
-                uint8_t mem_buf=-1, mba=-1; // dimm/membuf Info Parameters
+                uint8_t mem_buf = 0xFF; // membuf Info Parameters
 
                 if (MEM_TYPE_OCM == G_sysConfigData.mem_type)
                 {
                     mem_buf = l_data_set->mem_throt_info.membuf_num;
-                    mba  = l_data_set->mem_throt_info.mba_num;
 
                     // Validate parameters
-                    if((mem_buf >= MAX_NUM_OCMBS) ||
-                       (mba >= NUM_MBAS_PER_OCMB))
+                    if(mem_buf >= MAX_NUM_OCMBS)
                     {
                         CMDH_TRAC_ERR("data_store_mem_throt: Invalid memory data for type 0x%02X "
-                                      "(entry %d: mem_buf[%d], mba[%d])",
-                                      G_sysConfigData.mem_type, i, mem_buf, mba);
+                                      "(entry %d: mem_buf[%d]",
+                                      G_sysConfigData.mem_type, i, mem_buf);
                         cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
                         break;
                     }
@@ -2385,17 +2018,14 @@ errlHndl_t data_store_mem_throt(const cmdh_fsp_cmd_t * i_cmd_ptr,
                 memcpy(&l_temp_set, &(l_data_set->min_n_per_mba), sizeof(mem_throt_config_data_t));
 
                 // A 0 for any power or N value is an error
-                unsigned int l_index = 0;
-                for(l_n_ptr = &l_temp_set.min_n_per_mba; l_n_ptr <= &l_temp_set.nom_mem_power; l_n_ptr++)
+                for(l_n_ptr = &l_temp_set.min_n_per_mba; l_n_ptr <= &l_temp_set.fmax_mem_power; l_n_ptr++)
                 {
                     if(!(*l_n_ptr))
                     {
-                        CMDH_TRAC_ERR("data_store_mem_throt: DIMM Throttle N value is 0!"
-                                      " mem_buf[%d] mba[%d]", mem_buf, mba);
+                        CMDH_TRAC_ERR("data_store_mem_throt: DIMM Throttle N value is 0! mem_buf[%d]", mem_buf);
                         cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
                         break;
                     }
-                    ++l_index;
                 }
 
                 if(l_err)  // zero N Value?
@@ -2405,16 +2035,16 @@ errlHndl_t data_store_mem_throt(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
                 if (MEM_TYPE_OCM == G_sysConfigData.mem_type)
                 {
-                    memcpy(&G_sysConfigData.mem_throt_limits[mem_buf][mba],
+                    memcpy(&G_sysConfigData.mem_throt_limits[mem_buf],
                            &(l_data_set->min_n_per_mba),
                            sizeof(mem_throt_config_data_t));
 
-                    l_configured_mbas |= 1 << ((mem_buf * NUM_MBAS_PER_OCMB) + mba);
+                    l_configured_membufs |= (0x1 << mem_buf);
                 }
 
                 // Add memory power
-                l_total_turbo_mem_power += l_data_set->turbo_mem_power;
-                l_total_nominal_mem_power += l_data_set->nom_mem_power;
+                l_total_wof_mem_power += l_data_set->wof_mem_power;
+                l_total_fmax_mem_power += l_data_set->fmax_mem_power;
                 l_total_pcap_mem_power += l_data_set->pcap_mem_power;
 
             } // data_sets for loop
@@ -2431,13 +2061,14 @@ errlHndl_t data_store_mem_throt(const cmdh_fsp_cmd_t * i_cmd_ptr,
         // If there were no errors, indicate that we got this data
         G_data_cnfg->data_mask |= DATA_MASK_MEM_THROT;
         CMDH_TRAC_IMP("data_store_mem_throt: Got valid mem throt packet. configured_mba_bitmap=0x%04x",
-                 l_configured_mbas);
+                 l_configured_membufs);
 
         // Update the configured mba bitmap and save the total memory powers
-        G_configured_mbas = l_configured_mbas;
+        G_configured_mbas = l_configured_membufs;
+
         // g_amec is in Watts, config data is in cW
-        g_amec->pcap.nominal_mem_pwr = l_total_nominal_mem_power / 100;
-        g_amec->pcap.turbo_mem_pwr = l_total_turbo_mem_power / 100;
+        g_amec->pcap.nominal_mem_pwr = l_total_fmax_mem_power / 100;
+        g_amec->pcap.turbo_mem_pwr = l_total_wof_mem_power / 100;
         g_amec->pcap.pcap1_mem_pwr = l_total_pcap_mem_power / 100;
     }
 
@@ -2514,67 +2145,6 @@ errlHndl_t data_store_ips_config(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
 // Function Specification
 //
-// Name:  data_store_vrm_fault
-//
-// Description: Store VRM fault status from TMGT
-//
-// End Function Specification
-errlHndl_t data_store_vrm_fault(const cmdh_fsp_cmd_t * i_cmd_ptr,
-                                      cmdh_fsp_rsp_t * o_rsp_ptr)
-{
-    errlHndl_t          l_err = NULL;
-    cmdh_vrm_fault_t   *l_cmd_ptr = (cmdh_vrm_fault_t *)i_cmd_ptr; // Cast the command to the struct for this format
-    uint16_t            l_data_length = CMDH_DATALEN_FIELD_UINT16(l_cmd_ptr);
-    uint32_t            l_data_sz = sizeof(cmdh_vrm_fault_t) - sizeof(cmdh_fsp_cmd_header_t);
-
-
-    // Check length and version
-    if((l_cmd_ptr->version != DATA_VRM_FAULT_VERSION) ||
-       ( l_data_sz != l_data_length) )
-    {
-        CMDH_TRAC_ERR("data_store_vrm_fault: Invalid version[%d] expected[%d] or length[%d] expected[%d]",
-                       l_cmd_ptr->version, DATA_VRM_FAULT_VERSION, l_data_length, l_data_sz);
-
-        /* @
-         * @errortype
-         * @moduleid    DATA_STORE_VRM_FAULT
-         * @reasoncode  INVALID_INPUT_DATA
-         * @userdata1   data size
-         * @userdata2   packet version
-         * @userdata4   OCC_NO_EXTENDED_RC
-         * @devdesc     OCC recieved an invalid VRM fault data packet from the FSP
-         */
-        l_err = createErrl(DATA_STORE_VRM_FAULT,
-                           INVALID_INPUT_DATA,
-                           OCC_NO_EXTENDED_RC,
-                           ERRL_SEV_UNRECOVERABLE,
-                           NULL,
-                           DEFAULT_TRACE_SIZE,
-                           l_data_length,
-                           (uint32_t)l_cmd_ptr->version);
-
-        // Callout firmware
-        addCalloutToErrl(l_err,
-                         ERRL_CALLOUT_TYPE_COMPONENT_ID,
-                         ERRL_COMPONENT_ID_FIRMWARE,
-                         ERRL_CALLOUT_PRIORITY_HIGH);
-    }
-    else
-    {
-        // Save the VRM fault status
-        g_amec->sys.vrm_fault_status = l_cmd_ptr->vrm_fault_status;
-
-        // Change Data Request Mask to indicate we got this data
-        G_data_cnfg->data_mask |= DATA_MASK_VRM_FAULT;
-
-        CMDH_TRAC_IMP("Got VRM fault status = 0x%02X", g_amec->sys.vrm_fault_status);
-    }
-
-    return l_err;
-} // end data_store_vrm_fault()
-
-// Function Specification
-//
 // Name:   DATA_store_cnfgdata
 //
 // Description: Process Set Configuration Data cmd based on format (type) byte
@@ -2591,16 +2161,6 @@ errlHndl_t DATA_store_cnfgdata (const cmdh_fsp_cmd_t * i_cmd_ptr,
 
     switch (i_cmd_ptr->data[0])
     {
-        case DATA_FORMAT_FREQ:
-            l_errlHndl = data_store_freq_data(i_cmd_ptr , o_rsp_ptr);
-            if(NULL == l_errlHndl)
-            {
-                // New Frequency config data packet received with no error logs: set the
-                // DATA_MASK_FREQ_PRESENT to flag that we received the frequency from TMGT
-                l_new_data = DATA_MASK_FREQ_PRESENT;
-            }
-            break;
-
         case DATA_FORMAT_SET_ROLE:
             // Initialze our role to either be a master of a slave
             // We must be in Standby State for this command to be
@@ -2708,16 +2268,6 @@ errlHndl_t DATA_store_cnfgdata (const cmdh_fsp_cmd_t * i_cmd_ptr,
             if(NULL == l_errlHndl)
             {
                 l_new_data = DATA_MASK_MEM_THROT;
-            }
-            break;
-
-        case DATA_FORMAT_VRM_FAULT:
-            // Handle VRM fault status
-            l_errlHndl = data_store_vrm_fault(i_cmd_ptr, o_rsp_ptr);
-
-            if(NULL == l_errlHndl)
-            {
-                l_new_data = DATA_MASK_VRM_FAULT;
             }
             break;
 

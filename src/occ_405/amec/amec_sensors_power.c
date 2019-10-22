@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -43,7 +43,6 @@
 #include "sensor_enum.h"
 #include "amec_service_codes.h"
 #include <amec_sensors_power.h>
-#include <cmdh_snapshot.h>
 #include "amec_oversub.h"
 #include "avsbus.h"
 #include <pstates_occ.H>
@@ -430,51 +429,6 @@ bool amec_update_apss_sensors(void)
             }
             temp32 = ROUND_POWER(temp32);
             sensor_update(AMECSENSOR_PTR(PWRSYS), (uint16_t)temp32);
-
-            // Calculate average frequency of all OCCs.
-            uint32_t    l_allOccAvgFreqOver250us = 0;
-            uint8_t     l_presentOCCs = 0;
-            uint8_t     l_occCount = 0;
-
-            // Add up the average freq from all OCCs.
-            for (l_occCount = 0; l_occCount < MAX_OCCS; l_occCount++)
-            {
-                if (G_sysConfigData.is_occ_present & (1<< l_occCount))
-                {
-                    l_allOccAvgFreqOver250us += G_dcom_slv_outbox_rx[l_occCount].freqa;
-                    l_presentOCCs++;
-                }
-            }
-            //Calculate average of all the OCCs.
-            l_allOccAvgFreqOver250us /= l_presentOCCs;
-
-            // Save the max and min pwr sensors and keep an accumulator of the
-            // average frequency over 30 seconds.
-            if (g_pwr250us_over30sec.count == 0)
-            {
-                //The counter has been reset, therefore initialize the stored values.
-                g_pwr250us_over30sec.max = (uint16_t) temp32;
-                g_pwr250us_over30sec.min = (uint16_t) temp32;
-                g_pwr250us_over30sec.freqaAccum = l_allOccAvgFreqOver250us;
-            }
-            else
-            {
-                //Check for max.
-                if (temp32 > g_pwr250us_over30sec.max)
-                {
-                    g_pwr250us_over30sec.max = (uint16_t) temp32;
-                }
-                //Check for min.
-                if (temp32 < g_pwr250us_over30sec.min)
-                {
-                    g_pwr250us_over30sec.min = (uint16_t) temp32;
-                }
-                //Average frequency accumulator.
-                g_pwr250us_over30sec.freqaAccum += l_allOccAvgFreqOver250us;
-            }
-
-            //Count of number of updates.
-            g_pwr250us_over30sec.count++;
 
             // Check the GPU presence signals
             amec_update_gpu_configuration();

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -35,14 +35,11 @@
 #define CORE_PRESENT(occ_core_id) \
          ((CORE0_PRESENT_MASK >> occ_core_id) & G_present_cores)
 
-#define ALL_CORES_MASK          0xffffff00
+#define ALL_CORES_MASK          0xffffffff
 #define CORE0_PRESENT_MASK      0x80000000ul
 #define CORE0_PRESENT_MASK_GPE  0x8000000000000000ull
 
-#define MAX_NUM_HW_CORES    24
-#define MAX_NUM_FW_CORES    24
-
-#define CORE_MID_POINT (MAX_NUM_FW_CORES / 2)
+#define CORE_MID_POINT (MAX_CORES / 2)
 
 #define THREADS_PER_CORE    4
 
@@ -54,37 +51,45 @@
 #define NUM_CORE_DATA_DOUBLE_BUF 2
 #define NUM_CORE_DATA_EMPTY_BUF  1
 
-#define LO_CORES_MASK            0xfff00000
-#define HI_CORES_MASK            0x000fff00
-#define HW_CORES_MASK            0xffffff00
+#define LO_CORES_MASK            0xffff0000
+#define HI_CORES_MASK            0x0000ffff
+#define HW_CORES_MASK            0xffffffff
 #define QUAD0_CORES_PRESENT_MASK 0xf0000000
 
 enum eOccProcCores
 {
-  CORE_0  = 0,
-  CORE_1  = 1,
-  CORE_2  = 2,
-  CORE_3  = 3,
-  CORE_4  = 4,
-  CORE_5  = 5,
-  CORE_6  = 6,
-  CORE_7  = 7,
-  CORE_8  = 8,
-  CORE_9  = 9,
-  CORE_10 = 10,
-  CORE_11 = 11,
-  CORE_12 = 12,
-  CORE_13 = 13,
-  CORE_14 = 14,
-  CORE_15 = 15,
-  CORE_16 = 16,
-  CORE_17 = 17,
-  CORE_18 = 18,
-  CORE_19 = 19,
-  CORE_20 = 20,
-  CORE_21 = 21,
-  CORE_22 = 22,
-  CORE_23 = 23,
+    CORE_0  = 0,
+    CORE_1  = 1,
+    CORE_2  = 2,
+    CORE_3  = 3,
+    CORE_4  = 4,
+    CORE_5  = 5,
+    CORE_6  = 6,
+    CORE_7  = 7,
+    CORE_8  = 8,
+    CORE_9  = 9,
+    CORE_10 = 10,
+    CORE_11 = 11,
+    CORE_12 = 12,
+    CORE_13 = 13,
+    CORE_14 = 14,
+    CORE_15 = 15,
+    CORE_16 = 16,
+    CORE_17 = 17,
+    CORE_18 = 18,
+    CORE_19 = 19,
+    CORE_20 = 20,
+    CORE_21 = 21,
+    CORE_22 = 22,
+    CORE_23 = 23,
+    CORE_24 = 24,
+    CORE_25 = 25,
+    CORE_26 = 26,
+    CORE_27 = 27,
+    CORE_28 = 28,
+    CORE_29 = 29,
+    CORE_30 = 30,
+    CORE_31 = 31
 };
 
 //Processor data collect structures used for task data pointers

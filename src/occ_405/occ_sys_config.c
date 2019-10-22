@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -60,11 +60,12 @@ occSysConfigData_t G_sysConfigData =
     // System maximum frequencies (in MHz) for each mode
     // -----------------------------------------------------------
     .sys_mode_freq.table = {
-        [OCC_MODE_NOMINAL]       3500,
-        [OCC_MODE_TURBO]         3700,
-        [OCC_MODE_PWRSAVE]       3000,
-        [OCC_MODE_MIN_FREQUENCY] 2575,
-        [OCC_MODE_FFO]              0,
+        [OCC_MODE_NOMINAL]              3500,
+        [OCC_MODE_STATIC_FREQ_POINT]    0,
+        [OCC_MODE_WOF_BASE]             3700,
+        [OCC_MODE_PWRSAVE]              3000,
+        [OCC_MODE_MIN_FREQUENCY]        2575,
+        [OCC_MODE_FFO]                  0,
     },
 
     // -----------------------------------------------------------
@@ -164,7 +165,6 @@ occSysConfigData_t G_sysConfigData =
         .rail = 0,
     },
 
-    .proc_power_adder = 0,
     .vdd_current_rollover_10mA = 0xffff,
     .vdd_max_current_10mA = 0xffff,
 
@@ -211,17 +211,7 @@ occSysConfigData_t G_sysConfigData =
     // -------------------------------------------------------------------
     // Memory Throttle Limits Initialization
     // -------------------------------------------------------------------
-    .mem_throt_limits =
-    {
-        {{0}, {0}, {0}, {0}},
-        {{0}, {0}, {0}, {0}},
-        {{0}, {0}, {0}, {0}},
-        {{0}, {0}, {0}, {0}},
-        {{0}, {0}, {0}, {0}},
-        {{0}, {0}, {0}, {0}},
-        {{0}, {0}, {0}, {0}},
-        {{0}, {0}, {0}, {0}}
-    },
+    .mem_throt_limits = {{0}},
 
     // -----------------------------------------------------------
     // GPU Initialization
@@ -322,8 +312,7 @@ void sysConfigFspLess(void)
     // correctly initialized.
     // ----------------------------------------------------
     extern data_cnfg_t * G_data_cnfg;
-    G_data_cnfg->data_mask = (   DATA_MASK_FREQ_PRESENT
-                               | DATA_MASK_SET_ROLE
+    G_data_cnfg->data_mask = (   DATA_MASK_SET_ROLE
                                | DATA_MASK_APSS_CONFIG
                                | DATA_MASK_PCAP_PRESENT );
 

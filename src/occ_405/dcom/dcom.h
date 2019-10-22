@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -101,7 +101,7 @@
 #define NUM_TOD_SENSORS          3
 #define SLV_INBOX_RSV_SIZE       150
 #define SLV_MAILBOX_SIZE         32
-#define SLV_OUTBOX_RSV_SIZE      550
+#define SLV_OUTBOX_RSV_SIZE      454
 #define DOORBELL_RSV_SIZE        1
 #define DCOM_MAX_ERRH_ENTRIES    8
 
@@ -174,7 +174,6 @@ typedef struct __attribute__ ((packed))
       struct __attribute__ ((packed))
       {
           uint32_t     counter;
-          freqConfig_t sys_mode_freq;
           uint8_t      tb_record;
       };
       uint8_t  reserved[ SLV_INBOX_RSV_SIZE ];                      // [74] - 150 bytes
@@ -197,43 +196,43 @@ typedef struct __attribute__ ((packed))
     // Mini-sensors
     uint16_t freqa;                                              //   [2]
     uint16_t ips4msp0cy[MAX_CORES];                              //   [4]
-    uint16_t mcpifd4msp0cy[MAX_CORES];                           //  [52]
-    uint16_t mcpifi4msp0cy[MAX_CORES];                           // [100]
-    uint16_t memReserved[MAX_NUM_MEM_CONTROLLERS];               // [148]
-    uint16_t pwrproc;                                            // [180]
-    uint16_t pwr250usmemp0;                                      // [182]
-    uint16_t reserved0;                                          // [184]
-    uint16_t reserved1;                                          // [186]
-    uint16_t tempprocavg;                                        // [188]
-    uint16_t tempprocthermal;                                    // [190]
-    uint16_t utilcy[MAX_CORES];                                  // [192]
-    uint16_t tempvdd;                                            // [240]
-    uint16_t reserved2;                                          // [242]
-    uint16_t mrd[MAX_NUM_MEM_CONTROLLERS];                       // [244]
-    uint16_t mwr[MAX_NUM_MEM_CONTROLLERS];                       // [276]
-    uint16_t coreReserved[MAX_CORES];                            // [308]
-    uint16_t todclock[NUM_TOD_SENSORS];                          // [356]
-    uint16_t tempmembufthrm;                                     // [362]
-    uint16_t tempdimmthrm;                                       // [364]
-    uint16_t util;                                               // [366]
-    uint16_t ips4msp0;                                           // [368]
-    uint16_t nutil3sp0cy[MAX_CORES];                             // [370]
+    uint16_t mcpifd4msp0cy[MAX_CORES];                           //  [68]
+    uint16_t mcpifi4msp0cy[MAX_CORES];                           // [132]
+    uint16_t memReserved[MAX_NUM_MEM_CONTROLLERS];               // [196]
+    uint16_t pwrproc;                                            // [228]
+    uint16_t pwr250usmemp0;                                      // [230]
+    uint16_t reserved0;                                          // [232]
+    uint16_t reserved1;                                          // [234]
+    uint16_t tempprocavg;                                        // [236]
+    uint16_t tempprocthermal;                                    // [238]
+    uint16_t utilcy[MAX_CORES];                                  // [240]
+    uint16_t tempvdd;                                            // [304]
+    uint16_t reserved2;                                          // [306]
+    uint16_t mrd[MAX_NUM_MEM_CONTROLLERS];                       // [308]
+    uint16_t mwr[MAX_NUM_MEM_CONTROLLERS];                       // [340]
+    uint16_t coreReserved[MAX_CORES];                            // [372]
+    uint16_t todclock[NUM_TOD_SENSORS];                          // [436]
+    uint16_t tempmembufthrm;                                     // [442]
+    uint16_t tempdimmthrm;                                       // [444]
+    uint16_t util;                                               // [446]
+    uint16_t ips4msp0;                                           // [448]
+    uint16_t nutil3sp0cy[MAX_CORES];                             // [450]
 
     // Fwish (i.e., desired frequency that this OCC slave wants based on DPS
     // algorithms)
-    uint16_t fwish;                                              // [418]
+    uint16_t fwish;                                              // [514]
     // Factual (i.e., actual frequency requested by this OCC slave)
-    uint16_t factual;                                            // [420]
+    uint16_t factual;                                            // [516]
 
     // Error history counts
-    error_history_count_t errhCount[DCOM_MAX_ERRH_ENTRIES];      // [422] - 16 bytes
+    error_history_count_t errhCount[DCOM_MAX_ERRH_ENTRIES];      // [518] - 16 bytes
 
     // Frequency Clip History
-    uint32_t fClipHist;                                          // [438] - 4 bytes
+    uint32_t fClipHist;                                          // [534] - 4 bytes
     // Reserved Bytes
     union
     {
-        uint8_t  reserved[SLV_OUTBOX_RSV_SIZE];                  // [442] - 550 bytes
+        uint8_t  reserved[SLV_OUTBOX_RSV_SIZE];                  // [538] - 454 bytes
         struct __attribute__ ((packed))
         {
             uint8_t _reserved_1;

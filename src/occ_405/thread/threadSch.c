@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -30,8 +30,7 @@
 #include "occ_service_codes.h"
 #include <trac.h>
 #include <state.h>
-#include "cmdh_snapshot.h"
-
+#include <cmdh_fsp.h>
 // Numbers of threads to schedule
 #define THREADS_TO_SCHEDULE (sizeof(G_scheduledThreads)/sizeof(SsxThread*))
 
@@ -39,9 +38,6 @@
 
 // Thread Timer to reprioritize the threads
 SsxTimer G_threadSchTimer;
-
-// Snapshot timer object
-extern SsxTimer G_snapshotTimer;
 
 // Index of highest priority thread in G_scheduledThreads
 uint16_t G_threadSchedulerIndex = 0;
@@ -126,7 +122,6 @@ void initThreadScheduler(void)
     int l_cmdThreadRc        = SSX_OK;
     int l_timerRc            = SSX_OK;
     int l_dcomThreadRc       = SSX_OK;
-    int l_snapshotTimerRc    = SSX_OK;
 
     // Creating threads that need to be scheduled
     // Thread priority range should match scheduled
@@ -162,33 +157,14 @@ void initThreadScheduler(void)
         MAIN_TRAC_INFO("Error creating timer: RC: %d", l_timerRc);
     }
 
-    // Create snapshot timer
-    l_snapshotTimerRc = ssx_timer_create(&G_snapshotTimer, cmdh_snapshot_callback, 0);
-    // Check for errors creating the timer
-    if(l_snapshotTimerRc == SSX_OK)
-    {
-        // Schedule the timer so that it runs every 30 seconds.
-        l_snapshotTimerRc = ssx_timer_schedule(&G_snapshotTimer, 0, SSX_SECONDS(30));
-        if (l_snapshotTimerRc != SSX_OK)
-        {
-            MAIN_TRAC_ERR("cmdh_snapshot_sync: reseting the snapshot timer failed.");
-        }
-    }
-    else
-    {
-        MAIN_TRAC_INFO("Error creating timer: RC: %d", l_snapshotTimerRc);
-    }
-
     // If there are any errors creating the threads or starting the
     // timer create an error log to pass back.
     if(    l_cmdThreadRc
         || l_dcomThreadRc
-        || l_timerRc
-        || l_snapshotTimerRc )
+        || l_timerRc )
     {
-        MAIN_TRAC_ERR("Error creating thread: snapshopTimerTc: %d, timerRc: %d, cmdThreadRc: %d, dcomThreadRc: %d",
-                      l_snapshotTimerRc, l_timerRc,
-                      l_cmdThreadRc,l_dcomThreadRc);
+        MAIN_TRAC_ERR("Error creating thread: timerRc: %d, cmdThreadRc: %d, dcomThreadRc: %d",
+                      l_timerRc, l_cmdThreadRc,l_dcomThreadRc);
 
         // Create error log and log it
         const trace_descriptor_array_t*  l_trace = NULL;
@@ -198,7 +174,7 @@ void initThreadScheduler(void)
          * @moduleid    THRD_MID_INIT_THREAD_SCHDLR
          * @reasoncode  SSX_GENERIC_FAILURE
          * @userdata1   Schedule timer return code
-         * @userdata2   Snapshot timer return code
+         * @userdata2   NULL
          * @userdata4   OCC_NO_EXTENDED_RC
          * @devdesc     SSX thread related failure
          */
@@ -209,7 +185,7 @@ void initThreadScheduler(void)
                                        l_trace,                       // Trace Buf
                                        DEFAULT_TRACE_SIZE,            // Trace Size
                                        l_timerRc,                     // Userdata1
-                                       l_snapshotTimerRc);            // Userdata2
+                                       0);                            // Userdata2
 
         CHECKPOINT(COMM_INIT_FAILURE);
 

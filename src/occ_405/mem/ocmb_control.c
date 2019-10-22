@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2016,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2016,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -267,9 +267,9 @@ void update_nlimits(uint32_t i_membuf)
             &G_memoryThrottleLimits[i_membuf][1];
 
         mem_throt_config_data_t* l_state_limits01 =
-            &G_sysConfigData.mem_throt_limits[i_membuf][0];
+            &G_sysConfigData.mem_throt_limits[i_membuf];
         mem_throt_config_data_t* l_state_limits23 =
-            &G_sysConfigData.mem_throt_limits[i_membuf][1];
+            &G_sysConfigData.mem_throt_limits[i_membuf];
 
         //Minimum N value is not state dependent
         l_active_limits01->min_n_per_mba = l_state_limits01->min_n_per_mba;
@@ -285,17 +285,17 @@ void update_nlimits(uint32_t i_membuf)
         }
         else if(CURRENT_MODE() == OCC_MODE_NOMINAL)
         {
-            l_mba01_mba_maxn = l_state_limits01->nom_n_per_mba;
-            l_mba01_chip_maxn = l_state_limits01->nom_n_per_chip;
-            l_mba23_mba_maxn = l_state_limits23->nom_n_per_mba;
-            l_mba23_chip_maxn = l_state_limits23->nom_n_per_chip;
+            l_mba01_mba_maxn = l_state_limits01->fmax_n_per_mba;
+            l_mba01_chip_maxn = l_state_limits01->fmax_n_per_chip;
+            l_mba23_mba_maxn = l_state_limits23->fmax_n_per_mba;
+            l_mba23_chip_maxn = l_state_limits23->fmax_n_per_chip;
         }
         else //all other modes will use turbo settings
         {
-            l_mba01_mba_maxn = l_state_limits01->turbo_n_per_mba;
-            l_mba01_chip_maxn = l_state_limits01->turbo_n_per_chip;
-            l_mba23_mba_maxn = l_state_limits23->turbo_n_per_mba;
-            l_mba23_chip_maxn = l_state_limits23->turbo_n_per_chip;
+            l_mba01_mba_maxn = l_state_limits01->wof_n_per_mba;
+            l_mba01_chip_maxn = l_state_limits01->wof_n_per_chip;
+            l_mba23_mba_maxn = l_state_limits23->wof_n_per_mba;
+            l_mba23_chip_maxn = l_state_limits23->wof_n_per_chip;
         }
 
         l_active_limits01->max_n_per_chip = l_mba01_chip_maxn;

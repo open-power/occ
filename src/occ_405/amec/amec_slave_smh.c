@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -81,22 +81,22 @@ smh_state_t G_amec_slv_state = {AMEC_INITIAL_STATE,
                                 AMEC_INITIAL_STATE};
 
 // This table presents the core data sensors collection pattern.
-// This pattern is not completely rbitrary, and it must always
+// This pattern is not completely arbitrary, and it must always
 // follow track the GPE request pattern for the data collection.
-// The choice made here is for 3 cores data collection every 2 tick,
+// The choice made here is for 4 cores data collection every 2 tick,
 // with a maximum latency of 2 ticks (counting the dispatch tick).
-#define CORES_PER_STATE 3
+#define CORES_PER_STATE 4
 
 const uint8_t G_sensor_update_pattern[AMEC_SMH_STATES_PER_LVL][CORES_PER_STATE] =
 {
-    { 23,  0, 12 },    // Group 0
-    {  1,  2, 13 },    // Group 1
-    { 14,  3, 15 },    // Group 2
-    {  4,  5, 16 },    // Group 3
-    { 17,  6, 18 },    // Group 4
-    {  7,  8, 19 },    // Group 5
-    { 20,  9, 21 },    // Group 6
-    { 10, 11, 22 }     // Group 7
+    { 31,  0, 16,  1 },    // Group 0
+    { 17,  2, 18,  3 },    // Group 1
+    { 19,  4, 20,  5 },    // Group 2
+    { 21,  6, 22,  7 },    // Group 3
+    { 23,  8, 24,  9 },    // Group 4
+    { 25, 10, 26, 11 },    // Group 5
+    { 27, 12, 28, 13 },    // Group 6
+    { 29, 14, 30, 15 }     // Group 7
 };
 
 // --------------------------------------------------------
@@ -735,10 +735,11 @@ void amec_slv_substate_1_0(void)
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
-    AMEC_DBG("\tAMEC Slave State 1.0: Core Data[%d,      %d, %d]\n",
+    AMEC_DBG("\tAMEC Slave State 1.0: Core Data[%d,      %d, %d     %d]\n",
              G_sensor_update_pattern[0][0],
              G_sensor_update_pattern[0][1],
-             G_sensor_update_pattern[0][2]);
+             G_sensor_update_pattern[0][2],
+             G_sensor_update_pattern[0][3]);
 
     //-------------------------------------------------------
     // Update Proc Core sensors (for this substate)
@@ -755,10 +756,11 @@ void amec_slv_substate_1_1(void)
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
-    AMEC_DBG("\tAMEC Slave State 1.1: Core Data[%d,      %d, %d]\n",
+    AMEC_DBG("\tAMEC Slave State 1.1: Core Data[%d,      %d, %d     %d]\n",
              G_sensor_update_pattern[4][0],
              G_sensor_update_pattern[4][1],
-             G_sensor_update_pattern[4][2]);
+             G_sensor_update_pattern[4][2],
+             G_sensor_update_pattern[4][3]);
 
     //-------------------------------------------------------
     // Update Proc Core sensors (for this substate)
@@ -776,11 +778,11 @@ void amec_slv_substate_1_2(void)
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
-    AMEC_DBG("\tAMEC Slave State 1.2: Core Data[%d,      %d, %d]\n",
+    AMEC_DBG("\tAMEC Slave State 1.2: Core Data[%d,      %d, %d     %d]\n",
              G_sensor_update_pattern[0][0],
              G_sensor_update_pattern[0][1],
-             G_sensor_update_pattern[0][2]);
-
+             G_sensor_update_pattern[0][2],
+             G_sensor_update_pattern[0][3);
     //-------------------------------------------------------
     // Update Proc Core sensors (for this substate)
     //-------------------------------------------------------
@@ -796,11 +798,11 @@ void amec_slv_substate_1_3(void)
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
-    AMEC_DBG("\tAMEC Slave State 1.3: Core Data[%d,      %d, %d]\n",
+    AMEC_DBG("\tAMEC Slave State 1.3: Core Data[%d,      %d, %d     %d]\n",
              G_sensor_update_pattern[4][0],
              G_sensor_update_pattern[4][1],
-             G_sensor_update_pattern[4][2]);
-
+             G_sensor_update_pattern[4][2],
+             G_sensor_update_pattern[4][3]);
     //-------------------------------------------------------
     // Update Proc Core sensors (for this substate)
     //-------------------------------------------------------
@@ -817,11 +819,11 @@ void amec_slv_substate_1_4(void)
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
-    AMEC_DBG("\tAMEC Slave State 1.4: Core Data[%d,      %d, %d]\n",
+    AMEC_DBG("\tAMEC Slave State 1.4: Core Data[%d,      %d, %d     %d]\n",
              G_sensor_update_pattern[0][0],
              G_sensor_update_pattern[0][1],
-             G_sensor_update_pattern[0][2]);
-
+             G_sensor_update_pattern[0][2]
+             G_sensor_update_pattern[0][3]);
     //-------------------------------------------------------
     // Update Proc Core sensors (for this substate)
     //-------------------------------------------------------
@@ -837,10 +839,11 @@ void amec_slv_substate_1_5(void)
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
-    AMEC_DBG("\tAMEC Slave State 1.5: Core Data[%d,      %d, %d]\n",
+    AMEC_DBG("\tAMEC Slave State 1.5: Core Data[%d,      %d, %d     %d]\n",
              G_sensor_update_pattern[4][0],
              G_sensor_update_pattern[4][1],
-             G_sensor_update_pattern[4][2]);
+             G_sensor_update_pattern[4][2],
+             G_sensor_update_pattern[4][3]);
 
 
     //-------------------------------------------------------
@@ -859,11 +862,11 @@ void amec_slv_substate_1_6(void)
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
-    AMEC_DBG("\tAMEC Slave State 1.6: Core Data[%d,      %d, %d]\n",
+    AMEC_DBG("\tAMEC Slave State 1.6: Core Data[%d,      %d, %d     %d]\n",
              G_sensor_update_pattern[0][0],
              G_sensor_update_pattern[0][1],
-             G_sensor_update_pattern[0][2]);
-
+             G_sensor_update_pattern[0][2],
+             G_sensor_update_pattern[0][3]);
     //-------------------------------------------------------
     // Update Proc Core sensors (for this substate)
     //-------------------------------------------------------
@@ -879,10 +882,11 @@ void amec_slv_substate_1_7(void)
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
-    AMEC_DBG("\tAMEC Slave State 1.7: Core Data[%d,      %d, %d]\n",
+    AMEC_DBG("\tAMEC Slave State 1.7: Core Data[%d,      %d, %d     %d]\n",
              G_sensor_update_pattern[4][0],
              G_sensor_update_pattern[4][1],
-             G_sensor_update_pattern[4][2]);
+             G_sensor_update_pattern[4][2],
+             G_sensor_update_pattern[4][3]);
 
     //-------------------------------------------------------
     // Update Proc Core sensors (for this substate)
@@ -937,10 +941,11 @@ void amec_slv_substate_3_0(void)
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
-    AMEC_DBG("\tAMEC Slave State 3.0: Core Data[%d,      %d, %d]\n",
+    AMEC_DBG("\tAMEC Slave State 3.0: Core Data[%d,      %d, %d     %d]\n",
              G_sensor_update_pattern[1][0],
              G_sensor_update_pattern[1][1],
-             G_sensor_update_pattern[1][2]);
+             G_sensor_update_pattern[1][2],
+             G_sensor_update_pattern[1][3]);
 
     //-------------------------------------------------------
     // Update Proc Core sensors (for this substate)
@@ -957,10 +962,11 @@ void amec_slv_substate_3_1(void)
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
-    AMEC_DBG("\tAMEC Slave State 3.1: Core Data[%d,      %d, %d]\n",
+    AMEC_DBG("\tAMEC Slave State 3.1: Core Data[%d,      %d, %d     %d]\n",
              G_sensor_update_pattern[5][0],
              G_sensor_update_pattern[5][1],
-             G_sensor_update_pattern[5][2]);
+             G_sensor_update_pattern[5][2],
+             G_sensor_update_pattern[5][3]);
 
     //-------------------------------------------------------
     // Update Proc Core sensors (for this substate)
@@ -977,10 +983,11 @@ void amec_slv_substate_3_2(void)
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
-    AMEC_DBG("\tAMEC Slave State 3.2: Core Data[%d,      %d, %d]\n",
+    AMEC_DBG("\tAMEC Slave State 3.2: Core Data[%d,      %d, %d     %d]\n",
              G_sensor_update_pattern[1][0],
              G_sensor_update_pattern[1][1],
-             G_sensor_update_pattern[1][2]);
+             G_sensor_update_pattern[1][2],
+             G_sensor_update_pattern[1][3]);
 
     //-------------------------------------------------------
     // Update Proc Core sensors (for this substate)
@@ -997,10 +1004,11 @@ void amec_slv_substate_3_3(void)
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
-    AMEC_DBG("\tAMEC Slave State 3.3: Core Data[%d,      %d, %d]\n",
+    AMEC_DBG("\tAMEC Slave State 3.3: Core Data[%d,      %d, %d     %d]\n",
              G_sensor_update_pattern[5][0],
              G_sensor_update_pattern[5][1],
-             G_sensor_update_pattern[5][2]);
+             G_sensor_update_pattern[5][2],
+             G_sensor_update_pattern[5][3]);
 
     //-------------------------------------------------------
     // Update Proc Core sensors (for this substate)
@@ -1017,10 +1025,11 @@ void amec_slv_substate_3_4(void)
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
-    AMEC_DBG("\tAMEC Slave State 3.4: Core Data[%d,      %d, %d]\n",
+    AMEC_DBG("\tAMEC Slave State 3.4: Core Data[%d,      %d, %d     %d]\n",
              G_sensor_update_pattern[1][0],
              G_sensor_update_pattern[1][1],
-             G_sensor_update_pattern[1][2]);
+             G_sensor_update_pattern[1][2],
+             G_sensor_update_pattern[1][3]);
 
     //-------------------------------------------------------
     // Update Proc Core sensors (for this substate)
@@ -1037,10 +1046,11 @@ void amec_slv_substate_3_5(void)
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
-    AMEC_DBG("\tAMEC Slave State 3.5: Core Data[%d,      %d, %d]\n",
+    AMEC_DBG("\tAMEC Slave State 3.5: Core Data[%d,      %d, %d     %d]\n",
              G_sensor_update_pattern[5][0],
              G_sensor_update_pattern[5][1],
-             G_sensor_update_pattern[5][2]);
+             G_sensor_update_pattern[5][2],
+             G_sensor_update_pattern[5][3]);
 
     //-------------------------------------------------------
     // Update Proc Core sensors (for this substate)
@@ -1057,10 +1067,11 @@ void amec_slv_substate_3_6(void)
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
-    AMEC_DBG("\tAMEC Slave State 3.6: Core Data[%d,      %d, %d]\n",
+    AMEC_DBG("\tAMEC Slave State 3.6: Core Data[%d,      %d, %d     %d]\n",
              G_sensor_update_pattern[1][0],
              G_sensor_update_pattern[1][1],
-             G_sensor_update_pattern[1][2]);
+             G_sensor_update_pattern[1][2],
+             G_sensor_update_pattern[1][3]);
 
     //-------------------------------------------------------
     // Update Proc Core sensors (for this substate)
@@ -1078,10 +1089,11 @@ void amec_slv_substate_3_7(void)
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
-    AMEC_DBG("\tAMEC Slave State 3.7: Core Data[%d,      %d, %d]\n",
+    AMEC_DBG("\tAMEC Slave State 3.7: Core Data[%d,      %d, %d     %d]\n",
              G_sensor_update_pattern[5][0],
              G_sensor_update_pattern[5][1],
-             G_sensor_update_pattern[5][2]);
+             G_sensor_update_pattern[5][2],
+             G_sensor_update_pattern[5][3]);
 
     //-------------------------------------------------------
     // Update Proc Core sensors (for this substate)
@@ -1120,10 +1132,11 @@ void amec_slv_substate_5_0(void)
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
-    AMEC_DBG("\tAMEC Slave State 5.0: Core Data[%d,      %d, %d]\n",
+    AMEC_DBG("\tAMEC Slave State 5.0: Core Data[%d,      %d, %d      %d]\n",
              G_sensor_update_pattern[2][0],
              G_sensor_update_pattern[2][1],
-             G_sensor_update_pattern[2][2]);
+             G_sensor_update_pattern[2][2],
+             G_sensor_update_pattern[2][3]);
 
     //-------------------------------------------------------
     // Update Proc Core sensors (for this substate)
@@ -1143,10 +1156,11 @@ void amec_slv_substate_5_1(void)
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
-    AMEC_DBG("\tAMEC Slave State 5.1: Core Data[%d,      %d, %d]\n",
+    AMEC_DBG("\tAMEC Slave State 5.1: Core Data[%d,      %d, %d     %d]\n",
              G_sensor_update_pattern[6][0],
              G_sensor_update_pattern[6][1],
-             G_sensor_update_pattern[6][2]);
+             G_sensor_update_pattern[6][2],
+             G_sensor_update_pattern[6][3]);
 
     //-------------------------------------------------------
     // Update Proc Core sensors (for this substate)
@@ -1164,10 +1178,11 @@ void amec_slv_substate_5_2(void)
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
-    AMEC_DBG("\tAMEC Slave State 5.2: Core Data[%d,      %d, %d]\n",
+    AMEC_DBG("\tAMEC Slave State 5.2: Core Data[%d,      %d, %d     %d]\n",
              G_sensor_update_pattern[2][0],
              G_sensor_update_pattern[2][1],
-             G_sensor_update_pattern[2][2]);
+             G_sensor_update_pattern[2][2],
+             G_sensor_update_pattern[2][3]);
 
     //-------------------------------------------------------
     // Update Proc Core sensors (for this substate)
@@ -1184,10 +1199,11 @@ void amec_slv_substate_5_3(void)
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
-    AMEC_DBG("\tAMEC Slave State 5.3: Core Data[%d,      %d, %d]\n",
+    AMEC_DBG("\tAMEC Slave State 5.3: Core Data[%d,      %d, %d     %d]\n",
              G_sensor_update_pattern[6][0],
              G_sensor_update_pattern[6][1],
-             G_sensor_update_pattern[6][2]);
+             G_sensor_update_pattern[6][2],
+             G_sensor_update_pattern[6][3]);
 
 
     //-------------------------------------------------------
@@ -1206,10 +1222,11 @@ void amec_slv_substate_5_4(void)
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
-    AMEC_DBG("\tAMEC Slave State 5.4: Core Data[%d,      %d, %d]\n",
+    AMEC_DBG("\tAMEC Slave State 5.4: Core Data[%d,      %d, %d     %d]\n",
              G_sensor_update_pattern[2][0],
              G_sensor_update_pattern[2][1],
-             G_sensor_update_pattern[2][2]);
+             G_sensor_update_pattern[2][2],
+             G_sensor_update_pattern[2][3]);
 
     //-------------------------------------------------------
     // Update Proc Core sensors (for this substate)
@@ -1226,10 +1243,11 @@ void amec_slv_substate_5_5(void)
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
-    AMEC_DBG("\tAMEC Slave State 5.5: Core Data[%d,      %d, %d]\n",
+    AMEC_DBG("\tAMEC Slave State 5.5: Core Data[%d,      %d, %d     %d]\n",
              G_sensor_update_pattern[6][0],
              G_sensor_update_pattern[6][1],
-             G_sensor_update_pattern[6][2]);
+             G_sensor_update_pattern[6][2],
+             G_sensor_update_pattern[6][3]);
 
     //-------------------------------------------------------
     // Update Proc Core sensors (for this substate)
@@ -1247,10 +1265,11 @@ void amec_slv_substate_5_6(void)
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
-    AMEC_DBG("\tAMEC Slave State 5.6: Core Data[%d,      %d, %d]\n",
+    AMEC_DBG("\tAMEC Slave State 5.6: Core Data[%d,      %d, %d     %d]\n",
              G_sensor_update_pattern[2][0],
              G_sensor_update_pattern[2][1],
-             G_sensor_update_pattern[2][2]);
+             G_sensor_update_pattern[2][2],
+             G_sensor_update_pattern[2][3]);
 
     //-------------------------------------------------------
     // Update Proc Core sensors (for this substate)
@@ -1267,10 +1286,11 @@ void amec_slv_substate_5_7(void)
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
-    AMEC_DBG("\tAMEC Slave State 5.7: Core Data[%d,      %d, %d]\n",
+    AMEC_DBG("\tAMEC Slave State 5.7: Core Data[%d,      %d, %d     %d]\n",
              G_sensor_update_pattern[6][0],
              G_sensor_update_pattern[6][1],
-             G_sensor_update_pattern[6][2]);
+             G_sensor_update_pattern[6][2],
+             G_sensor_update_pattern[6][3]);
 
     //-------------------------------------------------------
     // Update Proc Core sensors (for this substate)
@@ -1323,10 +1343,11 @@ void amec_slv_substate_7_0(void)
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
-    AMEC_DBG("\tAMEC Slave State 7.0: Core Data[%d,      %d, %d]\n",
+    AMEC_DBG("\tAMEC Slave State 7.0: Core Data[%d,      %d, %d     %d]\n",
              G_sensor_update_pattern[3][0],
              G_sensor_update_pattern[3][1],
-             G_sensor_update_pattern[3][2]);
+             G_sensor_update_pattern[3][2],
+             G_sensor_update_pattern[3][3]);
 
     //-------------------------------------------------------
     // Update Proc Core sensors (for this substate)
@@ -1352,10 +1373,11 @@ void amec_slv_substate_7_1(void)
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
-    AMEC_DBG("\tAMEC Slave State 7.1: Core Data[%d,      %d, %d]\n",
+    AMEC_DBG("\tAMEC Slave State 7.1: Core Data[%d,      %d, %d     %d]\n",
              G_sensor_update_pattern[7][0],
              G_sensor_update_pattern[7][1],
-             G_sensor_update_pattern[7][2]);
+             G_sensor_update_pattern[7][2],
+             G_sensor_update_pattern[7][3]);
 
     //-------------------------------------------------------
     // Update Proc Core sensors (for this substate)
@@ -1372,10 +1394,11 @@ void amec_slv_substate_7_2(void)
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
-    AMEC_DBG("\tAMEC Slave State 7.2: Core Data[%d,      %d, %d]\n",
+    AMEC_DBG("\tAMEC Slave State 7.2: Core Data[%d,      %d, %d     %d]\n",
              G_sensor_update_pattern[3][0],
              G_sensor_update_pattern[3][1],
-             G_sensor_update_pattern[3][2]);
+             G_sensor_update_pattern[3][2],
+             G_sensor_update_pattern[3][3]);
 
     //-------------------------------------------------------
     // Update Proc Core sensors (for this substate)
@@ -1392,10 +1415,11 @@ void amec_slv_substate_7_3(void)
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
-    AMEC_DBG("\tAMEC Slave State 7.3: Core Data[%d,      %d, %d]\n",
+    AMEC_DBG("\tAMEC Slave State 7.3: Core Data[%d,      %d, %d     %d]\n",
              G_sensor_update_pattern[7][0],
              G_sensor_update_pattern[7][1],
-             G_sensor_update_pattern[7][2]);
+             G_sensor_update_pattern[7][2],
+             G_sensor_update_pattern[7][3]);
 
     //-------------------------------------------------------
     // Update Proc Core sensors (for this substate)
@@ -1412,10 +1436,11 @@ void amec_slv_substate_7_4(void)
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
-    AMEC_DBG("\tAMEC Slave State 7.4: Core Data[%d,      %d, %d]\n",
+    AMEC_DBG("\tAMEC Slave State 7.4: Core Data[%d,      %d, %d     %d]\n",
              G_sensor_update_pattern[3][0],
              G_sensor_update_pattern[3][1],
-             G_sensor_update_pattern[3][2]);
+             G_sensor_update_pattern[3][2],
+             G_sensor_update_pattern[3][3]);
 
     //-------------------------------------------------------
     // Update Proc Core sensors (for this substate)
@@ -1432,10 +1457,11 @@ void amec_slv_substate_7_5(void)
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
-    AMEC_DBG("\tAMEC Slave State 7.5: Core Data[%d,      %d, %d]\n",
+    AMEC_DBG("\tAMEC Slave State 7.5: Core Data[%d,      %d, %d     %d]\n",
              G_sensor_update_pattern[7][0],
              G_sensor_update_pattern[7][1],
-             G_sensor_update_pattern[7][2]);
+             G_sensor_update_pattern[7][2],
+             G_sensor_update_pattern[7][3]);
 
     //-------------------------------------------------------
     // Update Proc Core sensors (for this substate)
@@ -1452,10 +1478,11 @@ void amec_slv_substate_7_6(void)
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
-    AMEC_DBG("\tAMEC Slave State 7.6: Core Data[%d,      %d, %d]\n",
+    AMEC_DBG("\tAMEC Slave State 7.6: Core Data[%d,      %d, %d     %d]\n",
              G_sensor_update_pattern[3][0],
              G_sensor_update_pattern[3][1],
-             G_sensor_update_pattern[3][2]);
+             G_sensor_update_pattern[3][2],
+             G_sensor_update_pattern[3][3]);
 
     //-------------------------------------------------------
     // Update Proc Core sensors (for this substate)
@@ -1473,10 +1500,11 @@ void amec_slv_substate_7_7(void)
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
-    AMEC_DBG("\tAMEC Slave State 7.7: Core Data[%d,      %d, %d]\n",
+    AMEC_DBG("\tAMEC Slave State 7.7: Core Data[%d,      %d, %d     %d]\n",
              G_sensor_update_pattern[7][0],
              G_sensor_update_pattern[7][1],
-             G_sensor_update_pattern[7][2]);
+             G_sensor_update_pattern[7][2],
+             G_sensor_update_pattern[7][3]);
 
     //-------------------------------------------------------
     // Update Proc Core sensors (for this substate)

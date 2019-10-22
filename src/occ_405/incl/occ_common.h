@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -34,8 +34,6 @@ extern char _LINEAR_WR_WINDOW_SECTION_BASE[];
 extern void _LINEAR_WR_WINDOW_SECTION_SIZE;
 extern char _LINEAR_RD_WINDOW_SECTION_BASE[];
 extern void _LINEAR_RD_WINDOW_SECTION_SIZE;
-extern char _FIR_PARMS_SECTION_BASE[];
-extern char _FIR_HEAP_SECTION_BASE[];
 extern char _TRACE_BUFFERS_START_BASE[];
 
 // Declare aligned data structures for Async access in a noncacheable section
@@ -74,8 +72,6 @@ extern char _TRACE_BUFFERS_START_BASE[];
 #define LINEAR_WR_WINDOW_SECTION_SIZE   ((uint32_t) &_LINEAR_WR_WINDOW_SECTION_SIZE)
 #define CMDH_OCC_RESPONSE_BASE_ADDRESS  ((uint32_t) &_LINEAR_RD_WINDOW_SECTION_BASE)
 #define LINEAR_RD_WINDOW_SECTION_SIZE   ((uint32_t) &_LINEAR_RD_WINDOW_SECTION_SIZE)
-#define FIR_PARMS_SECTION_BASE_ADDRESS  ((uint32_t) &_FIR_PARMS_SECTION_BASE)
-#define FIR_HEAP_SECTION_BASE_ADDRESS   ((uint32_t) &_FIR_HEAP_SECTION_BASE)
 #define TRACE_BUFFERS_START_ADDR        ((uint32_t) &_TRACE_BUFFERS_START_BASE)
 
 
@@ -270,7 +266,7 @@ enum
 
 #define DEFAULT_TRACE_SIZE 1536
 #define MAX_OCCS       8
-#define MAX_CORES      24
+#define MAX_CORES      32
 
 //Used by G_occ_interrupt_type to distinguish between FSP supported OCCs and other servers.
 #define FSP_SUPPORTED_OCC 0x00

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -295,7 +295,7 @@ void populate_opal_static_config_data(void)
     G_opal_static_table.config.occ_role = G_occ_role;
     G_opal_static_table.config.pmin     = proc_freq2pstate(g_amec->sys.fmin);
     G_opal_static_table.config.pnominal = proc_freq2pstate(G_sysConfigData.sys_mode_freq.table[OCC_MODE_NOMINAL]);
-    G_opal_static_table.config.pturbo   = proc_freq2pstate(G_sysConfigData.sys_mode_freq.table[OCC_MODE_TURBO]);
+    G_opal_static_table.config.pturbo   = proc_freq2pstate(G_sysConfigData.sys_mode_freq.table[OCC_MODE_WOF_BASE]);
     G_opal_static_table.config.puturbo  = proc_freq2pstate(G_proc_fmax_mhz);
 }
 
