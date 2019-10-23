@@ -110,7 +110,10 @@ typedef struct __attribute__ ((packed))
 }mnfg_emul_oversub_rsp_t;
 
 #define MFG_LIST_SENSOR_VERSION 0
-#define MFG_MAX_NUM_SENSORS 50 // 20 bytes per sensor, 4k response packet (4k stack is limiting factor here).
+// max number of sensors that can be returned with mfg test list sensors command
+// subtract 2 bytes for non-sensor data fields in return data
+// subtract 1 from number of sensors to allow +1 query to detect truncation
+#define MFG_MAX_NUM_SENSORS ( ((CMDH_FSP_RSP_DATA_SIZE-2) / sizeof(sensorQueryList_t)) - 1 )
 
 // Used by mfg to get sensor data
 typedef struct __attribute__ ((packed))
@@ -124,20 +127,13 @@ typedef struct __attribute__ ((packed))
     uint16_t    type;
 }cmdh_mfg_list_sensors_query_t;
 
-typedef struct __attribute__ ((packed))
-{
-    uint16_t    gsid;
-    char        name[MAX_SENSOR_NAME_SZ]; //16 bytes
-    uint16_t    sample;
-}cmdh_mfg_sensor_rec_t;
-
 // Used by OCC firmware to respond to the "MFG_LIST_SENSORS" mfg command.  Follows the TMGT/OCC specification.
 typedef struct __attribute__ ((packed))
 {
     struct                  cmdh_fsp_rsp_header;
     uint8_t                 truncated;
     uint8_t                 num_sensors;
-    cmdh_mfg_sensor_rec_t   sensor[MFG_MAX_NUM_SENSORS];
+    sensorQueryList_t       sensor[MFG_MAX_NUM_SENSORS];
     uint16_t                checksum;
 }cmdh_mfg_list_sensors_resp_t;
 

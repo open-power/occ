@@ -212,14 +212,13 @@ struct sensor
 
 /*****************************************************************************/
 // Sensor Query list structure used for querying sensor data
-struct sensorQueryList
+// format MUST match sensor data set in mfg list sensors command in OCC interface spec.
+typedef struct __attribute__ ((packed))
 {
     uint16_t gsid; // Global Sensor ID
+    char name[MAX_SENSOR_NAME_SZ]; // 16 byte Sensor Name
     uint16_t sample; // Latest sample of the sensor
-    char name[MAX_SENSOR_NAME_SZ]; // Sensor Name
-};
-
-typedef struct sensorQueryList sensorQueryList_t;
+}sensorQueryList_t;
 
 /*****************************************************************************/
 // Sensor List Structures used to build tables of sensor pointers.

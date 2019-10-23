@@ -352,7 +352,6 @@ uint8_t cmdh_mnfg_list_sensors(const cmdh_fsp_cmd_t * i_cmd_ptr,
     uint16_t                        l_type = 0;
     uint16_t                        l_location = 0;
     uint16_t                        l_start_gsid;
-    uint16_t                        i = 0;
     uint16_t                        l_resp_data_length = 0;
     uint16_t                        l_datalength;
     uint16_t                        l_num_of_sensors = MFG_MAX_NUM_SENSORS + 1;
@@ -360,7 +359,6 @@ uint8_t cmdh_mnfg_list_sensors(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                     (cmdh_mfg_list_sensors_query_t*) i_cmd_ptr;
     cmdh_mfg_list_sensors_resp_t    *l_resp_ptr =
                                     (cmdh_mfg_list_sensors_resp_t*) o_rsp_ptr;
-    sensorQueryList_t               l_sensor_list[MFG_MAX_NUM_SENSORS + 1];
     errlHndl_t                      l_err = NULL;
 
     do
@@ -406,16 +404,21 @@ uint8_t cmdh_mnfg_list_sensors(const cmdh_fsp_cmd_t * i_cmd_ptr,
                   l_type,
                   l_location);
 
+        // Clear out the sensor fields in response buffer
+        memset((void*) &(l_resp_ptr->sensor[0]), 0, (sizeof(cmdh_dbug_sensor_list_t)*MFG_MAX_NUM_SENSORS) );
+
         // Initialize the sensor query arguments
+        // To take advantage of full 4K response buffer copy directly to response buffer
+        // Cannot use a local to copy into first as stack size limits creating a local buffer of 4K
         const querySensorListArg_t l_qsl_arg =
         {
-            l_start_gsid,           // i_startGsid - passed by the caller
-            l_cmd_ptr->present,     // i_present - passed by the caller
-            l_type,                 // i_type - passed by the caller
-            l_location,             // i_loc - passed by the caller
-            &l_num_of_sensors,      // io_numOfSensors
-            l_sensor_list,          // o_sensors
-            NULL                    // o_sensorInfoPtr - not needed
+            l_start_gsid,                               // i_startGsid - passed by the caller
+            l_cmd_ptr->present,                         // i_present - passed by the caller
+            l_type,                                     // i_type - passed by the caller
+            l_location,                                 // i_loc - passed by the caller
+            &l_num_of_sensors,                          // io_numOfSensors
+            (sensorQueryList_t*)&l_resp_ptr->sensor[0], // o_sensors
+            NULL                                        // o_sensorInfoPtr - not needed
         };
 
         // Get the list of sensors
@@ -430,6 +433,7 @@ uint8_t cmdh_mnfg_list_sensors(const cmdh_fsp_cmd_t * i_cmd_ptr,
             // Commit error log
             commitErrl(&l_err);
             l_rc = ERRL_RC_INTERNAL_FAIL;
+            l_num_of_sensors = 0;
             break;
         }
         else
@@ -451,24 +455,13 @@ uint8_t cmdh_mnfg_list_sensors(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
                 l_resp_ptr->truncated = 0;
             }
-
-            // Clear out the sensor fields
-            memset((void*) &(l_resp_ptr->sensor[0]), 0, (sizeof(cmdh_dbug_sensor_list_t)*l_num_of_sensors) );
-
-            // Populate the response data packet
-            l_resp_ptr->num_sensors = l_num_of_sensors;
-            for (i=0; i<l_num_of_sensors; i++)
-            {
-                l_resp_ptr->sensor[i].gsid = l_sensor_list[i].gsid;
-                l_resp_ptr->sensor[i].sample = l_sensor_list[i].sample;
-                strcpy(l_resp_ptr->sensor[i].name, l_sensor_list[i].name);
-            }
         }
 
     }while(0);
 
     // Populate the response data header
-    l_resp_data_length = 2 + l_num_of_sensors * sizeof(cmdh_mfg_sensor_rec_t);
+    l_resp_ptr->num_sensors = l_num_of_sensors;
+    l_resp_data_length = 2 + l_num_of_sensors * sizeof(sensorQueryList_t);
     G_rsp_status = l_rc;
     o_rsp_ptr->data_length[0] = ((uint8_t *)&l_resp_data_length)[0];
     o_rsp_ptr->data_length[1] = ((uint8_t *)&l_resp_data_length)[1];
