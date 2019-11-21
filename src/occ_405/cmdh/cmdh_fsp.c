@@ -70,19 +70,11 @@ LINEAR_WINDOW_RD_BUFFER(fsp_rsp_t G_fsp_rsp);
 // doorbell placeholder data.
 
 // Since the entirety of our SRAM is marked as cacheable, we need to use
-// the non-cacheable address alias of our command and response buffers when
-// not using the MMU.
-#if PPC405_MMU_SUPPORT
-fsp_msg_t G_fsp_msg = {
-    .cmd = (fsp_cmd_t *) CMDH_LINEAR_WINDOW_BASE_ADDRESS,
-    .rsp = (fsp_rsp_t *) CMDH_OCC_RESPONSE_BASE_ADDRESS,
-};
-#else
+// the non-cacheable address alias of our command and response buffers
 fsp_msg_t G_fsp_msg = {
     .cmd = (fsp_cmd_t *) (CMDH_LINEAR_WINDOW_BASE_ADDRESS - 0x08000000),
     .rsp = (fsp_rsp_t *) (CMDH_OCC_RESPONSE_BASE_ADDRESS  - 0x10000000),
 };
-#endif
 
 // Temporary storage used by our SSX_PANIC macro
 uint32_t __occ_panic_save_r3;

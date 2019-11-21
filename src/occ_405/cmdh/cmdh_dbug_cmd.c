@@ -275,11 +275,6 @@ void cmdh_dbug_peek (const cmdh_fsp_cmd_t * i_cmd_ptr,
 
     if (G_smf_mode == false)
     {
-#if PPC405_MMU_SUPPORT
-        static Ppc405MmuMap       L_mmuMapHomer;
-        static Ppc405MmuMap       L_mmuMapCommon;
-#endif
-
         switch(l_type)
         {
             case 0x01:    // OCI Direct Read
@@ -356,37 +351,7 @@ void cmdh_dbug_peek (const cmdh_fsp_cmd_t * i_cmd_ptr,
                 dcache_flush( (void *) l_addr, l_len );
                 l_len = 0;
                 break;
-#if PPC405_MMU_SUPPORT
-            case 0x05:   // MMU Map Mainstore
-                // Map mainstore to oci space so that we can peek at it
 
-                // HOMER Image
-                ppc405_mmu_map(HOMER_BASE_ADDRESS, // Mainstore address (BAR0, offset 0)
-                               HOMER_BASE_ADDRESS, // OCI address 0x0 (BAR0)
-                               HOMER_SPACE_SIZE,   // Size
-                               0,                  // TLB hi flags
-                               0,                  // TLB lo flags
-                               &L_mmuMapHomer); // map pointer
-
-                // COMMON Image = Communal OCC Memory Map On Node
-                ppc405_mmu_map(COMMON_BASE_ADDRESS, // Mainstore address (BAR2, offset 0)
-                               COMMON_BASE_ADDRESS, // OCI address 0xA0000000
-                               COMMON_SPACE_SIZE,   // Size
-                               0,                              // TLB hi flags
-                               0,                              // TLB lo flags
-                               &L_mmuMapCommon); // map pointer
-                l_len = 0;
-                break;
-            case 0x06:   // MMU UnMap Mainstore
-                // HOMER Image
-                ppc405_mmu_unmap(&L_mmuMapHomer);
-
-                // COMMON Image = Communal OCC Memory Map On Node
-                ppc405_mmu_unmap(&L_mmuMapCommon);
-
-                l_len = 0;
-                break;
-#endif
             default:
                 // Didn't do anything, respond with zero bytes
                 l_len = 0;

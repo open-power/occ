@@ -62,13 +62,8 @@ homer_rc_t __attribute__((optimize("O1"))) homer_hd_map_read_unmap(const homer_r
                                    void                    * const o_host_data,
                                    int                     * const o_ssx_rc)
 {
-#if PPC405_MMU_SUPPORT
-    Ppc405MmuMap l_mmuMapHomer = 0;
-#endif
-
     homer_rc_t l_rc = HOMER_SUCCESS;
-    // TODO - RTC 213675
-    //occHostConfigDataArea_t *l_hdcfg_data = (occHostConfigDataArea_t *) HOMER_HD_ADDRESS;
+    occHostConfigDataArea_t *l_hdcfg_data = (occHostConfigDataArea_t *) HOMER_HD_ADDRESS;
 
     // Validate the pointers
     if (!o_host_data || !o_ssx_rc || ((uint32_t)o_host_data % 4))
@@ -79,70 +74,40 @@ homer_rc_t __attribute__((optimize("O1"))) homer_hd_map_read_unmap(const homer_r
     {
         *o_ssx_rc = SSX_OK;
 
-#if PPC405_MMU_SUPPORT
-
-        /*
-         * Map to mainstore at HOMER host data offset. The first parameter is
-         * the effective address where the data can be accessed once mapped, the
-         * second parameter is the real address in main memory (PBA adjusted)
-         * where the data is located.
-         */
-        *o_ssx_rc = ppc405_mmu_map((SsxAddress)l_hdcfg_data,
-                                   (SsxAddress)(HOMER_HD_ADDRESS),
-                                   sizeof(occHostConfigDataArea_t),
-                                   0,
-                                   0,
-                                   &l_mmuMapHomer);
-#endif
         if (SSX_OK != *o_ssx_rc)
         {
             l_rc = HOMER_SSX_MAP_ERR;
         }
         else
         {
-            // TODO - RTC 213675
-#if 0
-            // Check version, if ok handle ID requested. We need to support
-            // current version as well as older ones
-            if (HOMER_VERSION_P9 != l_hdcfg_data->version)
+            // Check version (must be backwards compatible for the program release)
+            if (HOMER_VERSION_P10 != l_hdcfg_data->version)
             {
                 l_rc = HOMER_UNSUPPORTED_HD_VERSION;
-                TRAC_ERR("homer_hd_map_read_unmap: expected version 0x%02X, but read 0x%02X", HOMER_VERSION_P9, l_hdcfg_data->version);
+                TRAC_ERR("homer_hd_map_read_unmap: expected version 0x%02X, but read 0x%02X",
+                         HOMER_VERSION_P10, l_hdcfg_data->version);
             }
             else
-#endif
             {
-                // HOMER_VERSION_P9 == l_hdcfg_data->version
                 switch (i_id)
                 {
-                case HOMER_VERSION:
-                    //*(uint32_t *)o_host_data = l_hdcfg_data->version;
-                    *(uint32_t *)o_host_data = HOMER_VERSION_P9; // TODO - RTC 213675
-                    break;
-                case HOMER_NEST_FREQ:
-                    //*(uint32_t *)o_host_data = l_hdcfg_data->nestFrequency;
-                    *(uint32_t *)o_host_data = PPC405_TIMEBASE_HZ; // TODO - RTC 213675
-                    break;
-                case HOMER_INT_TYPE:
-                    //*(uint32_t *)o_host_data = l_hdcfg_data->occInterruptType;
-                    *(uint32_t *)o_host_data = FSP_SUPPORTED_OCC; // TODO - RTC 213675
-                    break;
-                case HOMER_SMF_MODE:
-                    //*(uint32_t *)o_host_data = l_hdcfg_data->smfMode;
-                    break;
-                default:
-                    l_rc = HOMER_UNKNOWN_ID;
-                    break;
+                    case HOMER_VERSION:
+                        *(uint32_t *)o_host_data = l_hdcfg_data->version;
+                        break;
+                    case HOMER_NEST_FREQ:
+                        *(uint32_t *)o_host_data = l_hdcfg_data->nestFrequency;
+                        break;
+                    case HOMER_INT_TYPE:
+                        *(uint32_t *)o_host_data = l_hdcfg_data->occInterruptType;
+                        break;
+                    case HOMER_SMF_MODE:
+                        *(uint32_t *)o_host_data = l_hdcfg_data->smfMode;
+                        break;
+                    default:
+                        l_rc = HOMER_UNKNOWN_ID;
+                        break;
                 }
             }
-#if PPC405_MMU_SUPPORT
-            // Unmap the HOMER before returning to caller
-            *o_ssx_rc = ppc405_mmu_unmap(&l_mmuMapHomer);
-            if ((SSX_OK != *o_ssx_rc) && (HOMER_SUCCESS == l_rc))
-            {
-                l_rc = HOMER_SSX_UNMAP_ERR;
-            }
-#endif
         }
     }
 

@@ -75,7 +75,7 @@ enum smf_mode_e
 // Version(s) of HOMER host data currently supported
 typedef enum homer_version
 {
-    HOMER_VERSION_P9    = 0x90,
+    HOMER_VERSION_P10   = 0xA0,
 } homer_version_t;
 
 // ID of host data variables

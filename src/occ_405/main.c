@@ -161,7 +161,6 @@ extern uint8_t g_trac_inf_buffer[];
 extern uint8_t g_trac_imp_buffer[];
 extern uint8_t g_trac_err_buffer[];
 
-void create_tlb_entry(uint32_t address, uint32_t size);
 
 /*
  * Function Specification
@@ -187,99 +186,9 @@ void check_runtime_environment(void)
         // slow down RTL for Simics
         G_mics_per_tick = SIMICS_MICS_PER_TICK;
         G_dcom_tx_apss_wait_time = SIMICS_MICS_PER_TICK * 4 / 10;
-
-        // Same comment as above about lower 32-bits. Bit 62 can be toggled
-        // on or off (in Simics) to indicate for which APSS specification the
-        // model is configured.
-        G_shared_gpe_data.spipss_spec_p9 =
-            (0 != (flags & 0x0000000000000002) ) ? FALSE : TRUE;
-    }
-    else
-    {
-        G_shared_gpe_data.spipss_spec_p9 = 0;
     }
 }
 
-/*
- * Function Specification
- *
- * Name: create_tlb_entry
- *
- * Description: Creates a TLB entry in the 405 processor to access PGPE space.
- *              The TLB entry has read only access, and is cache-inhibited.
- *              This call takes care of pages alignment
- *              and adds additional pages in case the requested
- *              space crosses page boundaries.
- *
- *              will result in panic if the TLB entry allocation
- *              fails.
- *
- * End Function Specification
- */
-
-#define PAGE_SIZE PPC405_PAGE_SIZE_MIN
-#define PAGE_ALIGNED_ADDRESS(addr)     (addr & ~((uint32_t)(PAGE_SIZE-1)))
-#define PAGE_ALIGNED_SIZE(sz)          ((uint32_t)PAGE_SIZE*(((uint32_t)sz/PAGE_SIZE)+1))
-
-void create_tlb_entry(uint32_t address, uint32_t size)
-{
-#if PPC405_MMU_SUPPORT
-    int      l_rc = SSX_OK;
-    uint32_t tlb_entry_address, tlb_entry_size;   // address and size that guarantee page alignment
-
-    tlb_entry_address = PAGE_ALIGNED_ADDRESS(address);
-
-    if ((address + (size%PPC405_PAGE_SIZE_MIN)) >=
-        (tlb_entry_address + PPC405_PAGE_SIZE_MIN))
-    {
-        tlb_entry_size = PAGE_ALIGNED_SIZE(size+PPC405_PAGE_SIZE_MIN);
-    }
-    else
-    {
-        tlb_entry_size = PAGE_ALIGNED_SIZE(size);
-    }
-
-    // define DTLB for page aligned address and size
-    l_rc = ppc405_mmu_map(tlb_entry_address,
-                          tlb_entry_address,
-                          tlb_entry_size,
-                          0,
-                          TLBLO_I,         //Read-only, Cache-inhibited
-                          NULL);
-    if(l_rc == SSX_OK)
-    {
-        MAIN_TRAC_IMP("Created TLB entry for Address[0x%08x]"
-                      "TLB Page Address[0x%08x], TLB Entry size[0x%08x]",
-                      address, tlb_entry_address, tlb_entry_size);
-    }
-    else
-    {
-        MAIN_TRAC_ERR("Failed to create TLB entry,"
-                      "TLB Page Address[0x%08x], TLB Entry size[0x%08x], rc[0x%08x]",
-                      tlb_entry_address, tlb_entry_size, l_rc);
-
-        /* @
-         * @errortype
-         * @moduleid    CREATE_TLB_ENTRY
-         * @reasoncode  SSX_GENERIC_FAILURE
-         * @userdata1   ppc405_mmu_map return code
-         * @userdata2   address for which a TLB entry is created
-         * @userdata4   ERC_TLB_ENTRY_CREATION_FAILURE
-         * @devdesc     SSX semaphore related failure
-         */
-        errlHndl_t l_err = createErrl(CREATE_TLB_ENTRY,               //modId
-                                      SSX_GENERIC_FAILURE,            //reasoncode
-                                      ERC_TLB_ENTRY_CREATION_FAILURE, //Extended reason code
-                                      ERRL_SEV_UNRECOVERABLE,         //Severity
-                                      NULL,                           //Trace Buf
-                                      DEFAULT_TRACE_SIZE,             //Trace Size
-                                      l_rc,                           //userdata1
-                                      address);                       //userdata2
-
-        REQUEST_RESET(l_err);
-    }
-#endif
-}
 
 /*
  * Function Specification
@@ -531,7 +440,7 @@ bool read_pgpe_header(void)
             G_hcode_elog_table_slots = 0;
             G_hcode_elog_table = 0;
             G_pgpe_shared_sram_V_I_readings = false;
-            MAIN_TRAC_IMP("Using fake PGPE header: shared sram addr[0x%08X]",
+            MAIN_TRAC_IMP("read_pgpe_header: Using fake PGPE header: shared sram addr[0x%08X]",
                           G_pgpe_header.shared_sram_addr);
         }
         else if (PGPE_MAGIC_NUMBER_10 == magic_number)
@@ -728,9 +637,6 @@ bool read_ppmr_header(void)
 
     MAIN_TRAC_INFO("read_ppmr_header(0x%08X)", PPMR_ADDRESS_HOMER);
 
-    // create a DTLB entry for the PPMR image header
-    create_tlb_entry(PPMR_ADDRESS_HOMER, sizeof(ppmr_header_t));
-
     do{
         // use block copy engine to read the PPMR header
         BceRequest pba_copy;
@@ -855,7 +761,6 @@ bool read_oppb_params()
     const uint32_t oppb_address = PPMR_ADDRESS_HOMER + G_ppmr_header.oppb_offset;
 
     MAIN_TRAC_INFO("read_oppb_params(0x%08X)", oppb_address);
-    create_tlb_entry(oppb_address, sizeof(OCCPstateParmBlock_t));
 
     do{
         // use block copy engine to read the OPPB header
@@ -929,51 +834,29 @@ bool read_oppb_params()
             break;
         }
 
-#if 0
-        // TODO: RTC 213675
-        MAIN_TRAC_INFO("read_oppb_params: G_oppb.attr.pstates_enabled=%p (0x%04X), %p (0x%04X)",
-                        &(G_oppb.attr.fields.pstates_enabled), (uint32_t)&G_oppb.attr.fields.pstates_enabled - (uint32_t)&G_oppb,
-                        &(G_oppb.attr.fields.throttle_control_enabled), (uint32_t)&G_oppb.attr.fields.throttle_control_enabled - (uint32_t)&G_oppb);
-        MAIN_TRAC_INFO("read_oppb_params: G_oppb.attr.pstates_enabled=0x%02X, 0x%02X, 0x%02X 0x%02X...",
-                        G_oppb.attr.fields.pstates_enabled, G_oppb.attr.fields.resclk_enabled,
-                        G_oppb.attr.fields.wof_enabled, G_oppb.attr.fields.dds_enabled);
+        MAIN_TRAC_INFO("read_oppb_params: G_oppb.attr.pstates_enabled=0x%02X, wof_enabled=0x%02X, dds_enabled=0x%02X",
+                        G_oppb.attr.fields.pstates_enabled, G_oppb.attr.fields.wof_enabled, G_oppb.attr.fields.dds_enabled);
 
-        MAIN_TRAC_INFO("read_oppb_params: G_oppb.operating_points[0]=%p (0x%04X), %p (0x%04X)",
-                        &G_oppb.operating_points[0].frequency_mhz, (uint32_t)&G_oppb.operating_points[0].frequency_mhz - (uint32_t)&G_oppb,
-                        &G_oppb.operating_points[1].frequency_mhz, (uint32_t)&G_oppb.operating_points[1].frequency_mhz - (uint32_t)&G_oppb);
-        MAIN_TRAC_INFO("read_oppb_params: G_oppb.operating_points[0]=0x%08XMhz, [1]=0x%08XMhz",
+        MAIN_TRAC_INFO("read_oppb_params: G_oppb.operating_points[0]=%4d, %4d, %4d, %4d Mhz",
                         G_oppb.operating_points[0].frequency_mhz,
-                        G_oppb.operating_points[1].frequency_mhz);
-
-        MAIN_TRAC_INFO("read_oppb_params: G_oppb.vdd_sysparm=%p (0x%04X), iddq=%p (0x%04X)",
-                        &G_oppb.vdd_sysparm, (uint32_t)&G_oppb.vdd_sysparm - (uint32_t)&G_oppb,
-                        &G_oppb.iddq, (uint32_t)&G_oppb.iddq - (uint32_t)&G_oppb);
-
-        MAIN_TRAC_INFO("read_oppb_params: G_oppb.frequency_min_khz=%p (0x%04X), step=%p (0x%04X)",
-                        &G_oppb.frequency_min_khz, (uint32_t)&G_oppb.frequency_min_khz - (uint32_t)&G_oppb,
-                        &G_oppb.frequency_step_khz, (uint32_t)&G_oppb.frequency_step_khz - (uint32_t)&G_oppb);
-
-        const unsigned int num_words = oppb_length/4;
-        const uint32_t * L_bcdata = (uint32_t*)&G_oppb;
-        unsigned int index;
-        for (index = 0; index < num_words; index += 4)
-        {
-            MAIN_TRAC_INFO("G_oppb[0x%04X]: %08X %08X %08X %08X", index*4,
-                           L_bcdata[index],
-                           L_bcdata[index+1],
-                           L_bcdata[index+2],
-                           L_bcdata[index+3]);
-        }
-#endif
+                        G_oppb.operating_points[1].frequency_mhz,
+                        G_oppb.operating_points[2].frequency_mhz,
+                        G_oppb.operating_points[3].frequency_mhz);
+        MAIN_TRAC_INFO("read_oppb_params: G_oppb.operating_points[4]=%4d, %4d, %4d, %4d Mhz",
+                        G_oppb.operating_points[4].frequency_mhz,
+                        G_oppb.operating_points[5].frequency_mhz,
+                        G_oppb.operating_points[6].frequency_mhz,
+                        G_oppb.operating_points[7].frequency_mhz);
 
         // Validate frequencies
         // frequency_min_khz frequency_max_khz frequency_step_khz pstate_min
         if ((G_oppb.frequency_min_khz == 0) || (G_oppb.frequency_max_khz == 0) ||
-            (G_oppb.frequency_step_khz == 0) || (G_oppb.pstate_min == 0) ||
+            (G_oppb.frequency_step_khz == 0) ||
+            (G_oppb.pstate_min == 0) || (G_oppb.pstate_min > 0xFF) ||
             (G_oppb.frequency_min_khz > G_oppb.frequency_max_khz))
         {
             // The magic number is invalid .. Invalid or corrupt OPPB image header
-            MAIN_TRAC_ERR("read_oppb_header: Invalid frequency data: min[%d], max[%d], step[%d], pmin[%d] kHz",
+            MAIN_TRAC_ERR("read_oppb_header: Invalid frequency data: min[%d], max[%d], step[%d] kHZ, pmin[0x%02X]",
                           G_oppb.frequency_min_khz, G_oppb.frequency_max_khz,
                           G_oppb.frequency_step_khz, G_oppb.pstate_min);
             /* @
@@ -991,18 +874,14 @@ bool read_oppb_params()
             break;
         }
 
-        MAIN_TRAC_IMP("read_oppb_header: PGPE Frequency data: min[%dkHz], max[%dkHz], step[%dkHz], pState min[%d]",
+        MAIN_TRAC_IMP("read_oppb_header: PGPE Frequency data: min[%d], max[%d], step[%d] kHz, pState min[0x%02X]",
                           G_oppb.frequency_min_khz, G_oppb.frequency_max_khz,
                           G_oppb.frequency_step_khz, G_oppb.pstate_min);
+
         // Confirm whether we have wof support
-        // TODO - RTC 209558 - wof_enabled is part of GPPB: GlobalPstateParmBlock_t (attr.wof_enabled)
-#if 1
-        MAIN_TRAC_INFO("read_oppb_header: WOF is disabled");
-#else
-        if(!(G_oppb.wof.wof_enabled))
+        if(!(G_oppb.attr.fields.wof_enabled))
         {
-            MAIN_TRAC_INFO("OPPB has WOF disabled.(%d)",
-                    G_oppb.wof.wof_enabled);
+            MAIN_TRAC_INFO("OPPB has WOF disabled.");
             set_clear_wof_disabled( SET,
                                     WOF_RC_OPPB_WOF_DISABLED,
                                     ERC_WOF_OPPB_WOF_DISABLED );
@@ -1010,9 +889,8 @@ bool read_oppb_params()
         else
         {
             MAIN_TRAC_INFO("OPPB has WOF enabled(%d)",
-                    G_oppb.wof.wof_enabled);
+                           G_oppb.attr.fields.wof_enabled);
         }
-#endif
 
     } while (0);
 
@@ -1058,84 +936,6 @@ bool read_oppb_params()
 /*
  * Function Specification
  *
- * Name: read_gppb_header
- *
- * Description: Read GPPB header
- *
- * Returns: TRUE if read was successful, else FALSE
- *
- * End Function Specification
- */
-bool read_gppb_header(void)
-{
-    uint32_t l_reasonCode = 0;
-    uint32_t l_extReasonCode = OCC_NO_EXTENDED_RC;
-    uint32_t userdata1 = 0;
-    uint32_t userdata2 = 0;
-    uint64_t magic_number = 0;
-
-    MAIN_TRAC_INFO("read_gppb_header(0x%08X)", G_pgpe_header.global_pstate_parm_block_sram_addr);
-    do
-    {
-        // verify the validity of the magic number
-        magic_number = in64(G_pgpe_header.global_pstate_parm_block_sram_addr);
-        if (PGPE_MAGIC_NUMBER_10 == magic_number)
-        {
-        }
-        else
-        {
-            // The Magic number is invalid .. Invalid or corrupt PGPE image header
-            MAIN_TRAC_ERR("read_gppb_header: Invalid GPPB Magic number. Address[0x%08X], Magic Number[0x%08X%08X]",
-                          PGPE_HEADER_ADDR, WORD_HIGH(magic_number), WORD_LOW(magic_number));
-#if 0
-            // TODO: RTC 213675
-            /* @
-             * @errortype
-             * @moduleid    READ_GPPB_HEADER
-             * @reasoncode  INVALID_MAGIC_NUMBER
-             * @userdata1   High order 32 bits of retrieved PGPE magic number
-             * @userdata2   Low order 32 bits of retrieved PGPE magic number
-             * @userdata4   OCC_NO_EXTENDED_RC
-             * @devdesc     Invalid magic number in PGPE header
-             */
-            l_reasonCode = INVALID_MAGIC_NUMBER;
-            userdata1 = WORD_HIGH(magic_number);
-            userdata2 = WORD_LOW(magic_number);
-            break;
-#endif
-        }
-    } while (0);
-
-    if ( l_reasonCode )
-    {
-        errlHndl_t l_errl = createErrl(READ_GPPB_HEADER,         //modId
-                                       l_reasonCode,             //reasoncode
-                                       l_extReasonCode,          //Extended reason code
-                                       ERRL_SEV_UNRECOVERABLE,   //Severity
-                                       NULL,                     //Trace Buf
-                                       DEFAULT_TRACE_SIZE,       //Trace Size
-                                       userdata1,                //userdata1
-                                       userdata2);               //userdata2
-
-        // Callout firmware
-        addCalloutToErrl(l_errl,
-                         ERRL_CALLOUT_TYPE_COMPONENT_ID,
-                         ERRL_COMPONENT_ID_FIRMWARE,
-                         ERRL_CALLOUT_PRIORITY_HIGH);
-
-        REQUEST_RESET(l_errl);
-        return FALSE;
-    }
-
-    // Success
-    return TRUE;
-
-} // end read_gppb_header()
-
-
-/*
- * Function Specification
- *
  * Name: read_hcode_headers
  *
  * Description: Read and save hcode header data
@@ -1156,7 +956,7 @@ void read_hcode_headers()
         if(G_present_cores == 0)
         {
             TRAC_INFO("read_hcode_headers: No configured cores detected."
-                      " Skipping OPPB, PGPE, WOF, and GPPB headers");
+                      " Skipping OPPB, PGPE, and WOF headers");
             set_clear_wof_disabled( SET,
                                     WOF_RC_NO_CONFIGURED_CORES,
                                     ERC_WOF_NO_CONFIGURED_CORES );
@@ -1172,10 +972,6 @@ void read_hcode_headers()
             if (read_pgpe_header() == FALSE) break;
             CHECKPOINT(PGPE_IMAGE_HEADER_READ);
 
-            // Read Global Pstate Parameter Block header
-            if (read_gppb_header() == FALSE) break;
-            CHECKPOINT(GPPB_IMAGE_HEADER_READ);
-
             // Extract important WOF data into global space
             // TODO: RTC 209558
 #if 0
@@ -1185,14 +981,6 @@ void read_hcode_headers()
             set_clear_wof_disabled( CLEAR,
                                     WOF_RC_NO_CONFIGURED_CORES,
                                     ERC_WOF_NO_CONFIGURED_CORES );
-        }
-
-        // PGPE Beacon is not implemented in simics
-        if (!G_simics_environment)
-        {
-            // define DTLB for OCC/PGPE shared SRAM, which enables access
-            // to OCC-PGPE Shared SRAM space, including pgpe_beacon
-            create_tlb_entry(G_pgpe_header.shared_sram_addr, G_pgpe_header.shared_sram_length);
         }
 
     } while(0);
@@ -1919,119 +1707,6 @@ int main(int argc, char **argv)
     // First, check what environment we are running on (Simics vs. HW).
     check_runtime_environment();
 
-    // ----------------------------------------------------
-    // Initialize TLB for Linear Window access here so we
-    // can write checkpoints into the fsp response buffer.
-    // ----------------------------------------------------
-
-#if PPC405_MMU_SUPPORT
-    l_ssxrc = ppc405_mmu_map(
-            OSD_ADDR,
-            OSD_ADDR,
-//          OSD_ADDR | 0x18000000,
-            OSD_TOTAL_SHARED_DATA_BYTES,
-            0,
-            TLBLO_WR | TLBLO_I,
-            NULL
-            );
-
-    if(l_ssxrc != SSX_OK)
-    {
-        //failure means we can't talk to FSP.
-        SSX_PANIC(0x01000001);
-    }
-
-#if TRAC_TO_SIMICS
-    l_ssxrc = ppc405_mmu_map(
-            SIMICS_STDIO_BASE,
-            SIMICS_STDIO_BASE,
-            1024,
-            0,
-            TLBLO_WR | TLBLO_I,
-            NULL
-            );
-
-    if(l_ssxrc != SSX_OK)
-    {
-        //failure means we can't talk to FSP.
-        SSX_PANIC(0x01000001);
-    }
-#endif  /* TRAC_TO_SIMICS */
-
-    l_ssxrc = ppc405_mmu_map(
-            CMDH_OCC_RESPONSE_BASE_ADDRESS,
-            CMDH_OCC_RESPONSE_BASE_ADDRESS,
-            CMDH_FSP_RSP_SIZE,
-            0,
-            TLBLO_WR | TLBLO_I,
-            NULL
-            );
-
-    if(l_ssxrc != SSX_OK)
-    {
-        //failure means we can't talk to FSP.
-        SSX_PANIC(0x01000001);
-    }
-
-    l_ssxrc = ppc405_mmu_map(
-            CMDH_LINEAR_WINDOW_BASE_ADDRESS,
-            CMDH_LINEAR_WINDOW_BASE_ADDRESS,
-            CMDH_FSP_CMD_SIZE,
-            0,
-            TLBLO_I,
-            NULL
-            );
-
-    if(l_ssxrc != SSX_OK)
-    {
-        //failure means we can't talk to FSP.
-        SSX_PANIC(0x01000002);
-    }
-
-    l_ssxrc = ppc405_mmu_map(
-            TRACE_BUFFERS_START_ADDR,
-            TRACE_BUFFERS_START_ADDR,
-            ALL_TRACE_BUFFERS_SZ,
-            0,
-            TLBLO_WR | TLBLO_I,
-            NULL
-            );
-
-    if(l_ssxrc != SSX_OK)
-    {
-        //failure means there will be no trace data for debug
-        SSX_PANIC(0x01000003);
-    }
-
-    // Setup the TLB for writing to the FIR parms section
-    l_ssxrc = ppc405_mmu_map(FIR_PARMS_SECTION_BASE_ADDRESS,
-                             FIR_PARMS_SECTION_BASE_ADDRESS,
-                             FIR_PARMS_SECTION_SIZE,
-                             0,
-                             TLBLO_WR | TLBLO_I,
-                             NULL);
-
-    if (l_ssxrc != SSX_OK)
-    {
-        // Panic, this section is required for FIR collection on checkstops
-        SSX_PANIC(0x01000003);
-    }
-
-    // Setup the TLB for writing to the FIR heap section
-    l_ssxrc = ppc405_mmu_map(FIR_HEAP_SECTION_BASE_ADDRESS,
-                             FIR_HEAP_SECTION_BASE_ADDRESS,
-                             FIR_HEAP_SECTION_SIZE,
-                             0,
-                             TLBLO_WR | TLBLO_I,
-                             NULL);
-
-    if (l_ssxrc != SSX_OK)
-    {
-        // Panic, this section is required for FIR collection on checkstops
-        SSX_PANIC(0x01000004);
-    }
-#endif
-
     CHECKPOINT_INIT();
     CHECKPOINT(MAIN_STARTED);
 
@@ -2128,14 +1803,6 @@ int main(int argc, char **argv)
     else
     {
         MAIN_TRAC_INFO("Currently running in Simics environment");
-        if(G_shared_gpe_data.spipss_spec_p9)
-        {
-            MAIN_TRAC_INFO("Using P9 Spec for APSS data gathering");
-        }
-        else
-        {
-            MAIN_TRAC_INFO("Using P8 Spec for APSS data gathering");
-        }
     }
 
     if(!G_ipl_time)

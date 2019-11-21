@@ -35,10 +35,6 @@
 #define APSS_RESET_GPIO (0x2000000000000000ull)
 
 
-// Default to Auto-2 for now, should get set when the mode
-// is initialized, and before any APSS data is gathered.
-uint8_t G_apss_mode = APSS_MODE_AUTO2;
-
 /*
  * Function Specification
  *
@@ -337,13 +333,6 @@ void apss_init_mode(ipc_msg_t* cmd, void* arg)
             regValue = regValue << 6;                   //Make space for GPIO port count
             regValue |= (args->config.numGpioPortsToRead) & 0x03;   //gg => Num of GPIO ports
             regValue = (regValue << 48) | 0x8C00000000000000; //Add Command at D15-D12
-            G_apss_mode = APSS_MODE_COMPOSITE;
-        }
-        else if (args->config.mode == APSS_MODE_AUTO2)
-        {
-            // Set Auto2 mode to scan all 16 ADC channels
-            regValue = 0x3FC0000000000000;
-            G_apss_mode = APSS_MODE_AUTO2;
         }
         else
         {

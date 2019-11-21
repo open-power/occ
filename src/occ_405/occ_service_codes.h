@@ -212,8 +212,6 @@ enum occExtReasonCode
 
     ERC_FW_ZERO_FREQ_LIMIT                      = 0x0090,
 
-    ERC_TLB_ENTRY_CREATION_FAILURE              = 0x00A0,
-
     ERC_AVSBUS_VDD_VOLTAGE_FAILURE              = 0x00AA,
     ERC_AVSBUS_VDD_CURRENT_FAILURE              = 0x00AB,
     ERC_AVSBUS_VDN_VOLTAGE_FAILURE              = 0x00AC,
@@ -301,11 +299,9 @@ enum occModuleId
     HMON_ROUTINE_MID                =  MAIN_COMP_ID | 0x0c,
     CMDH_DBUG_MID                   =  MAIN_COMP_ID | 0x0f,
     I2C_LOCK_UPDATE                 =  MAIN_COMP_ID | 0x10,
-    CREATE_TLB_ENTRY                =  MAIN_COMP_ID | 0x11,
     READ_PGPE_HEADER                =  MAIN_COMP_ID | 0x12,
     READ_PPMR_HEADER                =  MAIN_COMP_ID | 0x13,
     READ_OPPB_PARAMS                =  MAIN_COMP_ID | 0x14,
-    READ_GPPB_HEADER                =  MAIN_COMP_ID | 0x15,
 };
 
 #endif /* #ifndef _OCC_SERVICE_CODES_H_ */

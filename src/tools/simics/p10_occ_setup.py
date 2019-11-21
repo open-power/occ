@@ -1110,7 +1110,6 @@ def ValidateCmd(FLG_VRB, SeqNumExpected, FLG_LAST, flg_quiet):
                     ELOG_RC, elog = ReadSRAM("backplane0."+proc+".occ_cmp.oci_space.x 0x"+elogAddress+" 0x"+elogLength, FLG_VRB)
                     print("OCC SRC: 0x2A"+elog[2][:2].upper()+" / 0x"+elog[4][-2:]+elog[5][:2]+", Severity:0x"+elog[2][-2:]+", Actions:0x"+elog[3][:2]+"\n")
                     #hexDumpString(elog)
-                    RC = int("0x2A"+elog[2][:2].upper(),16)
             else:
                 # Not a poll command (and it has rsp data)
                 if (len(DataList) > 0):
@@ -1536,20 +1535,24 @@ def pgpe_trace(directory_arg, flg_verbose):
 
     # Determine where the string files is located
     parse_opts = ""
-    if os.path.isdir(directory_arg):
-        if os.path.isfile(directory_arg+"/trexStringFile"):
-            print("Using string file from: "+directory_arg+"/")
-            string_name = directory_arg+"/trexStringFile"
-            parse_opts = "-s "+string_name
-        else:
-            print("Using string file from OCC repo: "+directory_arg)
-            parse_opts = "-g "+directory_arg
-    elif os.path.isfile(directory_arg):
+    if directory_arg:
+        if os.path.isdir(directory_arg):
+            if os.path.isfile(directory_arg+"/trexStringFile"):
+                print("Using string file from: "+directory_arg+"/")
+                string_name = directory_arg+"/trexStringFile"
+                parse_opts = "-s "+string_name
+            else:
+                print("Using string file from OCC repo: "+directory_arg)
+                parse_opts = "-g "+directory_arg
+        elif os.path.isfile(directory_arg):
             print("Using string file: "+directory_arg)
             string_name = directory_arg
             parse_opts = "-s "+string_name
+        else:
+            print("WARNING: IGNORING argument: "+directory_arg+" (NOT a directory or a file)");
     else:
-        print("WARNING: IGNORING argument: "+directory_arg+" (NOT a directory or a file)");
+        if os.path.isfile("binaries/trexStringFile"):
+            parse_opts = "-s binaries/trexStringFile"
 
     # Parse the trace file
     command = "!"+tools_directory+"/ppe-trace.exe "+trace_filename+" > "+target_trace_directory+"/tracegpe2.bin "+parse_opts
@@ -1664,6 +1667,39 @@ def dump_occ_machine_state(flg_verbose):
     print("Additional Regs:")
     print("")
 
+    # OISR0/OIMR0 - PGPE Interrupts
+    command = "backplane0."+proc+".occ_cmp.ocb_base->ocb_oisr0"
+    print("==> " + command)
+    ReturnData = cli.quiet_run_command(command, output_mode = output_modes.formatted_text)
+    oisr0 = int(ReturnData[0])
+    print("OISR0: " + hex(oisr0))
+    bin_header("       ")
+    print("OISR0: " + int_to_bin_string(oisr0))
+    oisr0Array = [
+            "trace_trigger", "occ_error", "gpe2_error", "gpe3_error",
+            "check_stop_gpe2", "check_stop_gpe3", "occ_malf_alert", "pvref_error",
+            "ipi2", "ipi3", "debug_trigger", "spare",
+            "pbax_pgpe_attn", "pbax_pgpe_push0", "pbax_pgpe_push1", "pba_overcurrent_indicator",
+            "pmc_pcb_intr_type0_pend", "pmc_pcb_intr_type1_pend", "pmc_pcb_intr_type2_pend", "pmc_pcb_intr_type3_pend",
+            "pmc_pcb_intr_type4_pend", "pmc_pcb_intr_type5_pend", "pmc_pcb_intr_type6_pend", "pmc_pcb_intr_type7_pend",
+            "pmc_pcb_intr_type8_pend", "pmc_pcb_intr_type9_pend", "pmc_pcb_intr_typeA_pend", "pmc_pcb_intr_typeB_pend",
+            "pmc_pcb_intr_typeC_pend", "pmc_pcb_intr_typeD_pend", "pmc_pcb_intr_typeE_pend", "pmc_pcb_intr_typeF_pend",
+            ]
+    print("       " + parse_32bit(oisr0>>32, oisr0Array))
+    command = "backplane0."+proc+".occ_cmp.ocb_base->ocb_oimr0"
+    print("==> " + command)
+    ReturnData = cli.quiet_run_command(command, output_mode = output_modes.formatted_text)
+    oimr0 = int(ReturnData[0])
+    print("OIMR0: " + hex(oimr0))
+    bin_header("       ")
+    print("OIMR0: " + int_to_bin_string(oimr0))
+    print("       enabled: " + parse_32bit((~oimr0)>>32, oisr0Array))
+    merged = oisr0 & (~oimr0)
+    print("");
+    print("OIS&M0: " + int_to_bin_string(merged))
+    print("        " + parse_32bit(merged>>32, oisr0Array))
+
+    # OISR1/OIMR1 - OCC/405 Interrupts
     command = "backplane0."+proc+".occ_cmp.ocb_base->ocb_oisr1"
     print("==> " + command)
     ReturnData = cli.quiet_run_command(command, output_mode = output_modes.formatted_text)
@@ -1705,8 +1741,8 @@ def dump_occ_machine_state(flg_verbose):
     print("       enabled: " + parse_32bit((~oimr1)>>32, oisr1Array))
     merged = oisr1 & (~oimr1)
     print("");
-    print("OIS&M: " + int_to_bin_string(merged))
-    print("       " + parse_32bit(merged>>32, oisr1Array))
+    print("OIS&M1: " + int_to_bin_string(merged))
+    print("        " + parse_32bit(merged>>32, oisr1Array))
 
     return RC
 
@@ -1742,7 +1778,10 @@ def sensor_list(flg_verbose):
 
         # let simics run (if not already)
         if G_run_time > 0:
-            cli.quiet_run_command("run 2 s", output_mode = output_modes.formatted_text)
+            if L_pgpe_enabled:
+                cli.quiet_run_command("run 5 ms", output_mode = output_modes.formatted_text)
+            else:
+                cli.quiet_run_command("run 2 s", output_mode = output_modes.formatted_text)
 
         last_sensor = ReadPrint_OCCsensor(FLG_VRB=flg_verbose, SeqNum="00")
         # receive should update more_sensors and last_sensor
@@ -1762,9 +1801,15 @@ def send_occ_cmd(occ_cmd, occ_data, flg_verbose):
     retries = 2
     global G_run_time
     global LastCmd_SeqNum
+    timeout = 1
 
     if L_pgpe_enabled == 1:
         retries = 10
+        if occ_cmd == 0x20:
+            # SET STATE OR MODE takes longer
+            timeout = 50
+        else:
+            timeout = 5
 
     print("Sending 0x"+"{:02x}".format(occ_cmd)+" command to OCC");
 
@@ -1775,7 +1820,10 @@ def send_occ_cmd(occ_cmd, occ_data, flg_verbose):
     while retries > 0:
         if G_run_time > 0:
             # let simics run (if not already)
-            cli.quiet_run_command("run 1 s", output_mode = output_modes.formatted_text)
+            if L_pgpe_enabled:
+                cli.quiet_run_command("run "+str(timeout)+" ms", output_mode = output_modes.formatted_text)
+            else:
+                cli.quiet_run_command("run "+str(timeout)+" s", output_mode = output_modes.formatted_text)
 
         RC = rValidate_cmd_func("-C", occ_cmd, "-D", LastCmd_SeqNum, flg_verbose, "", "")
         if RC != 0:
@@ -2086,7 +2134,7 @@ new_command("occcmd",       # The name of the command - required
 #===============================================================================
 # Prep simics to run OCC code
 #===============================================================================
-def occ_init(flg_pgpe, flg_verbose):
+def occ_init(code_dir, flg_pgpe, flg_verbose):
     """Initialization to get OCC ready to run"""
     RC = 0
     OCC = 0
@@ -2095,146 +2143,260 @@ def occ_init(flg_pgpe, flg_verbose):
     # Required for p10_standalone
     command = "system_cmp0.cpu0_0_00_0.disable"
     print("==> " + command);
-    ReturnData = cli.quiet_run_command(command, output_mode = output_modes.formatted_text)
+    cli.run_command(command)
 
-    print("Wait for OCC init checkpoint");
+    # Hide error message: [backplane0.dcm0.chip0.pib_cmp.tod_scom error] Mambo cpu system_cmp0.cpu0_0_00_0 is disabled - Failed reading chip TOD value
+    command = "backplane0.dcm0.chip0.pib_cmp.tod_scom.log-type -disable log-type = error"
+    print("==> " + command);
+    cli.run_command(command)
 
     command = "backplane0->system_info = \"OCC Complex Model\""
     print("==> " + command)
-    ReturnData = cli.quiet_run_command(command, output_mode = output_modes.formatted_text)
+    cli.run_command(command)
 
-    occ_405_binary_to_load  = "binaries/occ_405.out"
-    occ_gpe0_binary_to_load = "binaries/occ_gpe0.out"
-    occ_gpe1_binary_to_load = "binaries/occ_gpe1.out"
-    occ_gpe2_binary_to_load = "binaries/pgpe.out"
+    base_dir = "binaries"
+    if code_dir:
+        base_dir = code_dir
+    occ_405_binary_to_load  = base_dir + "/occ_405.out"
+    occ_gpe0_binary_to_load = base_dir + "/occ_gpe0.out"
+    occ_gpe1_binary_to_load = base_dir + "/occ_gpe1.out"
+    occ_gpe2_binary_to_load = base_dir + "/pgpe.out"
 
-    print("==> Loading 405 binary " + occ_405_binary_to_load)
-    # Load the binary
+    # Load the code binaries into OCI space
+    print("\n==> Loading 405 binary: " + occ_405_binary_to_load)
+    cli.run_command("!ls -l "+occ_405_binary_to_load)
     command = "backplane0."+proc+".occ_cmp.oci_space.load-binary -v "+occ_405_binary_to_load
     print("==> " + command)
-    ReturnData = cli.quiet_run_command(command, output_mode = output_modes.formatted_text)
+    cli.run_command(command)
     command = "new-symtable -n sym_tbl_405 file="+occ_405_binary_to_load
     print("==> " + command)
-    ReturnData = cli.quiet_run_command(command, output_mode = output_modes.formatted_text)
+    cli.run_command(command)
     command = "new-context ctx_405"
     print("==> " + command)
-    ReturnData = cli.quiet_run_command(command, output_mode = output_modes.formatted_text)
+    cli.run_command(command)
     command = "backplane0."+proc+".occ_cmp.proc_405.set-context context = ctx_405"
     print("==> " + command)
-    ReturnData = cli.quiet_run_command(command, output_mode = output_modes.formatted_text)
+    cli.run_command(command)
     command = "ctx_405->symtable = sym_tbl_405"
     print("==> " + command)
-    ReturnData = cli.quiet_run_command(command, output_mode = output_modes.formatted_text)
+    cli.run_command(command)
 
-    print("==> Loading GPE0 binary " + occ_gpe0_binary_to_load)
+    print("\n==> Loading GPE0 binary: " + occ_gpe0_binary_to_load)
+    cli.run_command("!ls -l "+occ_gpe0_binary_to_load)
     command = "backplane0."+proc+".occ_cmp.oci_space.load-binary -v "+occ_gpe0_binary_to_load
     print("==> " + command)
-    ReturnData = cli.quiet_run_command(command, output_mode = output_modes.formatted_text)
+    cli.run_command(command)
     command = "new-symtable -n sym_tbl_gpe0 file="+occ_gpe0_binary_to_load
     print("==> " + command)
-    ReturnData = cli.quiet_run_command(command, output_mode = output_modes.formatted_text)
+    cli.run_command(command)
     command = "backplane0."+proc+".occ_cmp.gpe_ctx0.symtable sym_tbl_gpe0"
     print("==> " + command)
-    ReturnData = cli.quiet_run_command(command, output_mode = output_modes.formatted_text)
+    cli.run_command(command)
 
-    print("==> Loading GPE1 binary " + occ_gpe1_binary_to_load)
+    print("\n==> Loading GPE1 binary: " + occ_gpe1_binary_to_load)
+    cli.run_command("!ls -l "+occ_gpe1_binary_to_load)
     command = "backplane0."+proc+".occ_cmp.oci_space.load-binary -v "+occ_gpe1_binary_to_load
     print("==> " + command)
-    ReturnData = cli.quiet_run_command(command, output_mode = output_modes.formatted_text)
+    cli.run_command(command)
     command = "new-symtable -n sym_tbl_gpe1 file="+occ_gpe1_binary_to_load
     print("==> " + command)
-    ReturnData = cli.quiet_run_command(command, output_mode = output_modes.formatted_text)
-    command = "backplane0."+proc+".occ_cmp.gpe_ctx0.symtable sym_tbl_gpe1"
+    cli.run_command(command)
+    command = "backplane0."+proc+".occ_cmp.gpe_ctx1.symtable sym_tbl_gpe1"
     print("==> " + command)
-    ReturnData = cli.quiet_run_command(command, output_mode = output_modes.formatted_text)
+    cli.run_command(command)
 
     if flg_pgpe:
-        print("==> Loading GPE2 (PGPE) binary " + occ_gpe2_binary_to_load)
+        print("\n==> Loading GPE2 (PGPE) binary: " + occ_gpe2_binary_to_load)
+        cli.run_command("!ls -l "+occ_gpe2_binary_to_load)
         command = "backplane0."+proc+".occ_cmp.oci_space.load-binary -v "+occ_gpe2_binary_to_load
         print("==> " + command)
-        ReturnData = cli.quiet_run_command(command, output_mode = output_modes.formatted_text)
+        cli.run_command(command)
         command = "new-symtable -n sym_tbl_gpe2 file="+occ_gpe2_binary_to_load
         print("==> " + command)
-        ReturnData = cli.quiet_run_command(command, output_mode = output_modes.formatted_text)
-        command = "backplane0."+proc+".occ_cmp.gpe_ctx0.symtable sym_tbl_gpe2"
+        cli.run_command(command)
+        command = "backplane0."+proc+".occ_cmp.gpe_ctx2.symtable sym_tbl_gpe2"
         print("==> " + command)
-        ReturnData = cli.quiet_run_command(command, output_mode = output_modes.formatted_text)
+        cli.run_command(command)
 
-        command = "backplane0."+proc+".occ_cmp.oci_space.write 0xfff201a0 0x10300000 -b" # Enable PGPE immediate return
-        print("==> " + command + " (enable PGPE immediate return)")
-        ReturnData = cli.quiet_run_command(command, output_mode = output_modes.formatted_text)
+        #command = "backplane0."+proc+".occ_cmp.oci_space.write 0xfff201a0 0x10300000 -b" # Enable PGPE immediate return
+        #print("\n==> " + command + " (enable PGPE immediate return)")
+        #cli.run_command(command)
 
-# GPE Interrupt Vector Prefix Register
-    print("==> Initialize IVPR and PIR")
-    cli.quiet_run_command("backplane0."+proc+".occ_cmp.gpe_ppe2.enable") #Enable GPE2
+    #print("\n==> Enable GPE2 (needed?)")
+    #cli.run_command("backplane0."+proc+".occ_cmp.gpe_ppe2.enable") #Enable GPE2
 
-    cli.quiet_run_command("backplane0."+proc+".occ_cmp.oci_space.write 0xc0000008 0xFFF01000 -b") # TP.TPCHIP.OCC.OCI.GPE0.GPEIVPR
-    cli.quiet_run_command("backplane0."+proc+".occ_cmp.oci_space.write 0xc0010008 0xFFF10000 -b") # TP.TPCHIP.OCC.OCI.GPE1.GPEIVPR
-    cli.quiet_run_command("backplane0."+proc+".occ_cmp.oci_space.write 0xc0020008 0xFFF20000 -b") # TP.TPCHIP.OCC.OCI.GPE2.GPEIVPR
-    cli.quiet_run_command("backplane0."+proc+".occ_cmp.oci_space.write 0xc0030008 0xFFF30000 -b") # TP.TPCHIP.OCC.OCI.GPE3.GPEIVPR
+    # GPE Interrupt Vector Prefix Register
+    print("\n==> Initialize IVPR and PIR")
+    cli.run_command("backplane0."+proc+".occ_cmp.oci_space.write 0xc0000008 0xFFF01000 -b") # TP.TPCHIP.OCC.OCI.GPE0.GPEIVPR
+    cli.run_command("backplane0."+proc+".occ_cmp.oci_space.write 0xc0010008 0xFFF10000 -b") # TP.TPCHIP.OCC.OCI.GPE1.GPEIVPR
+    cli.run_command("backplane0."+proc+".occ_cmp.oci_space.write 0xc0020008 0xFFF20000 -b") # TP.TPCHIP.OCC.OCI.GPE2.GPEIVPR
+    cli.run_command("backplane0."+proc+".occ_cmp.oci_space.write 0xc0030008 0xFFF30000 -b") # TP.TPCHIP.OCC.OCI.GPE3.GPEIVPR
 
-    cli.quiet_run_command("backplane0."+proc+".occ_cmp.gpe_ppe0.write-reg pir value=0x00000000")
-    cli.quiet_run_command("backplane0."+proc+".occ_cmp.gpe_ppe1.write-reg pir value=0x00000001")
-    cli.quiet_run_command("backplane0."+proc+".occ_cmp.gpe_ppe2.write-reg pir value=0x00000002")
-    cli.quiet_run_command("backplane0."+proc+".occ_cmp.gpe_ppe3.write-reg pir value=0x00000003")
+    cli.run_command("backplane0."+proc+".occ_cmp.gpe_ppe0.write-reg pir value=0x00000000")
+    cli.run_command("backplane0."+proc+".occ_cmp.gpe_ppe1.write-reg pir value=0x00000001")
+    cli.run_command("backplane0."+proc+".occ_cmp.gpe_ppe2.write-reg pir value=0x00000002")
+    cli.run_command("backplane0."+proc+".occ_cmp.gpe_ppe3.write-reg pir value=0x00000003")
 
     # PPE External Interface XCR - Start each GPE? - Hard Reset, Toggle XSR[TRH], Resume
-    cli.quiet_run_command("backplane0."+proc+".occ_cmp.oci_space.write 0xc0000088 0x6000000000000000 8 -b") # GPE0
-    cli.quiet_run_command("backplane0."+proc+".occ_cmp.oci_space.write 0xc0000088 0x4000000000000000 8 -b")
-    cli.quiet_run_command("backplane0."+proc+".occ_cmp.oci_space.write 0xc0000088 0x2000000000000000 8 -b")
+    print("\n==> Start GPE0 (Hard Reset, Toggle XSR, Resume)")
+    cli.run_command("backplane0."+proc+".occ_cmp.oci_space.write 0xc0000088 0x6000000000000000 8 -b") # GPE0
+    cli.run_command("backplane0."+proc+".occ_cmp.oci_space.write 0xc0000088 0x4000000000000000 8 -b")
+    cli.run_command("backplane0."+proc+".occ_cmp.oci_space.write 0xc0000088 0x2000000000000000 8 -b")
 
-    cli.quiet_run_command("backplane0."+proc+".occ_cmp.oci_space.write 0xc0010088 0x6000000000000000 8 -b") # GPE1
-    cli.quiet_run_command("backplane0."+proc+".occ_cmp.oci_space.write 0xc0010088 0x4000000000000000 8 -b")
-    cli.quiet_run_command("backplane0."+proc+".occ_cmp.oci_space.write 0xc0010088 0x2000000000000000 8 -b")
+    print("\n==> Start GPE1 (Hard Reset, Toggle XSR, Resume)")
+    cli.run_command("backplane0."+proc+".occ_cmp.oci_space.write 0xc0010088 0x6000000000000000 8 -b") # GPE1
+    cli.run_command("backplane0."+proc+".occ_cmp.oci_space.write 0xc0010088 0x4000000000000000 8 -b")
+    cli.run_command("backplane0."+proc+".occ_cmp.oci_space.write 0xc0010088 0x2000000000000000 8 -b")
 
     if flg_pgpe:
-        cli.quiet_run_command("backplane0."+proc+".occ_cmp.oci_space.write 0xc0020088 0x6000000000000000 8 -b") # GPE2
-        cli.quiet_run_command("backplane0."+proc+".occ_cmp.oci_space.write 0xc0020088 0x4000000000000000 8 -b")
-        cli.quiet_run_command("backplane0."+proc+".occ_cmp.oci_space.write 0xc0020088 0x2000000000000000 8 -b")
+        print("\n==> Start GPE2 (Hard Reset, Toggle XSR, Resume)")
+        cli.run_command("backplane0."+proc+".occ_cmp.oci_space.write 0xc0020088 0x6000000000000000 8 -b") # GPE2
+        cli.run_command("backplane0."+proc+".occ_cmp.oci_space.write 0xc0020088 0x4000000000000000 8 -b")
+        cli.run_command("backplane0."+proc+".occ_cmp.oci_space.write 0xc0020088 0x2000000000000000 8 -b")
 
+    ### SRAM LAYOUT (768KB) ###
+    # FFF00000 - IPC Communication Region
+    # FFF01000 - GPE0 Code (60K)
+    # FFF10000 - GPE1 Code (64K)
+    # FFF20000 - PGPE HCode+Data (48K)
+    # FFF2C000 - SGPE HCode (80K)
+    # FFF40000 - 405 Code+Data (512K)
+    # FFFB3C00 -     ERR Trace Buffer (8K)
+    # FFFB5C00 -     INF Trace Buffer (8K)
+    # FFFB7C00 -     IMP Trace Buffer (8K)
+    # FFFB9C00 -     FIR Heap / Parms (16K)
+    # FFFBDC00 -     FSP/BMC Response Buffer (4K)
+    # FFFBEC00 -     FSP/BMC Command Buffer (4K)
+    # FFFBDC00 -     Reserved (Bootloader) (1K)
+
+    # HOMER Layout (relative to base address 0x80000000)
+    # 000C0000 - header? version (4 bytes), nestFreq (4B), interruptType (4B), firMaster (4B), firParms, smfMode (4B)
+    # 000E0000 - HTMGT Command Buffer (4k)
+    # 000E1000 - HTMGT Response Buffer (4k)
+    # 000E2000 - OPAL Shared Memory (32k)
+    # 000E2000 -   OPAL Static space (0x880 bytes)
+    # 000E2B80 -   OPAL Dynamic space (128 bytes)
+    # 000E2C00 -   Inband Command Buffer (4k)
+    # 000E3C00 -   Inband Response Buffer (4k)
+    # 00300000 - PPMR Header (4k)
+
+    print("==> Requesting 405 chip level reset and set pc to __ssx_boot");
     # Request a 405 chip level reset and set the 405 pc to __ssx_boot
-    cli.quiet_run_command("backplane0."+proc+".occ_cmp.proc_405.write-reg reg-name = dbcr0 value = 0x20000000")
-    cli.quiet_run_command("backplane0."+proc+".occ_cmp.proc_405.write-reg reg-name = pc value = (backplane0."+proc+".occ_cmp.proc_405.sym __ssx_boot)")
-    cli.quiet_run_command("backplane0."+proc+".occ_cmp.proc_405.enable")
+    cli.run_command("backplane0."+proc+".occ_cmp.proc_405.write-reg reg-name = dbcr0 value = 0x20000000")
+    cli.run_command("backplane0."+proc+".occ_cmp.proc_405.write-reg reg-name = pc value = (backplane0."+proc+".occ_cmp.proc_405.sym __ssx_boot)")
+    cli.run_command("backplane0."+proc+".occ_cmp.proc_405.enable")
 
-    cli.quiet_run_command("backplane0."+proc+".occ_cmp.oci_space.write 0xFFFFFFFC 0x4BF40002 size = 4")
+    print("==> write 0xFFFFFFFC to 0x4BF40002");
+    cli.run_command("backplane0."+proc+".occ_cmp.oci_space.write 0xFFFFFFFC 0x4BF40002 size = 4")
 
     # Create 16K OCC cache
-    cli.quiet_run_command("@will_cache = SIM_create_object(\"image\", \"occ_cache\", [[\"size\",0x4000]])")
-    cli.quiet_run_command("backplane0."+proc+".occ_cmp.ram_cacheable->image = occ_cache")
-    cli.quiet_run_command("backplane0."+proc+".occ_cmp.oci_space.del-map base = 0x00000000 device = backplane0."+proc+".occ_cmp.ram_cacheable")
-    cli.quiet_run_command("backplane0."+proc+".occ_cmp.oci_space.add-map base = 0x00000000 device = backplane0."+proc+".occ_cmp.ram_cacheable length = 0x4000 align-size = 8192")
+    print("==> Creating 16K OCC cache");
+    cli.run_command("@will_cache = SIM_create_object(\"image\", \"occ_cache\", [[\"size\",0x4000]])")
+    cli.run_command("backplane0."+proc+".occ_cmp.ram_cacheable->image = occ_cache")
+    cli.run_command("backplane0."+proc+".occ_cmp.oci_space.del-map base = 0x00000000 device = backplane0."+proc+".occ_cmp.ram_cacheable")
+    cli.run_command("backplane0."+proc+".occ_cmp.oci_space.add-map base = 0x00000000 device = backplane0."+proc+".occ_cmp.ram_cacheable length = 0x4000 align-size = 8192")
 
-    # map images files?
-    cli.quiet_run_command("system_cmp0.memory_image0.load-file binaries/image.bin 0x00000000")
-    cli.quiet_run_command("system_cmp0.memory_image0.load-file binaries/ppmr.bin  0x00300000")
-    cli.quiet_run_command("system_cmp0.memory_image0.load-file binaries/oppb.bin  0x00320000")
+    # Load the code binaries into main memory
+    print("==> Loading OCC image: ${simics_binaries}/image.bin @ 0x00000000")
+    cli.run_command("system_cmp0.memory_image0.load-file binaries/image.bin 0x00000000")
+    print("==> Loading fake PPMR header (ppmr.bin)")
+    cli.run_command("system_cmp0.memory_image0.load-file binaries/ppmr.bin  0x00300000")
+    print("==> Loading fake OPPB header (oppb.bin)")
+    cli.run_command("system_cmp0.memory_image0.load-file binaries/oppb.bin  0x00320000")
 
     # SRAM - FFF4000 is start of PPC405 Code + Data area "3C20800060210040 7C2903A64E800420"
-    cli.quiet_run_command("backplane0."+proc+".occ_cmp.oci_space.write 0xFFF40000 0x3C208000 size = 4")
-    cli.quiet_run_command("backplane0."+proc+".occ_cmp.oci_space.write 0xFFF40004 0x60210040 size = 4")
-    cli.quiet_run_command("backplane0."+proc+".occ_cmp.oci_space.write 0xFFF40008 0x7C2903A6 size = 4")
-    cli.quiet_run_command("backplane0."+proc+".occ_cmp.oci_space.write 0xFFF4000C 0x4E800420 size = 4")
+    print("==> write 0xFFF4000x");
+    cli.run_command("backplane0."+proc+".occ_cmp.oci_space.write 0xFFF40000 0x3C208000 size = 4")
+    cli.run_command("backplane0."+proc+".occ_cmp.oci_space.write 0xFFF40004 0x60210040 size = 4")
+    cli.run_command("backplane0."+proc+".occ_cmp.oci_space.write 0xFFF40008 0x7C2903A6 size = 4")
+    cli.run_command("backplane0."+proc+".occ_cmp.oci_space.write 0xFFF4000C 0x4E800420 size = 4")
 
-    cli.quiet_run_command("backplane0."+proc+".bridge_cmp.pba->pba_barmsk0=0x0000000007f00000")
+    # HOMER init
+    print("==> Initialize OCC Host Config Data in HOMER (0x800C0000)")
+    cli.run_command("backplane0."+proc+".occ_cmp.oci_space.write 0x800C0000 0x000000A0 -b") # Version
+    cli.run_command("backplane0."+proc+".occ_cmp.oci_space.write 0x800C0004 0x00000964 -b") # Nest Frequency
+    cli.run_command("backplane0."+proc+".occ_cmp.oci_space.write 0x800C0008 0x00000000 -b") # Interrupt Type (FSP)
+    cli.run_command("backplane0."+proc+".occ_cmp.oci_space.write 0x800C000C 0x00000000 -b") # SMB
+    cli.run_command("backplane0."+proc+".occ_cmp.oci_space.read  0x800C0000 8")
+    cli.run_command("backplane0."+proc+".occ_cmp.oci_space.read  0x800C0008 8")
+
+    print("==> Trigger 405 start??? (write barmsk0 to 0x7f00000)");
+    cli.run_command("backplane0."+proc+".bridge_cmp.pba->pba_barmsk0=0x0000000007f00000")
 
     print("==> INIT APSS CHANNEL VALUES")
     command = "backplane0.apss->adc_channel_val = [0x0293, 0x9287, 0x2887, 0x3877, 0x4326, 0x52F2, 0x6214, 0x7006, 0x8003, 0x9EB7, 0xA01B, 0xB013, 0xC123, 0xD0FC, 0xE0F2, 0xF008]"
     print("==> " + command)
-    ReturnData = cli.quiet_run_command(command, output_mode = output_modes.formatted_text)
+    cli.run_command(command)
 
-    cli.quiet_run_command("backplane0."+proc+".occ_cmp.proc_405.read-reg reg-name = pc")
+    cli.run_command("backplane0."+proc+".occ_cmp.proc_405.read-reg reg-name = pc")
 
     if flg_pgpe:
-        print("==> ENABLING CORES...")
-        command = "backplane0."+proc+".occ_cmp.ocb_agen->OCB_AGEN_CCSR = 0xff00000000000000" # Set CCSR
+        print("==> ENABLING 24 CORES...")
+        command = "backplane0."+proc+".occ_cmp.ocb_agen->OCB_AGEN_CCSR = 0xffffff0000000000" # Set CCSR
         print("==> " + command)
-        ReturnData = cli.quiet_run_command(command, output_mode = output_modes.formatted_text)
+        cli.run_command(command)
         command = "backplane0."+proc+".occ_cmp.ocb_agen->OCB_AGEN_CCSR" # Display CCSR
         print("==> " + command)
-        ReturnData = cli.quiet_run_command(command, output_mode = output_modes.formatted_text)
+        cli.run_command(command)
+
+    return RC
 
 
+def wait_for_checkpoint(flg_verbose):
+    keep_waiting = True
+    while keep_waiting:
+        sramRC, mylist = ReadSRAM("backplane0."+proc+".occ_cmp.oci_space.x "+G_occsram_rsp_buffer+" 16 " , flg_verbose)
+        SeqNum = int( mylist[0][:2], 16 )
+        Cmd = int( mylist[0][-2:], 16 )
+        RtnCode = int(mylist[1][:2],16); # Convert to integer
+        DataLength = int(mylist[1][-2:] + mylist[2][:2],16)
+        CheckPoint = int(mylist[3], 16)
+        if (SeqNum != 0) or (Cmd != 0):
+            print("WARNING: Unexpected sequence # ("+str(SeqNum)+") or command ("+str(Cmd)+") - communication w/OCC already started?");
+            keep_waiting = False
+        if RtnCode == 0xE1:
+            if (CheckPoint == 0x0EFF):
+                print("occ_to_active: Initialization Checkpoint 0x%04X (COMPLETE)" % CheckPoint + " (data length="+str(DataLength)+")")
+                keep_waiting = False
+            else:
+                print("occ_to_active: Initialization Checkpoint 0x%04X" % CheckPoint + " (data length="+str(DataLength)+")")
+        elif RtnCode != 0x00:
+            print("ERROR: UNEXPECTED STATUS ("+str(RtnCode)+")");
+            keep_waiting = False
+        if keep_waiting:
+            if G_run_time > 0:
+                # let simics run (if not already)
+                if L_pgpe_enabled:
+                    cli.quiet_run_command("run 5 ms", output_mode = output_modes.formatted_text)
+                else:
+                    cli.quiet_run_command("run 1 s", output_mode = output_modes.formatted_text)
+
+
+#===============================================================================
+# Wait for OCCs to complete init and then send one poll command
+#===============================================================================
+def occ_to_ckpt(flg_pgpe, flg_run, flg_verbose):
+    """Wait for checkpoint and send Poll command"""
+    RC = 0
+    OCC = 0
+    ReturnData = []
+    global G_run_time
+    global LastCmd_SeqNum
+    global L_pgpe_enabled
+
+    if flg_pgpe:
+        L_pgpe_enabled = 1
+
+    print("#### WAIT FOR OCC CHECKPOINT #############################################################################");
+    if flg_run:
+        # Simics is already running (do not issue any manual run commands)
+        G_run_time = 0
+    wait_for_checkpoint(flg_verbose);
+
+    print("#### SEND POLL COMMAND ###################################################################################");
+    RC = send_occ_cmd(0x00, "20", flg_verbose);
+
+    return RC
 
 #===============================================================================
 # Move OCCs to Active state (must be run after occ_init)
@@ -2255,35 +2417,9 @@ def occ_to_active(flg_pgpe, flg_run, flg_verbose):
     if flg_run:
         # Simics is already running (do not issue any manual run commands)
         G_run_time = 0
+    wait_for_checkpoint(flg_verbose);
 
-    keep_waiting = True
-    while keep_waiting:
-        sramRC, mylist = ReadSRAM("backplane0."+proc+".occ_cmp.oci_space.x "+G_occsram_rsp_buffer+" 16 " , flg_verbose)
-        SeqNum = int( mylist[0][:2], 16 )
-        Cmd = int( mylist[0][-2:], 16 )
-        RtnCode = int(mylist[1][:2],16); # Convert to integer
-        DataLength = int(mylist[1][-2:] + mylist[2][:2],16)
-        CheckPoint = int(mylist[3], 16)
-        if (SeqNum != 0) or (Cmd != 0):
-            print("INVALID SEQ# ("+str(SeqNum)+") or CMD ("+str(Cmd)+")");
-            keep_waiting = False
-        if RtnCode == 0xE1:
-            if (CheckPoint == 0x0EFF):
-                print("occ_to_active: Initialization Checkpoint 0x%04X (COMPLETE)" % CheckPoint + " (data length="+str(DataLength)+")")
-                keep_waiting = False
-            else:
-                print("occ_to_active: Initialization Checkpoint 0x%04X" % CheckPoint + " (data length="+str(DataLength)+")")
-        elif RtnCode != 0x00:
-            print("UNEXPECTED STATUS ("+str(RtnCode)+")");
-            keep_waiting = False
-        if keep_waiting:
-            if G_run_time > 0:
-                # let simics run (if not already)
-                cli.quiet_run_command("run 1 s", output_mode = output_modes.formatted_text)
-
-    print("Checkpoint received!");
-
-    print("\n==> Sending POLL");
+    print("#### SEND POLL COMMAND ###################################################################################");
     RC = send_occ_cmd(0x00, "20", flg_verbose);
 
     print("\n#### SET SYSTEM CONFIG ###################################################################################");
@@ -2410,6 +2546,7 @@ def occ_to_active(flg_pgpe, flg_run, flg_verbose):
 new_command("occinit",          # The name of the command - required
             occ_init,           # The function to call when the command is issued - required
             args = [            # List of arguments to the command - required
+                    arg(str_t,  "dir", "?", None),
                     arg(flag_t, "-p" ),
                     arg(flag_t, "-v" ),
                    ],
@@ -2419,7 +2556,9 @@ new_command("occinit",          # The name of the command - required
         # Command documentation, supports simple HTML like markup
         doc =
 """
-<b>occinit</b> [-p] [-v] - Prep simics to run OCC code<br>
+<b>occinit</b> [dir] [-p] [-v] - Prep simics to run OCC code<br>
+
+<b>dir</b> &nbsp; Directory name containing code images<br>
 
 <b>-p</b> &nbsp; [optional]
 <br>&nbsp;&nbsp;- also enable PGPE<br>
@@ -2429,6 +2568,39 @@ new_command("occinit",          # The name of the command - required
 
 """
 )
+
+#===============================================================================
+#
+# Send required config data to get to active state
+#
+#===============================================================================
+new_command("occ2ckpt",         # The name of the command - required
+            occ_to_ckpt,        # The function to call when the command is issued - required
+            args = [            # List of arguments to the command - required
+                    arg(flag_t, "-p" ),
+                    arg(flag_t, "-r" ),
+                    arg(flag_t, "-v" ),
+                   ],
+        alias = "o2c",     # Alias for the command name
+        short = "Wait for OCC init complete checkpoint and send poll", # Short command description
+        type = ["ibm-util"],    # Command categories
+        # Command documentation, supports simple HTML like markup
+        doc =
+"""
+<b>occ2ckpt</b> [-r] [-v] - Wait for OCC init complete checkpoing and send poll<br>
+
+<b>-p</b> &nbsp; [optional]
+<br>&nbsp;&nbsp;- also enable PGPE<br>
+
+<b>-r</b> &nbsp; [optional]
+<br>&nbsp;&nbsp;- simics is already running (do not run between commands)<br>
+
+<b>-v</b> &nbsp; [optional]
+<br>&nbsp;&nbsp;- verbose mode flag<br>
+
+"""
+)
+
 
 #===============================================================================
 #

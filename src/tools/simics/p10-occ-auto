@@ -65,7 +65,7 @@ current_test=""
 
 simics_machine="p10_standalone"
 
-simics_options=""
+G_simics_options=""
 
 # Get the directory of this script
 current_script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd -P)"
@@ -156,6 +156,7 @@ usage()
     echo "               -powman       : use powman model (instead of p10_standalone)"
     echo ""
     echo "               -t test#      : run specified test"
+    echo "                               0 = Wait for checkpoint and send POLL command"
     echo "                               2 = Observation state"
     echo "                               3 = Active state (DEFAULT)"
     echo "                               4 = error logging"
@@ -165,13 +166,14 @@ usage()
     echo "               -wait         : keep simics running after tests complete"
     echo "                               (to do additional debug, traces, etc)"
     echo ""
+    echo "               -v            : verbose mode (display more hex data)"
     echo "               -h            : You are looking at it!"
     echo ""
 }
 
 main()
 {
-    StartDate=`date +%s`
+    test_start_time=`date +%s`
 
     if [ ! -d "$simics_binaries" ]; then
         echo -e "${bold}--> Creating $simics_binaries/${normal}"
@@ -243,6 +245,10 @@ main()
                 fi
                 ;;
 
+            -v )
+                G_simics_options="-v"
+                ;;
+
             -wait )
                 let G_keep_running=1
                 ;;
@@ -255,7 +261,7 @@ main()
     done
 
     if [ $G_use_pgpe -ne 0 ]; then
-        let numCores=$maxCores # up to 32
+        let numCores=24 # up to 32
         let G_cmd_delay=4 # time in seconds to wait before checking for response
         let G_rsp_retries=8 # number of retries before timing out on a response
     fi
@@ -308,8 +314,8 @@ main()
         fi
     fi
 
-    echo "==> autosim --startserver -machine $simics_machine $simics_options"
-    autosim --startserver --machine $simics_machine $simics_options
+    echo "==> autosim --startserver -machine $simics_machine"
+    autosim --startserver --machine $simics_machine
     if [ $? == 0 ]; then
         echo SERVER STARTED
     else
@@ -321,8 +327,8 @@ main()
 
 
     # Start simics without run
-    echo "==> autosim --startsim --notar -machine $simics_machine $simics_options --norun"
-    autosim --startsim --notar --machine $simics_machine $simics_options --norun
+    echo "==> autosim --startsim --notar -machine $simics_machine --norun"
+    autosim --startsim --notar --machine $simics_machine --norun
     if [ $? == 0 ]; then
         echo SIM STARTED
     else
@@ -337,8 +343,19 @@ main()
     trap "echo '** TEST ABORTED**' ; autosim --stopserver ; exit -1" INT TERM
 
 
-    # Required for p10_standalone
-    autosim --simcmd 'system_cmp0.cpu0_0_00_0.disable'
+    # Read utility functions
+    printHeader "LOADING $occ_setup_file"
+    autosim --simcmd 'run-python-file "'$occ_setup_file'"'
+    if [ $? == 0 ]; then
+        echo OCC SIMICs Python commands loaded.
+    else
+        echo -e "${red}ERROR: OCC SIMICs Python commands not loaded :  $?${normal}"
+        echo WAIT : 30 seconds before shutdown.
+        sleep 30
+        autosim --stopserver
+        echo "For errors check: autosim/autosim.log"
+        exit 1
+    fi
 
 
     printHeader "SETUP OCC IMAGE"
@@ -358,21 +375,6 @@ main()
 
     autosim --simcmd 'backplane0.'$proc'.occ_cmp.proc_405.read-reg reg-name = pc'
 
-    # Read utility functions
-    printHeader "LOADING $occ_setup_file"
-    autosim --simcmd 'run-python-file "'$occ_setup_file'"'
-
-    if [ $? == 0 ]; then
-        echo OCC SIMICs Python commands loaded.
-    else
-        echo -e "${red}ERROR: OCC SIMICs Python commands not loaded :  $?${normal}"
-        echo WAIT : 30 seconds before shutdown.
-        sleep 30
-        autosim --stopserver
-        echo "For errors check: autosim/autosim.log"
-        exit 1
-    fi
-
 
     touch $tempfile
 
@@ -381,44 +383,48 @@ main()
     WaitForCheckpoint
 
 
-    printHeader "SET SYSTEM CONFIG"
-    cmdData="0f2001" # single node
-    cmdData="${cmdData}00000001" # proc sensor
-    cmdData="${cmdData}0100000101000002" # core0 temp sensor / freq sensor
-    cmdData="${cmdData}0100010101000102"
-    cmdData="${cmdData}0100020101000202"
-    cmdData="${cmdData}0100030101000302"
-    cmdData="${cmdData}0100040101000402"
-    cmdData="${cmdData}0100050101000502"
-    cmdData="${cmdData}0100060101000602"
-    cmdData="${cmdData}0100070101000702"
-    cmdData="${cmdData}0100080101000802"
-    cmdData="${cmdData}0100090101000902"
-    cmdData="${cmdData}0100100101001002"
-    cmdData="${cmdData}0100110101001102"
-    cmdData="${cmdData}0100120101001202"
-    cmdData="${cmdData}0100130101001302"
-    cmdData="${cmdData}0100140101001402"
-    cmdData="${cmdData}0100150101001502"
-    cmdData="${cmdData}0100160101001602"
-    cmdData="${cmdData}0100170101001702"
-    cmdData="${cmdData}0100180101001802"
-    cmdData="${cmdData}0100190101001902"
-    cmdData="${cmdData}0100200101002002"
-    cmdData="${cmdData}0100210101002102"
-    cmdData="${cmdData}0100220101002202"
-    cmdData="${cmdData}0100230101002302"
-    cmdData="${cmdData}02000001" # backplane sensor
-    cmdData="${cmdData}03000001" # APSS sensor
-    autosim --simcmd '$SeqNum=(OCCw -C '$OCCCMD_SET_CFG_DATA' -D "'$cmdData'")'
-    WaitForResponse $OCCCMD_SET_CFG_DATA
-
-
     printHeader "POLL TO VERIFY NO ELOGS"
     PollToVerifyElogs
 
 
     if [ $test_depth -gt 0 ]; then
+
+        printHeader "SET SYSTEM CONFIG"
+        cmdData="0f2001" # single node
+        cmdData="${cmdData}00000001" # proc sensor
+        cmdData="${cmdData}0100000101000002" # core0 temp sensor / freq sensor
+        cmdData="${cmdData}0100010101000102"
+        cmdData="${cmdData}0100020101000202"
+        cmdData="${cmdData}0100030101000302"
+        cmdData="${cmdData}0100040101000402"
+        cmdData="${cmdData}0100050101000502"
+        cmdData="${cmdData}0100060101000602"
+        cmdData="${cmdData}0100070101000702"
+        cmdData="${cmdData}0100080101000802"
+        cmdData="${cmdData}0100090101000902"
+        cmdData="${cmdData}0100100101001002"
+        cmdData="${cmdData}0100110101001102"
+        cmdData="${cmdData}0100120101001202"
+        cmdData="${cmdData}0100130101001302"
+        cmdData="${cmdData}0100140101001402"
+        cmdData="${cmdData}0100150101001502"
+        cmdData="${cmdData}0100160101001602"
+        cmdData="${cmdData}0100170101001702"
+        cmdData="${cmdData}0100180101001802"
+        cmdData="${cmdData}0100190101001902"
+        cmdData="${cmdData}0100200101002002"
+        cmdData="${cmdData}0100210101002102"
+        cmdData="${cmdData}0100220101002202"
+        cmdData="${cmdData}0100230101002302"
+        cmdData="${cmdData}02000001" # backplane sensor
+        cmdData="${cmdData}03000001" # APSS sensor
+        autosim --simcmd '$SeqNum=(OCCw -C '$OCCCMD_SET_CFG_DATA' -D "'$cmdData'" '$G_simics_options')'
+        WaitForResponse $OCCCMD_SET_CFG_DATA
+
+
+        printHeader "POLL TO VERIFY NO ELOGS"
+        PollToVerifyElogs
+
 
         # zzfp164
         #04200000
@@ -469,7 +475,7 @@ main()
         cmdData="${cmdData}18AAAAAA100000004E4800000005" # channel 15 - GPU
         cmdData="${cmdData}00000000000005060708" # GPIO port 0
         cmdData="${cmdData}0300090A000000000000" # GPIO port 1
-        autosim --simcmd '$SeqNum=(OCCw -C '$OCCCMD_SET_CFG_DATA' -D "'$cmdData'")'
+        autosim --simcmd '$SeqNum=(OCCw -C '$OCCCMD_SET_CFG_DATA' -D "'$cmdData'" '$G_simics_options')'
         WaitForResponse $OCCCMD_SET_CFG_DATA
 
 
@@ -478,7 +484,7 @@ main()
 
 
         printHeader "SET ROLE COMMAND - MASTER"
-        autosim --simcmd '$SeqNum=(OCCw -C '$OCCCMD_SET_CFG_DATA' -D "0301000")'
+        autosim --simcmd '$SeqNum=(OCCw -C '$OCCCMD_SET_CFG_DATA' -D "0301000" '$G_simics_options')'
         WaitForResponse $OCCCMD_SET_CFG_DATA
         if [ $? -eq 0 ]; then
             TestValidationOCCmaster
@@ -506,7 +512,7 @@ main()
             cmdData="${cmdData}$(printf "%08X000000%02XFF%02X%02X%02X" $hwsensor $sensor $i2cEngine $i2cPort $i2cAddr)"
             let dimm=$dimm+1
         done
-        autosim --simcmd '$SeqNum=(OCCw -C '$OCCCMD_SET_CFG_DATA' -D "'$cmdData'")'
+        autosim --simcmd '$SeqNum=(OCCw -C '$OCCCMD_SET_CFG_DATA' -D "'$cmdData'" '$G_simics_options')'
         WaitForResponse $OCCCMD_SET_CFG_DATA
 
 
@@ -516,7 +522,7 @@ main()
 
         printHeader "SET THERMAL THRESHOLDS (TCT)"
         #autosim --simcmd '$SeqNum=(OCCw -C '$OCCCMD_SET_CFG_DATA' -D "1320140A0200FF5FFFFF0502FF48FFFF1E")'
-        autosim --simcmd '$SeqNum=(OCCw -C '$OCCCMD_SET_CFG_DATA' -D "1320140A0200FF5FFFFFFF02FF48FFFF1E")'
+        autosim --simcmd '$SeqNum=(OCCw -C '$OCCCMD_SET_CFG_DATA' -D "1320140A0200FF5FFFFFFF02FF48FFFF1E" '$G_simics_options')'
         WaitForResponse $OCCCMD_SET_CFG_DATA
 
 
@@ -525,7 +531,7 @@ main()
 
 
         printHeader "SET AVSBUS CONFIG"
-        autosim --simcmd '$SeqNum=(OCCw -C '$OCCCMD_SET_CFG_DATA' -D "1401FF000000FF010001")'
+        autosim --simcmd '$SeqNum=(OCCw -C '$OCCCMD_SET_CFG_DATA' -D "1401FF000000FF010001" '$G_simics_options')'
         WaitForResponse $OCCCMD_SET_CFG_DATA
 
 
@@ -537,7 +543,7 @@ main()
         # DEBUG: force various error conditions
         #autosim --simcmd '$SeqNum=(OCCw -C '$OCCCMD_SET_CFG_DATA' -D "02200BB80DAC09C40FA00AF0091C")' # ffo < fmin
         #autosim --simcmd '$SeqNum=(OCCw -C '$OCCCMD_SET_CFG_DATA' -D "02200BB80DAC09C40FA00AF00C1C")' # valid ffo
-        autosim --simcmd '$SeqNum=(OCCw -C '$OCCCMD_SET_CFG_DATA' -D "02200BB80DAC09C40ED80AF00000")' # no ffo (N=3000,T=3500,Min=2500,UT=3800,SPS=2800,FFO=0)
+        autosim --simcmd '$SeqNum=(OCCw -C '$OCCCMD_SET_CFG_DATA' -D "02200BB80DAC09C40ED80AF00000" '$G_simics_options')' # no ffo (N=3000,T=3500,Min=2500,UT=3800,SPS=2800,FFO=0)
         #autosim --simcmd '$SeqNum=(OCCw -C '$OCCCMD_SET_CFG_DATA' -D "02200BB80DAC09C40FA00AF00FA1")' # ffo > max
         WaitForResponse $OCCCMD_SET_CFG_DATA
 
@@ -549,7 +555,7 @@ main()
         printHeader "SET PCAP DATA"
         #autosim --simcmd '$SeqNum=(OCCw -C '$OCCCMD_SET_CFG_DATA' -D "0720011F07BC07E90000")' ### Quick Power Drop (Oversubscription) disabled
         #autosim --simcmd '$SeqNum=(OCCw -C '$OCCCMD_SET_CFG_DATA' -D "0720011F07BC07E907C2")' ### Soft:287 Min:1980 Max:2025 QPD:1986
-        autosim --simcmd '$SeqNum=(OCCw -C '$OCCCMD_SET_CFG_DATA' -D "0720011F012C07E907C2")' ### Soft:287 Min:300 Max:2025 QPD:1986
+        autosim --simcmd '$SeqNum=(OCCw -C '$OCCCMD_SET_CFG_DATA' -D "0720011F012C07E907C2" '$G_simics_options')' ### Soft:287 Min:300 Max:2025 QPD:1986
         WaitForResponse $OCCCMD_SET_CFG_DATA
 
 
@@ -565,7 +571,7 @@ main()
         cmdData="${cmdData}000144440101455556660121233334440111677778880131EEEEEEEEEEEE"
         cmdData="${cmdData}000244440102455556660122233334440112677778880132EEEEEEEEEEEE"
         cmdData="${cmdData}000344440103455556660123233334440113677778880133EEEEEEEEEEEE"
-        autosim --simcmd '$SeqNum=(OCCw -C '$OCCCMD_SET_CFG_DATA' -D "'$cmdData'")'
+        autosim --simcmd '$SeqNum=(OCCw -C '$OCCCMD_SET_CFG_DATA' -D "'$cmdData'" '$G_simics_options')'
         WaitForResponse $OCCCMD_SET_CFG_DATA
 
 
@@ -576,7 +582,7 @@ main()
         printHeader "SET GPU CONFIG"
         cmdData="1502"
         cmdData="${cmdData}0000000000010000" # NO GPUs (I2C Engine must be hardcoded to 1)
-        autosim --simcmd '$SeqNum=(OCCw -C '$OCCCMD_SET_CFG_DATA' -D "'$cmdData'")'
+        autosim --simcmd '$SeqNum=(OCCw -C '$OCCCMD_SET_CFG_DATA' -D "'$cmdData'" '$G_simics_options')'
         WaitForResponse $OCCCMD_SET_CFG_DATA
 
 
@@ -586,10 +592,10 @@ main()
 
         if [ $test_depth -eq 2 ]; then
             printHeader "SET STATE - OBSERVATION"
-            autosim --simcmd '$SeqNum=(OCCw -C 0x20 -D "000200")'
+            autosim --simcmd '$SeqNum=(OCCw -C 0x20 -D "000200" '$G_simics_options')'
         else
             printHeader "SET STATE - ACTIVE"
-            autosim --simcmd '$SeqNum=(OCCw -C 0x20 -D "000300")'
+            autosim --simcmd '$SeqNum=(OCCw -C 0x20 -D "000300" '$G_simics_options')'
         fi
         WaitForResponse 0x20
 
@@ -599,7 +605,7 @@ main()
 
 
         printHeader "SET NOMINAL MODE"
-        autosim --simcmd '$SeqNum=(OCCw -C 0x20 -D "000001")'
+        autosim --simcmd '$SeqNum=(OCCw -C 0x20 -D "000001" '$G_simics_options')'
         WaitForResponse 0x20
 
 
@@ -802,10 +808,18 @@ WaitForResponse()
                 #occWord0=$(egrep '^0x0000:' $tempfile | tail -n 1 | tr -d '\r' | awk '{print $2}')
                 #occRc=0x${occWord0:4:2};
                 if [ $cmd == "0x00" ]; then
-                    if [ $(($RemoteReturnCode)) -ne $(($expectedOccSrc)) ]; then
-                        echo "WaitForResponse: RC ($(printf "0x%04X" $RemoteReturnCode)) != EXPECTED ($(printf "0x%04X" $expectedOccSrc))"
+                    OccElogReturnCode=$(egrep '^OCC SRC: 0x' $tempfile | tail -n 1 | tr -d '\r')
+                    if [ -n "$OccElogReturnCode" ]; then
+                        let OccElogRC=`echo ${OccElogReturnCode} | awk '{print $3}'`
+                    else
+                        let OccElogRC=0
+                    fi
+                    if [ $(($OccElogRC)) -ne $(($expectedOccSrc)) ]; then
+                        # Unexpected ELOG was found in poll response!
+                        echo "WaitForResponse: RC ($(printf "0x%04X" $OccElogRC)) != EXPECTED ($(printf "0x%04X" $expectedOccSrc))"
                     fi
                 fi
+                # Check OCC response status (was command successful?)
                 occRc=$(egrep 'Return Status          :' $tempfile | tail -n 1 | tr -d '\r' | awk '{print $4}')
                 if [ -z "$occRc" ]; then
                     occRc=$(egrep 'ERROR: OCC returned status' $tempfile | tr -d '\r' | awk '{print $5}')
@@ -850,7 +864,7 @@ WaitForResponse()
         echo "####################################################"
         echo
         let failure=1
-        let rc=1
+        let rc=2 # no data to parse
 
         let failureCount=$failureCount+1
         if [ $cmd == "0x20" ]; then
@@ -877,8 +891,8 @@ WaitForResponse()
         fi
         if [ $(($expectedRc)) -eq 0 ] && [ $expectedOccSrc -eq 0 ]; then
             TestValidationFunction
+            let rc=$?
         fi
-        let rc=$?
     fi
 
     if [ $failure -ne 0 ]; then
@@ -978,146 +992,164 @@ SetupOccImage()
 {
     let abort=0
 
-    autosim --simcmd 'backplane0->system_info = "OCC Complex Model"'
-
-    # Code Images
-    echo "==> Loading 405 binary: ${simics_binaries}/occ_405.out"
-    autosim --simcmd "backplane0.${proc}.occ_cmp.oci_space.load-binary -v ${simics_binaries}/occ_405.out"
-    autosim --simcmd "new-symtable -n sym_tbl_405 file=${simics_binaries}/occ_405.out"
-    autosim --simcmd 'new-context ctx_405'
-    autosim --simcmd "backplane0.${proc}.occ_cmp.proc_405.set-context context = ctx_405"
-    autosim --simcmd 'ctx_405->symtable = sym_tbl_405'
-    echo "==> Loading GPE0 binary: ${simics_binaries}/occ_gpe0.out"
-    autosim --simcmd "backplane0.${proc}.occ_cmp.oci_space.load-binary -v ${simics_binaries}/occ_gpe0.out"
-    autosim --simcmd "new-symtable -n sym_tbl_gpe0 file=${simics_binaries}/occ_gpe0.out"
-    autosim --simcmd "backplane0.${proc}.occ_cmp.gpe_ctx0.symtable sym_tbl_gpe0"
-
-    echo "==> Loading GPE1 binary: ${simics_binaries}/occ_gpe1.out"
-    autosim --simcmd "backplane0.${proc}.occ_cmp.oci_space.load-binary -v ${simics_binaries}/occ_gpe1.out"
-    if [ $? -ne 0 ]; then
-        echo -e "${red}ERROR: Failed to load GPE1 binary!${normal}"
-        let abort=1
-    fi
-    autosim --simcmd "new-symtable -n sym_tbl_gpe1 file=${simics_binaries}/occ_gpe1.out"
-    if [ $? -ne 0 ]; then
-        echo -e "${red}ERROR: Failed to create symtable GPE1 binary!${normal}"
-        let abort=1
-    fi
-    autosim --simcmd "backplane0.${proc}.occ_cmp.gpe_ctx1.symtable sym_tbl_gpe1"
-    if [ $? -ne 0 ]; then
-        echo -e "${red}ERROR: Failed to assign symtable for GPE1${normal}"
-        let abort=1
-    fi
-    if [ $abort -ne 0 ]; then
-        echo -e "${red}ERROR: Failed to load GPE1 binary!${normal}"
-    fi
-
-    if [ $G_use_pgpe -ne 0 ]; then
-        echo "==> Loading GPE2 binary: ${simics_binaries}/pgpe.out"
-        autosim --simcmd "backplane0.${proc}.occ_cmp.oci_space.load-binary -v ${simics_binaries}/pgpe.out"
-        let abort=$abort+$?
-        autosim --simcmd "new-symtable sym_tbl_gpe2 ${simics_binaries}/pgpe.out"
-        let abort=$abort+$?
-        autosim --simcmd "backplane0.${proc}.occ_cmp.gpe_ctx2.symtable symtable = sym_tbl_gpe2"
-        let abort=$abort+$?
-        if [ $abort -ne 0 ]; then
-            echo -e "${red}ERROR: Failed to load GPE2 binary!${normal}"
+    # TODO: The init from the python script is not working in autotest environment (even though same commands)
+    if [ 0 -eq 1 ]; then
+        # Use init from the python script
+        if [ $G_use_pgpe -ne 0 ]; then
+            autosim --simcmd "occinit -p ${simics_binaries}"
+        else
+            autosim --simcmd "occinit ${simics_binaries}"
         fi
-    fi
 
-    if [ $abort -ne 0 ]; then
-        abortTest
-    fi
+    else
 
+        # Required for p10_standalone
+        autosim --simcmd 'system_cmp0.cpu0_0_00_0.disable'
 
-    # GPE Interrupt Vector Prefix Register
-    echo "[occ_standalone.simics info] Initialize IVPR and PIR"
-    autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.write 0xc0000008 0xFFF01000 -b' # TP.TPCHIP.OCC.OCI.GPE0.GPEIVPR
-    autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.write 0xc0010008 0xFFF10000 -b' # TP.TPCHIP.OCC.OCI.GPE1.GPEIVPR
-    autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.write 0xc0020008 0xFFF20000 -b' # TP.TPCHIP.OCC.OCI.GPE2.GPEIVPR
-    autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.write 0xc0030008 0xFFF30000 -b' # TP.TPCHIP.OCC.OCI.GPE3.GPEIVPR
+        # Hide error message: [backplane0.dcm0.chip0.pib_cmp.tod_scom error] Mambo cpu system_cmp0.cpu0_0_00_0 is disabled - Failed reading chip TOD value
+        autosim --simcmd "backplane0.${proc}.pib_cmp.tod_scom.log-type -disable log-type = error"
 
-    autosim --simcmd 'backplane0.'$proc'.occ_cmp.gpe_ppe0.write-reg pir value=0x00000000'
-    autosim --simcmd 'backplane0.'$proc'.occ_cmp.gpe_ppe1.write-reg pir value=0x00000001'
-    autosim --simcmd 'backplane0.'$proc'.occ_cmp.gpe_ppe2.write-reg pir value=0x00000002'
-    autosim --simcmd 'backplane0.'$proc'.occ_cmp.gpe_ppe3.write-reg pir value=0x00000003'
+        autosim --simcmd 'backplane0->system_info = "OCC Complex Model"'
 
-    # PPE External Interface XCR - Start each GPE? - Hard Reset, Toggle XSR[TRH], Resume
+        # Code Images
+        echo -e "\n==> Loading 405 binary: ${simics_binaries}/occ_405.out"
+        autosim --simcmd "backplane0.${proc}.occ_cmp.oci_space.load-binary -v ${simics_binaries}/occ_405.out"
+        autosim --simcmd "new-symtable -n sym_tbl_405 file=${simics_binaries}/occ_405.out"
+        autosim --simcmd 'new-context ctx_405'
+        autosim --simcmd "backplane0.${proc}.occ_cmp.proc_405.set-context context = ctx_405"
+        autosim --simcmd 'ctx_405->symtable = sym_tbl_405'
 
-    # GPE0
-    autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.write 0xc0000088 0x6000000000000000 8 -b'
-    autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.write 0xc0000088 0x4000000000000000 8 -b'
-    autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.write 0xc0000088 0x2000000000000000 8 -b'
+        echo -e "\n==> Loading GPE0 binary: ${simics_binaries}/occ_gpe0.out"
+        autosim --simcmd "backplane0.${proc}.occ_cmp.oci_space.load-binary -v ${simics_binaries}/occ_gpe0.out"
+        autosim --simcmd "new-symtable -n sym_tbl_gpe0 file=${simics_binaries}/occ_gpe0.out"
+        autosim --simcmd "backplane0.${proc}.occ_cmp.gpe_ctx0.symtable sym_tbl_gpe0"
 
-    # GPE1
-    autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.write 0xc0010088 0x6000000000000000 8 -b'
-    autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.write 0xc0010088 0x4000000000000000 8 -b'
-    autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.write 0xc0010088 0x2000000000000000 8 -b'
+        echo -e "\n==> Loading GPE1 binary: ${simics_binaries}/occ_gpe1.out"
+        autosim --simcmd "backplane0.${proc}.occ_cmp.oci_space.load-binary -v ${simics_binaries}/occ_gpe1.out"
+        autosim --simcmd "new-symtable -n sym_tbl_gpe1 file=${simics_binaries}/occ_gpe1.out"
+        autosim --simcmd "backplane0.${proc}.occ_cmp.gpe_ctx1.symtable sym_tbl_gpe1"
 
-    if [ $G_use_pgpe -ne 0 ]; then
-        # GPE2
-        autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.write 0xc0020088 0x6000000000000000 8 -b'
-        autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.write 0xc0020088 0x4000000000000000 8 -b'
-        autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.write 0xc0020088 0x2000000000000000 8 -b'
-    fi
+        if [ $G_use_pgpe -ne 0 ]; then
+            echo -e "\n==> Loading GPE2 (PGPE) binary: ${simics_binaries}/pgpe.out"
+            autosim --simcmd "backplane0.${proc}.occ_cmp.oci_space.load-binary -v ${simics_binaries}/pgpe.out"
+            autosim --simcmd "new-symtable sym_tbl_gpe2 ${simics_binaries}/pgpe.out"
+            autosim --simcmd "backplane0.${proc}.occ_cmp.gpe_ctx2.symtable symtable = sym_tbl_gpe2"
 
-    ### SRAM LAYOUT (768KB) ###
-    # FFF00000 - IPC Communication Region
-    # FFF01000 - GPE0 Code (60K)
-    # FFF10000 - GPE1 Code (64K)
-    # FFF20000 - PGPE HCode+Data (48K)
-    # FFF2C000 - SGPE HCode (80K)
-    # FFF40000 - 405 Code+Data (512K)
-    # FFFB3C00 -     ERR Trace Buffer (8K)
-    # FFFB5C00 -     INF Trace Buffer (8K)
-    # FFFB7C00 -     IMP Trace Buffer (8K)
-    # FFFB9C00 -     FIR Heap / Parms (16K)
-    # FFFBDC00 -     FSP/BMC Response Buffer (4K)
-    # FFFBEC00 -     FSP/BMC Command Buffer (4K)
-    # FFFBDC00 -     Reserved (Bootloader) (1K)
+            # Enable PGPE immediate return
+            #echo -e "\n==> Enable PGPE immediate return"
+            #autosim --simcmd "backplane0.${proc}.occ_cmp.oci_space.write 0xfff201a0 0x10300000 -b"
+        fi
 
-    # Request a 405 chip level reset and set the 405 pc to __ssx_boot
-    autosim --simcmd 'backplane0.'$proc'.occ_cmp.proc_405.write-reg reg-name = dbcr0 value = 0x20000000'
-    autosim --simcmd 'backplane0.'$proc'.occ_cmp.proc_405.write-reg reg-name = pc value = (backplane0.'$proc'.occ_cmp.proc_405.sym __ssx_boot)'
-    autosim --simcmd 'backplane0.'$proc'.occ_cmp.proc_405.enable'
+        #Enable GPE2
+        #echo -e "\n==> Enable GPE2 (needed?}"
+        #autosim --simcmd "backplane0.${proc}.occ_cmp.gpe_ppe2.enable"
 
-    autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.write 0xFFFFFFFC 0x4BF40002 size = 4'
+        # GPE Interrupt Vector Prefix Register
+        echo -e "\n==> Initialize IVPR and PIR"
+        autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.write 0xc0000008 0xFFF01000 -b' # TP.TPCHIP.OCC.OCI.GPE0.GPEIVPR
+        autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.write 0xc0010008 0xFFF10000 -b' # TP.TPCHIP.OCC.OCI.GPE1.GPEIVPR
+        autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.write 0xc0020008 0xFFF20000 -b' # TP.TPCHIP.OCC.OCI.GPE2.GPEIVPR
+        autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.write 0xc0030008 0xFFF30000 -b' # TP.TPCHIP.OCC.OCI.GPE3.GPEIVPR
 
-    # Create 16K OCC cache
-    autosim --simcmd '@will_cache = SIM_create_object("image", "occ_cache", [["size",0x4000]])'
-    autosim --simcmd 'backplane0.'$proc'.occ_cmp.ram_cacheable->image = occ_cache'
-    autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.del-map base = 0x00000000 device = backplane0.'$proc'.occ_cmp.ram_cacheable'
-    autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.add-map base = 0x00000000 device = backplane0.'$proc'.occ_cmp.ram_cacheable length = 0x4000 align-size = 8192'
+        autosim --simcmd 'backplane0.'$proc'.occ_cmp.gpe_ppe0.write-reg pir value=0x00000000'
+        autosim --simcmd 'backplane0.'$proc'.occ_cmp.gpe_ppe1.write-reg pir value=0x00000001'
+        autosim --simcmd 'backplane0.'$proc'.occ_cmp.gpe_ppe2.write-reg pir value=0x00000002'
+        autosim --simcmd 'backplane0.'$proc'.occ_cmp.gpe_ppe3.write-reg pir value=0x00000003'
 
-    # HOMER Layout (relative to base address 0x80000000)
-    # 000C0000 - header? version (4 bytes), nestFreq (4B), interruptType (4B), firMaster (4B), firParms, smfMode (4B)
-    # 000E0000 - HTMGT Command Buffer (4k)
-    # 000E1000 - HTMGT Response Buffer (4k)
-    # 000E2000 - OPAL Shared Memory (32k)
-    # 000E2000 -   OPAL Static space (0x880 bytes)
-    # 000E2B80 -   OPAL Dynamic space (128 bytes)
-    # 000E2C00 -   Inband Command Buffer (4k)
-    # 000E3C00 -   Inband Response Buffer (4k)
-    # 00300000 - PPMR Header (4k)
+        # PPE External Interface XCR - Start each GPE? - Hard Reset, Toggle XSR[TRH], Resume
 
-    # map images files?
-    #autosim --simcmd '@conf.OccSystem0.mainstore_image.files = [["binaries/image.bin", "ro", 0, 0],["binaries/ppmr.bin", "ro", 0x300000, 0],["binaries/oppb.bin", "ro", 0x320000, 0]]'
-    autosim --simcmd "system_cmp0.memory_image0.load-file ${simics_binaries}/image.bin 0x00000000"
-    #if [ $G_use_pgpe -eq 0 ]; then
-        echo "Loading fake PPMR header: ${simics_binaries}/ppmr.bin @ 0x300000"
+        # GPE0
+        echo -e "\n==> Start GPE0 (Hard Reset, Toggle XSR, Resume)"
+        autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.write 0xc0000088 0x6000000000000000 8 -b'
+        autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.write 0xc0000088 0x4000000000000000 8 -b'
+        autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.write 0xc0000088 0x2000000000000000 8 -b'
+
+        # GPE1
+        echo -e "\n==> Start GPE1 (Hard Reset, Toggle XSR, Resume)"
+        autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.write 0xc0010088 0x6000000000000000 8 -b'
+        autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.write 0xc0010088 0x4000000000000000 8 -b'
+        autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.write 0xc0010088 0x2000000000000000 8 -b'
+
+        if [ $G_use_pgpe -ne 0 ]; then
+            # GPE2
+            echo -e "\n==> Start GPE2 (Hard Reset, Toggle XSR, Resume)"
+            autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.write 0xc0020088 0x6000000000000000 8 -b'
+            autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.write 0xc0020088 0x4000000000000000 8 -b'
+            autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.write 0xc0020088 0x2000000000000000 8 -b'
+        fi
+
+        ### SRAM LAYOUT (768KB) ###
+        # FFF00000 - IPC Communication Region
+        # FFF01000 - GPE0 Code (60K)
+        # FFF10000 - GPE1 Code (64K)
+        # FFF20000 - PGPE HCode+Data (48K)
+        # FFF2C000 - SGPE HCode (80K)
+        # FFF40000 - 405 Code+Data (512K)
+        # FFFB3C00 -     ERR Trace Buffer (8K)
+        # FFFB5C00 -     INF Trace Buffer (8K)
+        # FFFB7C00 -     IMP Trace Buffer (8K)
+        # FFFB9C00 -     FIR Heap / Parms (16K)
+        # FFFBDC00 -     FSP/BMC Response Buffer (4K)
+        # FFFBEC00 -     FSP/BMC Command Buffer (4K)
+        # FFFBDC00 -     Reserved (Bootloader) (1K)
+
+        # HOMER Layout (relative to base address 0x80000000)
+        # 000C0000 - header? version (4 bytes), nestFreq (4B), interruptType (4B), firMaster (4B), firParms, smfMode (4B)
+        # 000E0000 - HTMGT Command Buffer (4k)
+        # 000E1000 - HTMGT Response Buffer (4k)
+        # 000E2000 - OPAL Shared Memory (32k)
+        # 000E2000 -   OPAL Static space (0x880 bytes)
+        # 000E2B80 -   OPAL Dynamic space (128 bytes)
+        # 000E2C00 -   Inband Command Buffer (4k)
+        # 000E3C00 -   Inband Response Buffer (4k)
+        # 00300000 - PPMR Header (4k)
+
+        # Request a 405 chip level reset and set the 405 pc to __ssx_boot
+        echo -e "==> Requesting 405 chip level reset and set pc to __ssx_boot"
+        autosim --simcmd 'backplane0.'$proc'.occ_cmp.proc_405.write-reg reg-name = dbcr0 value = 0x20000000'
+        autosim --simcmd 'backplane0.'$proc'.occ_cmp.proc_405.write-reg reg-name = pc value = (backplane0.'$proc'.occ_cmp.proc_405.sym __ssx_boot)'
+        autosim --simcmd 'backplane0.'$proc'.occ_cmp.proc_405.enable'
+
+        echo -e "\n==> write 0xFFFFFFFC to 0x4BF40002"
+        autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.write 0xFFFFFFFC 0x4BF40002 size = 4'
+
+        # Create 16K OCC cache
+        echo -e "\n==> Creating 16K OCC cache"
+        autosim --simcmd '@will_cache = SIM_create_object("image", "occ_cache", [["size",0x4000]])'
+        autosim --simcmd 'backplane0.'$proc'.occ_cmp.ram_cacheable->image = occ_cache'
+        autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.del-map base = 0x00000000 device = backplane0.'$proc'.occ_cmp.ram_cacheable'
+        autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.add-map base = 0x00000000 device = backplane0.'$proc'.occ_cmp.ram_cacheable length = 0x4000 align-size = 8192'
+
+        # Load the code binaries into main memory
+        echo -e "\n==> Loading OCC image: ${simics_binaries}/image.bin @ 0x00000000"
+        autosim --simcmd "system_cmp0.memory_image0.load-file ${simics_binaries}/image.bin 0x00000000"
+        echo -e "\n==> Loading fake PPMR header: ${simics_binaries}/ppmr.bin @ 0x300000"
         autosim --simcmd "system_cmp0.memory_image0.load-file ${simics_binaries}/ppmr.bin  0x00300000"
-        echo "Loading fake OPPB header: ${simics_binaries}/oppb.bin @ 0x320000"
+        echo -e "\n==> Loading fake OPPB header: ${simics_binaries}/oppb.bin @ 0x320000"
         autosim --simcmd "system_cmp0.memory_image0.load-file ${simics_binaries}/oppb.bin  0x00320000"
-    #fi
 
-    # SRAM - FFF4000 is start of PPC405 Code + Data area "3C20800060210040 7C2903A64E800420"
-    autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.write 0xFFF40000 0x3C208000 size = 4'
-    autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.write 0xFFF40004 0x60210040 size = 4'
-    autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.write 0xFFF40008 0x7C2903A6 size = 4'
-    autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.write 0xFFF4000C 0x4E800420 size = 4'
+        # SRAM - FFF4000 is start of PPC405 Code + Data area "3C20800060210040 7C2903A64E800420"
+        echo -e "\n==> write 0xFFF4000x"
+        autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.write 0xFFF40000 0x3C208000 size = 4'
+        autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.write 0xFFF40004 0x60210040 size = 4'
+        autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.write 0xFFF40008 0x7C2903A6 size = 4'
+        autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.write 0xFFF4000C 0x4E800420 size = 4'
 
-    autosim --simcmd 'backplane0.'$proc'.bridge_cmp.pba->pba_barmsk0=0x0000000007f00000'
+        # HOMER init
+        echo -e "\n==> Initialize OCC Host Config Data in HOMER (0x800C0000)"
+        autosim --simcmd "backplane0.${proc}.occ_cmp.oci_space.write 0x800C0000 0x000000A0 -b" # Version
+        autosim --simcmd "backplane0.${proc}.occ_cmp.oci_space.write 0x800C0004 0x00000964 -b" # Nest Frequency
+        autosim --simcmd "backplane0.${proc}.occ_cmp.oci_space.write 0x800C0008 0x00000000 -b" # Interrupt Type (FSP)
+        autosim --simcmd "backplane0.${proc}.occ_cmp.oci_space.write 0x800C000C 0x00000000 -b" # SMB
+        autosim --simcmd "backplane0.${proc}.occ_cmp.oci_space.read  0x800C0000 8"
+        autosim --simcmd "backplane0.${proc}.occ_cmp.oci_space.read  0x800C0008 8"
 
+        echo -e "\n==> Trigger 405 start??? (write barmsk0 to 0x7f00000)"
+        autosim --simcmd 'backplane0.'$proc'.bridge_cmp.pba->pba_barmsk0=0x0000000007f00000'
+
+    fi
+
+    # Update/enable specified number of cores
     if [ $numCores -gt 0 ]; then
         let core=0
         let ccsr=0
@@ -1138,17 +1170,11 @@ SetupOccImage()
     fi
 
     if [ $G_use_pgpe -ne 0 ]; then
-        ## let pgpe run for a moment to be ahead of 405
+        # let pgpe run for a moment to be ahead of 405
         autosim --simcmd 'run'
         autosim --simcmd 'stop'
     fi
 
-    # FOR PIB/OCI WRITES
-    #backplane0.'$proc'.pib_cmp.pib.read address = 0x6d0330 size = 8
-    # -OR-
-    #@SIM_create_object('pib_master', 'master_foo', [['pcb_space', conf.backplane0.'$proc'.pib_cmp.pib]])
-    #master_foo->address = 0x6d0330
-    #master_foo->data
 }
 
 
@@ -1215,7 +1241,7 @@ SetupCoreInitTemps()
         let quad=$quad+1
     done
 
-    # Cores 0x20-0x37
+    # Cores 0x20-0x40
     let core=0
     let temp=$startingCoreTemp
     while [ $core -lt $numCores ]; do
@@ -1292,7 +1318,7 @@ TestValidationFunction()
         let failureCount=$failureCount+1
         testFailDesc="${testFailDesc} : ${current_test}UNABLE TO VALIDATE FUNCTION"
         CaptureOccTraces "unableToValidateFunction"
-        let status=1
+        let status=2 # no data to parse
     fi
 
     return $status
@@ -1301,7 +1327,7 @@ TestValidationFunction()
 
 TestValidationObservationReady()
 {
-    autosim --simcmd '$SeqNum=(OCCw -C '$OCCCMD_POLL' -D "20")'
+    autosim --simcmd '$SeqNum=(OCCw -C '$OCCCMD_POLL' -D "20" '$G_simics_options')'
     WaitForResponse $OCCCMD_POLL
     if [ $? -eq 0 ]; then
 
@@ -1343,7 +1369,7 @@ TestValidationActiveReady()
 
     until [ $ar_complete -eq 1 ] || [ $ar_retry -eq 0 ]; do
         echo "Sending POLL command... (retries: $ar_retry)"
-        autosim --simcmd '$SeqNum=(OCCw -C '$OCCCMD_POLL' -D "20")'
+        autosim --simcmd '$SeqNum=(OCCw -C '$OCCCMD_POLL' -D "20" '$G_simics_options')'
         WaitForResponse $OCCCMD_POLL
         if [ $? -eq 0 ]; then
 
@@ -1407,7 +1433,7 @@ TestValidationActiveReady()
 
 TestValidationObservationState()
 {
-    autosim --simcmd '$SeqNum=(OCCw -C '$OCCCMD_POLL' -D "20")'
+    autosim --simcmd '$SeqNum=(OCCw -C '$OCCCMD_POLL' -D "20" '$G_simics_options')'
     WaitForResponse $OCCCMD_POLL
     if [ $? -eq 0 ]; then
 
@@ -1445,7 +1471,7 @@ TestValidationObservationState()
 
 TestValidationActiveState()
 {
-    autosim --simcmd '$SeqNum=(OCCw -C '$OCCCMD_POLL' -D "20")'
+    autosim --simcmd '$SeqNum=(OCCw -C '$OCCCMD_POLL' -D "20" '$G_simics_options')'
     WaitForResponse $OCCCMD_POLL
     if [ $? -eq 0 ]; then
 
@@ -1537,7 +1563,7 @@ checkAndHandleOccElog()
 ValidatePollData()
 {
     let fail=0
-    autosim --simcmd '$SeqNum=(OCCw -C '$OCCCMD_POLL' -D "20")'
+    autosim --simcmd '$SeqNum=(OCCw -C '$OCCCMD_POLL' -D "20" '$G_simics_options')'
     WaitForResponse $OCCCMD_POLL
     if [ $? -eq 0 ]; then
 
@@ -1773,10 +1799,10 @@ PollToVerifyElogs()
     while [ $check_more -eq 1 ];
     do
         echo "Polling to check for elogs..."
-        autosim --simcmd '$SeqNum=(OCCw -C '$OCCCMD_POLL' -D "20")'
+        autosim --simcmd '$SeqNum=(OCCw -C '$OCCCMD_POLL' -D "20" '$G_simics_options')'
         WaitForResponse $OCCCMD_POLL
         let pollrc=$?
-        if [ $pollrc -eq 0 ] || [ $pollrc -gt $((0x00FF)) ]; then
+        if [ $pollrc -eq 0 ]; then
             echo -e "${bold}PollToVerifyElogs - WaitForResponse(POLL) returned $pollrc${normal}"
             let poll_fail=0
             OccState=$(grep 'Current OCC State (5)  : ' $tempfile | tail -n 1 )
@@ -1816,7 +1842,7 @@ PollToVerifyElogs()
 
 TestValidationOCCslave()
 {
-    autosim --simcmd '$SeqNum=(OCCw -C '$OCCCMD_POLL' -D "20")'
+    autosim --simcmd '$SeqNum=(OCCw -C '$OCCCMD_POLL' -D "20" '$G_simics_options')'
     WaitForResponse $OCCCMD_POLL
     if [ $? -eq 0 ]; then
         occRole=$(grep 'Status (1)             :' $tempfile | tail -n 1 )
@@ -1850,7 +1876,7 @@ TestValidationOCCslave()
 
 TestValidationOCCmaster()
 {
-    autosim --simcmd '$SeqNum=(OCCw -C '$OCCCMD_POLL' -D "20")'
+    autosim --simcmd '$SeqNum=(OCCw -C '$OCCCMD_POLL' -D "20" '$G_simics_options')'
     WaitForResponse $OCCCMD_POLL
     if [ $? -eq 0 ]; then
         occRole=$(grep 'Status (1)             :' $tempfile | tail -n 1 )
@@ -1893,7 +1919,7 @@ ReadAndClearElog()
         autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.x '$elogAddr' '$elogLen''
 
         # Clear the 405 elog
-        autosim --simcmd '$SeqNum=(OCCw -C 0x12 -D "01'${elogId:2:2}'0000")'
+        autosim --simcmd '$SeqNum=(OCCw -C 0x12 -D "01'${elogId:2:2}'0000" '$G_simics_options')'
         WaitForResponse 0x12
         if [ $? -eq 0 ]; then
             echo "Clear of OCC elog $elogId completed successfully"
@@ -1930,7 +1956,7 @@ ReadAndClearElog()
 
 printTestResults()
 {
-    FinalDate=`date +%s`
+    test_end_time=`date +%s`
 
     if [ $testFailure -ne 0 ]; then
         autosim --simcmd 'OCCstate'
@@ -2005,7 +2031,7 @@ printTestResults()
         echo "SET_MODE completed after $G_duration_set_mode seconds"
     fi
 
-    echo "Test duration:" `date -u -d "0 $FinalDate seconds - $StartDate seconds" +"%M minutes %S seconds"`
+    echo "Test duration:" `date -u -d "0 $test_end_time seconds - $test_start_time seconds" +"%M minutes %S seconds"`
 }
 
 
@@ -2013,6 +2039,8 @@ printTestResults()
 TESTS_elogs()
 {
     current_test="TESTS_elogs-"
+    let start_time=`date +%s`
+
     let MAX_SLOTS=6
 
     # OCC $MAX_SLOTS elog slots and 1 for CallHome logs
@@ -2165,6 +2193,10 @@ TESTS_elogs()
         let expectedOccSrc=0x2AD3 # Remaining logs should be 2AD3
     done
 
+    let end_time=`date +%s`
+    let delta_time=$end_time-$start_time
+    echo -e "\n${bold}==> END OF ${current_test}: test duration $delta_time seconds${normal}"
+
     let expectedOccSrc=0
     current_test=""
 
@@ -2174,6 +2206,8 @@ TESTS_elogs()
 TESTS_pcaps()
 {
     current_test="TESTS_pcaps-"
+    let start_time=`date +%s`
+
     printHeader "SET USER POWER CAP"
     autosim --simcmd '$SeqNum=(OCCw -C 0x22 -D "07BE")' ### cap < oversub
     WaitForResponse 0x22
@@ -2202,25 +2236,31 @@ TESTS_pcaps()
     ValidatePollData
 
 
-    printHeader "SET POWER CAP BELOW CURRENT POWER"
+    printHeader "TODO: SET POWER CAP BELOW CURRENT POWER"
     ### DEBUG: Set power limit BELOW current power usage to test OCC code
-    autosim --simcmd '$SeqNum=(OCCw -C 0x22 -D "0145")' ### 325W ### valid cap that is < current power
-    WaitForResponse 0x22
-    ValidatePollData
-    echo WAIT : 10 seconds before next poll
-    sleep 10
-    let expectedState=0x04
-    let expectedOccSrc=0x2A06
-    ValidatePollData
-    echo WAIT : 10 seconds before next poll
-    sleep 10
-    ValidatePollData
-    autosim --simcmd '$SeqNum=(OCCw -C 0x22 -D "0384")' ### 900W ### valid cap that is < current power
-    WaitForResponse 0x22
-    ValidatePollData
-    echo WAIT : 10 seconds before next poll
-    sleep 10
-    ValidatePollData
+    if [ 0 -eq 1 ]; then
+        autosim --simcmd '$SeqNum=(OCCw -C 0x22 -D "0145")' ### 325W ### valid cap that is < current power
+        WaitForResponse 0x22
+        ValidatePollData
+        echo WAIT : 10 seconds before next poll
+        sleep 10
+        let expectedState=0x04 # Expect to be in safe mode
+        let expectedOccSrc=0x2A06 # and report 2A06 elog
+        ValidatePollData
+        echo WAIT : 10 seconds before next poll
+        sleep 10
+        ValidatePollData
+        autosim --simcmd '$SeqNum=(OCCw -C 0x22 -D "0384")' ### 900W ### valid cap that is < current power
+        WaitForResponse 0x22
+        ValidatePollData
+        echo WAIT : 10 seconds before next poll
+        sleep 10
+        ValidatePollData
+    fi
+
+    let end_time=`date +%s`
+    let delta_time=$end_time-$start_time
+    echo -e "\n${bold}==> END OF ${current_test}: test duration $delta_time seconds${normal}"
 
     current_test=""
 
