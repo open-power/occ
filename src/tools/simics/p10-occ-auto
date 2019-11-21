@@ -1,0 +1,2235 @@
+#!/bin/bash
+# IBM_PROLOG_BEGIN_TAG
+# This is an automatically generated prolog.
+#
+# $Source: src/tools/simics/p10-occ-auto $
+#
+# OpenPOWER OnChipController Project
+#
+# Contributors Listed Below - COPYRIGHT 2019
+# [+] International Business Machines Corp.
+#
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+# implied. See the License for the specific language governing
+# permissions and limitations under the License.
+#
+# IBM_PROLOG_END_TAG
+
+# REQUIREMENTS:
+#   occ code:
+#       binaries/occ_405.out
+#       binaries/occ_gpe0.out
+#       binaries/occ_gpe1.out
+#       binaries/pgpe.out
+#       NOT SUPPORTED: binaries/image.bin
+#   dummy headers:
+#       binaries/ppmr.bin
+#       binaries/oppb.bin
+#
+# SETUP:
+#     export OCCREPO=/esw/...     # location of the simics repository to test with
+#     export SIMICS_BASE=`pwd`    # location where simics was extracted
+#
+#     export START_SIMICS_CMD="$SIMICS_BASE/runsim"
+#     export PATH="$PATH:$SIMICS_BASE"
+#
+# START TEST RUN:
+#     p10-occ-auto -g $OCCREPO
+
+let verbose=1
+blue=""
+red=""
+green=""
+bold=""
+normal=""
+if [ $TERM == "xterm-color" ] || [ $TERM == "xterm" ]; then
+    blue="\033[34;1m";
+    red="\033[31;1m";
+    green="\033[32;1m";
+    bold="\033[1m";
+    normal="\033[0m";
+fi
+
+let test_depth=3 # Just bring to active state
+let ALL_TESTS=0xFF
+current_test=""
+
+simics_machine="p10_standalone"
+
+simics_options=""
+
+# Get the directory of this script
+current_script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd -P)"
+
+patch_dir="/gsa/ausgsa/projects/o/occfw/simics_p10/binary_patches"
+
+occ_setup_file="${current_script_dir}/p10_occ_setup.py"
+if [ ! -x ${occ_setup_file} ]; then
+    occ_setup_file="/gsa/ausgsa/projects/o/occfw/simics_p10/p10_occ_setup.py"
+fi
+
+#proc="proc0"
+# DCM supported added to Simics July 2019
+proc="dcm0.chip0"
+
+let G_use_pgpe=0
+let G_use_binary_patches=0
+let G_cmd_delay=2 # time in seconds to wait before checking for response
+let G_rsp_retries=4 # number of retries before timing out on a response
+let G_trace_index=1
+
+let G_duration_active_ready=0
+let G_duration_set_state=0
+let G_duration_set_mode=0
+let G_keep_running=0
+
+if [ -z "$sb" ] || [ ! -d "$sb" ]; then
+    echo -e "${red}ERROR: autosimics script must be run from ODE sandbox${normal}"
+    exit 1;
+fi
+
+simics_base=`pwd -P`
+sandbox_base=""
+if [ -d "${sb}/../simics" ]; then
+    # auto-simics gets it binaries from the sandbox
+    sandbox_base=`cd ${sb}/../simics; pwd -P`
+    simics_binaries="${sandbox_base}/binaries"
+else
+    simics_binaries="${simics_base}/binaries"
+fi
+
+simics_traces="${simics_base}/traces"
+if [ ! -d "$simics_traces" ]; then
+    mkdir ${simics_traces}
+fi
+
+tempfile="tmpOCCbuffer.txt"
+let testFailure=0
+let failureCount=0
+testFailDesc=""
+
+let numCores=0 # no cores present yet
+let maxCores=32
+
+let startingCoreTemp=0x31
+let numDimms=2
+let numDimms=0 # no DIMMs present yet
+let startingDimmTemp=0x21
+apssFuncName=(Unused MemProc0 MemProc1 MemProc2 MemProc3 Proc0 Proc1 Proc2 Proc3 Proc0Cache Proc1Cache Proc2Cache Proc3Cache IO_A IO_B IO_C Fans_A Fans_B StorageA StorageB 12VSense GroundSense TotalSysPower MemCache Gpu, MemProc0b MemProc0c MemProc0d)
+
+### DEBUG: Test Options:
+let useBulkPowerSensor=0    # APSS will provide a bulk power sensor
+let hugePowerValue=0        # Force one sensor to return huge power value (to test bounds)
+let hugePowerWithRollover=0 # Force one sensor to roll over 32 bit accululator (long)
+let allHugePowerValues=0    # Force all sensors to return large power value (to test bounds)
+let expectedOccSrc=0
+let expectedState=0x03
+
+# Set working directory to current directory
+#   --workdir xxx : (or $AUTOSIM_WORKDIR) specifies the directory in which to store log files and other
+#                   working files (default is the current sandbox base directory)
+#export AUTOSIM_WORKDIR=`pwd -P`
+
+OCCCMD_POLL="0x00"
+OCCCMD_SET_CFG_DATA="0x21"
+OCCCMD_MFG_TEST="0x53"
+
+usage()
+{
+    echo "Usage: p10-auto-act <options>"
+    echo ""
+    echo "           options:"
+    echo "               -g gitRepoDir : use OCC binaries/string file from specified repo"
+    echo "               -p            : enable PGPE"
+    #echo "               -p10sa        : use p10_standalone model (instead of powman)"
+    echo "               -b            : copy/update any binary patches available from:"
+    echo "                                 $patch_dir"
+    echo "               -powman       : use powman model (instead of p10_standalone)"
+    echo ""
+    echo "               -t test#      : run specified test"
+    echo "                               2 = Observation state"
+    echo "                               3 = Active state (DEFAULT)"
+    echo "                               4 = error logging"
+    echo "                               5 = power capping"
+    echo "               -a            : run ALL available OCC tests"
+    echo ""
+    echo "               -wait         : keep simics running after tests complete"
+    echo "                               (to do additional debug, traces, etc)"
+    echo ""
+    echo "               -h            : You are looking at it!"
+    echo ""
+}
+
+main()
+{
+    StartDate=`date +%s`
+
+    if [ ! -d "$simics_binaries" ]; then
+        echo -e "${bold}--> Creating $simics_binaries/${normal}"
+        mkdir $simics_binaries
+    fi
+
+
+    if [ -n "$sandbox_base" ]; then
+        echo -e "${bold}Sandbox Base Dir: ${sandbox_base}${normal}"
+    fi
+    echo -e "${bold}Simics Base Dir: ${simics_base}${normal}"
+    echo -e "${bold}Trace Directory: ${simics_traces}${normal}"
+    echo -e "${bold}Simics Binaries Dir: ${simics_binaries}${normal}"
+    echo ""
+
+    git_repo=""
+
+    # Parse all - command line options
+    while [ -n "$(echo \'$1\' | grep '-')" ]; do
+        case $1 in
+            -a )
+                let test_depth=$ALL_TESTS # ALL TESTS
+                ;;
+
+            -b )
+                let G_use_binary_patches=1
+                ;;
+
+            -g )
+                if [ -z "$2" ] || [ "`echo $2 | cut -c1`" == "-" ]; then
+                    echo -e "${red}ERROR: Directory required with -g parameter${normal}"
+                    exit -3
+                elif [ -d "$2" ]; then
+                    git_repo="$2"
+                    if [ -d "${git_repo}/occ" ]; then
+                        git_repo="${git_repo}/occ"
+                    fi
+                    shift
+                else
+                    echo -e "${red}ERROR: $2 is not a directory (Directory required with -g parameter)${normal}"
+                    exit -2
+                fi
+                ;;
+
+            -h )
+                usage
+                exit 0
+                ;;
+
+            -p )
+                let G_use_pgpe=1
+                ;;
+
+            -powman )
+                simics_machine="powman"
+                ;;
+
+            -p10sa )
+                simics_machine="p10_standalone"
+                ;;
+
+            -t )
+                if [ -z "$2" ] || [ "`echo $2 | cut -c1`" == "-" ]; then
+                    echo -e "${red}ERROR: Test requires # parameter${normal}"
+                    exit -4
+                else
+                    let test_depth=$2
+                    shift
+                fi
+                ;;
+
+            -wait )
+                let G_keep_running=1
+                ;;
+
+            * )
+                echo -e "${red}WARNING: Ignoring unknown option $1${normal}"
+                ;;
+        esac
+        shift
+    done
+
+    if [ $G_use_pgpe -ne 0 ]; then
+        let numCores=$maxCores # up to 32
+        let G_cmd_delay=4 # time in seconds to wait before checking for response
+        let G_rsp_retries=8 # number of retries before timing out on a response
+    fi
+
+    # p10_standalone specific configuration
+    if [ $simics_machine == "p10_standalone" ]; then
+        grep -q 'required for OCC testing in p10_standalone model' ${simics_base}/targets/p10_standalone/simenv_user.simics
+        if [ $? -ne 0 ]; then
+            echo -e "${bold}Updating targets/p10_standalone/simenv_user.simics for OCC testing${normal}"
+            cat ${patch_dir}/simenv_user.simics >> ${simics_base}/targets/p10_standalone/simenv_user.simics
+            echo ""
+        fi
+    fi
+
+    # Copy files from OCCREPO to the SIMICS binaries directory
+    if [ -n "$git_repo" ]; then
+        echo -e "${bold}OCC GIT Repo: ${git_repo}${normal}"
+        if [ -d "${git_repo}/obj" ]; then
+            echo -e "${bold}--> Copying/updating OCC code/string from repo: ${git_repo}${normal}"
+            cp -uv ${git_repo}/obj/occ_*/*.out ${git_repo}/obj/image.bin ${git_repo}/obj/occStringFile $simics_binaries/
+        fi
+        echo ""
+    fi
+
+    if [ -n "$sandbox_base" ]; then
+        # Copy files from SIMICS binaries directory to SANDBOX binaries
+        if [ -d "${simics_base}/binaries" ]; then
+            echo -e "${bold}--> Copying/updating SANDBOX binaries from ${simics_base}/binaries/ to ${simics_binaries}${normal}"
+            cp -uv ${simics_base}/binaries/* ${simics_binaries}/
+            echo ""
+        fi
+    fi
+
+    if [ $G_use_binary_patches -eq 1 ] || [ ! -e ${simics_binaries}/ppmr.bin ] || [ ! -e ${simics_binaries}/oppb.bin ]; then
+        # Apply any patches if specified or files don't yet exist
+        if [ -d "$patch_dir" ]; then
+            if [ `ls $patch_dir | wc -l ` -gt 0 ]; then
+                echo -e "${bold}--> Copying/updating patches (*.bin, *.out, *StringFile) from ${patch_dir}${normal}"
+                cp -uv ${patch_dir}/*.bin ${patch_dir}/*.out ${patch_dir}/*StringFile ${simics_binaries}/
+                echo ""
+            fi
+        fi
+    fi
+
+    if [ $G_use_pgpe -ne 0 ]; then
+        # Make sure PGPE binaries/string exist
+        if [ ! -e "${simics_binaries}/pgpe.out" ] || [ ! -e "${simics_binaries}/trexStringFile" ]; then
+            echo -e "${bold}--> Copying PGPE and trexStringFile from ${patch_dir}${normal}"
+            cp -uv ${patch_dir}/pgpe.out ${patch_dir}/trexStringFile ${simics_binaries}/
+        fi
+    fi
+
+    echo "==> autosim --startserver -machine $simics_machine $simics_options"
+    autosim --startserver --machine $simics_machine $simics_options
+    if [ $? == 0 ]; then
+        echo SERVER STARTED
+    else
+        echo -e "${red}ERROR: Return Code from autosim startserver :  $?${normal}"
+        read -p "Press ENTER to stop simics: " answer
+        autosim --stopserver
+        exit 1
+    fi
+
+
+    # Start simics without run
+    echo "==> autosim --startsim --notar -machine $simics_machine $simics_options --norun"
+    autosim --startsim --notar --machine $simics_machine $simics_options --norun
+    if [ $? == 0 ]; then
+        echo SIM STARTED
+    else
+        echo -e "${red}ERROR: Return Code from autosim startsim :  $?${normal}"
+        read -p "Press ENTER to stop simics: " answer
+        autosim --stopserver
+        exit 1
+    fi
+
+
+    # Force simulation exit on ctrl-c (cleanup)
+    trap "echo '** TEST ABORTED**' ; autosim --stopserver ; exit -1" INT TERM
+
+
+    # Required for p10_standalone
+    autosim --simcmd 'system_cmp0.cpu0_0_00_0.disable'
+
+
+    printHeader "SETUP OCC IMAGE"
+    SetupOccImage
+
+
+    printHeader "INIT APSS CHANNEL VALUES"
+    SetupAPSSChannel
+
+
+    printHeader "INIT TEMPERATURE SENSORS"
+    SetupDimmInitTemps
+    SetupCoreInitTemps
+
+    # Run
+    autosim --simcmd 'run'
+
+    autosim --simcmd 'backplane0.'$proc'.occ_cmp.proc_405.read-reg reg-name = pc'
+
+    # Read utility functions
+    printHeader "LOADING $occ_setup_file"
+    autosim --simcmd 'run-python-file "'$occ_setup_file'"'
+
+    if [ $? == 0 ]; then
+        echo OCC SIMICs Python commands loaded.
+    else
+        echo -e "${red}ERROR: OCC SIMICs Python commands not loaded :  $?${normal}"
+        echo WAIT : 30 seconds before shutdown.
+        sleep 30
+        autosim --stopserver
+        echo "For errors check: autosim/autosim.log"
+        exit 1
+    fi
+
+
+    touch $tempfile
+
+
+    printHeader "WAIT FOR OCC CHECKPOINT"
+    WaitForCheckpoint
+
+
+    printHeader "SET SYSTEM CONFIG"
+    cmdData="0f2001" # single node
+    cmdData="${cmdData}00000001" # proc sensor
+    cmdData="${cmdData}0100000101000002" # core0 temp sensor / freq sensor
+    cmdData="${cmdData}0100010101000102"
+    cmdData="${cmdData}0100020101000202"
+    cmdData="${cmdData}0100030101000302"
+    cmdData="${cmdData}0100040101000402"
+    cmdData="${cmdData}0100050101000502"
+    cmdData="${cmdData}0100060101000602"
+    cmdData="${cmdData}0100070101000702"
+    cmdData="${cmdData}0100080101000802"
+    cmdData="${cmdData}0100090101000902"
+    cmdData="${cmdData}0100100101001002"
+    cmdData="${cmdData}0100110101001102"
+    cmdData="${cmdData}0100120101001202"
+    cmdData="${cmdData}0100130101001302"
+    cmdData="${cmdData}0100140101001402"
+    cmdData="${cmdData}0100150101001502"
+    cmdData="${cmdData}0100160101001602"
+    cmdData="${cmdData}0100170101001702"
+    cmdData="${cmdData}0100180101001802"
+    cmdData="${cmdData}0100190101001902"
+    cmdData="${cmdData}0100200101002002"
+    cmdData="${cmdData}0100210101002102"
+    cmdData="${cmdData}0100220101002202"
+    cmdData="${cmdData}0100230101002302"
+    cmdData="${cmdData}02000001" # backplane sensor
+    cmdData="${cmdData}03000001" # APSS sensor
+    autosim --simcmd '$SeqNum=(OCCw -C '$OCCCMD_SET_CFG_DATA' -D "'$cmdData'")'
+    WaitForResponse $OCCCMD_SET_CFG_DATA
+
+
+    printHeader "POLL TO VERIFY NO ELOGS"
+    PollToVerifyElogs
+
+
+    if [ $test_depth -gt 0 ]; then
+
+        # zzfp164
+        #04200000
+        #0E 00000000 00 00004E52 FFFFFFF6 (ch0)
+        #14 00000000 00 00001964 00000000
+        #05 00000000 00 000049A2 FFFFFFEF
+        #06 00000000 00 000049A2 FFFFFFEF
+        #09 00000000 00 0000245F 00000002
+        #0A 00000000 00 0000245F 00000002
+        #01 00000000 00 00004B64 FFFFFFF3
+        #02 00000000 00 00004B64 FFFFFFF3
+        #13 00000000 00 0000229C FFFFFFED
+        #00 00000000 00 00000000 00000000
+        #00 00000000 00 00000000 00000000
+        #00 00000000 00 00000000 00000000
+        #1C 00000000 00 000012C0 FFFFFF45
+        #10 00000000 00 00004E20 FFFFFFEC
+        #12 00000000 00 00006C98 FFFFFFEB
+        #0D 00000000 00 00008084 FFFFFFF0 (ch15)
+        #00 00 0102000405060000 (GPIO port0)
+        #00 00 0000000000000000 (GPIO port1)
+
+        printHeader "SET APSS CONFIG"
+        cmdData="04200000"
+        cmdData="${cmdData}01AAAAAA010000004E4800000005" # channel 0 - Mem Proc 0
+        cmdData="${cmdData}02AAAAAA020000004E4800000005" # channel 1 - Mem Proc 1
+        cmdData="${cmdData}05AAAAAA030000004E4800000005" # channel 2 - Proc 0
+        cmdData="${cmdData}06AAAAAA040000004E4800000005" # channel 3 - Proc 1
+        cmdData="${cmdData}09AAAAAA05000000271000000005" # channel 4 - Proc 0 cache/io/pcie
+        if [ $hugePowerValue -ne 0 ] || [ $hugePowerWithRollover -ne 0 ]; then
+            cmdData="${cmdData}0AAAAAAA0603FF00271000003F00" # channel 5 - Proc 1 cache/io/pcie : DEBUG: HUGE gain to force accumulator rollover quicker
+        else
+            cmdData="${cmdData}0AAAAAAA06000000271000000005" # channel 5 - Proc 1 cache/io/pcie
+        fi
+        cmdData="${cmdData}12AAAAAA07000000239D00000005" # channel 6 - Storage A
+        cmdData="${cmdData}13AAAAAA08000000239D00000005" # channel 7 - Storage B
+        cmdData="${cmdData}15AAAAAA0900000003E800000000" # channel 8 - ground
+        cmdData="${cmdData}14AAAAAA0A000000195E00000005" # channel 9 - 12v sense
+        cmdData="${cmdData}0DAAAAAA0B000000239D00000005" # channel 10 - IO A
+        cmdData="${cmdData}0EAAAAAA0C000000239D00000005" # channel 11 - IO B
+        cmdData="${cmdData}0FAAAAAA0D000000239D00000005" # channel 12 - IO C
+        cmdData="${cmdData}10AAAAAA0E000000239D00000005" # channel 13 - Fans A
+        if [ $useBulkPowerSensor -ne 0 ]; then
+            cmdData="${cmdData}16AAAAAA0F000000239D00000005" # channel 14 - Total System Power : DEBUG: verify this is used to report total power (in CAPS in poll rsp)
+        else
+            cmdData="${cmdData}11AAAAAA0F000000239D00000005" # channel 14 - Fans B
+        fi
+        cmdData="${cmdData}18AAAAAA100000004E4800000005" # channel 15 - GPU
+        cmdData="${cmdData}00000000000005060708" # GPIO port 0
+        cmdData="${cmdData}0300090A000000000000" # GPIO port 1
+        autosim --simcmd '$SeqNum=(OCCw -C '$OCCCMD_SET_CFG_DATA' -D "'$cmdData'")'
+        WaitForResponse $OCCCMD_SET_CFG_DATA
+
+
+        printHeader "VERIFY ROLE - SLAVE"
+        TestValidationOCCslave
+
+
+        printHeader "SET ROLE COMMAND - MASTER"
+        autosim --simcmd '$SeqNum=(OCCw -C '$OCCCMD_SET_CFG_DATA' -D "0301000")'
+        WaitForResponse $OCCCMD_SET_CFG_DATA
+        if [ $? -eq 0 ]; then
+            TestValidationOCCmaster
+        fi
+
+
+        printHeader "POLL TO VERIFY NO ELOGS"
+        PollToVerifyElogs
+
+
+        printHeader "SET MEMORY CONFIG"
+        cmdData="0520"$(printf "%02X" $numDimms)
+        let dimm=0
+        printf "($numDimms DIMMs)\n"
+        while [ $dimm -lt $numDimms ]; do
+            let hwsensor=$((0x11111111*($dimm+1)))
+            let sensor=0xD1+$dimm
+            # DEBUG: force invalid engine (not 1-3), invalid port (not 0-1), or invalid address (not addr&0xF1 != 0x30)
+            let i2cEngine=3
+            #if [ $dimm -eq $(($numDimms-1)) ]; then
+            #    let i2cEngine=2 # DEBUG: Force engine mismatch
+            #fi
+            let i2cPort=0 # Simics currently does not support port 1
+            let i2cAddr=$((0x30+($dimm*2)))
+            cmdData="${cmdData}$(printf "%08X000000%02XFF%02X%02X%02X" $hwsensor $sensor $i2cEngine $i2cPort $i2cAddr)"
+            let dimm=$dimm+1
+        done
+        autosim --simcmd '$SeqNum=(OCCw -C '$OCCCMD_SET_CFG_DATA' -D "'$cmdData'")'
+        WaitForResponse $OCCCMD_SET_CFG_DATA
+
+
+        printHeader "POLL TO VERIFY NO ELOGS"
+        PollToVerifyElogs
+
+
+        printHeader "SET THERMAL THRESHOLDS (TCT)"
+        #autosim --simcmd '$SeqNum=(OCCw -C '$OCCCMD_SET_CFG_DATA' -D "1320140A0200FF5FFFFF0502FF48FFFF1E")'
+        autosim --simcmd '$SeqNum=(OCCw -C '$OCCCMD_SET_CFG_DATA' -D "1320140A0200FF5FFFFFFF02FF48FFFF1E")'
+        WaitForResponse $OCCCMD_SET_CFG_DATA
+
+
+        printHeader "POLL TO VERIFY NO ELOGS"
+        PollToVerifyElogs
+
+
+        printHeader "SET AVSBUS CONFIG"
+        autosim --simcmd '$SeqNum=(OCCw -C '$OCCCMD_SET_CFG_DATA' -D "1401FF000000FF010001")'
+        WaitForResponse $OCCCMD_SET_CFG_DATA
+
+
+        printHeader "POLL TO VERIFY NO ELOGS"
+        PollToVerifyElogs
+
+
+        printHeader "SET FREQUENCY POINTS"
+        # DEBUG: force various error conditions
+        #autosim --simcmd '$SeqNum=(OCCw -C '$OCCCMD_SET_CFG_DATA' -D "02200BB80DAC09C40FA00AF0091C")' # ffo < fmin
+        #autosim --simcmd '$SeqNum=(OCCw -C '$OCCCMD_SET_CFG_DATA' -D "02200BB80DAC09C40FA00AF00C1C")' # valid ffo
+        autosim --simcmd '$SeqNum=(OCCw -C '$OCCCMD_SET_CFG_DATA' -D "02200BB80DAC09C40ED80AF00000")' # no ffo (N=3000,T=3500,Min=2500,UT=3800,SPS=2800,FFO=0)
+        #autosim --simcmd '$SeqNum=(OCCw -C '$OCCCMD_SET_CFG_DATA' -D "02200BB80DAC09C40FA00AF00FA1")' # ffo > max
+        WaitForResponse $OCCCMD_SET_CFG_DATA
+
+
+        printHeader "VALIDATE POLL - OBSERVATION READY"
+        TestValidationObservationReady
+
+
+        printHeader "SET PCAP DATA"
+        #autosim --simcmd '$SeqNum=(OCCw -C '$OCCCMD_SET_CFG_DATA' -D "0720011F07BC07E90000")' ### Quick Power Drop (Oversubscription) disabled
+        #autosim --simcmd '$SeqNum=(OCCw -C '$OCCCMD_SET_CFG_DATA' -D "0720011F07BC07E907C2")' ### Soft:287 Min:1980 Max:2025 QPD:1986
+        autosim --simcmd '$SeqNum=(OCCw -C '$OCCCMD_SET_CFG_DATA' -D "0720011F012C07E907C2")' ### Soft:287 Min:300 Max:2025 QPD:1986
+        WaitForResponse $OCCCMD_SET_CFG_DATA
+
+
+        printHeader "POLL TO VERIFY NO ELOGS"
+        PollToVerifyElogs
+
+
+        printHeader "SET MEMORY THROTTLE"
+        cmdData="122004"
+        #                              TURBO       PCAP        NOMINAL     reserved
+        #cmdData="${cmdData}000044440100455556660120233334440110677778880130EEEEEEEEEEEE"
+        cmdData="${cmdData}000044440100233334440120233334440110233334440130EEEEEEEEEEEE"
+        cmdData="${cmdData}000144440101455556660121233334440111677778880131EEEEEEEEEEEE"
+        cmdData="${cmdData}000244440102455556660122233334440112677778880132EEEEEEEEEEEE"
+        cmdData="${cmdData}000344440103455556660123233334440113677778880133EEEEEEEEEEEE"
+        autosim --simcmd '$SeqNum=(OCCw -C '$OCCCMD_SET_CFG_DATA' -D "'$cmdData'")'
+        WaitForResponse $OCCCMD_SET_CFG_DATA
+
+
+        printHeader "POLL TO VERIFY NO ELOGS"
+        PollToVerifyElogs
+
+
+        printHeader "SET GPU CONFIG"
+        cmdData="1502"
+        cmdData="${cmdData}0000000000010000" # NO GPUs (I2C Engine must be hardcoded to 1)
+        autosim --simcmd '$SeqNum=(OCCw -C '$OCCCMD_SET_CFG_DATA' -D "'$cmdData'")'
+        WaitForResponse $OCCCMD_SET_CFG_DATA
+
+
+        printHeader "VALIDATE POLL - ACTIVE READY"
+        TestValidationActiveReady
+
+
+        if [ $test_depth -eq 2 ]; then
+            printHeader "SET STATE - OBSERVATION"
+            autosim --simcmd '$SeqNum=(OCCw -C 0x20 -D "000200")'
+        else
+            printHeader "SET STATE - ACTIVE"
+            autosim --simcmd '$SeqNum=(OCCw -C 0x20 -D "000300")'
+        fi
+        WaitForResponse 0x20
+
+
+        printHeader "VALIDATE POLL DATA"
+        ValidatePollData
+
+
+        printHeader "SET NOMINAL MODE"
+        autosim --simcmd '$SeqNum=(OCCw -C 0x20 -D "000001")'
+        WaitForResponse 0x20
+
+
+        printHeader "VALIDATE POLL DATA"
+        ValidatePollData
+
+
+        CaptureOccTraces "OccActive"
+
+
+        if [ $test_depth -eq 4 ] || [ $test_depth -eq $ALL_TESTS ]; then
+            TESTS_elogs
+        fi
+
+
+        if [ $test_depth -gt 10 ]; then
+
+            #printHeader "VALIDATE CURRENT STATE - ACTIVE"
+            #TestValidationActiveState
+            printHeader "VALIDATE CURRENT STATE - OBSERVATION"
+            TestValidationObservationReady
+
+
+            echo
+            echo "==> $G_cmd_delay second delay before Poll verification"
+            sleep $G_cmd_delay
+
+
+            printHeader "VALIDATE POLL DATA"
+            ValidatePollData
+
+
+            printHeader "DUMP APSS DATA TO TRACE"
+            autosim --simcmd '$SeqNum=(OCCw -C 0x40 -D "25")'
+            WaitForResponse 0x40
+
+
+            printHeader "SENSOR QUERY"
+            autosim --simcmd '$SeqNum=(OCCw -C '$OCCCMD_MFG_TEST' -D "0500000000FFFFFFFF")'
+            WaitForResponse $OCCCMD_SET_CFG_DATA
+
+
+            if [ $testFailure -eq 0 ]; then
+                printHeader "CHANGE DIMM TEMPS AND VALIDATE POLL"
+                let startingDimmTemp=$startingDimmTemp+0x10
+                SetupDimmInitTemps
+                echo
+                echo "==> $G_cmd_delay second delay before Poll verification"
+                sleep $G_cmd_delay
+                ValidatePollData
+            fi
+
+
+            let loop=1;
+            let maxLoops=2;
+            let loopDelay=10; # seconds
+            if [ $hugePowerWithRollover -ne 0 ]; then
+                # DEBUG: To force accululator to roll over 32 bits - 17th poll @ 600sec delay - with the following gain/offset:
+                #cmdData="${cmdData}0AAAAAAA0603FF00271000003F00" # HUGE gain to force accumulator rollover
+                let maxLoops=12
+                let loopDelay=300
+            fi
+            trap "echo 'Breaking out of loop...' ; let loop=$maxLoops" INT TERM
+            while [ $loop -le $maxLoops ]; do
+                echo ""
+                echo "==> Sleeping for $loopDelay seconds before poll $loop of $maxLoops"
+                sleep $loopDelay
+                echo "==> Poll $loop of $maxLoops - `date`"
+                ValidatePollData
+                let loop=$loop+1
+            done
+            echo
+
+
+        fi
+
+
+        if [ $test_depth -eq 5 ] || [ $test_depth -eq $ALL_TESTS ]; then
+            TESTS_pcaps
+        fi
+    fi
+
+
+
+    printTestResults
+
+    # Restore normal interrupts
+    trap - INT TERM
+
+
+    #echo WAIT : 30 seconds before shutdown.
+    #sleep 30
+    autosim --stopserver
+}
+
+
+################################################################################
+#### FUNCTION DEFINITIONS BELOW ################################################
+################################################################################
+
+
+abortTest()
+{
+    echo -e "\n${red}ABORTING TEST!${normal}"
+
+    printTestResults
+
+    # Restore normal interrupts
+    trap - INT TERM
+
+    #echo WAIT : 30 seconds before shutdown.
+    #sleep 30
+    autosim --stopserver
+
+    exit -2
+}
+
+dumpOccMachineState()
+{
+    echo "405 Regs:"
+    autosim --simcmd 'backplane0.'$proc'.occ_cmp.proc_405.pregs -all'
+    echo "GPE0 Regs:"
+    autosim --simcmd 'backplane0.'$proc'.occ_cmp.gpe_ppe0.pregs'
+    echo "GPE1 Regs:"
+    autosim --simcmd 'backplane0.'$proc'.occ_cmp.gpe_ppe1.pregs'
+    #autosim --simcmd 'backplane0.'$proc'.occ_cmp.gpe_ppe2.pregs'
+}
+
+printHeader()
+{
+    prefix="####"
+    pad="####################################################################################################"
+    if [ -n "$1" ]; then
+        printf "\n${bold}$prefix %s %s${normal}\n" "$1" "${pad:${#1}}"
+    else
+        printf "\n${bold}${prefix}${pad}##${normal}\n"
+    fi
+}
+
+# Parms: OCC_CMD  EXPECTED_RC
+WaitForResponse()
+{
+    let rc=0 # success
+    let failure=0
+    cmd="$1"
+    if [ -n "$2" ]; then
+        expectedRc="$2"
+    else
+        expectedRc="0x00"
+    fi
+    seq='$SeqNum'
+    let complete=0
+    let retry=$G_rsp_retries
+    let responseWaitDelay=1 # second
+    quiet=""
+
+    if [ $cmd == "0x20" ]; then
+        # Set state takes longer (especially in simics)
+        let responseWaitDelay=$responseWaitDelay*2
+        let retry=$retry*2
+    fi
+
+    if [ $G_use_pgpe -ne 0 ]; then
+        # Even longer with PGPE running
+        let responseWaitDelay=$responseWaitDelay*2
+        let retry=$G_rsp_retries*5
+        # Minimal output on retries
+        quiet="-q"
+    fi
+
+    lastRetry=""
+    let duration=0
+    let max_retries=$retry
+    echo "Waiting for response to $cmd command... (sequence "$seq" and up to $retry retries)"
+    until [ $complete -eq 1 ] || [ $retry -eq 0 ]; do
+        if [ $retry -eq 1 ]; then
+            lastRetry="-L"
+        fi
+        #echo "WaitForResponse: OCCrv -C $cmd -D $seq $lastRetry"
+        autosim --simcmd "OCCrv -C $cmd -D $seq $lastRetry $quiet" | tee $tempfile
+        #echo "WaitForResponse: OCCrv done"
+
+        #echo "FILE: $tempfile"
+        #cat $tempfile
+        #echo "END FILE"
+        RemoteReturnCode=$(egrep '^RemoteReturnCode = ' $tempfile | tail -n 1 | tr -d '\r')
+        #echo "...RC=$RemoteReturnCode"
+        if [ ${#RemoteReturnCode} != 0 ]; then
+            let RemoteReturnCode=${RemoteReturnCode##* = }
+            #echo "......RC=$RemoteReturnCode"
+            if [ $RemoteReturnCode -ge $((0xE0)) ] && [ $RemoteReturnCode -le $((0xEF)) ] ; then
+                echo -e "${red}OCC EXCEPTION DETECTED!${normal}"
+                let failure=1
+                testFailDesc="${testFailDesc} : ${current_test}OCC EXCEPTION - $RemoteReturnCode"
+                CaptureOccTraces "OccException"
+                let testFailure=1
+                abortTest
+            elif [ $RemoteReturnCode -ne $((0xFD)) ] ; then
+                #echo "RC != 253 ($RemoteReturnCode), so finished waiting"
+                #occWord0=$(egrep '^0x0000:' $tempfile | tail -n 1 | tr -d '\r' | awk '{print $2}')
+                #occRc=0x${occWord0:4:2};
+                if [ $cmd == "0x00" ]; then
+                    if [ $(($RemoteReturnCode)) -ne $(($expectedOccSrc)) ]; then
+                        echo "WaitForResponse: RC ($(printf "0x%04X" $RemoteReturnCode)) != EXPECTED ($(printf "0x%04X" $expectedOccSrc))"
+                    fi
+                fi
+                occRc=$(egrep 'Return Status          :' $tempfile | tail -n 1 | tr -d '\r' | awk '{print $4}')
+                if [ -z "$occRc" ]; then
+                    occRc=$(egrep 'ERROR: OCC returned status' $tempfile | tr -d '\r' | awk '{print $5}')
+                    if [ -z "$occRc" ]; then
+                        echo "NOTE: Did not find expected status, dumping file:"
+                        cat $tempfile
+                    fi
+                fi
+                echo "OCC RC: $occRc, expected $expectedRc"
+                if [ $(($expectedRc)) -ne $(($occRc)) ] ; then
+                    echo -e "${red}ERROR: Unexpected response status from OCC (exp $expectedRc, rcv $occRc)${normal}"
+                    let failure=1
+                    testFailDesc="${testFailDesc} : ${current_test}UNEXPECTED RESPONSE STATUS"
+                fi
+                let complete=1
+                break
+            #else
+            #    echo "RC=$RemoteReturnCode, retry=$retry"
+            fi
+        else
+            echo -e "${red}ERROR DETECTED: no data analysis available with buffer of 0${normal}"
+            let failure=1
+            testFailDesc="${testFailDesc} : ${current_test}UNABLE TO VALIDATE FUNCTION"
+            CaptureOccTraces "UnableToValidateFunction"
+            break
+        fi
+
+        let retry=$retry-1
+        if [ $retry -gt 0 ]; then
+            echo "...retrying read (after $responseWaitDelay sec, $retry attempt(s) left)"
+            sleep $responseWaitDelay
+        fi
+        let duration=$duration+$responseWaitDelay
+    done
+
+    if [ $complete -ne 1 ]; then
+        echo "Timeout after ~$duration seconds."
+        CaptureOccTraces "WaitForResponse"
+        echo
+        echo "####################################################"
+        echo -e "${red}ERROR: Timeout (${responseWaitDelay}sec * $max_retries) waiting for response to cmd: $cmd !${normal}"
+        echo "####################################################"
+        echo
+        let failure=1
+        let rc=1
+
+        let failureCount=$failureCount+1
+        if [ $cmd == "0x20" ]; then
+            # Timeout during state/mode change is bad...
+            testFailDesc="${testFailDesc} : ${current_test}TIMEOUT WAITING FOR STATE/MODE CHANGE"
+            let testFailure=1
+            abortTest
+        else
+            testFailDesc="${testFailDesc} : ${current_test}TIMEOUT ON $cmd CMD"
+        fi
+    else
+        if [ $duration -gt 0 ]; then
+            echo "Response took ~$duration seconds."
+
+            if [ $cmd == "0x20" ]; then
+                if [ $G_duration_set_state -eq 0 ]; then
+                    # First set state and mode, should be state
+                    let G_duration_set_state=$duration
+                else
+                    # second should be mode
+                    let G_duration_set_mode=$duration
+                fi
+            fi
+        fi
+        if [ $(($expectedRc)) -eq 0 ] && [ $expectedOccSrc -eq 0 ]; then
+            TestValidationFunction
+        fi
+        let rc=$?
+    fi
+
+    if [ $failure -ne 0 ]; then
+        let testFailure=1
+        let failureCount=$failureCount+1
+    fi
+
+    return $rc
+
+} # end WaitForResponse
+
+
+WaitForCheckpoint()
+{
+    let rc=0 # success
+    cmd="$1"
+    seq='$SeqNum'
+    let complete=0
+    let retry=5 # Wait up to 5 seconds for checkpoint complete
+    let responseWaitDelay=1 # second
+
+    lastRetry=""
+    lastCp=""
+    until [ $complete -eq 1 ] || [ $retry -eq 0 ]; do
+        echo "Waiting for checkpoint..."
+        if [ $retry -eq 1 ]; then
+            lastRetry="-L"
+        fi
+        autosim --simcmd "OCCrv -C 0x00 -D 0x00 $lastRetry" > $tempfile
+
+        RemoteReturnCode=$(egrep '^RemoteReturnCode = ' $tempfile | tail -n 1 | tr -d '\r')
+        #echo "...RC=$RemoteReturnCode"
+        if [ ${#RemoteReturnCode} != 0 ]; then
+            let RemoteReturnCode=${RemoteReturnCode##* = }
+            #echo "......RC=$RemoteReturnCode"
+            if [ $RemoteReturnCode -eq $((0xE1)) ]; then
+                #echo "FILE: $tempfile"
+                #cat $tempfile
+                #echo "END FILE"
+                CheckpointString=$(egrep '^0x0000:' $tempfile | tail -n 1 | tr -d '\r' | awk '{print $3$4$5}')
+                if [ "$lastCp" != "$CheckpointString" ]; then
+                    # Log any changes in value
+                    echo "  OCC Checkpoint: $CheckpointString"
+                    lastCp=$CheckpointString
+                fi
+                if [ "${CheckpointString:4:4}" == "0EFF" ]; then
+                    echo "OCC Initialization Complete Checkpoint found: $CheckpointString"
+                    let complete=1
+                    break;
+                elif [ "${CheckpointString:4:1}" == "E" ]; then
+                    echo -e "${red}ERROR: OCC Initialization Failed Checkpoint found: $CheckpointString${normal}"
+                    break;
+                # else still waiting
+                fi
+            elif [ $RemoteReturnCode -eq $((0xE5)) ]; then
+                echo -e "${red} ERROR: OCC Initialization Failed and OCC Halted${normal}"
+                break;
+            elif [ $RemoteReturnCode -ne 0 ]; then
+                echo -e "${red} ERROR: non 0xE1 return status found: $RemoteReturnCode${normal}"
+                break;
+            fi
+        else
+            echo -e "${red}ERROR DETECTED: no data analysis available with buffer of 0${normal}"
+            break
+        fi
+
+        let retry=$retry-1
+        if [ $retry -gt 0 ]; then
+            echo "... retrying read ($retry attempt(s) left)"
+            sleep $responseWaitDelay
+        fi
+    done
+
+    if [ $complete -ne 1 ]; then
+        cat $tempfile
+        CaptureOccTraces "CheckpointFailure"
+        autosim --simcmd "PGPEtrace ${simics_binaries}"
+        echo
+        echo "####################################################"
+        echo -e "${red}ERROR: Waiting for OCC checkpoint!${normal}"
+        echo "####################################################"
+        echo
+        let testFailure=1
+        let failureCount=$failureCount+1
+        testFailDesc="${testFailDesc} : CHECKPOINT_FAILURE"
+        let rc=1
+
+        abortTest
+    fi
+
+    return $rc
+
+} # end WaitForCheckpoint
+
+
+SetupOccImage()
+{
+    let abort=0
+
+    autosim --simcmd 'backplane0->system_info = "OCC Complex Model"'
+
+    # Code Images
+    echo "==> Loading 405 binary: ${simics_binaries}/occ_405.out"
+    autosim --simcmd "backplane0.${proc}.occ_cmp.oci_space.load-binary -v ${simics_binaries}/occ_405.out"
+    autosim --simcmd "new-symtable -n sym_tbl_405 file=${simics_binaries}/occ_405.out"
+    autosim --simcmd 'new-context ctx_405'
+    autosim --simcmd "backplane0.${proc}.occ_cmp.proc_405.set-context context = ctx_405"
+    autosim --simcmd 'ctx_405->symtable = sym_tbl_405'
+    echo "==> Loading GPE0 binary: ${simics_binaries}/occ_gpe0.out"
+    autosim --simcmd "backplane0.${proc}.occ_cmp.oci_space.load-binary -v ${simics_binaries}/occ_gpe0.out"
+    autosim --simcmd "new-symtable -n sym_tbl_gpe0 file=${simics_binaries}/occ_gpe0.out"
+    autosim --simcmd "backplane0.${proc}.occ_cmp.gpe_ctx0.symtable sym_tbl_gpe0"
+
+    echo "==> Loading GPE1 binary: ${simics_binaries}/occ_gpe1.out"
+    autosim --simcmd "backplane0.${proc}.occ_cmp.oci_space.load-binary -v ${simics_binaries}/occ_gpe1.out"
+    if [ $? -ne 0 ]; then
+        echo -e "${red}ERROR: Failed to load GPE1 binary!${normal}"
+        let abort=1
+    fi
+    autosim --simcmd "new-symtable -n sym_tbl_gpe1 file=${simics_binaries}/occ_gpe1.out"
+    if [ $? -ne 0 ]; then
+        echo -e "${red}ERROR: Failed to create symtable GPE1 binary!${normal}"
+        let abort=1
+    fi
+    autosim --simcmd "backplane0.${proc}.occ_cmp.gpe_ctx1.symtable sym_tbl_gpe1"
+    if [ $? -ne 0 ]; then
+        echo -e "${red}ERROR: Failed to assign symtable for GPE1${normal}"
+        let abort=1
+    fi
+    if [ $abort -ne 0 ]; then
+        echo -e "${red}ERROR: Failed to load GPE1 binary!${normal}"
+    fi
+
+    if [ $G_use_pgpe -ne 0 ]; then
+        echo "==> Loading GPE2 binary: ${simics_binaries}/pgpe.out"
+        autosim --simcmd "backplane0.${proc}.occ_cmp.oci_space.load-binary -v ${simics_binaries}/pgpe.out"
+        let abort=$abort+$?
+        autosim --simcmd "new-symtable sym_tbl_gpe2 ${simics_binaries}/pgpe.out"
+        let abort=$abort+$?
+        autosim --simcmd "backplane0.${proc}.occ_cmp.gpe_ctx2.symtable symtable = sym_tbl_gpe2"
+        let abort=$abort+$?
+        if [ $abort -ne 0 ]; then
+            echo -e "${red}ERROR: Failed to load GPE2 binary!${normal}"
+        fi
+    fi
+
+    if [ $abort -ne 0 ]; then
+        abortTest
+    fi
+
+
+    # GPE Interrupt Vector Prefix Register
+    echo "[occ_standalone.simics info] Initialize IVPR and PIR"
+    autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.write 0xc0000008 0xFFF01000 -b' # TP.TPCHIP.OCC.OCI.GPE0.GPEIVPR
+    autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.write 0xc0010008 0xFFF10000 -b' # TP.TPCHIP.OCC.OCI.GPE1.GPEIVPR
+    autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.write 0xc0020008 0xFFF20000 -b' # TP.TPCHIP.OCC.OCI.GPE2.GPEIVPR
+    autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.write 0xc0030008 0xFFF30000 -b' # TP.TPCHIP.OCC.OCI.GPE3.GPEIVPR
+
+    autosim --simcmd 'backplane0.'$proc'.occ_cmp.gpe_ppe0.write-reg pir value=0x00000000'
+    autosim --simcmd 'backplane0.'$proc'.occ_cmp.gpe_ppe1.write-reg pir value=0x00000001'
+    autosim --simcmd 'backplane0.'$proc'.occ_cmp.gpe_ppe2.write-reg pir value=0x00000002'
+    autosim --simcmd 'backplane0.'$proc'.occ_cmp.gpe_ppe3.write-reg pir value=0x00000003'
+
+    # PPE External Interface XCR - Start each GPE? - Hard Reset, Toggle XSR[TRH], Resume
+
+    # GPE0
+    autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.write 0xc0000088 0x6000000000000000 8 -b'
+    autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.write 0xc0000088 0x4000000000000000 8 -b'
+    autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.write 0xc0000088 0x2000000000000000 8 -b'
+
+    # GPE1
+    autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.write 0xc0010088 0x6000000000000000 8 -b'
+    autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.write 0xc0010088 0x4000000000000000 8 -b'
+    autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.write 0xc0010088 0x2000000000000000 8 -b'
+
+    if [ $G_use_pgpe -ne 0 ]; then
+        # GPE2
+        autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.write 0xc0020088 0x6000000000000000 8 -b'
+        autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.write 0xc0020088 0x4000000000000000 8 -b'
+        autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.write 0xc0020088 0x2000000000000000 8 -b'
+    fi
+
+    ### SRAM LAYOUT (768KB) ###
+    # FFF00000 - IPC Communication Region
+    # FFF01000 - GPE0 Code (60K)
+    # FFF10000 - GPE1 Code (64K)
+    # FFF20000 - PGPE HCode+Data (48K)
+    # FFF2C000 - SGPE HCode (80K)
+    # FFF40000 - 405 Code+Data (512K)
+    # FFFB3C00 -     ERR Trace Buffer (8K)
+    # FFFB5C00 -     INF Trace Buffer (8K)
+    # FFFB7C00 -     IMP Trace Buffer (8K)
+    # FFFB9C00 -     FIR Heap / Parms (16K)
+    # FFFBDC00 -     FSP/BMC Response Buffer (4K)
+    # FFFBEC00 -     FSP/BMC Command Buffer (4K)
+    # FFFBDC00 -     Reserved (Bootloader) (1K)
+
+    # Request a 405 chip level reset and set the 405 pc to __ssx_boot
+    autosim --simcmd 'backplane0.'$proc'.occ_cmp.proc_405.write-reg reg-name = dbcr0 value = 0x20000000'
+    autosim --simcmd 'backplane0.'$proc'.occ_cmp.proc_405.write-reg reg-name = pc value = (backplane0.'$proc'.occ_cmp.proc_405.sym __ssx_boot)'
+    autosim --simcmd 'backplane0.'$proc'.occ_cmp.proc_405.enable'
+
+    autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.write 0xFFFFFFFC 0x4BF40002 size = 4'
+
+    # Create 16K OCC cache
+    autosim --simcmd '@will_cache = SIM_create_object("image", "occ_cache", [["size",0x4000]])'
+    autosim --simcmd 'backplane0.'$proc'.occ_cmp.ram_cacheable->image = occ_cache'
+    autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.del-map base = 0x00000000 device = backplane0.'$proc'.occ_cmp.ram_cacheable'
+    autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.add-map base = 0x00000000 device = backplane0.'$proc'.occ_cmp.ram_cacheable length = 0x4000 align-size = 8192'
+
+    # HOMER Layout (relative to base address 0x80000000)
+    # 000C0000 - header? version (4 bytes), nestFreq (4B), interruptType (4B), firMaster (4B), firParms, smfMode (4B)
+    # 000E0000 - HTMGT Command Buffer (4k)
+    # 000E1000 - HTMGT Response Buffer (4k)
+    # 000E2000 - OPAL Shared Memory (32k)
+    # 000E2000 -   OPAL Static space (0x880 bytes)
+    # 000E2B80 -   OPAL Dynamic space (128 bytes)
+    # 000E2C00 -   Inband Command Buffer (4k)
+    # 000E3C00 -   Inband Response Buffer (4k)
+    # 00300000 - PPMR Header (4k)
+
+    # map images files?
+    #autosim --simcmd '@conf.OccSystem0.mainstore_image.files = [["binaries/image.bin", "ro", 0, 0],["binaries/ppmr.bin", "ro", 0x300000, 0],["binaries/oppb.bin", "ro", 0x320000, 0]]'
+    autosim --simcmd "system_cmp0.memory_image0.load-file ${simics_binaries}/image.bin 0x00000000"
+    #if [ $G_use_pgpe -eq 0 ]; then
+        echo "Loading fake PPMR header: ${simics_binaries}/ppmr.bin @ 0x300000"
+        autosim --simcmd "system_cmp0.memory_image0.load-file ${simics_binaries}/ppmr.bin  0x00300000"
+        echo "Loading fake OPPB header: ${simics_binaries}/oppb.bin @ 0x320000"
+        autosim --simcmd "system_cmp0.memory_image0.load-file ${simics_binaries}/oppb.bin  0x00320000"
+    #fi
+
+    # SRAM - FFF4000 is start of PPC405 Code + Data area "3C20800060210040 7C2903A64E800420"
+    autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.write 0xFFF40000 0x3C208000 size = 4'
+    autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.write 0xFFF40004 0x60210040 size = 4'
+    autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.write 0xFFF40008 0x7C2903A6 size = 4'
+    autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.write 0xFFF4000C 0x4E800420 size = 4'
+
+    autosim --simcmd 'backplane0.'$proc'.bridge_cmp.pba->pba_barmsk0=0x0000000007f00000'
+
+    if [ $numCores -gt 0 ]; then
+        let core=0
+        let ccsr=0
+        # Update CCSR word with installed cores (msb=core 0, etc)
+        while [ $core -lt 32 ]; do
+            if [ $core -lt $numCores ]; then
+                let ccsr="$ccsr|(1<<($maxCores-1-$core))"
+            fi
+            let core=$core+1
+        done
+        # Configure cores
+        echo "Enabling $numCores cores (of $maxCores)..."
+        #autosim --simcmd "backplane0.${proc}.occ_cmp.oci_space.write 0xc0060480 0xff00000000000000 8 -b" #Set CCSR
+        autosim --simcmd "backplane0.${proc}.occ_cmp.ocb_agen->OCB_AGEN_CCSR = 0x$(printf "%08X" $ccsr)00000000" #Set CCSR
+
+        echo "backplane0.${proc}.occ_cmp.ocb_agen->OCB_AGEN_CCSR: "
+        autosim --simcmd "backplane0.${proc}.occ_cmp.ocb_agen->OCB_AGEN_CCSR"
+    fi
+
+    if [ $G_use_pgpe -ne 0 ]; then
+        ## let pgpe run for a moment to be ahead of 405
+        autosim --simcmd 'run'
+        autosim --simcmd 'stop'
+    fi
+
+    # FOR PIB/OCI WRITES
+    #backplane0.'$proc'.pib_cmp.pib.read address = 0x6d0330 size = 8
+    # -OR-
+    #@SIM_create_object('pib_master', 'master_foo', [['pcb_space', conf.backplane0.'$proc'.pib_cmp.pib]])
+    #master_foo->address = 0x6d0330
+    #master_foo->data
+}
+
+
+SetupAPSSChannel()
+{
+    let verbose=1;
+    # Initialize/Display APSS channels
+    if [ $allHugePowerValues -eq 0 ]; then
+        defaultChannelData="[0x0293, 0x9287, 0x2887, 0x3877, 0x4326, 0x52F2, 0x6214, 0x7006, 0x8003, 0x9EB7, 0xA01B, 0xB013, 0xC123, 0xD0FC, 0xE0F2, 0xF008]"
+    else
+        # DEBUG: Use the following to force total power reading > 4295W (requiring uint64 calculation of current power in CAPS)
+        defaultChannelData="[0x0EEE, 0x1EEE, 0x2EEE, 0x3EEE, 0x4EEE, 0x5EEE, 0x6EEE, 0xEEE7, 0x8003, 0x9EB7, 0xAEEE, 0xBEEE, 0xEEEC, 0xEEED, 0xEEEE, 0xFEEE]"
+    fi
+    if [ $verbose -ne 0 ]; then
+        echo "==> autosim --simcmd 'backplane0.apss->adc_channel_val = $defaultChannelData'"
+    fi
+    autosim --simcmd "backplane0.apss->adc_channel_val = $defaultChannelData"
+    if [ $verbose -ne 0 ]; then
+        echo "backplane0.apss->adc_channel_val: "
+        autosim --simcmd "backplane0.apss->adc_channel_val"
+    fi
+
+}
+
+SetupDimmInitTemps()
+{
+    # Init and dump each DIMM temperature
+    let dimm=0
+    while [ $dimm -lt $numDimms ]; do
+        let temp=$startingDimmTemp+$dimm
+        echo "Setting DIMM${dimm} -> $temp C ("$(printf "0x%02X" $temp)")"
+        if [ $verbose -ne 0 ]; then
+            echo "==> OccStandalone0.i2c_tempsensor_$(printf %02d ${dimm}).i2c_tempsensor_$(printf %02d ${dimm})_dev->temp_local=0x0$(printf %02X $temp)0"
+        fi
+        autosim --simcmd "OccStandalone0.i2c_tempsensor_$(printf %02d ${dimm}).i2c_tempsensor_$(printf %02d ${dimm})_dev->temp_local"
+        autosim --simcmd "OccStandalone0.i2c_tempsensor_$(printf %02d ${dimm}).i2c_tempsensor_$(printf %02d ${dimm})_dev->temp_local=0x0$(printf %02X $temp)0"
+        # autosim --simcmd "OccStandalone0.i2c_tempsensor_${dimm}.i2c_tempsensor_${dimm}_dev->temp_local"
+        let dimm=$dimm+1
+    done
+}
+
+SetupCoreInitTemps()
+{
+    # Reported core temp = (Cwt*(Cdts1+Cdts2) + (Qwt*Qdts)) / (2*Cwt + Qwt)
+    # Where core weight (Cwt) and quad weight (Qwt) are from MRW/def file
+    # Init will set Cdts1==Cdts2==Qdts so that reported temp matches (core0 == core1 == quad0, core2 == core3 == quad2, ...)
+
+    # Quad Quad/Cache 0x10-0x15
+    let quad=0
+    while [ $quad -lt 6 ]; do
+        let quadAddr=0x10+$quad
+        let temp=$(($startingCoreTemp+($quad*4)))
+        let temp2=$(($startingCoreTemp+($quad*4)+2))
+        echo "Setting quad${quad} -> $temp/$temp2 C ("$(printf "0x%02X/0x%02X" $temp $temp2)")"
+        tempString=$(printf "0%02X50%02X5" $temp $temp2)
+        if [ $verbose -ne 0 ]; then
+            echo "==> backplane0.${proc}.pib_cmp.pib.write address = 0x$(printf %02X $quadAddr)0500000 0x${tempString}00000000 size = 8"
+        fi
+        ### NOTE: p10 simics - need to add an additional '0' to end of address for anything put on PIB (read & writes)
+        #autosim --simcmd "OccStandalone0.PowmanOccSlot.pib_space.write 0x$(printf %02X $quadAddr)050000  0x${tempString}00000000 8"
+        autosim --simcmd "backplane0.${proc}.pib_cmp.pib.write address = 0x$(printf %02X $quadAddr)0500000 0x${tempString}00000000 size = 8"
+        ## autosim --simcmd "OccStandalone0.PowmanOccSlot.pib_space.read  0x$(printf "%02X" $quadAddr)050000 8"
+        autosim --simcmd "backplane0.${proc}.pib_cmp.pib.read address = 0x$(printf %02X $quadAddr)0500000 size = 8"
+        let quad=$quad+1
+    done
+
+    # Cores 0x20-0x37
+    let core=0
+    let temp=$startingCoreTemp
+    while [ $core -lt $numCores ]; do
+        let coreAddr=0x20+$core
+        let temp2=$temp
+        echo "Setting core${core} -> $temp/$temp2 C ("$(printf "0x%02X/0x%02X" $temp $temp2)")"
+        tempString=$(printf "0%02X50%02X5" $temp $temp2)
+        if [ $verbose -ne 0 ]; then
+            echo "==> backplane0.${proc}.pib_cmp.pib.write address = 0x$(printf %02X $coreAddr)0500000 0x00000000${tempString}00000000 size = 8"
+        fi
+        autosim --simcmd "backplane0.${proc}.pib_cmp.pib.write address = 0x$(printf %02X $coreAddr)0500000 0x00000000${tempString}00000000 size = 8"
+        # autosim --simcmd "OccStandalone0.PowmanOccSlot.pib_space.read  0x"$(printf "%02X" $coreAddr)"050000 8"
+        autosim --simcmd "backplane0.${proc}.pib_cmp.pib.read address = 0x"$(printf "%02X" $coreAddr)"0500000 size = 8"
+        if [ $(($core % 2)) -eq 1 ]; then
+            let temp=$temp+2
+        fi
+        let core=$core+1
+    done
+}
+
+
+# Capture 405/GPE traces
+CaptureOccTraces()
+{
+    echo ">>CaptureOccTraces"
+    fnamePrefix=""
+    if [ -n "$1" ]; then
+        fnamePrefix="$(printf "%02d_%s" $G_trace_index $1)"
+        echo "Trace Prefix: ${fnamePrefix}"
+        let G_trace_index=$G_trace_index+1
+    fi
+
+    if [ -z "$git_repo" ]; then
+        echo "==> autosim --simcmd \"OCCtrace ${simics_binaries} -D $simics_traces -P ${fnamePrefix}\""
+        autosim           --simcmd  "OCCtrace ${simics_binaries} -D $simics_traces -P ${fnamePrefix}"
+    else
+        if [ -z "$fnamePrefix" ]; then
+            echo "==> autosim --simcmd \"OCCtrace ${git_repo}\""
+            autosim --simcmd "OCCtrace ${git_repo} -D $simics_traces"
+        else
+            echo "==> autosim --simcmd \"OCCtrace ${git_repo} -D $simics_traces -P ${fnamePrefix}\""
+            autosim           --simcmd  "OCCtrace ${git_repo} -D $simics_traces -P ${fnamePrefix}"
+        fi
+    fi
+}
+
+
+TestValidationFunction()
+{
+    let status=0
+    RemoteReturnCode=$(egrep '^RemoteReturnCode = ' $tempfile | tail -n 1 | awk '{print $3}' | tr -d '\r\n')
+    #RemoteReturnCode=${RemoteReturnCode##* = }
+    #echo "RemoteReturnCode = \"$RemoteReturnCode\""
+    #echo Size of RemoteReturnCodeVar = ${#RemoteReturnCode}
+    let remoteRC=$RemoteReturnCode
+    echo "RemoteReturnCode = $RemoteReturnCode, remoteRC = $remoteRC"
+    if [ ${#RemoteReturnCode} != 0 ]; then
+        #if [[ $RemoteReturnCode != *"None"* ]] ; then
+        if [ $remoteRC -ne 0 ]; then
+            CaptureOccTraces "testValidationFail"
+            echo
+            echo "####################################################"
+            echo -e "${red}ERROR DETECTED: look above for Validation points !${normal}"
+            echo "####################################################"
+            echo
+            let testFailure=1
+            let failureCount=$failureCount+1
+            testFailDesc="${testFailDesc} : ${current_test}FUNCTIONAL VALIDATION FAILED"
+            let status=1
+        fi
+    else
+        echo -e "${red}ERROR DETECTED: no data analysis available with buffer of 0${normal}"
+        let testFailure=1
+        let failureCount=$failureCount+1
+        testFailDesc="${testFailDesc} : ${current_test}UNABLE TO VALIDATE FUNCTION"
+        CaptureOccTraces "unableToValidateFunction"
+        let status=1
+    fi
+
+    return $status
+}
+
+
+TestValidationObservationReady()
+{
+    autosim --simcmd '$SeqNum=(OCCw -C '$OCCCMD_POLL' -D "20")'
+    WaitForResponse $OCCCMD_POLL
+    if [ $? -eq 0 ]; then
+
+        RemoteObservationReady=$(grep 'Status (1)             :' $tempfile | tail -n 1 )
+        RemoteObservationReady=${RemoteObservationReady##* - }
+
+        if [ ${#RemoteObservationReady} != 0 ]; then
+            if [[ $RemoteObservationReady != *"Observation Ready"* ]] ; then
+                CaptureOccTraces "notInObsReady"
+                echo
+                echo "####################################################"
+                echo -e "${red}ERROR DETECTED: OCC is not in OCC Observation Ready Enabled !${normal}"
+                echo "####################################################"
+                echo
+                let testFailure=1
+                let failureCount=$failureCount+1
+                testFailDesc="${testFailDesc} : OCC NOT OBS READY"
+                abortTest
+            else
+                echo
+                echo Validation OCC is Observation Ready.
+                echo
+            fi
+        else
+            echo -e "${red}ERROR DETECTED: no data analysis available with buffer of 0${normal}"
+            let testFailure=1
+            let failureCount=$failureCount+1
+            testFailDesc="${testFailDesc} : UNABLE TO VALIDATE OBSERVATION READY"
+            CaptureOccTraces "unableToValidateObservationReady"
+        fi
+    fi
+}
+
+TestValidationActiveReady()
+{
+    let ar_complete=0
+    let ar_retry=20 # Wait up to retry seconds for active ready
+    let ar_responseWaitDelay=1 # second
+
+    until [ $ar_complete -eq 1 ] || [ $ar_retry -eq 0 ]; do
+        echo "Sending POLL command... (retries: $ar_retry)"
+        autosim --simcmd '$SeqNum=(OCCw -C '$OCCCMD_POLL' -D "20")'
+        WaitForResponse $OCCCMD_POLL
+        if [ $? -eq 0 ]; then
+
+            RemoteActiveReady=$(grep 'Status (1)             :' $tempfile | tail -n 1 )
+            RemoteActiveReady=${RemoteActiveReady##* - }
+
+            if [ ${#RemoteActiveReady} != 0 ]; then
+                if [[ $RemoteActiveReady != *"Active Ready"* ]] ; then
+                    echo "OCC is NOT in Active Ready!"
+#                    echo
+#                    echo "####################################################"
+#                    echo -e "${red}ERROR DETECTED: OCC is not in OCC Active Ready Enabled !${normal}"
+#                    echo "####################################################"
+#                    let testFailure=1
+#                    let failureCount=$failureCount+1
+#                    testFailDesc="${testFailDesc} : OCC NOT ACTIVE READY"
+#                    abortTest
+                else
+                    echo
+                    echo Validation OCC is Active Ready.
+                    echo
+                    let ar_complete=1
+                fi
+            else
+                echo -e "${red}ERROR DETECTED: no data analysis available with buffer of 0${normal}"
+                let testFailure=1
+                let failureCount=$failureCount+1
+                testFailDesc="${testFailDesc} : UNABLE TO VALIDATE ACTIVE READY"
+                CaptureOccTraces "unableToValidateActiveReady"
+                break
+            fi
+        fi
+
+        let ar_retry=$ar_retry-1
+        if [ $ar_retry -gt 0 ]; then
+            echo "...retrying poll (after $ar_responseWaitDelay sec, $ar_retry attempt(s) left)"
+            sleep $ar_responseWaitDelay
+        fi
+        let ar_duration=$ar_duration+$ar_responseWaitDelay
+    done
+
+    echo "No more retries... (retries: $ar_retry, complete: $ar_complete, testFailure: $testFailure)"
+
+    if [ $ar_complete -ne 1 ]; then
+        echo "Timeout waiting for Active Ready after ~$duration seconds."
+        CaptureOccTraces "notInObsReady"
+        echo
+        echo "####################################################"
+        echo -e "${red}ERROR: Timeout (${ar_responseWaitDelay}sec * $max_retries) waiting for active ready !${normal}"
+        echo "####################################################"
+        echo
+        let testFailure=1
+        let failureCount=$failureCount+1
+        testFailDesc="${testFailDesc} : OCC NOT ACTIVE READY"
+        abortTest
+    else
+        echo "Completed after ~$ar_duration seconds."
+        let G_duration_active_ready=$ar_duration
+    fi
+}
+
+TestValidationObservationState()
+{
+    autosim --simcmd '$SeqNum=(OCCw -C '$OCCCMD_POLL' -D "20")'
+    WaitForResponse $OCCCMD_POLL
+    if [ $? -eq 0 ]; then
+
+        OccState=$(grep 'Current OCC State (5)  : ' $tempfile | tail -n 1 )
+        OccState=${OccState##* : }
+
+        if [ ${#OccState} != 0 ]; then
+            if [[ $OccState != *"Observation"* ]] ; then
+                CaptureOccTraces "notInObsFail"
+                let testFailure=1
+                let failureCount=$failureCount+1
+                testFailDesc="${testFailDesc} : OCC NOT IN OBSERVATION"
+                echo
+                echo "####################################################"
+                echo -e "${red}ERROR DETECTED: CURRENT OCC STATE not OBSERVATION !${normal}"
+                echo "####################################################"
+                echo
+            else
+                echo
+                echo Success: OCC is in Observation state.
+                echo
+
+                CaptureOccTraces "OccInObservation"
+            fi
+        else
+            echo -e "${red}ERROR DETECTED: no data analysis available with buffer of 0${normal}"
+            let testFailure=1
+            let failureCount=$failureCount+1
+            testFailDesc="${testFailDesc} : UNABLE TO VALIDATE OBSERVATION STATE"
+            CaptureOccTraces "unableToValidateObservation"
+        fi
+    fi
+}
+
+
+TestValidationActiveState()
+{
+    autosim --simcmd '$SeqNum=(OCCw -C '$OCCCMD_POLL' -D "20")'
+    WaitForResponse $OCCCMD_POLL
+    if [ $? -eq 0 ]; then
+
+        OccState=$(grep 'Current OCC State (5)  : ' $tempfile | tail -n 1 )
+        OccState=${OccState##* : }
+
+        if [ ${#OccState} != 0 ]; then
+            if [[ $OccState != *"Active"* ]] ; then
+                CaptureOccTraces "notInActFail"
+                let testFailure=1
+                let failureCount=$failureCount+1
+                testFailDesc="${testFailDesc} : OCC NOT IN ACTIVE"
+                echo
+                echo "####################################################"
+                echo -e "${red}ERROR DETECTED: CURRENT OCC STATE not ACTIVE !${normal}"
+                echo "####################################################"
+                echo
+            else
+                echo
+                echo Success: OCC is in Active state.
+                echo
+
+                CaptureOccTraces "OccInActive"
+            fi
+        else
+            echo -e "${red}ERROR DETECTED: no data analysis available with buffer of 0${normal}"
+            let testFailure=1
+            let failureCount=$failureCount+1
+            testFailDesc="${testFailDesc} : UNABLE TO VALIDATE ACTIVE STATE"
+            CaptureOccTraces "unableToValidateActive"
+        fi
+    fi
+}
+
+
+# Check for OCC Error log in last response
+# Must have sent poll command and received response into $tempfile
+checkAndHandleOccElog()
+{
+    elog=""
+    let found_elog=0
+    grep -q 'OCC ERROR LOG WAS RETURNED' $tempfile
+    if [ $? -eq 0 ]; then
+        let found_elog=1
+        elog=`grep -e 'OCC ERROR LOG' -e 'OCC SRC:' $tempfile`
+        occSrc=`grep 'OCC SRC:' $tempfile | awk '{print $3}'`
+        elogId=`grep "Error Log ID" $tempfile | awk '{print $6}' | tr -d '\r\n'`
+        elogAddr=`grep "Error Log Addr" $tempfile | awk '{print $6}' | tr -d '\r\n'`
+        elogLen=`grep "Error Log Length" $tempfile | awk '{print $4}' | tr -d '\r\n'`
+        elogSource=`grep "Error Log Source" $tempfile | awk '{print $6}'`
+        if [ $expectedOccSrc -eq $(($occSrc)) ]; then
+            echo -e "${bold}$elog${normal}"
+        else # unexpected
+            echo -e "${red}$elog${normal}"
+            echo
+            echo "####################################################"
+            echo -e "${red}ERROR: UNEXPECTED OCC SRC ${occSrc} instead of "$(printf "%0X" $expectedOccSrc)"!${normal}"
+            echo "####################################################"
+            echo
+            CaptureOccTraces "UnexpectedOccSrc_${occSrc}"
+            let testFailure=1
+            let failureCount=$failureCount+1
+            testFailDesc="${testFailDesc} : ${current_test}UNEXPECTED SRC ${occSrc}"
+        fi
+        echo "==> Read log $elogId @($elogAddr,$elogLen)"
+        ReadAndClearElog $elogId $elogAddr $elogLen $occSrc
+    else
+        if [ $expectedOccSrc -ne 0 ]; then
+            echo
+            echo "####################################################"
+            echo -e "${red}ERROR: MISSING OCC SRC "$(printf "%0X" $expectedOccSrc)"!${normal}"
+            echo "####################################################"
+            echo
+            CaptureOccTraces "MissingExpectedOccSrc_$(printf "%0X" $expectedOccSrc)"
+            let testFailure=1
+            let failureCount=$failureCount+1
+            testFailDesc="${testFailDesc} : ${current_test}MISSING SRC $(printf "%0X" $expectedOccSrc)"
+        fi
+    fi
+
+    # Clear expected SRC
+    let expectedOccSrc=0
+
+    return $found_elog;
+
+} # end checkAndHandleOccElog
+
+
+ValidatePollData()
+{
+    let fail=0
+    autosim --simcmd '$SeqNum=(OCCw -C '$OCCCMD_POLL' -D "20")'
+    WaitForResponse $OCCCMD_POLL
+    if [ $? -eq 0 ]; then
+
+        OccStateString=$(grep 'Current OCC State (5)  : ' $tempfile | tail -n 1 )
+        OccState=${OccStateString%:*}   # Remove end string: ": Active"
+        let OccState=${OccState##*: }   # Strip off beginning text then convert to decimal
+        OccStateString=${OccStateString##* : } # Just keep string "Active"
+
+        if [ ${#OccStateString} != 0 ]; then
+            if [ $expectedState -eq $((0x04)) ]; then
+                if [[ $OccStateString == *"Safe"* ]] ; then
+                    echo -e "${bold}OCC is in SAFE state as expected${normal}"
+                else
+                    echo -e "${red}ERROR: CURRENT OCC STATE not SAFE!${normal}"
+                    let fail=1
+                fi
+            elif [[ $OccStateString != *"Observation"* ]] && [[ $OccStateString != *"Active"* ]] ; then
+                echo -e "${red}ERROR: CURRENT OCC STATE not OBSERVATION or ACTIVE!${normal}"
+                if [[ $OccStateString == *"Safe"* ]] ; then
+                    let testFailure=1
+                    let failureCount=$failureCount+1
+                    testFailDesc="${testFailDesc} : OCC NOT IN EXPECTED STATE"
+                    abortTest
+                fi
+                let fail=1
+            fi
+        else
+            echo -e "${red}ERROR DETECTED: no data analysis available for ValidatePollData${normal}"
+            let fail=1
+        fi
+
+        #Verify Core Temperatures
+        let core=0
+        let temp=$startingCoreTemp
+        while [ $core -lt $numCores ]; do
+            let coreSensor=$core
+            sensor='SensorData     :  01 00 '$(printf "%02d" $coreSensor)' 01'
+            # First verify core is present
+            grep -iq "$sensor " $tempfile
+            if [ $? -ne 0 ]; then
+                echo -e "${red}ERROR: core$core temp was not found in poll response${normal}"
+                let fail=1
+            else
+                # Verify temp is correct
+                sensorValue=$(printf "00 %02X" $temp) # Core FRU + Temperature
+                grep -iq "$sensor $sensorValue" $tempfile
+                if [ $? -ne 0 ]; then
+                    rcvdValue=`grep -i "$sensor" $tempfile | awk '{print $7 $8}'`
+                    echo -e "${red}ERROR: core$core temp is not correct (received 0x$rcvdValue C, expected 0x$sensorValue for $sensor)${normal}"
+                    # TEMP ALLOW                let fail=1
+                else
+                    echo "core$core temp is correct ($sensorValue C)"
+                fi
+            fi
+            if [ $(($core % 2)) -eq 1 ]; then
+                let temp=$temp+2
+            fi
+            let core=$core+1
+        done
+
+        # Verify DIMM Temperatures
+        let dimm=0
+        while [ $dimm -lt $numDimms ]; do
+            let temp=$startingDimmTemp+$dimm
+            let dimmSensor=0xd1+$dimm
+            sensor='SensorData     :  00 00 00 '$(printf "%02x" $dimmSensor)
+            sensorValue=$(printf "02 %02X" $temp) # DIMM FRU + Temperature
+            grep -iq "$sensor $sensorValue" $tempfile
+            if [ $? -ne 0 ]; then
+                echo -e "${red}ERROR: DIMM$dimm temp not correct (expect $sensorValue)${normal}"
+                grep -i "$sensor" $tempfile
+                let fail=1
+            else
+                echo "DIMM$dimm temp is correct ($sensorValue C)"
+            fi
+            let dimm=$dimm+1
+        done
+
+        #Verify Core Frequencies
+        let core=0
+        let freq=0
+        while [ $core -lt $numCores ]; do
+            let coreSensor=$core
+            sensor='SensorData     :  01 00 '$(printf "%02d" $coreSensor)' 02'
+            # First verify core is present
+            grep -iq "$sensor " $tempfile
+            if [ $? -ne 0 ]; then
+                echo -e "${red}ERROR: core$core frequency was not found in poll response${normal}"
+                let fail=1
+            else
+                #sensorValue=$(printf "00 %02X" $freq)
+                #grep -iq "$sensor $sensorValue" $tempfile
+                #if [ $? -ne 0 ]; then
+                #    #echo -e "${red}ERROR: core$core freq not correct (expect $sensorValue for $sensor)${normal}"
+                #    grep -i "$sensor" $tempfile
+                #    #let fail=1
+                #else
+                    echo "core$core frequency was present ($sensor)"
+                #fi
+            fi
+            let core=$core+1
+        done
+
+        let powrFormat=1
+        grep -q "Sensor Name (0-3)      : TEMP" $tempfile
+        if [ $? -eq 0 ]; then
+            let powrFormat=`egrep -A4 'Sensor Name \(0-3\)      : TEMP' $tempfile | grep 'Sensor format' | awk '{print $5}' | sed 's/\s//'`
+            if [ $powrFormat -ne 2 ]; then
+                echo -e "${red}ERROR: POWR format/version was not 2! (received $powrFormat)${normal}"
+                let fail=1
+            fi
+        else
+            echo -e "${red}ERROR: Unable to find POWR sensor version${normal}"
+            let fail=1
+        fi
+
+        #Verify APSS sensors
+        let ii=0;
+        let totalPower=0
+        apssChannel=( 0x00 0x01 0x02 0x03 0x04 0x05 0x06 0x07 0x0A 0x0B 0x0C 0x0D 0x0E 0x0F)
+        if [ $useBulkPowerSensor -ne 0 ]; then
+            apssFuncIds=( 0x01 0x02 0x05 0x06 0x09 0x0A 0x12 0x13 0x0D 0x0E 0x0F 0x10 0x16 0x18) # DEBUG: with total bulk power sensor
+        else
+            apssFuncIds=( 0x01 0x02 0x05 0x06 0x09 0x0A 0x12 0x13 0x0D 0x0E 0x0F 0x10 0x11 0x18)
+        fi
+        let bulkSensorPower=0;
+        for sensor in 0x01 0x02 0x03 0x04 0x05 0x06 0x07 0x08 0x0B 0x0C 0x0D 0x0E 0x0F; do
+            sensorId="aa aa aa "$(printf "%02x" $sensor)
+            sensorString="SensorData     :  $sensorId"
+            grep -qi "$sensorString" $tempfile
+            if [ $? -ne 0 ]; then
+                echo -e "${red}ERROR: Unable to find power sensor: $sensorId${normal}"
+                let fail=1
+            else
+                expectedData=$(printf "$sensorString %02x %02x 00 00" ${apssFuncIds[ii]} ${apssChannel[ii]})
+                grep -qi "$expectedData" $tempfile
+                if [ $? -ne 0 ]; then
+                    echo -e "${red}ERROR: Channel data not what was expected ($expectedData)${normal}"
+                    grep -i "$sensorString" $tempfile
+                    let fail=1
+                fi
+                let function=0x`grep -i "$sensorString" $tempfile | awk '{print $7}'`
+                let channel=0x`grep -i "$sensorString" $tempfile | awk '{print $8}'`
+                let updateTag=0x`grep -i "$sensorString" $tempfile | awk '{print $11 $12 $13 $14}'`
+                accum=`grep -i "$sensorString" $tempfile | awk '{print $15 $16 $17 $18" "$19 $20 $21 $22}'`
+                let powerValue=0x`grep -i "$sensorString" $tempfile | awk '{print $23 $24}'`
+                echo "power sensor $sensorId channel $(printf '%2d' $channel), function $(printf '%2d' $function) ${apssFuncName[$function]} (UpdateTag: $updateTag, Accum: $accum, $powerValue W)"
+                if [ $updateTag -ne 0 ] || [ "$accum" != "00000000 00000000" ] || [ $powerValue -ne 0 ]; then
+                    if [ $updateTag -eq 0 ] || [ "$accum" == "00000000 00000000" ] || [ $powerValue -eq 0 ]; then
+                        echo -e "${red}ERROR: expected non-zero values for channel ${apssChannel[ii]} update tag/accum/power readings!${normal}"
+                        let fail=1
+                    fi
+                fi
+                let totalPower=$totalPower+$powerValue
+                if [ $function -eq 22 ]; then
+                    let bulkSensorPower=$powerValue
+                fi
+            fi
+            let ii=$ii+1
+        done
+        echo "==> Total Power from POWR section: $totalPower W (sum of all APSS power readings from Poll)"
+        if [ $bulkSensorPower -ne 0 ]; then
+            let totalPower=$bulkSensorPower;
+            echo "==> Total System Power from sensor: $totalPower W"
+        fi
+
+        #Verify Power Caps
+        capData=`egrep -A5 'Sensor Name \(0-3\)      : CAPS' $tempfile | tail -1 | sed 's/\s//'`
+        # current cap, current reading, n power cap, sys cap, min cap, user cap, power limit source (0 not set, 0x01 from BMC/HTMGT, 0x02 from OPAL)
+        let currentCap=0x`echo $capData | awk '{print $3 $4}'`
+        let currentPower=0x`echo $capData | awk '{print $5 $6}'`
+        let nCap=0x`echo $capData | awk '{print $7 $8}'`
+        let systemCap=0x`echo $capData | awk '{print $9 $10}'`
+        let minCap=0x`echo $capData | awk '{print $11 $12}'`
+        let softMinCap=0x`echo $capData | awk '{print $13 $14}'`
+        let userLimit=0x`echo $capData | awk '{print $15 $16}'`
+        let limitSource=0x`echo $capData | awk '{print $17}'`
+        echo "==> Current Power from CAPS section: $currentPower W (range: $softMinCap-$systemCap/$nCap, user: $userLimit, current: $currentCap w/src $limitSource)"
+        if [ $minCap -gt $systemCap ] || [ $minCap -gt $nCap ]; then
+            echo -e "${red}ERROR: Minimum power cap ($minCap) exceeds system ($systemCap) or n mode ($nCap)${normal}"
+            let fail=1
+        fi
+        if [ $softMinCap -gt $minCap ]; then
+            echo -e "${red}ERROR: Soft minimum power cap ($softMinCap) exceeds minimum power cap ($minCap)${normal}"
+            let fail=1
+        fi
+        if [ $currentCap -gt $systemCap ] || [ $currentCap -lt $softMinCap ]; then
+            if [ $OccState -ne $((0x02)) ]; then
+                echo -e "${red}ERROR: Current Cap ($currentCap) out of range${normal}"
+                let fail=1
+            elif [ $currentCap -ne 0 ]; then
+                echo -e "${red}ERROR: Current Cap ($currentCap) should be 0 in Observation state${normal}"
+                let fail=1
+            fi
+        fi
+        if [ $userLimit -gt 0 ] && ( [ $userLimit -gt $systemCap ] || [ $userLimit -lt $softMinCap ] ); then
+            echo -e "${red}ERROR: User Limit ($userLimit) out of range${normal}"
+            let fail=1
+        fi
+        if [ $limitSource -gt 2 ]; then
+            echo -e "${red}ERROR: Invalid user power limit source ($limitSource)${normal}"
+            let fail=1
+        fi
+        let delta=$((currentPower / 100)) # 1%
+        if [ $totalPower -lt $(($currentPower-$delta)) ] || [ $totalPower -gt $(($currentPower+$delta)) ]; then
+            echo -e "${red}ERROR: Total power from APSS readings is more than 1% different from CAPS power (+/- $delta)${normal}"
+            let fail=1
+        fi
+
+        if [ $fail -ne 0 ]; then
+            echo
+            echo "####################################################"
+            echo -e "${red}ERROR DETECTED: POLL RESPONSE DATA NOT CORRECT!${normal}"
+            echo "####################################################"
+            echo
+            CaptureOccTraces "PollValidateFail"
+            let testFailure=1
+            let failureCount=$failureCount+1
+            testFailDesc="${testFailDesc} : ${current_test}POLL VALIDATION FAILED"
+        fi
+
+        checkAndHandleOccElog
+
+    fi
+} # end ValidatePollData
+
+
+# Send POLL command(s) and verify not in safe mode and no elogs being reported
+PollToVerifyElogs()
+{
+    let check_more=1
+    let poll_fail=0
+    while [ $check_more -eq 1 ];
+    do
+        echo "Polling to check for elogs..."
+        autosim --simcmd '$SeqNum=(OCCw -C '$OCCCMD_POLL' -D "20")'
+        WaitForResponse $OCCCMD_POLL
+        let pollrc=$?
+        if [ $pollrc -eq 0 ] || [ $pollrc -gt $((0x00FF)) ]; then
+            echo -e "${bold}PollToVerifyElogs - WaitForResponse(POLL) returned $pollrc${normal}"
+            let poll_fail=0
+            OccState=$(grep 'Current OCC State (5)  : ' $tempfile | tail -n 1 )
+            OccState=${OccState%:*}         # Strip off end (text state)
+            let OccState=${OccState##*: }   # Convert state to decimal
+            #echo -e "${bold}PollToVerifyElogs - poll success, state=$OccState${normal}"
+            if [ $OccState == 4 ]; then
+                if [ $expectedState -eq $((0x04)) ]; then
+                    echo -e "${bold}OCC is in SAFE state as expected${normal}"
+                else
+                    echo -e "${red}WARNING: OCC is in SAFE state!${normal}"
+                    let testFailure=1
+                    let failureCount=$failureCount+1
+                    testFailDesc="${testFailDesc} : OCC IN SAFE STATE"
+                    abortTest
+                fi
+            fi
+
+            checkAndHandleOccElog
+            let check_more=$?
+        else
+            let poll_fail=$poll_fail+1
+            echo -e "${red}PollToVerifyElogs - poll_fail=$poll_fail rc=$pollrc${normal}"
+            if [ $poll_fail -ge 2 ]; then
+                echo -e "${red}ERROR: $poll_fail consecutive failures trying to flush OCC logs!${normal}"
+                let check_more=0
+            fi
+        fi
+    done
+
+    if [ $poll_fail -lt 2 ]; then
+        echo "...no additional elogs"
+    fi
+
+} # end PollToVerifyElogs
+
+
+TestValidationOCCslave()
+{
+    autosim --simcmd '$SeqNum=(OCCw -C '$OCCCMD_POLL' -D "20")'
+    WaitForResponse $OCCCMD_POLL
+    if [ $? -eq 0 ]; then
+        occRole=$(grep 'Status (1)             :' $tempfile | tail -n 1 )
+        occRole=${occRole##* - }
+
+        if [ ${#occRole} != 0 ]; then
+            if [[ $occRole == *"Master"* ]] ; then
+                echo
+                echo "####################################################"
+                echo -e "${red}ERROR DETECTED: OCC role is not Slave !${normal}"
+                echo "####################################################"
+                echo
+                CaptureOccTraces "OccNotSlave"
+                let testFailure=1
+                let failureCount=$failureCount+1
+                testFailDesc="${testFailDesc} : OCC NOT SLAVE"
+            else
+                echo
+                echo Validation OCC role is Slave.
+                echo
+            fi
+        else
+            echo -e "${red}ERROR DETECTED: no data analysis available for TestValidationOCCslave${normal}"
+            let testFailure=1
+            let failureCount=$failureCount+1
+            testFailDesc="${testFailDesc} : UNABLE TO VALIDATE SLAVE ROLE"
+            CaptureOccTraces "unableToValidateSlave"
+        fi
+    fi
+}
+
+TestValidationOCCmaster()
+{
+    autosim --simcmd '$SeqNum=(OCCw -C '$OCCCMD_POLL' -D "20")'
+    WaitForResponse $OCCCMD_POLL
+    if [ $? -eq 0 ]; then
+        occRole=$(grep 'Status (1)             :' $tempfile | tail -n 1 )
+        occRole=${occRole##* - }
+        if [ ${#occRole} != 0 ]; then
+            if [[ $occRole != *"Master"* ]] ; then
+                echo
+                echo "####################################################"
+                echo -e "${red}ERROR DETECTED: OCC role is not Master !${normal}"
+                echo "####################################################"
+                echo
+                CaptureOccTraces "OccNotMaster"
+                let testFailure=1
+                let failureCount=$failureCount+1
+                testFailDesc="${testFailDesc} : OCC NOT MASTER"
+            else
+                echo
+                echo Validation OCC Role is Master.
+                echo
+            fi
+        else
+            echo -e "${red}ERROR DETECTED: no data analysis available for TestValidationOCCmaster${normal}"
+            let testFailure=1
+            let failureCount=$failureCount+1
+            testFailDesc="${testFailDesc} : UNABLE TO VALIDATE MASTER ROLE"
+            CaptureOccTraces "unableToValidateMaster"
+        fi
+    fi
+}
+
+ReadAndClearElog()
+{
+    elogId="$1"
+    elogAddr="$2"
+    elogLen="$3"
+    occSrc="$4"
+    echo -e "${bold}ReadAndClearElog($elogId,$elogAddr,$elogLen,$occSrc)${normal}" # DEBUG
+    if [ -n "$elogId" ] && [ -n "$elogAddr" ] && [ -n "$elogLen" ]; then
+        echo "Dumping Elog $elogId:"
+        autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.x '$elogAddr' '$elogLen''
+
+        # Clear the 405 elog
+        autosim --simcmd '$SeqNum=(OCCw -C 0x12 -D "01'${elogId:2:2}'0000")'
+        WaitForResponse 0x12
+        if [ $? -eq 0 ]; then
+            echo "Clear of OCC elog $elogId completed successfully"
+
+            if [ $expectedOccSrc -eq 0 ] || [ $expectedOccSrc -ne $(($occSrc)) ]; then
+                testFailDesc="${testFailDesc} : ${current_test}OCC ELOG $elogId $occSrc"
+                echo
+                echo "####################################################"
+                echo -e "${red}OCC ERROR LOG $occSrc FOUND IN POLL RESPONSE!${normal}"
+                echo "####################################################"
+                echo
+                let testFailure=1
+                let failureCount=$failureCount+1
+                testFailDesc="${testFailDesc} : ${current_test}${occSrc} ELOG IN POLL RESPONSE"
+
+                CaptureOccTraces "OccSrcReturned_$occSrc"
+            else
+                echo
+                echo -e "${bold}OCC SRC $occSrc was received as expected${normal}"
+                echo
+            fi
+        else
+            echo -e "${red}ERROR DETECTED: no data analysis available with buffer of 0${normal}"
+            let testFailure=1
+            let failureCount=$failureCount+1
+            testFailDesc="${testFailDesc} : ${current_test}UNABLE TO CLEAR ELOG $elogId"
+            CaptureOccTraces "unableToClearElog"
+        fi
+    else
+        echo -e "${red}ERROR: Invalid parms to ReadAndClearElog($elogId,$elogAddr,$elogLen,$occSrc)${normal}"
+    fi
+}
+
+
+printTestResults()
+{
+    FinalDate=`date +%s`
+
+    if [ $testFailure -ne 0 ]; then
+        autosim --simcmd 'OCCstate'
+    fi
+
+    printHeader "CAPTURE FINAL OCC TRACE"
+    CaptureOccTraces "finalOccTrace"
+
+    if [ $G_use_pgpe -ne 0 ]; then
+        printHeader "CAPTURE FINAL PGPE TRACE"
+        autosim --simcmd "PGPEtrace ${simics_binaries}"
+        echo
+        echo
+    fi
+
+    printHeader "TEST RESULTS"
+    echo ""
+
+    if [ -d "$simics_traces" ]; then
+        echo "Saved Traces:"
+        #ls -ltr ${simics_traces}/*occMERG.txt
+        stat -c "%y %6s %n" ${simics_traces}/*occMERG.txt | sort
+        echo
+        echo
+    fi
+
+    if [ $testFailure -ne 0 ]; then
+        echo -e "${red}##########################"
+        echo "### $failureCount TEST(S) FAILED ####"
+        echo "##########################"
+        echo -e "FAILURES $testFailDesc${normal}"
+    else
+        echo "#################################################################################################"
+        echo "#################################################################################################"
+        echo -e "${green}PASS PASS PASS PASS PASS PASS PASS PASS PASS PASS PASS PASS PASS PASS PASS PASS PASS PASS PASS${normal}"
+        echo "#################################################################################################"
+        echo "#################################################################################################"
+    fi
+
+    if [ $testFailure -ne 0 ] || [ $G_keep_running -ne 0 ]; then
+        echo
+        echo
+        let port=`autosim --simtelnet | sed 's/.*0x/0x/' | tr -d '\r'`
+        if [ $port -eq 0 ]; then
+            autosim --simtelnet
+        fi
+        echo -e "${bold}To connect to active simics console from another shell:"
+        autosim --simtelnet | sed "s/.*: /    /;s/0x.*/$port/"
+        echo "    to exit/disconnect that simics console use: exit -d"
+        echo -e "${normal}"
+
+        echo -en "${bold}Press ENTER to stop simics:${normal} "
+        read answer
+    fi
+
+    echo
+    echo
+
+    if [ $G_use_pgpe -ne 0 ]; then
+        echo "PGPE was enabled"
+    else
+        echo "PGPE was disabled"
+    fi
+    # Some timing results:
+    if [ $G_duration_active_ready -gt 0 ]; then
+        echo "POLL - Active Ready bit was set after $G_duration_active_ready seconds"
+    fi
+    if [ $G_duration_set_state -gt 0 ]; then
+        echo "SET_STATE completed after $G_duration_set_state seconds"
+    fi
+    if [ $G_duration_set_mode -gt 0 ]; then
+        echo "SET_MODE completed after $G_duration_set_mode seconds"
+    fi
+
+    echo "Test duration:" `date -u -d "0 $FinalDate seconds - $StartDate seconds" +"%M minutes %S seconds"`
+}
+
+
+
+TESTS_elogs()
+{
+    current_test="TESTS_elogs-"
+    let MAX_SLOTS=6
+
+    # OCC $MAX_SLOTS elog slots and 1 for CallHome logs
+    # If the slots are all occupied, and OCC has a predictive/unrecoverable error to add,
+    # it will replace an INFO elog.  It will NOT replace the oldest log because TMGT/HTMGT
+    # could have already started retrieveing that log.
+
+    printHeader "INJECT 2 PGPE, 1 INFO, 1 PGPE, 1 INFO, 1 ERROR"
+    autosim --simcmd '$SeqNum=(OCCw -C 0x40 -D "13")'
+    WaitForResponse 0x40
+    autosim --simcmd '$SeqNum=(OCCw -C 0x40 -D "13")'
+    WaitForResponse 0x40
+    autosim --simcmd '$SeqNum=(OCCw -C 0x40 -D "14494E4600")' # INF
+    WaitForResponse 0x40
+    autosim --simcmd '$SeqNum=(OCCw -C 0x40 -D "13")'
+    WaitForResponse 0x40
+    autosim --simcmd '$SeqNum=(OCCw -C 0x40 -D "14494E4600")' # INF
+    WaitForResponse 0x40
+    autosim --simcmd '$SeqNum=(OCCw -C 0x40 -D "13")'
+    WaitForResponse 0x40
+
+    printHeader "INJECT 1 more INF (should fail - no slots)"
+    autosim --simcmd '$SeqNum=(OCCw -C 0x40 -D "14494E4600")' # INF
+    WaitForResponse 0x40 "0x15"
+
+    printHeader "INJECT 1 more PGPE (should replace 1st INF)"
+    autosim --simcmd '$SeqNum=(OCCw -C 0x40 -D "13")'
+    WaitForResponse 0x40
+
+    printHeader "INJECT 1 more PGPE (should replace 2nd INF)"
+    autosim --simcmd '$SeqNum=(OCCw -C 0x40 -D "13")'
+    WaitForResponse 0x40
+
+    printHeader "TRY TO INJECT 1 more PGPE (should fail - no slots)"
+    autosim --simcmd '$SeqNum=(OCCw -C 0x40 -D "13")'
+    WaitForResponse 0x40 "0x15"
+
+    printHeader "CLEAR 1 LOG"
+    let expectedOccSrc=0x2AD3
+    autosim --simcmd '$SeqNum=(OCCw -C '$OCCCMD_POLL' -D "20")'
+    WaitForResponse $OCCCMD_POLL
+    if [ $? -eq 0 ]; then
+        checkAndHandleOccElog
+        echo "check_more=$?"
+    fi
+
+    printHeader "TRY TO INJECT 1 more PGPE (should work)"
+    autosim --simcmd '$SeqNum=(OCCw -C 0x40 -D "13")'
+    WaitForResponse 0x40
+
+    printHeader "TRY TO INJECT 1 more PGPE (should fail - no slots)"
+    autosim --simcmd '$SeqNum=(OCCw -C 0x40 -D "13")'
+    WaitForResponse 0x40 "0x15"
+
+    CaptureOccTraces "occElogInjection"
+
+    printHeader "CLEAR ALL LOGS"
+    let num_logs=1
+    while [ $num_logs -le $MAX_SLOTS ]; do
+        let expectedOccSrc=0x2AD3
+        echo "Clearing log #$num_logs  ($(printf "%04X" $expectedOccSrc))"
+        autosim --simcmd '$SeqNum=(OCCw -C '$OCCCMD_POLL' -D "20")'
+        WaitForResponse $OCCCMD_POLL
+        if [ $? -eq 0 ]; then
+            checkAndHandleOccElog
+            let check_more=$?
+            if [ $check_more -gt 0 ]; then
+                let num_logs=$num_logs+1
+            else
+                echo "check_more=$check_more"
+                echo "ERROR: Missing logs!"
+                let testFailure=1
+                let failureCount=$failureCount+1
+                testFailDesc="${testFailDesc} : ${current_test}MISSING LOGS"
+                break
+            fi
+        else
+            echo "ERROR: response failed $?"
+            let testFailure=1
+            let failureCount=$failureCount+1
+            testFailDesc="${testFailDesc} : ${current_test}LOG COLLECTION FAILED"
+            break;
+        fi
+    done
+
+    printHeader "POLL SHOULD NOT HAVE ANY LOGS"
+    autosim --simcmd '$SeqNum=(OCCw -C 0x00 -D "20")'
+    WaitForResponse 0x00
+
+    printHeader "INJECT ${MAX_SLOTS} INFO LOGS"
+    let num_logs=1
+    while [ $num_logs -le $MAX_SLOTS ]; do
+        echo "Inject INFO #$num_logs"
+        autosim --simcmd '$SeqNum=(OCCw -C 0x40 -D "14494E4600")' # INF
+        WaitForResponse 0x40
+        if [ $? -ne 0 ]; then
+            break;
+        fi
+        let num_logs=$num_logs+1
+    done
+    printHeader "TRY TO INJECT 1 MORE INFO (should fail - no slots)"
+    autosim --simcmd '$SeqNum=(OCCw -C 0x40 -D "14494E4600")' # INF
+    WaitForResponse 0x40 "0x15"
+
+    printHeader "INJECT $((${MAX_SLOTS}-1)) NON-INFO LOGS (REPLACE INFO)"
+    let num_logs=1
+    while [ $num_logs -le $((${MAX_SLOTS}-1)) ]; do
+        echo "Inject NON-INFO #$num_logs"
+        autosim --simcmd '$SeqNum=(OCCw -C 0x40 -D "13")'
+        WaitForResponse 0x40
+        if [ $? -ne 0 ]; then
+            break;
+        fi
+        let num_logs=$num_logs+1
+    done
+    printHeader "TRY TO INJECT 1 MORE PGPE (should fail - no slots)"
+    autosim --simcmd '$SeqNum=(OCCw -C 0x40 -D "13")'
+    WaitForResponse 0x40 "0x15"
+
+    CaptureOccTraces "occElogInjection2"
+
+    printHeader "CLEAR ALL LOGS AGAIN"
+    let num_logs=1
+    let expectedOccSrc=0x2A00 # First INFO slot never got replaced
+    while [ $num_logs -le $MAX_SLOTS ]; do
+        echo "Clearing log #$num_logs  ($(printf "%04X" $expectedOccSrc))"
+        autosim --simcmd '$SeqNum=(OCCw -C '$OCCCMD_POLL' -D "20")'
+        WaitForResponse $OCCCMD_POLL
+        if [ $? -eq 0 ]; then
+            checkAndHandleOccElog
+            let check_more=$?
+            echo "check_more=$check_more"
+            if [ $check_more -gt 0 ]; then
+                let num_logs=$num_logs+1
+            else
+                echo "check_more=$check_more"
+                echo "ERROR: Missing logs!"
+                let testFailure=1
+                let failureCount=$failureCount+1
+                testFailDesc="${testFailDesc} : ${current_test}MISSING LOGS 2"
+                break
+            fi
+        else
+            echo "ERROR: response failed $?"
+            let testFailure=1
+            let failureCount=$failureCount+1
+            testFailDesc="${testFailDesc} : ${current_test}LOG COLLECTION 2 FAILED"
+            break
+        fi
+        let expectedOccSrc=0x2AD3 # Remaining logs should be 2AD3
+    done
+
+    let expectedOccSrc=0
+    current_test=""
+
+} # end TESTS_elogs()
+
+
+TESTS_pcaps()
+{
+    current_test="TESTS_pcaps-"
+    printHeader "SET USER POWER CAP"
+    autosim --simcmd '$SeqNum=(OCCw -C 0x22 -D "07BE")' ### cap < oversub
+    WaitForResponse 0x22
+    printHeader "VALIDATE POLL DATA"
+    ValidatePollData
+    #autosim --simcmd '$SeqNum=(OCCw -C 0x22 -D "011E")' ### cap < soft
+    #WaitForResponse 0x22 0x13
+    #ValidatePollData
+    #autosim --simcmd '$SeqNum=(OCCw -C 0x22 -D "07BA")' ### cap < min
+    #WaitForResponse 0x22 0x13
+    #ValidatePollData
+    #autosim --simcmd '$SeqNum=(OCCw -C 0x22 -D "07EA")' ### cap > max
+    #WaitForResponse 0x22 0x13
+    #ValidatePollData
+    autosim --simcmd '$SeqNum=(OCCw -C 0x22 -D "07E9")' ### cap = max
+    WaitForResponse 0x22
+    ValidatePollData
+    #autosim --simcmd '$SeqNum=(OCCw -C 0x22 -D "011F")' ### cap = soft
+    #WaitForResponse 0x22
+    #ValidatePollData
+    autosim --simcmd '$SeqNum=(OCCw -C 0x22 -D "07C2")' ### cap = oversub
+    WaitForResponse 0x22
+    ValidatePollData
+    autosim --simcmd '$SeqNum=(OCCw -C 0x22 -D "07D0")' ### cap > min & < max
+    WaitForResponse 0x22
+    ValidatePollData
+
+
+    printHeader "SET POWER CAP BELOW CURRENT POWER"
+    ### DEBUG: Set power limit BELOW current power usage to test OCC code
+    autosim --simcmd '$SeqNum=(OCCw -C 0x22 -D "0145")' ### 325W ### valid cap that is < current power
+    WaitForResponse 0x22
+    ValidatePollData
+    echo WAIT : 10 seconds before next poll
+    sleep 10
+    let expectedState=0x04
+    let expectedOccSrc=0x2A06
+    ValidatePollData
+    echo WAIT : 10 seconds before next poll
+    sleep 10
+    ValidatePollData
+    autosim --simcmd '$SeqNum=(OCCw -C 0x22 -D "0384")' ### 900W ### valid cap that is < current power
+    WaitForResponse 0x22
+    ValidatePollData
+    echo WAIT : 10 seconds before next poll
+    sleep 10
+    ValidatePollData
+
+    current_test=""
+
+} # end TESTS_pcaps()
+
+
+main "$@"
+
+exit 0
+
+
+
