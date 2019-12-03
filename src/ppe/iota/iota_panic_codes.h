@@ -59,7 +59,7 @@ typedef enum
     IOTA_DEC_NOT_SUPPORTED = 0x000a,
     IOTA_WATCHDOG_NOT_SUPPORTED = 0x000d,
     IOTA_EXECUTION_STACK_OVERFLOW = 0x001c,
-    IOTA_UNUSED_001d = 0x001d,
+    IOTA_VIRTUAL_EXCEPTION = 0x001d,
     IOTA_UNUSED_001e = 0x001e,
     IOTA_UNUSED_001f = 0x001f,
 
@@ -350,6 +350,7 @@ typedef enum
 #define IOTA_SOFTWARE_HALT                 0x0009
 #define IOTA_DEC_NOT_SUPPORTED             0x000a
 #define IOTA_WATCHDOG_NOT_SUPPORTED        0x000d
+#define IOTA_VIRTUAL_EXCEPTION             0x001d
 
 #endif  // __ASSEMBLER__
 

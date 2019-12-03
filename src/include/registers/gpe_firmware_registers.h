@@ -45,929 +45,1293 @@
 
 
 
-typedef union gpe_gpentsel
+typedef union gpe_ocb_gpetsel
 {
 
-    uint64_t value;
+    uint32_t value;
     struct
     {
 #ifdef _BIG_ENDIAN
-        uint32_t high_order;
-        uint32_t low_order;
+        uint32_t watchdog_sel : 4;
+        uint32_t fit_sel : 4;
+        uint32_t reserved1 : 24;
 #else
-        uint32_t low_order;
-        uint32_t high_order;
-#endif // _BIG_ENDIAN
-    } words;
-    struct
-    {
-#ifdef _BIG_ENDIAN
-        uint64_t fit_sel : 4;
-        uint64_t watchdog_sel : 4;
-        uint64_t reserved1 : 56;
-#else
-        uint64_t reserved1 : 56;
-        uint64_t watchdog_sel : 4;
-        uint64_t fit_sel : 4;
+        uint32_t reserved1 : 24;
+        uint32_t fit_sel : 4;
+        uint32_t watchdog_sel : 4;
 #endif // _BIG_ENDIAN
     } fields;
-} gpe_gpentsel_t;
+} gpe_ocb_gpetsel_t;
 
 
 
-typedef union gpe_gpenivpr
+typedef union gpe_ocb_gpeivpr
 {
 
-    uint64_t value;
+    uint32_t value;
     struct
     {
 #ifdef _BIG_ENDIAN
-        uint32_t high_order;
-        uint32_t low_order;
+        uint32_t ivpr : 23;
+        uint32_t reserved1 : 9;
 #else
-        uint32_t low_order;
-        uint32_t high_order;
-#endif // _BIG_ENDIAN
-    } words;
-    struct
-    {
-#ifdef _BIG_ENDIAN
-        uint64_t ivpr : 23;
-        uint64_t reserved1 : 41;
-#else
-        uint64_t reserved1 : 41;
-        uint64_t ivpr : 23;
+        uint32_t reserved1 : 9;
+        uint32_t ivpr : 23;
 #endif // _BIG_ENDIAN
     } fields;
-} gpe_gpenivpr_t;
+} gpe_ocb_gpeivpr_t;
 
 
 
-typedef union gpe_gpendbg
+typedef union gpe_ocb_gpedbg
 {
 
-    uint64_t value;
+    uint32_t value;
     struct
     {
 #ifdef _BIG_ENDIAN
-        uint32_t high_order;
-        uint32_t low_order;
+        uint32_t en_dbg : 1;
+        uint32_t halt_on_xstop : 1;
+        uint32_t halt_on_trig : 1;
+        uint32_t en_coverage_mode : 1;
+        uint32_t en_intr_addr : 1;
+        uint32_t en_trace_extra : 1;
+        uint32_t en_trace_stall : 1;
+        uint32_t en_wait_cycles : 1;
+        uint32_t en_full_speed : 1;
+        uint32_t dis_flow_change : 1;
+        uint32_t trace_mode_sel : 2;
+        uint32_t reserved12_15 : 4;
+        uint32_t fir_trigger : 1;
+        uint32_t spare : 3;
+        uint32_t trace_data_sel : 4;
+        uint32_t reserved1 : 8;
 #else
-        uint32_t low_order;
-        uint32_t high_order;
-#endif // _BIG_ENDIAN
-    } words;
-    struct
-    {
-#ifdef _BIG_ENDIAN
-        uint64_t en_dbg : 1;
-        uint64_t halt_on_xstop : 1;
-        uint64_t halt_on_trig : 1;
-        uint64_t en_risctrace : 1;
-        uint64_t en_trace_full_iva : 1;
-        uint64_t dis_trace_extra : 1;
-        uint64_t dis_trace_stall : 1;
-        uint64_t en_wide_trace : 1;
-        uint64_t sync_timer_sel : 4;
-        uint64_t fir_trigger : 1;
-        uint64_t spare : 3;
-        uint64_t halt_input : 1;
-        uint64_t reserved1 : 47;
-#else
-        uint64_t reserved1 : 47;
-        uint64_t halt_input : 1;
-        uint64_t spare : 3;
-        uint64_t fir_trigger : 1;
-        uint64_t sync_timer_sel : 4;
-        uint64_t en_wide_trace : 1;
-        uint64_t dis_trace_stall : 1;
-        uint64_t dis_trace_extra : 1;
-        uint64_t en_trace_full_iva : 1;
-        uint64_t en_risctrace : 1;
-        uint64_t halt_on_trig : 1;
-        uint64_t halt_on_xstop : 1;
-        uint64_t en_dbg : 1;
+        uint32_t reserved1 : 8;
+        uint32_t trace_data_sel : 4;
+        uint32_t spare : 3;
+        uint32_t fir_trigger : 1;
+        uint32_t reserved12_15 : 4;
+        uint32_t trace_mode_sel : 2;
+        uint32_t dis_flow_change : 1;
+        uint32_t en_full_speed : 1;
+        uint32_t en_wait_cycles : 1;
+        uint32_t en_trace_stall : 1;
+        uint32_t en_trace_extra : 1;
+        uint32_t en_intr_addr : 1;
+        uint32_t en_coverage_mode : 1;
+        uint32_t halt_on_trig : 1;
+        uint32_t halt_on_xstop : 1;
+        uint32_t en_dbg : 1;
 #endif // _BIG_ENDIAN
     } fields;
-} gpe_gpendbg_t;
+} gpe_ocb_gpedbg_t;
 
 
 
-typedef union gpe_gpenstr
+typedef union gpe_ocb_gpe0str
 {
 
-    uint64_t value;
+    uint32_t value;
     struct
     {
 #ifdef _BIG_ENDIAN
-        uint32_t high_order;
-        uint32_t low_order;
+        uint32_t reserved1 : 12;
+        uint32_t pbase : 10;
+        uint32_t reserved2 : 7;
+        uint32_t size : 3;
 #else
-        uint32_t low_order;
-        uint32_t high_order;
-#endif // _BIG_ENDIAN
-    } words;
-    struct
-    {
-#ifdef _BIG_ENDIAN
-        uint64_t reserved1 : 12;
-        uint64_t pbase : 10;
-        uint64_t reserved2 : 7;
-        uint64_t size : 3;
-        uint64_t reserved3 : 32;
-#else
-        uint64_t reserved3 : 32;
-        uint64_t size : 3;
-        uint64_t reserved2 : 7;
-        uint64_t pbase : 10;
-        uint64_t reserved1 : 12;
+        uint32_t size : 3;
+        uint32_t reserved2 : 7;
+        uint32_t pbase : 10;
+        uint32_t reserved1 : 12;
 #endif // _BIG_ENDIAN
     } fields;
-} gpe_gpenstr_t;
+} gpe_ocb_gpe0str_t;
 
 
 
-typedef union gpe_gpenmacr
+typedef union gpe_ocb_gpemacr
 {
 
-    uint64_t value;
+    uint32_t value;
     struct
     {
 #ifdef _BIG_ENDIAN
-        uint32_t high_order;
-        uint32_t low_order;
+        uint32_t mem_low_priority : 2;
+        uint32_t mem_high_priority : 2;
+        uint32_t local_low_priority : 2;
+        uint32_t local_high_priority : 2;
+        uint32_t sram_low_priority : 2;
+        uint32_t sram_high_priority : 2;
+        uint32_t write_protect_enable : 1;
+        uint32_t reserved1 : 19;
 #else
-        uint32_t low_order;
-        uint32_t high_order;
-#endif // _BIG_ENDIAN
-    } words;
-    struct
-    {
-#ifdef _BIG_ENDIAN
-        uint64_t mem_low_priority : 2;
-        uint64_t mem_high_priority : 2;
-        uint64_t local_low_priority : 2;
-        uint64_t local_high_priority : 2;
-        uint64_t sram_low_priority : 2;
-        uint64_t sram_high_priority : 2;
-        uint64_t reserved1 : 52;
-#else
-        uint64_t reserved1 : 52;
-        uint64_t sram_high_priority : 2;
-        uint64_t sram_low_priority : 2;
-        uint64_t local_high_priority : 2;
-        uint64_t local_low_priority : 2;
-        uint64_t mem_high_priority : 2;
-        uint64_t mem_low_priority : 2;
+        uint32_t reserved1 : 19;
+        uint32_t write_protect_enable : 1;
+        uint32_t sram_high_priority : 2;
+        uint32_t sram_low_priority : 2;
+        uint32_t local_high_priority : 2;
+        uint32_t local_low_priority : 2;
+        uint32_t mem_high_priority : 2;
+        uint32_t mem_low_priority : 2;
 #endif // _BIG_ENDIAN
     } fields;
-} gpe_gpenmacr_t;
+} gpe_ocb_gpemacr_t;
 
 
 
-typedef union gpe_gpenxixcr
+typedef union gpe_ocb_gpeswpr0
 {
 
-    uint64_t value;
+    uint32_t value;
     struct
     {
 #ifdef _BIG_ENDIAN
-        uint32_t high_order;
-        uint32_t low_order;
+        uint32_t write_protect_bar : 27;
+        uint32_t reserved1 : 5;
 #else
-        uint32_t low_order;
-        uint32_t high_order;
-#endif // _BIG_ENDIAN
-    } words;
-    struct
-    {
-#ifdef _BIG_ENDIAN
-        uint64_t xcr : 32;
-        uint64_t reserved1 : 32;
-#else
-        uint64_t reserved1 : 32;
-        uint64_t xcr : 32;
+        uint32_t reserved1 : 5;
+        uint32_t write_protect_bar : 27;
 #endif // _BIG_ENDIAN
     } fields;
-} gpe_gpenxixcr_t;
+} gpe_ocb_gpeswpr0_t;
 
 
 
-typedef union gpe_gpenxiramra
+typedef union gpe_ocb_gpeswpr1
 {
 
-    uint64_t value;
+    uint32_t value;
     struct
     {
 #ifdef _BIG_ENDIAN
-        uint32_t high_order;
-        uint32_t low_order;
+        uint32_t write_protect_bar : 27;
+        uint32_t reserved1 : 5;
 #else
-        uint32_t low_order;
-        uint32_t high_order;
-#endif // _BIG_ENDIAN
-    } words;
-    struct
-    {
-#ifdef _BIG_ENDIAN
-        uint64_t xcr : 32;
-        uint64_t sprg0 : 32;
-#else
-        uint64_t sprg0 : 32;
-        uint64_t xcr : 32;
+        uint32_t reserved1 : 5;
+        uint32_t write_protect_bar : 27;
 #endif // _BIG_ENDIAN
     } fields;
-} gpe_gpenxiramra_t;
+} gpe_ocb_gpeswpr1_t;
 
 
 
-typedef union gpe_gpenxiramga
+typedef union gpe_ocb_gpexixcr
 {
 
-    uint64_t value;
+    uint32_t value;
     struct
     {
 #ifdef _BIG_ENDIAN
-        uint32_t high_order;
-        uint32_t low_order;
+        uint32_t reserved1 : 1;
+        uint32_t xcr : 3;
+        uint32_t reserved2 : 28;
 #else
-        uint32_t low_order;
-        uint32_t high_order;
-#endif // _BIG_ENDIAN
-    } words;
-    struct
-    {
-#ifdef _BIG_ENDIAN
-        uint64_t ir : 32;
-        uint64_t sprg0 : 32;
-#else
-        uint64_t sprg0 : 32;
-        uint64_t ir : 32;
+        uint32_t reserved2 : 28;
+        uint32_t xcr : 3;
+        uint32_t reserved1 : 1;
 #endif // _BIG_ENDIAN
     } fields;
-} gpe_gpenxiramga_t;
+} gpe_ocb_gpexixcr_t;
 
 
 
-typedef union gpe_gpenxiramdbg
+typedef union gpe_ocb_gpexiramra
 {
 
-    uint64_t value;
+    uint32_t value;
     struct
     {
 #ifdef _BIG_ENDIAN
-        uint32_t high_order;
-        uint32_t low_order;
+        uint32_t reserved1 : 1;
+        uint32_t xcr : 3;
+        uint32_t reserved2 : 28;
 #else
-        uint32_t low_order;
-        uint32_t high_order;
-#endif // _BIG_ENDIAN
-    } words;
-    struct
-    {
-#ifdef _BIG_ENDIAN
-        uint64_t xsr : 32;
-        uint64_t sprg0 : 32;
-#else
-        uint64_t sprg0 : 32;
-        uint64_t xsr : 32;
+        uint32_t reserved2 : 28;
+        uint32_t xcr : 3;
+        uint32_t reserved1 : 1;
 #endif // _BIG_ENDIAN
     } fields;
-} gpe_gpenxiramdbg_t;
+} gpe_ocb_gpexiramra_t;
 
 
 
-typedef union gpe_gpenxiramedr
+typedef union gpe_ocb_gpexiramga
 {
 
-    uint64_t value;
+    uint32_t value;
     struct
     {
 #ifdef _BIG_ENDIAN
-        uint32_t high_order;
-        uint32_t low_order;
+        uint32_t ir : 32;
 #else
-        uint32_t low_order;
-        uint32_t high_order;
-#endif // _BIG_ENDIAN
-    } words;
-    struct
-    {
-#ifdef _BIG_ENDIAN
-        uint64_t ir : 32;
-        uint64_t edr : 32;
-#else
-        uint64_t edr : 32;
-        uint64_t ir : 32;
+        uint32_t ir : 32;
 #endif // _BIG_ENDIAN
     } fields;
-} gpe_gpenxiramedr_t;
+} gpe_ocb_gpexiramga_t;
 
 
 
-typedef union gpe_gpenxidbgpro
+typedef union gpe_ocb_gpexiramdbg
 {
 
-    uint64_t value;
+    uint32_t value;
     struct
     {
 #ifdef _BIG_ENDIAN
-        uint32_t high_order;
-        uint32_t low_order;
+        uint32_t xsr_hs : 1;
+        uint32_t xsr_hc : 3;
+        uint32_t xsr_hcp : 1;
+        uint32_t xsr_rip : 1;
+        uint32_t xsr_sip : 1;
+        uint32_t xsr_trap : 1;
+        uint32_t xsr_iac : 1;
+        uint32_t xsr_sib : 3;
+        uint32_t xsr_rdac : 1;
+        uint32_t xsr_wdac : 1;
+        uint32_t xsr_ws : 1;
+        uint32_t xsr_trh : 1;
+        uint32_t xsr_sms : 4;
+        uint32_t xsr_lp : 1;
+        uint32_t xsr_ep : 1;
+        uint32_t xsr_ee : 1;
+        uint32_t reserved1 : 1;
+        uint32_t xsr_ptr : 1;
+        uint32_t xsr_st : 1;
+        uint32_t reserved2 : 2;
+        uint32_t xsr_mfe : 1;
+        uint32_t xsr_mcs : 3;
 #else
-        uint32_t low_order;
-        uint32_t high_order;
-#endif // _BIG_ENDIAN
-    } words;
-    struct
-    {
-#ifdef _BIG_ENDIAN
-        uint64_t xsr : 32;
-        uint64_t iar : 32;
-#else
-        uint64_t iar : 32;
-        uint64_t xsr : 32;
+        uint32_t xsr_mcs : 3;
+        uint32_t xsr_mfe : 1;
+        uint32_t reserved2 : 2;
+        uint32_t xsr_st : 1;
+        uint32_t xsr_ptr : 1;
+        uint32_t reserved1 : 1;
+        uint32_t xsr_ee : 1;
+        uint32_t xsr_ep : 1;
+        uint32_t xsr_lp : 1;
+        uint32_t xsr_sms : 4;
+        uint32_t xsr_trh : 1;
+        uint32_t xsr_ws : 1;
+        uint32_t xsr_wdac : 1;
+        uint32_t xsr_rdac : 1;
+        uint32_t xsr_sib : 3;
+        uint32_t xsr_iac : 1;
+        uint32_t xsr_trap : 1;
+        uint32_t xsr_sip : 1;
+        uint32_t xsr_rip : 1;
+        uint32_t xsr_hcp : 1;
+        uint32_t xsr_hc : 3;
+        uint32_t xsr_hs : 1;
 #endif // _BIG_ENDIAN
     } fields;
-} gpe_gpenxidbgpro_t;
+} gpe_ocb_gpexiramdbg_t;
 
 
 
-typedef union gpe_gpenxisib
+typedef union gpe_ocb_gpexiramedr
 {
 
-    uint64_t value;
+    uint32_t value;
     struct
     {
 #ifdef _BIG_ENDIAN
-        uint32_t high_order;
-        uint32_t low_order;
+        uint32_t ir : 32;
 #else
-        uint32_t low_order;
-        uint32_t high_order;
-#endif // _BIG_ENDIAN
-    } words;
-    struct
-    {
-#ifdef _BIG_ENDIAN
-        uint64_t sib_info : 64;
-#else
-        uint64_t sib_info : 64;
+        uint32_t ir : 32;
 #endif // _BIG_ENDIAN
     } fields;
-} gpe_gpenxisib_t;
+} gpe_ocb_gpexiramedr_t;
 
 
 
-typedef union gpe_gpenximem
+typedef union gpe_ocb_gpexidbgpro
 {
 
-    uint64_t value;
+    uint32_t value;
     struct
     {
 #ifdef _BIG_ENDIAN
-        uint32_t high_order;
-        uint32_t low_order;
+        uint32_t xsr_hs : 1;
+        uint32_t xsr_hc : 3;
+        uint32_t xsr_hcp : 1;
+        uint32_t xsr_rip : 1;
+        uint32_t xsr_sip : 1;
+        uint32_t xsr_trap : 1;
+        uint32_t xsr_iac : 1;
+        uint32_t xsr_sib : 3;
+        uint32_t xsr_rdac : 1;
+        uint32_t xsr_wdac : 1;
+        uint32_t xsr_ws : 1;
+        uint32_t xsr_trh : 1;
+        uint32_t xsr_sms : 4;
+        uint32_t xsr_lp : 1;
+        uint32_t xsr_ep : 1;
+        uint32_t xsr_ee : 1;
+        uint32_t reserved1 : 1;
+        uint32_t xsr_ptr : 1;
+        uint32_t xsr_st : 1;
+        uint32_t reserved2 : 2;
+        uint32_t xsr_mfe : 1;
+        uint32_t xsr_mcs : 3;
 #else
-        uint32_t low_order;
-        uint32_t high_order;
-#endif // _BIG_ENDIAN
-    } words;
-    struct
-    {
-#ifdef _BIG_ENDIAN
-        uint64_t memory_info : 64;
-#else
-        uint64_t memory_info : 64;
+        uint32_t xsr_mcs : 3;
+        uint32_t xsr_mfe : 1;
+        uint32_t reserved2 : 2;
+        uint32_t xsr_st : 1;
+        uint32_t xsr_ptr : 1;
+        uint32_t reserved1 : 1;
+        uint32_t xsr_ee : 1;
+        uint32_t xsr_ep : 1;
+        uint32_t xsr_lp : 1;
+        uint32_t xsr_sms : 4;
+        uint32_t xsr_trh : 1;
+        uint32_t xsr_ws : 1;
+        uint32_t xsr_wdac : 1;
+        uint32_t xsr_rdac : 1;
+        uint32_t xsr_sib : 3;
+        uint32_t xsr_iac : 1;
+        uint32_t xsr_trap : 1;
+        uint32_t xsr_sip : 1;
+        uint32_t xsr_rip : 1;
+        uint32_t xsr_hcp : 1;
+        uint32_t xsr_hc : 3;
+        uint32_t xsr_hs : 1;
 #endif // _BIG_ENDIAN
     } fields;
-} gpe_gpenximem_t;
+} gpe_ocb_gpexidbgpro_t;
 
 
 
-typedef union gpe_gpenxisgb
+typedef union gpe_ocb_gpexisib
 {
 
-    uint64_t value;
+    uint32_t value;
     struct
     {
 #ifdef _BIG_ENDIAN
-        uint32_t high_order;
-        uint32_t low_order;
+        uint32_t pib_addr : 32;
 #else
-        uint32_t low_order;
-        uint32_t high_order;
-#endif // _BIG_ENDIAN
-    } words;
-    struct
-    {
-#ifdef _BIG_ENDIAN
-        uint64_t storegatherbuffer_info : 64;
-#else
-        uint64_t storegatherbuffer_info : 64;
+        uint32_t pib_addr : 32;
 #endif // _BIG_ENDIAN
     } fields;
-} gpe_gpenxisgb_t;
+} gpe_ocb_gpexisib_t;
 
 
 
-typedef union gpe_gpenxiicac
+typedef union gpe_ocb_gpeximem
 {
 
-    uint64_t value;
+    uint32_t value;
     struct
     {
 #ifdef _BIG_ENDIAN
-        uint32_t high_order;
-        uint32_t low_order;
+        uint32_t mem_addr : 32;
 #else
-        uint32_t low_order;
-        uint32_t high_order;
-#endif // _BIG_ENDIAN
-    } words;
-    struct
-    {
-#ifdef _BIG_ENDIAN
-        uint64_t icache_info : 64;
-#else
-        uint64_t icache_info : 64;
+        uint32_t mem_addr : 32;
 #endif // _BIG_ENDIAN
     } fields;
-} gpe_gpenxiicac_t;
+} gpe_ocb_gpeximem_t;
 
 
 
-typedef union gpe_gpenxidcac
+typedef union gpe_ocb_gpexisgb
 {
 
-    uint64_t value;
+    uint32_t value;
     struct
     {
 #ifdef _BIG_ENDIAN
-        uint32_t high_order;
-        uint32_t low_order;
+        uint32_t store_address : 32;
 #else
-        uint32_t low_order;
-        uint32_t high_order;
-#endif // _BIG_ENDIAN
-    } words;
-    struct
-    {
-#ifdef _BIG_ENDIAN
-        uint64_t dcache_info : 64;
-#else
-        uint64_t dcache_info : 64;
+        uint32_t store_address : 32;
 #endif // _BIG_ENDIAN
     } fields;
-} gpe_gpenxidcac_t;
+} gpe_ocb_gpexisgb_t;
 
 
 
-typedef union gpe_gpenoxixcr
+typedef union gpe_ocb_gpexiicac
 {
 
-    uint64_t value;
+    uint32_t value;
     struct
     {
 #ifdef _BIG_ENDIAN
-        uint32_t high_order;
-        uint32_t low_order;
+        uint32_t icache_tag_addr : 27;
+        uint32_t reserved : 5;
 #else
-        uint32_t low_order;
-        uint32_t high_order;
-#endif // _BIG_ENDIAN
-    } words;
-    struct
-    {
-#ifdef _BIG_ENDIAN
-        uint64_t xcr : 32;
-        uint64_t reserved1 : 32;
-#else
-        uint64_t reserved1 : 32;
-        uint64_t xcr : 32;
+        uint32_t reserved : 5;
+        uint32_t icache_tag_addr : 27;
 #endif // _BIG_ENDIAN
     } fields;
-} gpe_gpenoxixcr_t;
+} gpe_ocb_gpexiicac_t;
 
 
 
-typedef union gpe_gpenxixsr
+typedef union gpe_ocb_gpexidcac
 {
 
-    uint64_t value;
+    uint32_t value;
     struct
     {
 #ifdef _BIG_ENDIAN
-        uint32_t high_order;
-        uint32_t low_order;
+        uint32_t dcache_tag_addr : 27;
+        uint32_t reserved : 5;
 #else
-        uint32_t low_order;
-        uint32_t high_order;
-#endif // _BIG_ENDIAN
-    } words;
-    struct
-    {
-#ifdef _BIG_ENDIAN
-        uint64_t xsr : 32;
-        uint64_t reserved1 : 32;
-#else
-        uint64_t reserved1 : 32;
-        uint64_t xsr : 32;
+        uint32_t reserved : 5;
+        uint32_t dcache_tag_addr : 27;
 #endif // _BIG_ENDIAN
     } fields;
-} gpe_gpenxixsr_t;
+} gpe_ocb_gpexidcac_t;
 
 
 
-typedef union gpe_gpenxisprg0
+typedef union gpe_ocb_gpexidbginf
 {
 
-    uint64_t value;
+    uint32_t value;
     struct
     {
 #ifdef _BIG_ENDIAN
-        uint32_t high_order;
-        uint32_t low_order;
+        uint32_t srr0 : 30;
+        uint32_t reserved1 : 2;
 #else
-        uint32_t low_order;
-        uint32_t high_order;
-#endif // _BIG_ENDIAN
-    } words;
-    struct
-    {
-#ifdef _BIG_ENDIAN
-        uint64_t sprg0 : 32;
-        uint64_t reserved1 : 32;
-#else
-        uint64_t reserved1 : 32;
-        uint64_t sprg0 : 32;
+        uint32_t reserved1 : 2;
+        uint32_t srr0 : 30;
 #endif // _BIG_ENDIAN
     } fields;
-} gpe_gpenxisprg0_t;
+} gpe_ocb_gpexidbginf_t;
 
 
 
-typedef union gpe_gpenxiedr
+typedef union gpe_ocb_gpeoxixcr
 {
 
-    uint64_t value;
+    uint32_t value;
     struct
     {
 #ifdef _BIG_ENDIAN
-        uint32_t high_order;
-        uint32_t low_order;
+        uint32_t reserved1 : 1;
+        uint32_t xcr : 3;
+        uint32_t reserved2 : 28;
 #else
-        uint32_t low_order;
-        uint32_t high_order;
-#endif // _BIG_ENDIAN
-    } words;
-    struct
-    {
-#ifdef _BIG_ENDIAN
-        uint64_t edr : 32;
-        uint64_t reserved1 : 32;
-#else
-        uint64_t reserved1 : 32;
-        uint64_t edr : 32;
+        uint32_t reserved2 : 28;
+        uint32_t xcr : 3;
+        uint32_t reserved1 : 1;
 #endif // _BIG_ENDIAN
     } fields;
-} gpe_gpenxiedr_t;
+} gpe_ocb_gpeoxixcr_t;
 
 
 
-typedef union gpe_gpenxiir
+typedef union gpe_ocb_gpexixsr
 {
 
-    uint64_t value;
+    uint32_t value;
     struct
     {
 #ifdef _BIG_ENDIAN
-        uint32_t high_order;
-        uint32_t low_order;
+        uint32_t xsr_hs : 1;
+        uint32_t xsr_hc : 3;
+        uint32_t xsr_hcp : 1;
+        uint32_t xsr_rip : 1;
+        uint32_t xsr_sip : 1;
+        uint32_t xsr_trap : 1;
+        uint32_t xsr_iac : 1;
+        uint32_t xsr_sib : 3;
+        uint32_t xsr_rdac : 1;
+        uint32_t xsr_wdac : 1;
+        uint32_t xsr_ws : 1;
+        uint32_t xsr_trh : 1;
+        uint32_t xsr_sms : 4;
+        uint32_t xsr_lp : 1;
+        uint32_t xsr_ep : 1;
+        uint32_t xsr_ee : 1;
+        uint32_t reserved1 : 1;
+        uint32_t xsr_ptr : 1;
+        uint32_t xsr_st : 1;
+        uint32_t reserved2 : 2;
+        uint32_t xsr_mfe : 1;
+        uint32_t xsr_mcs : 3;
 #else
-        uint32_t low_order;
-        uint32_t high_order;
-#endif // _BIG_ENDIAN
-    } words;
-    struct
-    {
-#ifdef _BIG_ENDIAN
-        uint64_t ir : 32;
-        uint64_t reserved1 : 32;
-#else
-        uint64_t reserved1 : 32;
-        uint64_t ir : 32;
+        uint32_t xsr_mcs : 3;
+        uint32_t xsr_mfe : 1;
+        uint32_t reserved2 : 2;
+        uint32_t xsr_st : 1;
+        uint32_t xsr_ptr : 1;
+        uint32_t reserved1 : 1;
+        uint32_t xsr_ee : 1;
+        uint32_t xsr_ep : 1;
+        uint32_t xsr_lp : 1;
+        uint32_t xsr_sms : 4;
+        uint32_t xsr_trh : 1;
+        uint32_t xsr_ws : 1;
+        uint32_t xsr_wdac : 1;
+        uint32_t xsr_rdac : 1;
+        uint32_t xsr_sib : 3;
+        uint32_t xsr_iac : 1;
+        uint32_t xsr_trap : 1;
+        uint32_t xsr_sip : 1;
+        uint32_t xsr_rip : 1;
+        uint32_t xsr_hcp : 1;
+        uint32_t xsr_hc : 3;
+        uint32_t xsr_hs : 1;
 #endif // _BIG_ENDIAN
     } fields;
-} gpe_gpenxiir_t;
+} gpe_ocb_gpexixsr_t;
 
 
 
-typedef union gpe_gpenxiiar
+typedef union gpe_ocb_gpexisprg0
 {
 
-    uint64_t value;
+    uint32_t value;
     struct
     {
 #ifdef _BIG_ENDIAN
-        uint32_t high_order;
-        uint32_t low_order;
+        uint32_t sprg0 : 32;
 #else
-        uint32_t low_order;
-        uint32_t high_order;
-#endif // _BIG_ENDIAN
-    } words;
-    struct
-    {
-#ifdef _BIG_ENDIAN
-        uint64_t iar : 32;
-        uint64_t reserved1 : 32;
-#else
-        uint64_t reserved1 : 32;
-        uint64_t iar : 32;
+        uint32_t sprg0 : 32;
 #endif // _BIG_ENDIAN
     } fields;
-} gpe_gpenxiiar_t;
+} gpe_ocb_gpexisprg0_t;
 
 
 
-typedef union gpe_gpenxisibu
+typedef union gpe_ocb_gpexiedr
 {
 
-    uint64_t value;
+    uint32_t value;
     struct
     {
 #ifdef _BIG_ENDIAN
-        uint32_t high_order;
-        uint32_t low_order;
+        uint32_t edr : 32;
 #else
-        uint32_t low_order;
-        uint32_t high_order;
-#endif // _BIG_ENDIAN
-    } words;
-    struct
-    {
-#ifdef _BIG_ENDIAN
-        uint64_t sib_info_upper : 32;
-        uint64_t reserved1 : 32;
-#else
-        uint64_t reserved1 : 32;
-        uint64_t sib_info_upper : 32;
+        uint32_t edr : 32;
 #endif // _BIG_ENDIAN
     } fields;
-} gpe_gpenxisibu_t;
+} gpe_ocb_gpexiedr_t;
 
 
 
-typedef union gpe_gpenxisibl
+typedef union gpe_ocb_gpexiir
 {
 
-    uint64_t value;
+    uint32_t value;
     struct
     {
 #ifdef _BIG_ENDIAN
-        uint32_t high_order;
-        uint32_t low_order;
+        uint32_t ir : 32;
 #else
-        uint32_t low_order;
-        uint32_t high_order;
-#endif // _BIG_ENDIAN
-    } words;
-    struct
-    {
-#ifdef _BIG_ENDIAN
-        uint64_t sib_info_lower : 32;
-        uint64_t reserved1 : 32;
-#else
-        uint64_t reserved1 : 32;
-        uint64_t sib_info_lower : 32;
+        uint32_t ir : 32;
 #endif // _BIG_ENDIAN
     } fields;
-} gpe_gpenxisibl_t;
+} gpe_ocb_gpexiir_t;
 
 
 
-typedef union gpe_gpenximemu
+typedef union gpe_ocb_gpexiiar
 {
 
-    uint64_t value;
+    uint32_t value;
     struct
     {
 #ifdef _BIG_ENDIAN
-        uint32_t high_order;
-        uint32_t low_order;
+        uint32_t iar : 30;
+        uint32_t reserved1 : 2;
 #else
-        uint32_t low_order;
-        uint32_t high_order;
-#endif // _BIG_ENDIAN
-    } words;
-    struct
-    {
-#ifdef _BIG_ENDIAN
-        uint64_t memory_info_upper : 32;
-        uint64_t reserved1 : 32;
-#else
-        uint64_t reserved1 : 32;
-        uint64_t memory_info_upper : 32;
+        uint32_t reserved1 : 2;
+        uint32_t iar : 30;
 #endif // _BIG_ENDIAN
     } fields;
-} gpe_gpenximemu_t;
+} gpe_ocb_gpexiiar_t;
 
 
 
-typedef union gpe_gpenximeml
+typedef union gpe_ocb_gpexisibu
 {
 
-    uint64_t value;
+    uint32_t value;
     struct
     {
 #ifdef _BIG_ENDIAN
-        uint32_t high_order;
-        uint32_t low_order;
+        uint32_t sib_info_upper : 32;
 #else
-        uint32_t low_order;
-        uint32_t high_order;
-#endif // _BIG_ENDIAN
-    } words;
-    struct
-    {
-#ifdef _BIG_ENDIAN
-        uint64_t memory_info_lower : 32;
-        uint64_t reserved1 : 32;
-#else
-        uint64_t reserved1 : 32;
-        uint64_t memory_info_lower : 32;
+        uint32_t sib_info_upper : 32;
 #endif // _BIG_ENDIAN
     } fields;
-} gpe_gpenximeml_t;
+} gpe_ocb_gpexisibu_t;
 
 
 
-typedef union gpe_gpenxisgbu
+typedef union gpe_ocb_gpexisibl
 {
 
-    uint64_t value;
+    uint32_t value;
     struct
     {
 #ifdef _BIG_ENDIAN
-        uint32_t high_order;
-        uint32_t low_order;
+        uint32_t sib_info_lower_part1 : 3;
+        uint32_t reserved1 : 14;
+        uint32_t sib_info_lower_part2 : 3;
+        uint32_t reserved2 : 10;
+        uint32_t sib_info_lower_part3 : 2;
 #else
-        uint32_t low_order;
-        uint32_t high_order;
-#endif // _BIG_ENDIAN
-    } words;
-    struct
-    {
-#ifdef _BIG_ENDIAN
-        uint64_t sgb_info_upper : 32;
-        uint64_t reserved1 : 32;
-#else
-        uint64_t reserved1 : 32;
-        uint64_t sgb_info_upper : 32;
+        uint32_t sib_info_lower_part3 : 2;
+        uint32_t reserved2 : 10;
+        uint32_t sib_info_lower_part2 : 3;
+        uint32_t reserved1 : 14;
+        uint32_t sib_info_lower_part1 : 3;
 #endif // _BIG_ENDIAN
     } fields;
-} gpe_gpenxisgbu_t;
+} gpe_ocb_gpexisibl_t;
 
 
 
-typedef union gpe_gpenxisgbl
+typedef union gpe_ocb_gpeximemu
 {
 
-    uint64_t value;
+    uint32_t value;
     struct
     {
 #ifdef _BIG_ENDIAN
-        uint32_t high_order;
-        uint32_t low_order;
+        uint32_t memory_info_upper : 32;
 #else
-        uint32_t low_order;
-        uint32_t high_order;
-#endif // _BIG_ENDIAN
-    } words;
-    struct
-    {
-#ifdef _BIG_ENDIAN
-        uint64_t sgb_info_lower : 32;
-        uint64_t reserved1 : 32;
-#else
-        uint64_t reserved1 : 32;
-        uint64_t sgb_info_lower : 32;
+        uint32_t memory_info_upper : 32;
 #endif // _BIG_ENDIAN
     } fields;
-} gpe_gpenxisgbl_t;
+} gpe_ocb_gpeximemu_t;
 
 
 
-typedef union gpe_gpenxiicacu
+typedef union gpe_ocb_gpeximeml
 {
 
-    uint64_t value;
+    uint32_t value;
     struct
     {
 #ifdef _BIG_ENDIAN
-        uint32_t high_order;
-        uint32_t low_order;
+        uint32_t memory_info_lower : 32;
 #else
-        uint32_t low_order;
-        uint32_t high_order;
-#endif // _BIG_ENDIAN
-    } words;
-    struct
-    {
-#ifdef _BIG_ENDIAN
-        uint64_t icache_info_upper : 32;
-        uint64_t reserved1 : 32;
-#else
-        uint64_t reserved1 : 32;
-        uint64_t icache_info_upper : 32;
+        uint32_t memory_info_lower : 32;
 #endif // _BIG_ENDIAN
     } fields;
-} gpe_gpenxiicacu_t;
+} gpe_ocb_gpeximeml_t;
 
 
 
-typedef union gpe_gpenxiicacl
+typedef union gpe_ocb_gpexisgbu
 {
 
-    uint64_t value;
+    uint32_t value;
     struct
     {
 #ifdef _BIG_ENDIAN
-        uint32_t high_order;
-        uint32_t low_order;
+        uint32_t sgb_info_upper : 32;
 #else
-        uint32_t low_order;
-        uint32_t high_order;
-#endif // _BIG_ENDIAN
-    } words;
-    struct
-    {
-#ifdef _BIG_ENDIAN
-        uint64_t icache_info_lower : 32;
-        uint64_t reserved1 : 32;
-#else
-        uint64_t reserved1 : 32;
-        uint64_t icache_info_lower : 32;
+        uint32_t sgb_info_upper : 32;
 #endif // _BIG_ENDIAN
     } fields;
-} gpe_gpenxiicacl_t;
+} gpe_ocb_gpexisgbu_t;
 
 
 
-typedef union gpe_gpenxidcacu
+typedef union gpe_ocb_gpexisgbl
 {
 
-    uint64_t value;
+    uint32_t value;
     struct
     {
 #ifdef _BIG_ENDIAN
-        uint32_t high_order;
-        uint32_t low_order;
+        uint32_t sgb_info_lower : 32;
 #else
-        uint32_t low_order;
-        uint32_t high_order;
-#endif // _BIG_ENDIAN
-    } words;
-    struct
-    {
-#ifdef _BIG_ENDIAN
-        uint64_t dcache_info_upper : 32;
-        uint64_t reserved1 : 32;
-#else
-        uint64_t reserved1 : 32;
-        uint64_t dcache_info_upper : 32;
+        uint32_t sgb_info_lower : 32;
 #endif // _BIG_ENDIAN
     } fields;
-} gpe_gpenxidcacu_t;
+} gpe_ocb_gpexisgbl_t;
 
 
 
-typedef union gpe_gpenxidcacl
+typedef union gpe_ocb_gpexiicacu
 {
 
-    uint64_t value;
+    uint32_t value;
     struct
     {
 #ifdef _BIG_ENDIAN
-        uint32_t high_order;
-        uint32_t low_order;
+        uint32_t icache_info_upper : 27;
+        uint32_t reserved1 : 5;
 #else
-        uint32_t low_order;
-        uint32_t high_order;
-#endif // _BIG_ENDIAN
-    } words;
-    struct
-    {
-#ifdef _BIG_ENDIAN
-        uint64_t dcache_info_lower : 32;
-        uint64_t reserved1 : 32;
-#else
-        uint64_t reserved1 : 32;
-        uint64_t dcache_info_lower : 32;
+        uint32_t reserved1 : 5;
+        uint32_t icache_info_upper : 27;
 #endif // _BIG_ENDIAN
     } fields;
-} gpe_gpenxidcacl_t;
+} gpe_ocb_gpexiicacu_t;
+
+
+
+typedef union gpe_ocb_gpexiicacl
+{
+
+    uint32_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t icache_info_lower_part1 : 12;
+        uint32_t reserved1 : 1;
+        uint32_t icache_info_lower_part2 : 3;
+        uint32_t reserved2 : 16;
+#else
+        uint32_t reserved2 : 16;
+        uint32_t icache_info_lower_part2 : 3;
+        uint32_t reserved1 : 1;
+        uint32_t icache_info_lower_part1 : 12;
+#endif // _BIG_ENDIAN
+    } fields;
+} gpe_ocb_gpexiicacl_t;
+
+
+
+typedef union gpe_ocb_gpexidcacu
+{
+
+    uint32_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t dcache_info_upper : 27;
+        uint32_t reserved1 : 5;
+#else
+        uint32_t reserved1 : 5;
+        uint32_t dcache_info_upper : 27;
+#endif // _BIG_ENDIAN
+    } fields;
+} gpe_ocb_gpexidcacu_t;
+
+
+
+typedef union gpe_ocb_gpexidcacl
+{
+
+    uint32_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t dcache_info_lower_part1 : 1;
+        uint32_t reserved1 : 2;
+        uint32_t dcache_info_lower_part2 : 5;
+        uint32_t reserved2 : 24;
+#else
+        uint32_t reserved2 : 24;
+        uint32_t dcache_info_lower_part2 : 5;
+        uint32_t reserved1 : 2;
+        uint32_t dcache_info_lower_part1 : 1;
+#endif // _BIG_ENDIAN
+    } fields;
+} gpe_ocb_gpexidcacl_t;
+
+
+
+typedef union gpe_ocb_gpexisrr0
+{
+
+    uint32_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t srr0 : 30;
+        uint32_t reserved1 : 2;
+#else
+        uint32_t reserved1 : 2;
+        uint32_t srr0 : 30;
+#endif // _BIG_ENDIAN
+    } fields;
+} gpe_ocb_gpexisrr0_t;
+
+
+
+typedef union gpe_ocb_gpexilr
+{
+
+    uint32_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t lr : 32;
+#else
+        uint32_t lr : 32;
+#endif // _BIG_ENDIAN
+    } fields;
+} gpe_ocb_gpexilr_t;
+
+
+
+typedef union gpe_ocb_gpexictr
+{
+
+    uint32_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t ctr : 32;
+#else
+        uint32_t ctr : 32;
+#endif // _BIG_ENDIAN
+    } fields;
+} gpe_ocb_gpexictr_t;
+
+
+
+typedef union gpe_ocb_gpexigpr0
+{
+
+    uint32_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t gpr0 : 32;
+#else
+        uint32_t gpr0 : 32;
+#endif // _BIG_ENDIAN
+    } fields;
+} gpe_ocb_gpexigpr0_t;
+
+
+
+typedef union gpe_ocb_gpexigpr1
+{
+
+    uint32_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t gpr1 : 32;
+#else
+        uint32_t gpr1 : 32;
+#endif // _BIG_ENDIAN
+    } fields;
+} gpe_ocb_gpexigpr1_t;
+
+
+
+typedef union gpe_ocb_gpexigpr2
+{
+
+    uint32_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t gpr2 : 32;
+#else
+        uint32_t gpr2 : 32;
+#endif // _BIG_ENDIAN
+    } fields;
+} gpe_ocb_gpexigpr2_t;
+
+
+
+typedef union gpe_ocb_gpexigpr3
+{
+
+    uint32_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t gpr3 : 32;
+#else
+        uint32_t gpr3 : 32;
+#endif // _BIG_ENDIAN
+    } fields;
+} gpe_ocb_gpexigpr3_t;
+
+
+
+typedef union gpe_ocb_gpexigpr4
+{
+
+    uint32_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t gpr4 : 32;
+#else
+        uint32_t gpr4 : 32;
+#endif // _BIG_ENDIAN
+    } fields;
+} gpe_ocb_gpexigpr4_t;
+
+
+
+typedef union gpe_ocb_gpexigpr5
+{
+
+    uint32_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t gpr5 : 32;
+#else
+        uint32_t gpr5 : 32;
+#endif // _BIG_ENDIAN
+    } fields;
+} gpe_ocb_gpexigpr5_t;
+
+
+
+typedef union gpe_ocb_gpexigpr6
+{
+
+    uint32_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t gpr6 : 32;
+#else
+        uint32_t gpr6 : 32;
+#endif // _BIG_ENDIAN
+    } fields;
+} gpe_ocb_gpexigpr6_t;
+
+
+
+typedef union gpe_ocb_gpexigpr7
+{
+
+    uint32_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t gpr7 : 32;
+#else
+        uint32_t gpr7 : 32;
+#endif // _BIG_ENDIAN
+    } fields;
+} gpe_ocb_gpexigpr7_t;
+
+
+
+typedef union gpe_ocb_gpexigpr8
+{
+
+    uint32_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t gpr8 : 32;
+#else
+        uint32_t gpr8 : 32;
+#endif // _BIG_ENDIAN
+    } fields;
+} gpe_ocb_gpexigpr8_t;
+
+
+
+typedef union gpe_ocb_gpexigpr9
+{
+
+    uint32_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t gpr9 : 32;
+#else
+        uint32_t gpr9 : 32;
+#endif // _BIG_ENDIAN
+    } fields;
+} gpe_ocb_gpexigpr9_t;
+
+
+
+typedef union gpe_ocb_gpexigpr10
+{
+
+    uint32_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t gpr10 : 32;
+#else
+        uint32_t gpr10 : 32;
+#endif // _BIG_ENDIAN
+    } fields;
+} gpe_ocb_gpexigpr10_t;
+
+
+
+typedef union gpe_ocb_gpexigpr13
+{
+
+    uint32_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t gpr13 : 32;
+#else
+        uint32_t gpr13 : 32;
+#endif // _BIG_ENDIAN
+    } fields;
+} gpe_ocb_gpexigpr13_t;
+
+
+
+typedef union gpe_ocb_gpexigpr28
+{
+
+    uint32_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t gpr28 : 32;
+#else
+        uint32_t gpr28 : 32;
+#endif // _BIG_ENDIAN
+    } fields;
+} gpe_ocb_gpexigpr28_t;
+
+
+
+typedef union gpe_ocb_gpexigpr29
+{
+
+    uint32_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t gpr29 : 32;
+#else
+        uint32_t gpr29 : 32;
+#endif // _BIG_ENDIAN
+    } fields;
+} gpe_ocb_gpexigpr29_t;
+
+
+
+typedef union gpe_ocb_gpexigpr30
+{
+
+    uint32_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t gpr30 : 32;
+#else
+        uint32_t gpr30 : 32;
+#endif // _BIG_ENDIAN
+    } fields;
+} gpe_ocb_gpexigpr30_t;
+
+
+
+typedef union gpe_ocb_gpexigpr31
+{
+
+    uint32_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t gpr31 : 32;
+#else
+        uint32_t gpr31 : 32;
+#endif // _BIG_ENDIAN
+    } fields;
+} gpe_ocb_gpexigpr31_t;
+
+
+
+typedef union gpe_ocb_gpexivdr0
+{
+
+    uint32_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t gpr0 : 32;
+#else
+        uint32_t gpr0 : 32;
+#endif // _BIG_ENDIAN
+    } fields;
+} gpe_ocb_gpexivdr0_t;
+
+
+
+typedef union gpe_ocb_gpexivdr2
+{
+
+    uint32_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t gpr2 : 32;
+#else
+        uint32_t gpr2 : 32;
+#endif // _BIG_ENDIAN
+    } fields;
+} gpe_ocb_gpexivdr2_t;
+
+
+
+typedef union gpe_ocb_gpexivdr4
+{
+
+    uint32_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t gpr4 : 32;
+#else
+        uint32_t gpr4 : 32;
+#endif // _BIG_ENDIAN
+    } fields;
+} gpe_ocb_gpexivdr4_t;
+
+
+
+typedef union gpe_ocb_gpexivdr6
+{
+
+    uint32_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t gpr6 : 32;
+#else
+        uint32_t gpr6 : 32;
+#endif // _BIG_ENDIAN
+    } fields;
+} gpe_ocb_gpexivdr6_t;
+
+
+
+typedef union gpe_ocb_gpexivdr8
+{
+
+    uint32_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t gpr8 : 32;
+#else
+        uint32_t gpr8 : 32;
+#endif // _BIG_ENDIAN
+    } fields;
+} gpe_ocb_gpexivdr8_t;
+
+
+
+typedef union gpe_ocb_gpexivdrx
+{
+
+    uint32_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t gpr10 : 32;
+#else
+        uint32_t gpr10 : 32;
+#endif // _BIG_ENDIAN
+    } fields;
+} gpe_ocb_gpexivdrx_t;
+
+
+
+typedef union gpe_ocb_gpexivdr28
+{
+
+    uint32_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t gpr28 : 32;
+#else
+        uint32_t gpr28 : 32;
+#endif // _BIG_ENDIAN
+    } fields;
+} gpe_ocb_gpexivdr28_t;
+
+
+
+typedef union gpe_ocb_gpexivdr30
+{
+
+    uint32_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t gpr30 : 32;
+#else
+        uint32_t gpr30 : 32;
+#endif // _BIG_ENDIAN
+    } fields;
+} gpe_ocb_gpexivdr30_t;
+
+
+
+typedef union gpe_ocb_gpe1str
+{
+
+    uint32_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t reserved1 : 12;
+        uint32_t pbase : 10;
+        uint32_t reserved2 : 7;
+        uint32_t size : 3;
+#else
+        uint32_t size : 3;
+        uint32_t reserved2 : 7;
+        uint32_t pbase : 10;
+        uint32_t reserved1 : 12;
+#endif // _BIG_ENDIAN
+    } fields;
+} gpe_ocb_gpe1str_t;
+
+
+
+typedef union gpe_ocb_gpe2str
+{
+
+    uint32_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t reserved1 : 12;
+        uint32_t pbase : 10;
+        uint32_t reserved2 : 7;
+        uint32_t size : 3;
+#else
+        uint32_t size : 3;
+        uint32_t reserved2 : 7;
+        uint32_t pbase : 10;
+        uint32_t reserved1 : 12;
+#endif // _BIG_ENDIAN
+    } fields;
+} gpe_ocb_gpe2str_t;
+
+
+
+typedef union gpe_ocb_gpe3str
+{
+
+    uint32_t value;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint32_t reserved1 : 12;
+        uint32_t pbase : 10;
+        uint32_t reserved2 : 7;
+        uint32_t size : 3;
+#else
+        uint32_t size : 3;
+        uint32_t reserved2 : 7;
+        uint32_t pbase : 10;
+        uint32_t reserved1 : 12;
+#endif // _BIG_ENDIAN
+    } fields;
+} gpe_ocb_gpe3str_t;
 
 
 #endif // __ASSEMBLER__

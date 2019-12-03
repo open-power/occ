@@ -105,12 +105,15 @@ enum PPE_MULTICAST_TYPES
 // Current MC GROUP for all Quads is 6
 #define PPE_MC_ENABLE_GROUP 0x46000000
 
+// Multicast Address Base Address Mask
+#define PPE_MC_BASE_ADDR_MASK   (0xFFFFF)
+
 // base macros are for per-core
 #define PPE_SCOM_ADDR_MC(base_addr, mc_type, core_select) \
-    (PPE_MC_ENABLE_GROUP | (mc_type << 27) | (core_select << 12) | (base_addr))
+    (PPE_MC_ENABLE_GROUP | (mc_type << 27) | (core_select << 12) | ((uint32_t)base_addr & PPE_MC_BASE_ADDR_MASK))
 
 #define PPE_SCOM_ADDR_UC(base_addr, quad_select, core_select) \
-    ((quad_select << 24) | (core_select << 12) | (base_addr))
+    ((quad_select << 24) | (core_select << 12) | ((uint32_t)base_addr))
 
 // *_Q macros are for per-quad where core_select is 0
 // when you mc to quad level register(non-per-core/non-cpms)
@@ -136,7 +139,7 @@ enum PPE_MULTICAST_TYPES
 // GetScom
 
 #define PPE_GETSCOM(addr, data)                        \
-    PPE_LVD(addr, data);
+    PPE_LVD((uint32_t)addr, data);
 
 // UC Q
 #define PPE_GETSCOM_UC_Q(addr, quad_select, data)      \
@@ -184,15 +187,15 @@ enum PPE_MULTICAST_TYPES
 // queued putscom if enabled; otherwise default with nop
 #if defined(USE_QME_QUEUED_SCOM)
 #define PPE_QUEUED_SCOM(addr)                                     \
-    (addr | 0x00800000)
+    ((uint32_t)addr | 0x00800000)
 #else
 #define PPE_QUEUED_SCOM(addr)                                     \
-    (addr)
+    ((uint32_t)addr)
 #endif
 
 // use this to override undesired queued putscom with nop
 #define PPE_PUTSCOM_NOQ(addr, data)                               \
-    putscom_norc(addr, data);
+    putscom_norc((uint32_t)addr, data);
 
 #define PPE_PUTSCOM(addr, data)                                   \
     putscom_norc(PPE_QUEUED_SCOM(addr), data);

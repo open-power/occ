@@ -459,8 +459,8 @@ int pgpe_set_clip_blocking(Pstate_t i_pstate)
         // Previous task is finished
         if( !err )
         {
-            // set the all quads to same pstate and submit the update
-            memset(G_desired_pstate, i_pstate, MAXIMUM_QUADS);
+            // save the pstate and submit the update
+            G_desired_pstate = i_pstate;
             rc = pgpe_clip_update();
             if(rc)
             {
@@ -617,7 +617,7 @@ int pgpe_clip_update(void)
         l_wait_time++;
     }
 
-    const unsigned int pstate = G_desired_pstate[0];
+    const unsigned int pstate = G_desired_pstate;
 
     // Set clip bounds
     G_clip_update_parms.ps_val_clip_min = proc_freq2pstate(g_amec->sys.fmin);
@@ -972,7 +972,6 @@ int set_nominal_pstate(void)
     SsxTimebase l_start = ssx_timebase_get();
     SsxInterval l_timeout =  SSX_SECONDS(1);
     uint8_t     l_pstate;
-    uint8_t     l_quad = 0;
 
    do
    {
@@ -980,7 +979,7 @@ int set_nominal_pstate(void)
        if( (!(DATA_get_present_cnfgdata() & DATA_MASK_FREQ_PRESENT)) ||
            (G_sysConfigData.sys_mode_freq.table[OCC_MODE_NOMINAL] == 0) )
        {
-            TRAC_ERR("set_nominal_pstate: Nominal Frequency not known!");
+            TRAC_ERR("set_nominal_pstate: WOF_BASE frequency not known!");
             l_rc = ERC_FW_ZERO_FREQ_LIMIT;
             break;
        }
@@ -1022,38 +1021,29 @@ int set_nominal_pstate(void)
                }
                ssx_sleep(SSX_MICROSECONDS(10));
            }
-       }
-
-       if(l_rc)
-       {
-           TRAC_ERR("set_nominal_pstate: Failed to enable Pstates for OCC rc[0x%04X]", l_rc);
-           break;
+           if(l_rc)
+           {
+               break;
+           }
        }
 
        // Pstate protocol is now enabled for OCC to set Pstate to nominal
        l_pstate = proc_freq2pstate(G_sysConfigData.sys_mode_freq.table[OCC_MODE_NOMINAL]);
-       for (l_quad = 0; l_quad < MAXIMUM_QUADS; l_quad++)
-       {
-// TODO - RTC 213672 - pmcr is no longer an array
-#if 0
-           // Update pmcr value (per quad) with nominal pstate and version (Version 1 (P9 format))
-           G_pmcr_set_parms.pmcr[l_quad] = ((uint64_t)l_pstate << 48) | 1;
-#endif
-       }
+       // Update pmcr value with nominal pstate and version (Version 1: Fast Request Mode)
+       G_pmcr_set_parms.pmcr = ((uint64_t)l_pstate << 48) | 1;
 
        //call PGPE IPC function to set Pstates
        l_rc = pgpe_pmcr_set();
-       if(l_rc)
+       if(l_rc == 0)
        {
-           TRAC_ERR("set_nominal_pstate: Set nominal pstate[0x%02X] failed with rc[0x%04X]", l_pstate, l_rc);
+           TRAC_IMP("set_nominal_pstate: Successfully set WOF_BASE pstate[0x%02X]", l_pstate);
+       }
+       else
+       {
+           TRAC_ERR("set_nominal_pstate: Set WOF_BASE pstate[0x%02X] failed with rc[0x%04X]", l_pstate, l_rc);
        }
 
    } while(0);
-
-   if(!l_rc)
-   {
-       TRAC_IMP("set_nominal_pstate: Successfully set nominal Pstate = 0x%02X", l_pstate);
-   }
 
    return l_rc;
 }

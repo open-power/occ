@@ -358,10 +358,10 @@ typedef union
 
 typedef union
 {
-    uint32_t    core_off_p01pct[32];
-    uint32_t    core_vmin_p01pct[32];
-    uint32_t    core_mma_off_p01pct[32];
-    uint32_t    l3_off_p01pct[32];
+    uint32_t    core_off[32];
+    uint32_t    core_vmin[32];
+    uint32_t    core_mma_off[32];
+    uint32_t    l3_off[32];
 } iddq_activity_t;
 
 
@@ -376,7 +376,28 @@ typedef struct
     /// PGPE Beacon
     uint32_t            pgpe_beacon;
 
-    uint64_t            reserved0[2];
+    /// OCC Data offset from start of OCC Shared SRAM
+    uint16_t            occ_data_offset;
+
+    /// XGPE Data offset from start of OCC Shared SRAM
+    uint16_t            xgpe_data_offset;
+
+    /// XGPE Data offset from start of OCC Shared SRAM
+    uint16_t            pgpe_data_offset;
+
+    /// IDDQ Data offset from start of OCC Shared SRAM
+    uint16_t            iddq_data_offset;
+
+    /// Error Log offset from start of OCC Shared SRAM
+    uint16_t            error_log_offset;
+
+    /// Pstate Table offset from start of OCC Shared SRAM
+    uint16_t            pstate_table_offset;
+
+    uint16_t            reserved;
+
+    ///IDDQ Activity sample depth(number of samples accumulated)
+    uint16_t            iddq_activity_sample_depth;
 
     /// OCC Produced WOF Values
     occ_wof_values_t    occ_wof_values;

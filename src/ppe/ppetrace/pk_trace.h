@@ -34,10 +34,13 @@
     #include "pk.h"
 #elif defined(__IOTA__)
     #include "iota.h"
+#elif defined(__SIM__)
+    #include "driver.h"
 #endif
 
-
-#define PK_TRACE_VERSION 2
+#ifndef PK_TRACE_VERSION
+    #define PK_TRACE_VERSION 2
+#endif
 
 #ifndef PK_TRACE_SZ
     #define PK_TRACE_SZ 256
@@ -67,17 +70,36 @@
     #endif
 #endif //PK_TRACE_HASH_PREFIX
 
-//This provides a 128ns tick (assuming a 32ns clock period)
-//and 4 different format values
-#define PK_TRACE_TS_BITS 30
+// Each firmware binary can compile in which which trace version it wishes to
+// use; however, the ppe2fsp tool needs to support both within a single binary
+// so generic and specific macros are defined here.
+
+#if (PK_TRACE_VERSION == 3)
+    #define PK_TRACE_TS_BITS 24
+#else
+    #define PK_TRACE_TS_BITS 30
+#endif
+
+#define PK_TRACE_V3_TS_BITS 24
 
 #define PK_TRACE_FORMAT_BITS (32 - PK_TRACE_TS_BITS)
+#define PK_TRACE_V3_FORMAT_BITS (32 - PK_TRACE_V3_TS_BITS)
 
 #define PK_TRACE_TS_MASK (0xfffffffful << PK_TRACE_FORMAT_BITS)
+#define PK_TRACE_V3_TS_MASK (0xfffffffful << PK_TRACE_V3_FORMAT_BITS)
+
 #define PK_TRACE_FORMAT_MASK (~PK_TRACE_TS_MASK)
+#define PK_TRACE_V3_FORMAT_MASK (~PK_TRACE_V3_TS_MASK)
 
 #define PK_GET_TRACE_FORMAT(w32) (PK_TRACE_FORMAT_MASK & w32)
 #define PK_GET_TRACE_TIME(w32) (PK_TRACE_TS_MASK & w32)
+
+#define PK_GET_TRACE_V3_FORMAT(w32) (PK_TRACE_V3_FORMAT_MASK & w32)
+#define PK_GET_TRACE_V3_TIME(w32) (PK_TRACE_V3_TS_MASK & w32)
+
+// In version 3, the 64 bit time is shifted left 8 bits The LSB 24 bits are
+// kept in the trace entree, the residue in the trace buffer header.
+#define PK_TRACE_V3_TIME_SHIFT 6
 
 //Set the trace timer period to be the maximum
 //32 bit time minus 2 seconds (assuming a 32ns tick)
@@ -120,7 +142,30 @@ typedef enum
     PK_TRACE_FORMAT_TINY,
     PK_TRACE_FORMAT_BIG,
     PK_TRACE_FORMAT_BINARY,
+
+    PPE_TRACE_TINY_MARK = 0xd1,
+    PPE_TRACE_BIG_MARK = 0xd2,
+    PPE_TRACE_BIN_MARK = 0xd3,
 } PkTraceFormat; //pk_trace_format_t;
+
+typedef union op_trace_mark
+{
+    uint8_t byte;
+    struct
+    {
+#ifdef _BIG_ENDIAN
+        uint8_t  ack: 1;
+        uint8_t  timestamp: 1;
+        uint8_t  word_count: 2;
+        uint8_t  type: 4;
+#else
+        uint8_t type: 4;
+        uint8_t word_count: 2;
+        uint8_t timestamp: 1;
+        uint8_t ack: 1;
+#endif
+    } fields;
+} op_trace_mark_t;
 
 //This combines the timestamp and the format bits into a
 //single 32 bit word.
@@ -135,6 +180,18 @@ typedef union
     };
     uint32_t word32;
 } PkTraceTime; //pk_trace_time_t;
+
+typedef union
+{
+    struct
+    {
+    uint32_t    timestamp   :
+        PK_TRACE_V3_TS_BITS;
+    uint32_t    format      :
+        PK_TRACE_V3_FORMAT_BITS;
+    };
+    uint32_t word32;
+} PkTraceTimeV3;
 
 //PK trace uses a 16 bit string format hash value
 typedef uint16_t PkTraceHash; //pk_trace_hash_t;
@@ -228,7 +285,11 @@ typedef union
                 uint8_t     bytes_or_parms_count;
             };
         };
+        union
+        {
         PkTraceTime         time_format;
+            PkTraceTimeV3       time_format_v3;
+        };
     };
     uint64_t    word64;
 } PkTraceGeneric; //pk_trace_generic_t;

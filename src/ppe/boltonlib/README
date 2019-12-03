@@ -1,4 +1,4 @@
 GPE:      OCC PPE that incorporate 64-bits interrupt bolt-on
-Standard: SBE/QME that incorporate 32-bits interrupt bolt-on
+Standard: SBE/QME/IOPPE that incorporate 32-bits interrupt bolt-on
 Vanilla:  (test-only) plain PPE driver that doesnt incorporate any interrupt bolt-on
 

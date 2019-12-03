@@ -54,35 +54,6 @@ const uint32_t MI_MCSYNC[OCCHW_N_MC_PORT] =
     MI_3_MCSYNC
 };
 
-#if 0 // TODO RTC 213672  Is this valid for P10?
-// This table was taken from ekb p9a_omi_setup_bars.C
-const int NUM_EXT_MASKS = 20;
-const uint8_t EXT_MASK_REORDER[][9] =   // Workbook table 7
-{
-    // B     6   7   8   9   10  11  12  13
-    { 0x00, 15, 18, 16, 17, 21, 20, 19, 14  },
-    { 0x04, 15, 18, 16, 17, 21, 20, 14, 19  },
-    { 0x06, 15, 18, 16, 17, 21, 14, 20, 19  },
-    { 0x07, 15, 18, 16, 17, 14, 21, 20, 19  },
-    { 0x80, 15, 18, 16, 17, 21, 20, 19, 14  },
-    { 0x84, 15, 18, 16, 17, 21, 20, 14, 19  },
-    { 0x86, 15, 18, 16, 17, 21, 14, 20, 19  },
-    { 0x87, 15, 18, 16, 17, 14, 21, 20, 19  },
-    { 0xC0, 15, 21, 17, 18, 20, 19, 14, 16  },
-    { 0xC4, 15, 21, 17, 18, 20, 14, 19, 16  },
-    { 0xC6, 15, 21, 17, 18, 14, 20, 19, 16  },
-    { 0xC7, 15, 14, 17, 18, 21, 20, 19, 16  },
-    { 0xE0, 15, 20, 18, 21, 19, 14, 17, 16  },
-    { 0xE4, 15, 20, 18, 21, 14, 19, 17, 16  },
-    { 0xE6, 15, 14, 18, 21, 20, 19, 17, 16  },
-    { 0xE7, 15, 21, 18, 14, 20, 19, 17, 16  },
-    { 0xF0, 15, 19, 21, 20, 14, 18, 17, 16  },
-    { 0xF4, 15, 14, 21, 20, 19, 18, 17, 16  },
-    { 0xF6, 15, 20, 21, 14, 19, 18, 17, 16  },
-    { 0xF7, 15, 20, 14, 21, 19, 18, 17, 16  }
-};
-#endif
-
 int inband_scom_setup(MemBufConfiguration_t* i_config,
                             uint32_t i_membuf_instance,
                             uint32_t i_scom_address,
@@ -374,11 +345,6 @@ int gpe_ocmb_configuration_create(MemBufConfiguration_t* o_config)
     int i = 0;
     int designated_sync = -1;
     mcfgpr_t mcfgpr;
-#if 0 //TODO RTC 213672 Swizzle Needed?
-    pb_mode_t pb_mode;
-    int l_rule = 0;
-    int l_ext_addr_mask = 0;
-#endif
     uint64_t*   ptr = (uint64_t*)o_config;
 
     // Prevent unwanted interrupts from scom errors
@@ -424,40 +390,6 @@ int gpe_ocmb_configuration_create(MemBufConfiguration_t* o_config)
             break;
         }
 
-        // On Ocmb the mmio bar value has been swizzled
-        // Need to un-swizzle
-#if 0   // TODO RTC 213672  Is P10 Swizzled?
-        rc = getscom_abs(P9A_PU_NMMU_MMCQ_PB_MODE_REG, &(pb_mode.value));
-        if( rc )
-        {
-            PK_TRACE("Scom failed on PB_MODE_REG. rc = %d",
-                     rc);
-            rc = MEMBUF_PBMODE_GETSCOM_FAILURE;
-            break;
-        }
-
-        l_ext_addr_mask = pb_mode.fields.addr_extension_group_id << 4;
-        l_ext_addr_mask |= pb_mode.fields.addr_extension_chip_id;
-
-        // bits [6:13] in mmio bar have been rearranged - look up translation
-        // rule.
-        for(l_rule = 0; l_rule < NUM_EXT_MASKS; ++l_rule)
-        {
-            if(EXT_MASK_REORDER[l_rule][0] == l_ext_addr_mask) // found
-            {
-                break;
-            }
-        }
-
-        if(l_rule == NUM_EXT_MASKS) // rule not found.
-        {
-            PK_TRACE("Failed to find match for %x in EXT_MASK_REORDER",
-                     l_ext_addr_mask);
-            rc = MEMBUF_PMODE_DATA_MISMATCH;
-            break;
-        }
-#endif
-
         // Find all configured MEMBUFs
         for (i = 0; i < OCCHW_N_MC_CHANNEL; ++i)
         {
@@ -481,28 +413,6 @@ int gpe_ocmb_configuration_create(MemBufConfiguration_t* o_config)
                 (uint32_t)(mcfgpr.fields.mmio_group_base_addr) << 1;
             PK_TRACE("Ocmb[%d] MMIO Bar: %08x", i, l_mmio_bar);
 
-#if 0       // TODO RTC 213672  Is P10 Swizzled
-            // The mmio bar has been swizzled,  It needs to be unswizzled.
-            // Make this easy for PPE 32 bit arch.
-
-            uint32_t l_mask = 0x02000000; //Start bit 6
-            uint32_t l_reordered = 0;
-            int      l_col;
-
-            for(l_col = 1; l_col < 9; ++l_col)
-            {
-                if((l_mask & l_mmio_bar) != 0)
-                {
-                    uint32_t l_setbit = 0x80000000 >>
-                        EXT_MASK_REORDER[l_rule][l_col];
-                    l_reordered |= l_setbit;
-                }
-
-                l_mask >>= 1;
-            }
-            l_mmio_bar &= 0xfc03ffff;  //mask off bits 6-13
-            l_mmio_bar |= (l_reordered << 8);
-#endif
             l_pba_addr = (uint64_t)(l_mmio_bar) << 32;
 
             // The 31-bit base-address (inband scom BAR) corresponds

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2019                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -331,10 +331,12 @@ __occhw_setup()
     if(0 == (in32(OCB_OIRR0A) | in32(OCB_OIRR1A) | in32(OCB_OIRR0B) |
              in32(OCB_OIRR1B) | in32(OCB_OIRR0C) | in32(OCB_OIRR1C)))
     {
-        //This instance must be the first instance to run within the OCC
+        //This instance must be the first instance to run within the OCC.
+        //Set up the routing table.
         //This will be done while all external interrupts are masked.
         out32(OCB_OIMR0_OR, 0xffffffff);
         out32(OCB_OIMR1_OR, 0xffffffff);
+
         out32(OCB_OIRR0A, (uint32_t)(g_ext_irqs_routeA >> 32));
         out32(OCB_OIRR1A, (uint32_t)g_ext_irqs_routeA);
         out32(OCB_OIRR0B, (uint32_t)(g_ext_irqs_routeB >> 32));

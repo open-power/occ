@@ -687,13 +687,13 @@ void amec_slv_freq_smh(void)
             }
 
 #ifdef PROC_DEBUG
-            if (G_desired_pstate[quad] != pmax[quad])
+            if (G_desired_pstate != pmax[quad])
             {
                 TRAC_IMP("Updating Quad %d's Pstate to %d", quad, pmax[quad]);
             }
 #endif
             // update quad pstate request
-            G_desired_pstate[quad] = pmax[quad];
+            G_desired_pstate = pmax[quad];
 
             if(L_mfg_set_trace[quad] == TRUE)
             {

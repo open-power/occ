@@ -68,8 +68,9 @@ ocb_timer_reset(int timer,
     if (timeout_ns != 0)
     {
         ticks = MAX(1, timeout_ns / (1000000000 / OCB_TIMER_FREQUENCY_HZ));
-        // TODO: RTC 213672
-        if (ticks != ((uint16_t)ticks))
+        // In Simics, the MICS_PER_TICK is increased significantly which ends up increasing
+        // the timeout_ns and makes ticks exceed a uint16.  Added check to accommodate.
+        if (ticks > 0xFFFF)
         {
             SSX_TRACE("ocb_timer_reset - ticks overflow: 0x%08X - setting to 0xFFFF\n", ticks);
             ticks = 0xFFFF;

@@ -75,7 +75,7 @@ void task_core_data_control( task_t * i_task )
     errlHndl_t      err            = NULL;   //Error handler
     static bool     L_trace_logged = false;  // trace logging to avoid unnecessarily repeating logs
     static bool     L_current_timeout_recorded = FALSE;
-    static uint64_t L_last = 0xFFFFFFFFFFFFFFFF;
+    static unsigned int L_last_pstate = 0xFF;
     static uint64_t L_ignore_wait_count = 0; // number of consecutive ticks IPC task failed
     bool            l_check_failure = false;
     int             l_request_is_idle = 0;
@@ -140,30 +140,22 @@ void task_core_data_control( task_t * i_task )
                     (l_request_rc == PGPE_RC_SUCCESS) )     // with no errors
                 {
                     //The previous Non-OPAL PGPE request succeeded
-                    uint64_t pstateList = 0;
-                    unsigned int quad = 0;
-                    for (quad = 0; quad < MAXIMUM_QUADS; quad++)
-                    {
-                        pstateList |= ((uint64_t) G_desired_pstate[quad] << ((7-quad)*8));
-// TODO - RTC 213672 - pmcr is no longer an array
-#if 0
-                        // Update pmcr value (per quad) with requested pstate and version (Version 1 (P9 format))
-                        G_pmcr_set_parms.pmcr[quad] = ((uint64_t) G_desired_pstate[quad] << 48) | 1;
-#endif
-                    }
+                    const unsigned int requested_pstate = G_desired_pstate;
+                    // Update pmcr value with requested pstate and version (Version 1: Fast Request Mode)
+                    G_pmcr_set_parms.pmcr = ((uint64_t)requested_pstate << 48) | 1;
 
                     // Only send pstates if they changed or first time after going active from char state
                     // in characterization state the user is writing the PMCR, need to make sure we write
                     // it back to desired Pstates
-                    if( (L_last != pstateList) || (G_set_pStates) )
+                    if( (L_last_pstate != requested_pstate) || (G_set_pStates) )
                     {
                         G_set_pStates = FALSE;
-                        L_last = pstateList;
+                        L_last_pstate = requested_pstate;
 
                         if( G_allow_trace_flags & ALLOW_PMCR_TRACE )
                         {
-                            TRAC_INFO("task_core_data_control: calling pmcr_set() w/pstates: 0x%08X%04X",
-                                 WORD_HIGH(pstateList), WORD_LOW(pstateList)>>16);
+                            TRAC_INFO("task_core_data_control: calling pmcr_set() w/pstate: 0x%02X",
+                                 requested_pstate);
                         }
                         //call PGPE IPC function to update Pstates
                         pgpe_pmcr_set();
@@ -200,7 +192,7 @@ void task_core_data_control( task_t * i_task )
                 if(!ignore_pgpe_error())
                 {
                     TRAC_ERR("task_core_data_control: pstate[0x%02X] update IPC task did not complete successfully, idle?[%d] rc[%08X]",
-                              G_desired_pstate[0], l_request_is_idle, l_request_rc);
+                              G_desired_pstate, l_request_is_idle, l_request_rc);
 
                     err = createPgpeErrl(RTLS_TASK_CORE_DATA_CONTROL_MOD,               //ModId
                                          PGPE_FAILURE,                                  //Reasoncode

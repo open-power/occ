@@ -488,6 +488,13 @@ main()
         WaitForResponse $OCCCMD_SET_CFG_DATA
         if [ $? -eq 0 ]; then
             TestValidationOCCmaster
+        else
+            echo -e "${red}ERROR DETECTED: ROLE COMMAND FAILED!${normal}"
+            let testFailure=1
+            let failureCount=$failureCount+1
+            testFailDesc="${testFailDesc} : ${current_test}ROLE CHANGE FAILED"
+            printTestResults
+            abortTest
         fi
 
 

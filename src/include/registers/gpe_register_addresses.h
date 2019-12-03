@@ -30,6 +30,8 @@
 
 // *** WARNING *** - This file is generated automatically, do not edit.
 
+// The addresses defined in this file are all for GPE0.  This macro will convert for specified GPE.
+#define OCI_ADDR(_base_addr, _gpe_instance) (_base_addr + (0x100000 * (_gpe_instance)))
 
 #define GPE_OCI_BASE 0xC0000000
 #define GPE_OCB_GPETSEL 0xc0000000

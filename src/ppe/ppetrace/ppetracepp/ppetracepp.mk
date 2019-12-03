@@ -27,3 +27,12 @@ IMAGE_DEPS+=ppetracepp
 OBJS=ppetracepp.o
 $(call BUILD_EXE)
 
+EXE=ppe-trace
+IMAGE_DEPS+=ppe-trace
+OBJS=ppeTrace.o ppeTraceEntry.o ppeTrex.o fspTrace.o ppeOpCodes.o
+$(call ADD_EXE_INCDIR, $(EXE), \
+	$(ROOTPATH)/chips/p10/common/ppe/ppetrace \
+	$(ROOTPATH)/chips/p10/procedures/ppe/pgpe \
+	)
+$(call BUILD_EXE)
+

@@ -123,8 +123,7 @@ typedef struct __attribute__ ((packed))
 
 extern uint32_t    G_mhz_per_pstate;
 
-// Per quad pstate
-extern uint8_t     G_desired_pstate[MAXIMUM_QUADS];
+extern uint8_t     G_desired_pstate;
 
 extern opal_dynamic_table_t G_opal_dynamic_table;
 extern opal_static_table_t G_opal_static_table;

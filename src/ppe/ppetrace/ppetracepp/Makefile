@@ -22,7 +22,7 @@
 # permissions and limitations under the License.
 #
 # IBM_PROLOG_END_TAG
-all: ppetracepp ppe2fsp
+all: ppetracepp ppe2fsp ppe-trace
 
 ppetracepp: ppetracepp.C
 	g++ -O3 -w -g -I./ ppetracepp.C -o ppetracepp
@@ -31,6 +31,11 @@ ppetracepp: ppetracepp.C
 ppe2fsp: ppe2fsp.c ppe2fsp_cmd.c
 	gcc -w -g -I./ -I../ ppe2fsp.c ppe2fsp_cmd.c -o ppe2fsp
 
+ppe-trace: ppeTrace.C ppeTraceEntry.C ppeTrex.C ppeOpCodes.C
+	g++ -g -I./ -I../ ppeTrace.C ppeTraceEntry.C ppeTrex.C fspTrace.C \
+		ppeOpCodes.C \
+		-o ppe-trace
+
 clean:
-	rm ppetracepp ppe2fsp
+	rm ppetracepp ppe2fsp ppe-trace
 

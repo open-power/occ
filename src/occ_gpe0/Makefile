@@ -39,7 +39,7 @@ OBJDIRS = $(sort $(dir ${OBJS}))
 PKLIB := $(OBJDIR)/pk/libpk.a
 COMMONLIB := $(OBJDIR)/commonlib/libcommon.a
 OCCLIB := $(OBJDIR)/occlib/libocc.a
-LIB_DIRS += -L$(OBJDIR)/pk -L$(OBJDIR)/commonlib -L$(OBJDIR)/occlib
+LIB_DIRS += -L$(OBJDIR)/pk -L$(OBJDIR)/commonlib -L$(OBJDIR)/occlib -L$(OBJDIR)/pkbaselib
 LINK_OBJS = $(OBJS) $(PKLIB) $(COMMONLIB) $(OCCLIB)
 LINK_SCRIPT = $(addprefix $(OBJDIR)/, linkscript)
 
@@ -61,7 +61,7 @@ $(OBJDIR)/$(IMAGE_NAME).bin $(OBJDIR)/$(IMAGE_NAME).dis: $(OBJDIR)/$(IMAGE_NAME)
 $(OBJDIR)/$(IMAGE_NAME).out: $(LINK_OBJS) $(LINK_SCRIPT)
 	$(LD) -e __system_reset -N -T$(LINK_SCRIPT) -Map $(OBJDIR)/$(IMAGE_NAME).map \
 	-Bstatic -o $(OBJDIR)/$(IMAGE_NAME).out $(LIB_DIRS) $(OBJS) \
-	-locc -lcommon -lpk
+	-locc -lcommon -lpk -lpkbase
 
 #pass the link command file through the C preprocessor to evaluate macros and remove comments
 $(LINK_SCRIPT): link.cmd
@@ -69,9 +69,6 @@ $(LINK_SCRIPT): link.cmd
 
 #Create an obj directory if needed
 $(LINK_OBJS) $(OBJS) $(OBJS:.o=.d): | $(OBJDIR) $(OBJDIRS)
-
-$(OBJDIR):
-	mkdir -p $(OBJDIR)
 
 $(OBJDIRS):
 	mkdir -p $(OBJDIRS)

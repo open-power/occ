@@ -68,8 +68,10 @@ __hwmacro_setup(void)
     {
         //This instance must be the first instance to run within the OCC
         //This will be done while all external interrupts are masked.
+        //APPCFG_TRACE("Initializing External Interrupt Routing Registers");
         out32(OCB_OIMR0_OR, 0xffffffff);
         out32(OCB_OIMR1_OR, 0xffffffff);
+
         out32(OCB_OIRR0A, (uint32_t)(g_ext_irqs_routeA >> 32));
         out32(OCB_OIRR1A, (uint32_t)g_ext_irqs_routeA);
         out32(OCB_OIRR0B, (uint32_t)(g_ext_irqs_routeB >> 32));

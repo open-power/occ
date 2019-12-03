@@ -105,9 +105,11 @@ void task_gpe_timings(task_t * i_task)
     bool l_gpe0_idle                = TRUE;
     bool l_gpe1_idle                = TRUE;
     static uint8_t L_consec_trace_count[2] = {0};
-    gpe_gpenxiramdbg_t xsr_sprg0 = {0};
-    gpe_gpenxiramedr_t ir_edr = {0};
-    gpe_gpenxidbgpro_t iar_xsr = {0};
+    gpe_ocb_gpexixsr_t   exi_xsr = {0};
+    gpe_ocb_gpexisprg0_t exi_sprg0 = {0};
+    gpe_ocb_gpexiedr_t   exi_edr = {0};
+    gpe_ocb_gpexiir_t    exi_ir = {0};
+    gpe_ocb_gpexiiar_t   exi_iar = {0};
 
     // ------------------------------------------------------
     // Kick off GPE programs to track WorstCase time in GPE
@@ -154,15 +156,16 @@ void task_gpe_timings(task_t * i_task)
 
             if(L_consec_trace_count[0] < MAX_CONSEC_TRACE)
             {
-               xsr_sprg0.fields.xsr = in32(GPE_OCB_GPEXIXSR);
-               xsr_sprg0.fields.sprg0 = in32(GPE_OCB_GPEXISPRG0);
-               ir_edr.fields.edr = in32(GPE_OCB_GPEXIEDR);
-               ir_edr.fields.ir = in32(GPE_OCB_GPEXIIR);
-               iar_xsr.fields.iar = in32(GPE_OCB_GPEXIIAR);
-               TRAC_ERR("GPE0 programs did not complete within one tick. "
+                // Read GPE0 regs for debug traces
+                exi_xsr.value = in32(OCI_ADDR(GPE_OCB_GPEXIXSR,0));
+                exi_sprg0.fields.sprg0 = in32(OCI_ADDR(GPE_OCB_GPEXISPRG0,0));
+                exi_edr.fields.edr = in32(OCI_ADDR(GPE_OCB_GPEXIEDR,0));
+                exi_ir.fields.ir = in32(OCI_ADDR(GPE_OCB_GPEXIIR,0));
+                exi_iar.fields.iar = in32(OCI_ADDR(GPE_OCB_GPEXIIAR,0));
+                TRAC_ERR("GPE0 programs did not complete within one tick. "
                          "XSR[0x%08x]  IAR[0x%08x] IR[0x%08x] EDR[0x%08x] SPRG0[0x%08X]",
-                         xsr_sprg0.fields.xsr, iar_xsr.fields.iar,
-                         ir_edr.fields.ir, ir_edr.fields.edr, xsr_sprg0.fields.sprg0);
+                         exi_xsr.value, exi_iar.fields.iar,
+                         exi_ir.fields.ir, exi_edr.fields.edr, exi_sprg0.fields.sprg0);
                 L_consec_trace_count[0]++;
             }
         }
@@ -209,17 +212,16 @@ void task_gpe_timings(task_t * i_task)
 
             if( (L_consec_trace_count[1] < MAX_CONSEC_TRACE) || (G_log_gpe1_error) )
             {
-                // TODO - RTC 213672 - THESE SHOULD BE GPE1 REGS, BUT NOT SURE HOW TO GET YET
-                xsr_sprg0.fields.xsr = in32(GPE_OCB_GPEXIXSR);
-                xsr_sprg0.fields.sprg0 = in32(GPE_OCB_GPEXISPRG0);
-                ir_edr.fields.edr = in32(GPE_OCB_GPEXIEDR);
-                ir_edr.fields.ir = in32(GPE_OCB_GPEXIIR);
-                iar_xsr.fields.iar = in32(GPE_OCB_GPEXIIAR);
-                // TODO - RTC 213672 - THESE SHOULD BE GPE1 REGS, BUT NOT SURE HOW TO GET YET
+                // Read GPE1 regs for debug traces
+                exi_xsr.value = in32(OCI_ADDR(GPE_OCB_GPEXIXSR,1));
+                exi_sprg0.fields.sprg0 = in32(OCI_ADDR(GPE_OCB_GPEXISPRG0,1));
+                exi_edr.fields.edr = in32(OCI_ADDR(GPE_OCB_GPEXIEDR,1));
+                exi_ir.fields.ir = in32(OCI_ADDR(GPE_OCB_GPEXIIR,1));
+                exi_iar.fields.iar = in32(OCI_ADDR(GPE_OCB_GPEXIIAR,1));
                 TRAC_ERR("GPE1 programs did not complete within one tick. "
                          "XSR[0x%08x]  IAR[0x%08x] IR[0x%08x] EDR[0x%08x] SPRG0[0x%08X]",
-                         xsr_sprg0.fields.xsr, iar_xsr.fields.iar,
-                         ir_edr.fields.ir, ir_edr.fields.edr, xsr_sprg0.fields.sprg0);
+                         exi_xsr.value, exi_iar.fields.iar,
+                         exi_ir.fields.ir, exi_edr.fields.edr, exi_sprg0.fields.sprg0);
                 L_consec_trace_count[1]++;
 
                 if(G_log_gpe1_error)

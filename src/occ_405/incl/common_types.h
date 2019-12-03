@@ -96,8 +96,6 @@ struct image_header
 {
     // Overload sram_repair_reserved for magic applet number
     // Note: unit64_t's don't compile when used w/IMAGE_HEADER macro.
-
-    // TODO - RTC 213672 - Is this even needed since we've removed applets?
     union
     {
         struct

@@ -28,7 +28,7 @@
 #include "ipc_async_cmd.h"
 #include "gpe_err.h"
 #include "gpe_util.h"
-//#include "p9_misc_scom_addresses.h"
+#include "misc_scom_addresses.h"
 
 gpu_i2c_info_t G_gpu_i2c __attribute__((section(".sbss.G_gpu_i2c")));
 
@@ -44,8 +44,6 @@ void gpe_gpu_init(ipc_msg_t* cmd, void* arg)
     // Prevent MCK attention on scom failes (PK kernel fix?)
     mtmsr((mfmsr() & ~(MSR_SIBRC | MSR_SIBRCA)) | MSR_SEM);
 
-// TODO - RTC 213672 - MISSING PU_GPIO_OUTPUT
-#if 0
     // According to Jordan Keuseman, Setting PV_CP0_P_PRV_GPIO0 pin on the
     // processor chip to low enables HW to automatically apply GPU power brake.
     // GPIO1 (GPU_PWR_BRAKE_FORCE_N) will not be controlled by FW, so needs to
@@ -66,17 +64,14 @@ void gpe_gpu_init(ipc_msg_t* cmd, void* arg)
     }
 
     // pin0 as output, pin1 as input, pin2 unchanged
-    data64 &= 0xBfffffffffffffffull;
-    data64 |= 0x8000000000000000ull;
-
+    data64 &= 0xbfffffffffffffffull; // clear bit 1 (pin1)
+    data64 |= 0x8000000000000000ull; // set bit 0 (pin0)
     rc = putscom_abs(PU_GPIO_OUTPUT_EN, data64);
-
     if(rc)
     {
         PK_TRACE("gpe_gpu_init: PU_GPIO0_OUTPUT_EN failed. rc:0x%08x",rc);
         gpe_set_ffdc(&(args->error), 0, GPE_RC_GPU_INIT_FAILED, rc);
     }
-#endif
 
     // Get i2c data
     G_gpu_i2c.pib_master = args->gpu_i2c.pib_master;

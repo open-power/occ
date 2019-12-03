@@ -29,6 +29,7 @@
 
 .global __vectors
 __vectors:
+        b   __machine_check
 
 /* __set_msr becomes the PPE idle address
    when the corresponding msr bit is set */
@@ -93,5 +94,7 @@ __watchdog_interrupt:
 /*   b __watchdog_interrupt  */
     _pk_panic IOTA_WATCHDOG_NOT_SUPPORTED
 
-/* TODO can addtional info be stuffed at 0x0160? addr of initial stackptr,
-    SDATA, SDATA2, SBSS, SBSS2 etc. */
+.global __virtual_exception
+.org    __vectors + 0x0160
+__virtual_exception:
+    _pk_panic IOTA_VIRTUAL_EXCEPTION

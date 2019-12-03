@@ -58,7 +58,7 @@
 #define OCCHW_IRQ_IPI2_HI_PRIORITY              8  /* 0x08 */
 #define OCCHW_IRQ_IPI3_HI_PRIORITY              9  /* 0x09 */
 #define OCCHW_IRQ_DEBUG_TRIGGER                 10 /* 0x0a */
-#define OCCHW_IRQ_RESERVED_11                   11 /* 0x0b */
+#define OCCHW_IRQ_GPE3_FUNCTION_TRIGGER         11 /* 0x0b */
 #define OCCHW_IRQ_PBAX_PGPE_ATTN                12 /* 0x0c */
 #define OCCHW_IRQ_PBAX_PGPE_PUSH0               13 /* 0x0d */
 #define OCCHW_IRQ_PBAX_PGPE_PUSH1               14 /* 0x0e */
@@ -134,7 +134,7 @@
                                                     "OCCHW_IRQ_IPI2_HI_PRIORITY",               \
                                                     "OCCHW_IRQ_IPI3_HI_PRIORITY",               \
                                                     "OCCHW_IRQ_DEBUG_TRIGGER",                  \
-                                                    "OCCHW_IRQ_RESERVED_11",                    \
+                                                    "OCCHW_IRQ_GPE3_FUNCTION_TRIGGER",          \
                                                     "OCCHW_IRQ_PBAX_PGPE_ATTN",                 \
                                                     "OCCHW_IRQ_PBAX_PGPE_PUSH0",                \
                                                     "OCCHW_IRQ_PBAX_PGPE_PUSH1",                \
@@ -238,8 +238,7 @@
     ({unsigned __irq = (unsigned)(irq); \
         ((__irq < OCCHW_IRQS) &&                                  \
          ((OCCHW_IRQ_MASK64(__irq) &                              \
-           (OCCHW_IRQ_MASK64(OCCHW_IRQ_RESERVED_11) |               \
-            OCCHW_IRQ_MASK64(OCCHW_IRQ_RESERVED_34))) == 0));})
+           (OCCHW_IRQ_MASK64(OCCHW_IRQ_RESERVED_34))) == 0));})
 
 /// This is a 32-bit mask, with big-endian bit (irq % 32) set.
 #define OCCHW_IRQ_MASK32(irq) (((uint32_t)0x80000000) >> ((irq) % 32))

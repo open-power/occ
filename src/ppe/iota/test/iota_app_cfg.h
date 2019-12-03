@@ -25,6 +25,8 @@
 #if !defined(__IOTA_APP_CFG__)
 #define __IOTA_APP_CFG__
 
+// This is GPE2 - see iota.mk
+
 #define PLATFORM_PANIC_CODES_H "iota_test_panic_codes.h"
 #include "iota_panic_codes.h"
 

@@ -22,15 +22,24 @@
 # permissions and limitations under the License.
 #
 # IBM_PROLOG_END_TAG
+export SUB_OBJDIR = /pkbaselib
+
 include img_defs.mk
 include baselibfiles.mk
 
 
 OBJS := $(addprefix $(OBJDIR)/, $(PPEBASELIB_OBJECTS))
 
-all: $(OBJS)
+all: $(OBJS) pkbaselib
+
+pkbaselib: $(OBJS)
+	$(AR) crs $(OBJDIR)/libpkbase.a $(OBJDIR)/*.o
 
 $(OBJS) $(OBJS:.o=.d): | $(OBJDIR)
+
+
+clean:
+	rm -rf $(OBJDIR)
 
 $(OBJDIR):
 	mkdir -p $(OBJDIR)

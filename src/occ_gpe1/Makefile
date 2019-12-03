@@ -38,7 +38,7 @@ OBJS := $(addprefix $(OBJDIR)/, $(TOP_OBJECTS))
 PKLIB := $(OBJDIR)/pk/libpk.a
 COMMONLIB := $(OBJDIR)/commonlib/libcommon.a
 OCCLIB := $(OBJDIR)/occlib/libocc.a
-LIB_DIRS += -L$(OBJDIR)/pk -L$(OBJDIR)/commonlib -L$(OBJDIR)/occlib
+LIB_DIRS += -L$(OBJDIR)/pk -L$(OBJDIR)/commonlib -L$(OBJDIR)/occlib -L$(OBJDIR)/pkbaselib
 LINK_OBJS = $(OBJS) $(PKLIB) $(COMMONLIB) $(OCCLIB)
 LINK_SCRIPT = $(addprefix $(OBJDIR)/, linkscript)
 
@@ -48,7 +48,7 @@ LIB_DIRS += -L$(OBJDIR)/p2p
 LINK_OBJS += $(P2PLIB)
 endif
 
-#default target is to make a binary application image
+#default target is to make a binary application image and ppetracepp
 all: $(PPETOOLS_OBJDIR)/ppetracepp $(OBJDIR)/$(IMAGE_NAME).bin $(OBJDIR)/$(IMAGE_NAME).dis
 
 #This removes all unecessary headers from the ELF executable
@@ -60,7 +60,7 @@ $(OBJDIR)/$(IMAGE_NAME).bin $(OBJDIR)/$(IMAGE_NAME).dis: $(OBJDIR)/$(IMAGE_NAME)
 $(OBJDIR)/$(IMAGE_NAME).out: $(LINK_OBJS) $(LINK_SCRIPT)
 	$(LD) -e __system_reset -N -T$(LINK_SCRIPT) -Map $(OBJDIR)/$(IMAGE_NAME).map \
     -Bstatic -o $(OBJDIR)/$(IMAGE_NAME).out $(LIB_DIRS) $(OBJS) \
-    -locc -lcommon -lpk
+    -locc -lcommon -lpk -lpkbase
 
 #pass the link command file through the C preprocessor to evaluate macros and remove comments
 $(LINK_SCRIPT): link.cmd

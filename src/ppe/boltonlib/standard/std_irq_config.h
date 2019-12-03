@@ -30,7 +30,11 @@
 /// configuration for a standard PPE.
 ///
 
-#include "iota_app_cfg.h"
+#if defined(__PK__)
+    #include "pk_app_cfg.h"
+#elif defined(__IOTA__)
+    #include "iota_app_cfg.h"
+#endif
 
 /// This constant is used to define the size of the table of interrupt handler
 /// structures as well as a limit for error checking.

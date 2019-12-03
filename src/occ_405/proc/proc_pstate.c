@@ -60,7 +60,7 @@ extern uint32_t G_first_proc_gpu_config;
 //Holds Fmax for ease of proc_freq2pstate calculation = max(fturbo,futurbo)
 uint16_t G_proc_fmax_mhz;
 
-uint8_t         G_desired_pstate[MAXIMUM_QUADS];
+uint8_t         G_desired_pstate;
 
 // A global variable indicating whether the pstates have been enabled.
 // initialized to PSTATES_DISABLED, turns to PSTATES_ENABLED only after

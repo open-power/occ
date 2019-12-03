@@ -114,59 +114,28 @@ int inband_access(MemBufConfiguration_t* i_config,
  * @Post The extended address field in the PBASLVCNT is set
  */
 int inband_scom_setup(MemBufConfiguration_t* i_config,
-                            uint32_t i_membuf_instance,
-                            uint32_t i_scom_address,
-                            uint32_t *o_oci_addr)
+                      uint32_t i_membuf_instance,
+                      uint32_t i_scom_address,
+                      uint32_t *o_oci_addr)
 {
-    int rc = 0;
-    uint32_t scom_address = i_scom_address;
-    // TODO use PBASLV in P10 - RTC 213672
-#if defined(__USE_PBASLV__)
-   pba_slvctln_t slvctln;
-#endif
+    pba_slvctln_t slvctln;
+
     uint64_t pb_addr = i_config->baseAddress[i_membuf_instance];
+    pb_addr |= ((uint64_t)i_scom_address << 3);
 
-    pb_addr  |= ((uint64_t)scom_address << 3);
-
-#if defined(__USE_PBASLV__)
     // put bits 23:36 of address into slvctln extended addr
     PPE_LVD((i_config->scomParms).slvctl_address, slvctln.value);
     slvctln.fields.extaddr = pb_addr >> 27;
     PPE_STVD((i_config->scomParms).slvctl_address, slvctln.value);
-#else
-    // TODO P9 HW bug work-around - Use PBASLV in P10 - RTC 213672
-    {
-        // workaround - don't use extraddr - use pbabar.
-        uint64_t barMsk = 0;
 
-        // Mask SIB from generating mck
-        mtmsr(mfmsr() | MSR_SEM);
-
-        // put the PBA in the BAR
-        rc = putscom_abs(PBA_BARN(PBA_BAR_MEMBUF), pb_addr & 0x00fffffffff00000ull);
-        if(rc)
-        {
-            PK_TRACE("inband_scom_setup. putscom fail on PBABAR."
-                     " rc = %d",rc);
-        }
-        else
-        {
-            rc = putscom_abs(PBA_BARMSKN(PBA_BAR_MEMBUF), barMsk);
-            if(rc)
-            {
-                PK_TRACE("inband_scom_setup. putscom fail on PBABARMSK"
-                         " rc = %d",rc);
-            }
-        }
-    }
-#endif
     // make oci address
     *o_oci_addr = (uint32_t)(pb_addr & 0x07ffffffull);
 
     // upper nibble is PBA region and BAR_SELECT
     *o_oci_addr  |= ((PBA_BAR_MEMBUF | 0x8) << 28);
     PK_TRACE_DBG("OCI mapped scom addr: %08x",*o_oci_addr);
-    return rc;
+
+    return 0;
 }
 
 void pbaslvctl_reset(GpePbaParms* i_pba_parms)

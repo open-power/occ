@@ -150,7 +150,7 @@ pk_initialize(PkAddress     kernel_stack,
     __pk_kernel_stack = kernel_stack;
     __pk_kernel_stack_size = kernel_stack_size;
 
-#if PK_TRACE_SUPPORT
+
 #if PK_TIMER_SUPPORT
 
     // Initialize the time queue sentinel as a circular queue, set the next
@@ -162,6 +162,7 @@ pk_initialize(PkAddress     kernel_stack,
 
 #endif  /* PK_TIMER_SUPPORT (timed callback)*/
 
+#if PK_TRACE_SUPPORT
     //set the trace timebase HZ
     pk_trace_set_freq(timebase_frequency_hz);
 
