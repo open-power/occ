@@ -72,11 +72,17 @@ extern "C"
         __d; \
     })
 
+extern void __virtual_exception() __attribute__ ((noreturn));
 
 unsigned long udivmodsi4(unsigned long long _a,
                          unsigned long _mod)
 {
+    if(0 == (unsigned long)_a)
+    {
+        __virtual_exception();
+    }
 
+    int cnt = 8;
     uint32_t ctx = mfmsr();
     wrteei(0);
     out64(OCB_DERP, _a);
@@ -84,10 +90,16 @@ unsigned long udivmodsi4(unsigned long long _a,
     do
     {
         _a = in64(OCB_DORP);
+        cnt--;
     }
-    while((~_a) == 0);
+    while(cnt && ((~_a) == 0));
 
     mtmsr(ctx);
+
+    if(0 == cnt)
+    {
+        __virtual_exception();
+    }
 
     if(_mod)
     {

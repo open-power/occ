@@ -52,7 +52,7 @@ typedef enum
     PK_UNUSED_000a                      = 0x000a,
     PK_UNUSED_000d                      = 0x000d,
     PK_UNUSED_001c                      = 0x001c,
-    PK_UNUSED_001d                      = 0x001d,
+    PPE42_VIRTUAL_EXCEPTION             = 0x001d,
     PK_UNUSED_001e                      = 0x001e,
     PK_UNUSED_001f                      = 0x001f,
 
@@ -334,6 +334,7 @@ typedef enum
 #define PPE42_DATA_STORAGE_PANIC            0x0002
 #define PPE42_INSTRUCTION_STORAGE_PANIC     0x0003
 #define PPE42_DATA_ALIGNMENT_PANIC          0x0004
+#define PPE42_VIRTUAL_EXCEPTION             0x001d
 
 #define PK_BOOT_VECTORS_NOT_ALIGNED         0x0005
 #define PPE42_ILLEGAL_INSTRUCTION           0x001c
