@@ -64,6 +64,7 @@ typedef enum {
     TASK_ID_GPE_TIMINGS,
     TASK_ID_GET_TOD,               // Get time of day task
     TASK_ID_APSS_RESET,            // (HW) reset APSS
+    TASK_ID_SEND_VRT_TO_PGPE,
     TASK_END  // This must always be the last enum in this list,
               // so that TASK_END always equals the last task ID + 1.
 } task_id_t;

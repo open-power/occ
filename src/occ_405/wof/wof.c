@@ -65,9 +65,6 @@ BceRequest G_vrt_req;
 // Buffer to hold vrt from main memory
 DMA_BUFFER(temp_bce_request_buffer_t G_vrt_temp_buff) = {{0}};
 
-// Wof header struct
-wof_header_data_t G_wof_header __attribute__ ((section (".global_data")));
-
 // TODO - RTC 209558
 #if 0
 // Quad state structs to temporarily hold the data from the doublewords to
@@ -516,69 +513,77 @@ void wof_main( void )
     // Calculate the AC currents
     calculate_AC_currents();
 
-    // Calculate ceff_ratio_vdd and ceff_ratio_vdn
+    // Calculate ceff_ratio_vdd and ceff_ratio_vcs
     calculate_ceff_ratio_vdd();
-    calculate_ceff_ratio_vdn();
+    calculate_ceff_ratio_vcs();
 
-    // Calculate how many steps from the beginning for VDD, VDN, and active quads
-    g_wof->vdn_step_from_start =
-                             calculate_step_from_start( g_wof->ceff_ratio_vdn,
-                                                        g_wof->vdn_step,
-                                                        g_wof->vdn_start,
-                                                        g_wof->vdn_size );
+    // Calculate how many steps from the beginning for each VRT parm
+    g_wof->vcs_step_from_start =
+                             calculate_step_from_start( g_wof->ceff_ratio_vcs,
+                                                        g_wof->wof_header.vcs_step,
+                                                        g_wof->wof_header.vcs_start,
+                                                        g_wof->wof_header.vcs_size );
 
     g_wof->vdd_step_from_start =
                              calculate_step_from_start( g_wof->ceff_ratio_vdd,
-                                                        g_wof->vdd_step,
-                                                        g_wof->vdd_start,
-                                                        g_wof->vdd_size );
+                                                        g_wof->wof_header.vdd_step,
+                                                        g_wof->wof_header.vdd_start,
+                                                        g_wof->wof_header.vdd_size );
 
-    g_wof->quad_step_from_start = calc_quad_step_from_start();
+    g_wof->io_pwr_step_from_start =
+                             calculate_step_from_start( g_wof->io_power,
+                                                        g_wof->wof_header.io_pwr_step,
+                                                        g_wof->wof_header.io_pwr_start,
+                                                        g_wof->wof_header.io_pwr_size );
+
+    g_wof->ambient_step_from_start =
+                             calculate_step_from_start( g_wof->ambient,
+                                                        g_wof->wof_header.ambient_step,
+                                                        g_wof->wof_header.ambient_start,
+                                                        g_wof->wof_header.ambient_size );
 
     // Compute the Main Memory address of the desired VRT table given
-    // the calculated VDN, VDD, and Quad steps
-    g_wof->next_vrt_main_mem_addr = calc_vrt_mainstore_addr();
+    // the calculated steps from start
+    g_wof->vrt_main_mem_addr = calc_vrt_mainstore_addr();
 
-
-    // Send the new vrt to the PGPE
-    send_vrt_to_pgpe( g_wof->next_vrt_main_mem_addr );
+    // Copy the new vrt from main memory to sram
+    copy_vrt_to_sram( g_wof->vrt_main_mem_addr );
 }
 
 /**
  * calculate_step_from_start
  *
- * Description: Calculates the step number for the current VDN/VDD
+ * Description: Calculates the step number for the given vrt parm
  *
- * Param[in]: i_ceff_vdx_ratio - The current Ceff_vdd or Ceff_vdn_ratio
- *                               to calculate the step for.
- * Param[in]: i_step_size - The size of each step.
- * Param[in]: i_min_ceff - The minimum step number for this VDN/VDD
- * Param[in]: i_max_step - The maximum step number for this VDN/VDD
+ * Param[in]: i_vrt_parm - The current VRT parm to calculate the step for.
+ * Param[in]: i_step_size - The size of each step for this VRT parm
+ * Param[in]: i_min_step - The minimum step number for this VRT parm
+ * Param[in]: i_max_step - The maximum step number for this VRT parm
  *
- * Return: The calculated step for current Ceff_vdd/Ceff_vdn
+ * Return: The calculated number of steps for given VRT parm
  */
-uint16_t calculate_step_from_start(uint16_t i_ceff_vdx_ratio,
+uint16_t calculate_step_from_start(uint16_t i_vrt_parm,
                                    uint16_t i_step_size,
-                                   uint16_t i_min_ceff,
+                                   uint16_t i_min_step,
                                    uint16_t i_max_step )
 {
     uint16_t l_current_step;
 
-    // Ensure ceff is at least the min step
-    if( (i_ceff_vdx_ratio <= i_min_ceff) || (i_step_size == 0) )
+    // Check if VRT parm is for the first entry
+    if( (i_vrt_parm <= i_min_step) || (i_step_size == 0) )
     {
         l_current_step = 0;
     }
     else
     {
-        // Add step size to current vdd/vdn to round up.
-        //  -1 to prevent overshoot when i_ceff_vdx_ratio is equal to Ceff table value
-        l_current_step = i_ceff_vdx_ratio + i_step_size - 1;
+        // Add step size to parm to round up.
+        //  -1 to prevent overshoot when i_vrt_parm is equal to table value
+        l_current_step = i_vrt_parm + i_step_size - 1;
 
-        // Subtract the starting ceff to skip the 0 table entry
-        l_current_step -= i_min_ceff;
+        // Subtract the starting value to skip the 0 table entry
+        l_current_step -= i_min_step;
 
-        // Divide by step size to determine how many from the 0 entry ceff is
+        // Divide by step size to determine how many from the 0 entry VRT parm is
         l_current_step /= i_step_size;
 
         // If the calculated step is greater than the max step, use max step
@@ -594,24 +599,9 @@ uint16_t calculate_step_from_start(uint16_t i_ceff_vdx_ratio,
 }
 
 /**
- * calc_quad_step_from_start
- *
- * Description: Calculates the step number for the current number
- *              of active quads
- *
- * Return: The calculated step for current active quads
- */
-uint8_t calc_quad_step_from_start( void )
-{
-    return (G_wof_header.active_quads_size == ACTIVE_QUAD_SZ_MIN) ? 0 :
-                                           (g_wof->num_active_quads - 1);
-}
-
-/**
  * calc_vrt_mainstore_address
  *
- * Description: Calculates the VRT address based on the Ceff vdd/vdn and quad
- *              steps.
+ * Description: Calculates the VRT address based on all VRT parm steps
  *
  * Return: The desired VRT main memory address
  */
@@ -638,19 +628,39 @@ uint32_t calc_vrt_mainstore_addr( void )
            L_trace_char_test = true;
        }
 
-       // Wof tables address calculation
-       // (Base_addr +
-       // (sizeof VRT * (total active quads * ( (g_wof->vdn_step_from_start * vdd_size) + (g_wof->vdd_step_from_start) ) + (g_wof->quad_step_from_start))))
-       g_wof->vrt_mm_offset = g_wof->vrt_block_size *
-                       (( g_wof->active_quads_size *
-                       ((g_wof->vdn_step_from_start * g_wof->vdd_size) +
-                       g_wof->vdd_step_from_start) ) + g_wof->quad_step_from_start);
+       // Calculate the VRT offset in main memory
+       // tables are sorted by Vcs, then Vdd, then IO Pwr, then ambient
+       // first determine number of VRT tables need to be skipped due to Vcs
+       g_wof->vrt_mm_offset = g_wof->vcs_step_from_start * g_wof->wof_header.vdd_size * g_wof->wof_header.io_pwr_size * g_wof->wof_header.ambient_size;
+       // next add number of tables skipped within this Vcs based on Vdd
+       g_wof->vrt_mm_offset += (g_wof->vdd_step_from_start * g_wof->wof_header.io_pwr_size * g_wof->wof_header.ambient_size);
+       // now add number of tables skipped within this Vcs/Vdd based on IO power
+       g_wof->vrt_mm_offset += (g_wof->io_pwr_step_from_start * g_wof->wof_header.ambient_size);
+       // now add number of tables skipped within this Vcs/Vdd/IO power based on ambient
+       g_wof->vrt_mm_offset += g_wof->ambient_step_from_start;
+
+       // We now have the total number of tables to skip multiply by the sizeof one VRT to get final offset
+       g_wof->vrt_mm_offset *= g_wof->wof_header.vrt_block_size;
     }
 
-    // Skip the wof header at the beginning of wof tables
-    uint32_t wof_tables_base = g_wof->vrt_tbls_main_mem_addr + WOF_HEADER_SIZE;
+    // Skip over the WOF header to find the base address where the tables actually start
+    uint32_t wof_tables_mm_addr = g_wof->vrt_tbls_main_mem_addr + WOF_HEADER_SIZE + g_wof->vrt_mm_offset;
 
-    return wof_tables_base + g_wof->vrt_mm_offset;
+    // now we know the final address of the table we want, but need to make sure it is 128B aligned for BCE
+    if(wof_tables_mm_addr%128 == 0)
+    {
+       // address is 128 byte aligned use it and set bce table offset to 0
+       g_wof->vrt_bce_table_offset = 0;
+    }
+    else
+    {
+       // go down to nearest 128B alignment and store how many tables in the table we really want is
+       // by design we have a guarantee that a VRT size is a factor of 128
+       uint32_t overage = wof_tables_mm_addr%128;
+       wof_tables_mm_addr -= overage;
+       g_wof->vrt_bce_table_offset = overage / g_wof->wof_header.vrt_block_size;
+    }
+    return wof_tables_mm_addr;
 }
 
 
@@ -672,42 +682,48 @@ void copy_vrt_to_sram_callback( void )
  * find out which ping pong buffer to use
  * copy the vrt to said ping pong buffer
  * save current vrt address to global
- * send IPC command to pgpe to notify of new ping/pong vrt address
+ * setup VRT IPC command parameters to be sent to pgpe
  */
-    // Static variable to trac which buffer is open for use
-    // 0 = PING; 1 = PONG;
+    // default use ping buffer
     uint8_t * l_buffer_address = G_sram_vrt_ping_buffer;
+
+    // offset needed for 128B alignment to the VRT we really want from main memory
+    uint32_t  l_vrt_offset = g_wof->vrt_bce_table_offset * g_wof->wof_header.vrt_block_size;
+
+    // If ping buffer is currently in use then use the pong buffer
     if(g_wof->curr_ping_pong_buf == (uint32_t)G_sram_vrt_ping_buffer)
     {
-        // Switch to pong buffer
         l_buffer_address = G_sram_vrt_pong_buffer;
     }
-    else
-    {
-        // Switch to ping buffer
-        l_buffer_address = G_sram_vrt_ping_buffer;
-    }
+
     // Update global "next" ping pong buffer for callback function
     g_wof->next_ping_pong_buf = (uint32_t)l_buffer_address;
 
     // Copy the vrt data into the buffer
     memcpy( l_buffer_address,
-            &G_vrt_temp_buff,
-            g_wof->vrt_block_size );
+            &G_vrt_temp_buff + l_vrt_offset,
+            g_wof->wof_header.vrt_block_size );
 
-// TODO - RTC 209558
-#if 0
     // Set the parameters for the GpeRequest
-    G_wof_vrt_parms.homer_vrt_ptr = (HomerVRTLayout_t*)l_buffer_address;
-    G_wof_vrt_parms.active_quads = g_wof->req_active_quad_update;
-#endif
+    G_wof_vrt_parms.idd_vrt_ptr = (VRT_t*)l_buffer_address;
+
+    if(g_wof->wof_init_state < INITIAL_VRT_SENT_WAITING)
+    {
+        // We didn't calculate this VRT set ceff ratios to 0xFF's
+        G_wof_vrt_parms.vdd_ceff_ratio = 0xFFFFFFFF;
+        G_wof_vrt_parms.vcs_ceff_ratio = 0xFFFFFFFF;
+    }
+    else // send ratios used to determine VRT
+    {
+        G_wof_vrt_parms.vdd_ceff_ratio = g_wof->ceff_ratio_vdd;
+        G_wof_vrt_parms.vcs_ceff_ratio = g_wof->ceff_ratio_vcs;
+    }
 
     if( g_wof->vrt_state != STANDBY )
     {
         // Set vrt state to let OCC know it needs to schedule the IPC command
         g_wof->vrt_state = NEED_TO_SCHEDULE;
     }
-
 }
 
 /**
@@ -740,9 +756,6 @@ void wof_vrt_callback( void )
        // Update previous active quads
        g_wof->prev_req_active_quads = g_wof->req_active_quad_update;
 
-       // Update current vrt_main_mem_address
-       g_wof->curr_vrt_main_mem_addr = g_wof->next_vrt_main_mem_addr;
-
        // Update the wof_init_state based off the current state
        if( g_wof->wof_init_state == INITIAL_VRT_SENT_WAITING )
        {
@@ -759,16 +772,15 @@ void wof_vrt_callback( void )
 }
 
 /**
- * send_vrt_to_pgpe
+ * copy_vrt_to_sram
  *
  * Description: Function to copy new VRT from Mainstore to local SRAM buffer
- *              and calls copy_vrt_to_sram_callback function to send new VRT
- *              to the PGPE
- *              Note: If desired VRT is the same as previous, skip.
+ *              and calls copy_vrt_to_sram_callback function to setup new VRT
+ *              to be sent to the PGPE
  *
  * Param[in]: i_vrt_main_mem_addr - Address of the desired vrt table.
  */
-void send_vrt_to_pgpe( uint32_t i_vrt_main_mem_addr )
+void copy_vrt_to_sram( uint32_t i_vrt_main_mem_addr )
 {
     int l_ssxrc = SSX_OK;
 
@@ -786,55 +798,37 @@ void send_vrt_to_pgpe( uint32_t i_vrt_main_mem_addr )
             break;
         }
 
-        // Check if PGPE explicitely requested a new vrt
-        ocb_occflg_t occ_flags = {0};
-        occ_flags.value = in32(OCB_OCCFLG0);
+        // Create request
+        l_ssxrc = bce_request_create(
+                                     &G_vrt_req,                 // block copy object
+                                     &G_pba_bcde_queue,           // main to sram copy engine
+                                     i_vrt_main_mem_addr,     //mainstore address
+                                     (uint32_t) &G_vrt_temp_buff, // SRAM start address
+                                     MIN_BCE_REQ_SIZE,  // size of copy
+                                     SSX_WAIT_FOREVER,            // no timeout
+                                     (AsyncRequestCallback)copy_vrt_to_sram_callback,
+                                     NULL,
+                                     ASYNC_CALLBACK_IMMEDIATE );
 
-        if( ((i_vrt_main_mem_addr == g_wof->curr_vrt_main_mem_addr ) &&
-            (g_wof->req_active_quad_update ==
-             g_wof->prev_req_active_quads)) &&
-            (!occ_flags.fields.active_quad_update) )
+        if(l_ssxrc != SSX_OK)
         {
-            // VRT and requested active quads are unchanged.
+            INTR_TRAC_ERR("copy_vrt_to_sram: BCDE request create failure rc=[%08X]", -l_ssxrc);
             break;
         }
-        // Either the Main memory address changed or req active quads changed
-        // get VRT based on new values
-        else
-        {
 
-            // Create request
-            l_ssxrc = bce_request_create(
-                             &G_vrt_req,                 // block copy object
-                             &G_pba_bcde_queue,           // main to sram copy engine
-                             i_vrt_main_mem_addr,     //mainstore address
-                             (uint32_t) &G_vrt_temp_buff, // SRAM start address
-                             MIN_BCE_REQ_SIZE,  // size of copy
-                             SSX_WAIT_FOREVER,            // no timeout
-                             (AsyncRequestCallback)copy_vrt_to_sram_callback,
-                             NULL,
-                             ASYNC_CALLBACK_IMMEDIATE );
+        // Make sure we are in correct vrt state
+        if( g_wof->vrt_state == STANDBY )
+        {
+            // Set the VRT state to ensure asynchronous order of operations
+            g_wof->vrt_state = SEND_INIT;
+
+            // Do the actual copy
+            l_ssxrc = bce_request_schedule( &G_vrt_req );
 
             if(l_ssxrc != SSX_OK)
             {
-                INTR_TRAC_ERR("send_vrt_to_pgpe: BCDE request create failure rc=[%08X]", -l_ssxrc);
+                INTR_TRAC_ERR("copy_vrt_to_sram: BCE request schedule failure rc=[%08X]", -l_ssxrc);
                 break;
-            }
-
-            // Make sure we are in correct vrt state
-            if( g_wof->vrt_state == STANDBY )
-            {
-                // Set the VRT state to ensure asynchronous order of operations
-                g_wof->vrt_state = SEND_INIT;
-
-                // Do the actual copy
-                l_ssxrc = bce_request_schedule( &G_vrt_req );
-
-                if(l_ssxrc != SSX_OK)
-                {
-                    INTR_TRAC_ERR("send_vrt_to_pgpe: BCE request schedule failure rc=[%08X]", -l_ssxrc);
-                    break;
-                }
             }
         }
     }while( 0 );
@@ -861,10 +855,6 @@ void read_shared_sram( void )
 {
 // TODO - RTC 209558
 #if 0
-    // Get the actual quad states
-    G_quad_state_0.value = in64(g_wof->quad_state_0_addr);
-    G_quad_state_1.value = in64(g_wof->quad_state_1_addr);
-
     // Read f_clip, v_clip, f_ratio, and v_ratio
     pgpe_wof_state_t l_wofstate;
     l_wofstate.value = in64(g_wof->pgpe_wof_state_addr);
@@ -1327,44 +1317,45 @@ uint32_t calculate_effective_capacitance( uint32_t i_iAC_10ma,
 }
 
 /**
- * calculate_ceff_ratio_vdn
+ * calculate_ceff_ratio_vcs
  *
  * Description: Function to calculate the effective capacitance ratio
- *              for the nest
+ *              for the cache
  */
-void calculate_ceff_ratio_vdn( void )
+void calculate_ceff_ratio_vcs( void )
 {
-    // Get ceff_tdp_vdn from OCCPPB
+    // Get ceff_tdp_vcs from OCCPPB
 // TODO - RTC 209558
 #if 0
-    g_wof->ceff_tdp_vdn = G_oppb.ceff_tdp_vdn;
-#endif
+    g_wof->ceff_tdp_vcs = G_oppb.ceff_tdp_vcs;
 
-    // Calculate ceff_vdn
-    // iac_vdn/ (VOLTVDN^1.3 * Fnest)
-    g_wof->c_ratio_vdn_freq = G_nest_frequency_mhz;
-    g_wof->ceff_vdn =
-                calculate_effective_capacitance( g_wof->iac_vdn,
-                                                 g_wof->voltvdn_sensor,
-                                                 g_wof->c_ratio_vdn_freq );
+    // Calculate ceff_vcs
+    // iac_vcs/ (VOLTVCS^1.3 * Fnest)
+    g_wof->c_ratio_vcs_freq = G_nest_frequency_mhz;
+    g_wof->ceff_vcs =
+                calculate_effective_capacitance( g_wof->iac_vcs,
+                                                 g_wof->voltvcs_sensor,
+                                                 g_wof->c_ratio_vcs_freq );
 
     // Prevent divide by zero
-    if( g_wof->ceff_tdp_vdn == 0 )
+    if( g_wof->ceff_tdp_vcs == 0 )
     {
-        INTR_TRAC_ERR("WOF Disabled! Ceff VDN divide by 0");
+        INTR_TRAC_ERR("WOF Disabled! Ceff VCS divide by 0");
         print_oppb();
         // Return 0
-        g_wof->ceff_ratio_vdn = 0;
+        g_wof->ceff_ratio_vcs = 0;
 
         set_clear_wof_disabled(SET,
-                               WOF_RC_DIVIDE_BY_ZERO_VDN,
-                               ERC_WOF_DIVIDE_BY_ZERO_VDN);
+                               WOF_RC_DIVIDE_BY_ZERO_VCS,
+                               ERC_WOF_DIVIDE_BY_ZERO_VCS);
     }
     else
     {
-        g_wof->ceff_ratio_vdn = g_wof->ceff_vdn / g_wof->ceff_tdp_vdn;
-        sensor_update(AMECSENSOR_PTR(CEFFVDNRATIO), (uint16_t)g_wof->ceff_ratio_vdn);
+        g_wof->ceff_ratio_vcs = g_wof->ceff_vcs / g_wof->ceff_tdp_vcs;
+        sensor_update(AMECSENSOR_PTR(CEFFVCSRATIO), (uint16_t)g_wof->ceff_ratio_vcs);
     }
+#endif
+
 }
 
 /**
@@ -2229,13 +2220,14 @@ void wof_control_callback( void )
 
 
 /**
- * schedule_vrt_request
+ * task_send_vrt_to_pgpe
  *
- * Description: Called from amec_slv_common_tasks_post every 500us. Checks
- *              to see if a new VRT table is ready to be sent to the PGPE
- *              and if so, sends it and sets the vrt state
+ * Description: Schedule the VRT IPC command to send VRT to the PGPE
+ *              Called from the tick table at the beginning of every tick.
+ *              This also gives the PGPE a required timing for HW power
+ *              proxy throttle control loop to write to QME register every 500us
  */
-void schedule_vrt_request( void )
+void task_send_vrt_to_pgpe(task_t* i_task)
 {
     if( (g_wof->vrt_state == NEED_TO_SCHEDULE ) &&
         (async_request_is_idle(&G_wof_vrt_req.request)) )
@@ -2262,9 +2254,11 @@ void schedule_vrt_request( void )
             // Reset the global return code after logging the error
             g_wof->gpe_req_rc = 0;
         }
-
-        // Update vrt state
-        g_wof->vrt_state = SCHEDULED;
+        else
+        {
+            // Success.  Update vrt state
+            g_wof->vrt_state = SCHEDULED;
+        }
     }
 }
 
@@ -2279,16 +2273,17 @@ void schedule_vrt_request( void )
  */
 void send_initial_vrt_to_pgpe( void )
 {
-    // Set the steps for VDN, VDD, and Quads to the max value
-    g_wof->vdn_step_from_start  = g_wof->vdn_size - 1;
-    g_wof->vdd_step_from_start  = g_wof->vdd_size - 1;
-    g_wof->quad_step_from_start = MAXIMUM_QUADS - 1;
+    // Set the steps for all VRT parms to the max value
+    g_wof->vcs_step_from_start  = g_wof->wof_header.vcs_size - 1;
+    g_wof->vdd_step_from_start  = g_wof->wof_header.vdd_size - 1;
+    g_wof->io_pwr_step_from_start  = g_wof->wof_header.io_pwr_size - 1;
+    g_wof->ambient_step_from_start  = g_wof->wof_header.ambient_size - 1;
 
     // Calculate the address of the final vrt
-    g_wof->next_vrt_main_mem_addr = calc_vrt_mainstore_addr();
+    g_wof->vrt_main_mem_addr = calc_vrt_mainstore_addr();
 
-    // Send the final vrt to shared OCC-PGPE SRAM.
-    send_vrt_to_pgpe( g_wof->next_vrt_main_mem_addr );
+    // Copy the final vrt to shared OCC-PGPE SRAM.
+    copy_vrt_to_sram( g_wof->vrt_main_mem_addr );
 
     // Update Init state
     if(g_wof->wof_init_state < INITIAL_VRT_SENT_WAITING)
@@ -2432,57 +2427,6 @@ uint32_t scale_and_interpolate( uint16_t * i_leak_arr,
                                (int32_t) scaled_lower_leak,
                                (int32_t) scaled_upper_leak ) / 10;
 
-}
-
-/**
- * print_data
- *
- * Description: For internal use only. Prints information on the current
- *              state of the wof algorithm.
- */
-void print_data( void )
-{
-    INTR_TRAC_INFO("ADDRESSES:");
-    INTR_TRAC_INFO("vrt_tbls_main_mem_addr: 0x%08x", g_wof->vrt_tbls_main_mem_addr);
-    INTR_TRAC_INFO("pgpe_wof_state_addr:     0x%08x", g_wof->pgpe_wof_state_addr);
-    INTR_TRAC_INFO("req_active_quads_addr:   0x%08x", g_wof->req_active_quads_addr);
-    INTR_TRAC_INFO("quad_state_0_addr:       0x%08x", g_wof->quad_state_0_addr);
-    INTR_TRAC_INFO("quad_state_1_addr:       0x%08x", g_wof->quad_state_1_addr);
-    INTR_TRAC_INFO("pstate_tbl_sram_addr:    0x%08x", g_wof->pstate_tbl_sram_addr);
-    INTR_TRAC_INFO("pong buffer address:     0x%08x", (&G_sram_vrt_pong_buffer));
-    INTR_TRAC_INFO("ping buffer address:     0x%08x", (&G_sram_vrt_ping_buffer));
-    INTR_TRAC_INFO("curr ping/pong addr:     0x%08x", g_wof->curr_ping_pong_buf);
-    INTR_TRAC_INFO("next ping/pong addr:     0x%08x", g_wof->next_ping_pong_buf);
-    INTR_TRAC_INFO("");
-    INTR_TRAC_INFO("version:            %d", g_wof->version);
-    INTR_TRAC_INFO("vrt_block_size:    %d",g_wof->vrt_block_size);
-    INTR_TRAC_INFO("vrt_blck_hdr_sz:   %d",g_wof->vrt_blck_hdr_sz);
-    INTR_TRAC_INFO("vrt_data_size:     %d ",g_wof->vrt_data_size);
-    INTR_TRAC_INFO("active_quads_size:  %d",g_wof->active_quads_size);
-    INTR_TRAC_INFO("core_count:         %d",g_wof->core_count);
-    INTR_TRAC_INFO("vdn_start:          %d",g_wof->vdn_start);
-    INTR_TRAC_INFO("vdn_step:           %d",g_wof->vdn_step);
-    INTR_TRAC_INFO("vdn_size:           %d",g_wof->vdn_size);
-    INTR_TRAC_INFO("vdd_start:          %d",g_wof->vdd_start);
-    INTR_TRAC_INFO("vdd_step:           %d",g_wof->vdd_step);
-    INTR_TRAC_INFO("vdd_size:           %d",g_wof->vdd_size);
-    INTR_TRAC_INFO("vdn_step_from_start:%d",g_wof->vdn_step_from_start);
-    INTR_TRAC_INFO("vdd_step_from_start:%d",g_wof->vdd_step_from_start);
-    INTR_TRAC_INFO("num_active_quads:   %d",g_wof->num_active_quads);
-    INTR_TRAC_INFO("quad_step_4rm_start:%d",g_wof->quad_step_from_start);
-    INTR_TRAC_INFO("vratio_start:       %d",g_wof->vratio_start);
-    INTR_TRAC_INFO("vratio_step:        %d",g_wof->vratio_step);
-    INTR_TRAC_INFO("vratio_size:        %d",g_wof->vratio_size);
-    INTR_TRAC_INFO("fratio_start:       %d",g_wof->fratio_start);
-    INTR_TRAC_INFO("fratio_step:        %d",g_wof->fratio_step);
-    INTR_TRAC_INFO("fratio_size:        %d",g_wof->fratio_size);
-    INTR_TRAC_INFO("fratio:             %d",g_wof->f_ratio);
-    INTR_TRAC_INFO("vratio:             %d",g_wof->v_ratio);
-    INTR_TRAC_INFO("fclip_ps:           %x",g_wof->f_clip_ps);
-    INTR_TRAC_INFO("fclip_freq:         %d",g_wof->f_clip_freq);
-    INTR_TRAC_INFO("vclip:              %d",g_wof->v_clip);
-    INTR_TRAC_INFO("req_active_quads:   %x", g_wof->req_active_quad_update);
-    INTR_TRAC_INFO("vrt_mm_offset:     0x%08x", g_wof->vrt_mm_offset);
 }
 
 /**

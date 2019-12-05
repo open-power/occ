@@ -446,9 +446,6 @@ void amec_slv_common_tasks_post(void)
             call_wof_main();
         }
 
-        // Check to see if a VRT IPC request needs to be sent to the PGPE
-        schedule_vrt_request();
-
         // Call the every tick trace recording if it has been configured via Amester.
         // If not configured, this call will return immediately.
         amec_tb_record(AMEC_TB_EVERY_TICK);

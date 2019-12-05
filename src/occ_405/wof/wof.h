@@ -159,29 +159,41 @@ typedef struct __attribute__ ((packed))
     uint16_t vrt_block_size;
     uint16_t vrt_blck_hdr_sz;
     uint16_t vrt_data_size;
-    uint8_t  active_quads_size;
+    uint8_t  ocs_mode;
     uint8_t  core_count;
-    uint16_t vdn_start;
-    uint16_t vdn_step;
-    uint16_t vdn_size;
+    uint16_t vcs_start;
+    uint16_t vcs_step;
+    uint16_t vcs_size;
     uint16_t vdd_start;
     uint16_t vdd_step;
     uint16_t vdd_size;
     uint16_t vratio_start;
     uint16_t vratio_step;
     uint16_t vratio_size;
-    uint16_t fratio_start;
-    uint16_t fratio_step;
-    uint16_t fratio_size;
-    uint16_t vdn_percent[8];
+    uint16_t io_pwr_start;
+    uint16_t io_pwr_step;
+    uint16_t io_pwr_size;
+    uint16_t ambient_start;
+    uint16_t ambient_step;
+    uint16_t ambient_size;
+    uint16_t reserved_2;
     uint16_t socket_power_w;
-    uint16_t nest_freq_mhz;
-    uint16_t nom_freq_mhz;
-    uint16_t rdp_capacity;
-    uint64_t wof_tbls_src_tag;
+    uint16_t sort_pwr_target_freq_mhz;
+    uint16_t rdp_current_amps;
+    uint16_t boost_current_amps;
+    uint32_t wof_tbls_timestamp;
+    uint16_t wof_tbls_version;
+    uint16_t reserved_3;
+    uint8_t  tdp_vcs_ceff_idx;
+    uint8_t  tdp_vdd_ceff_idx;
+    uint8_t  tdp_io_pwr_idx;
+    uint8_t  tdp_ambient_idx;
+    uint8_t  io_full_pwr_watts;
+    uint8_t  io_disabled_pwr_watts;
+    uint16_t reserved_4;
     uint64_t package_name_hi;
     uint64_t package_name_lo;
-    uint8_t  reserved_2[40];
+    uint8_t  reserved_5[40];
 } wof_header_data_t;
 
 // Structure used in g_amec
@@ -189,39 +201,16 @@ typedef struct __attribute__ ((packed))
 {
     // Bit vector where each bit signifies a different failure case
     uint32_t wof_disabled;
-    // Data from wof header for debug
-    uint8_t  version;
-    uint16_t vrt_block_size;
-    uint16_t vrt_blck_hdr_sz;
-    uint16_t vrt_data_size;
-    uint8_t  active_quads_size;
-    uint8_t  core_count;
-    uint16_t vdn_start;
-    uint16_t vdn_step;
-    uint16_t vdn_size;
-    uint16_t vdd_start;
-    uint16_t vdd_step;
-    uint16_t vdd_size;
-    uint16_t vratio_start;
-    uint16_t vratio_step;
-    uint16_t vratio_size;
-    uint16_t fratio_start;
-    uint16_t fratio_step;
-    uint16_t fratio_size;
-    uint16_t vdn_percent[8];
-    uint16_t socket_power_w;
-    uint16_t nest_freq_mhz;
-    uint16_t nom_freq_mhz;
-    uint16_t rdp_capacity;
-    uint64_t wof_tbls_src_tag;
-    uint64_t package_name_hi;
-    uint64_t package_name_lo;
+    // Data from wof header
+    wof_header_data_t wof_header;
     // Calculated step from start for VDD
     uint16_t vdd_step_from_start;
-    // Calculated step from start for VDN
-    uint16_t vdn_step_from_start;
-    // Calculated step from start for quads
-    uint8_t quad_step_from_start;
+    // Calculated step from start for VCS
+    uint16_t vcs_step_from_start;
+    // Calculated step from start for IO Power
+    uint16_t io_pwr_step_from_start;
+    // Calculated step from start for ambient
+    uint16_t ambient_step_from_start;
     // Array to hold the core voltages per quad (in 100uV)
     uint32_t v_core_100uV[MAXIMUM_QUADS];
     // Bit vector to hold the power on status of all 24 cores
@@ -276,12 +265,12 @@ typedef struct __attribute__ ((packed))
     uint32_t ceff_vdd;
     // Contains the calculated effective capacitance ratio for vdd
     uint32_t ceff_ratio_vdd;
-    // Contains the calculated effective capacitance for tdp_vdn
-    uint32_t ceff_tdp_vdn;
-    // Contains the calculated effective capacitance for vdn
-    uint32_t ceff_vdn;
-    // Contains the calculated effective capacitance ratio for vdn
-    uint32_t ceff_ratio_vdn;
+    // Contains the calculated effective capacitance for tdp_vcs
+    uint32_t ceff_tdp_vcs;
+    // Contains the calculated effective capacitance for vcs
+    uint32_t ceff_vcs;
+    // Contains the calculated effective capacitance ratio for vcs
+    uint32_t ceff_ratio_vcs;
     // Contains the index used for interpolation in the ALL_CORES_OFF_ISO calc
     uint8_t chip_volt_idx;
     // Contains the final calculated value of ALL_CORES_OFF_ISO
@@ -307,22 +296,17 @@ typedef struct __attribute__ ((packed))
     uint32_t curr_ping_pong_buf;
     // The next ping pong buffer SRAM address to be used by PGPE if IPC request succeeds
     uint32_t next_ping_pong_buf;
-    // The current vrt address in Main Memory that WOF pulled to give to PGPE
-    uint32_t curr_vrt_main_mem_addr;
-    // The most recently calculated vrt Main Memory address based off recently computed
-    // data. This is not what the PGPE is using. It is the candidate addr for the next
-    // vrt
-    uint32_t next_vrt_main_mem_addr;
+    // Most recently calculated vrt Main Memory address
+    uint32_t vrt_main_mem_addr;
+    // if vrt_main_mem_addr needed to be 128B aligned this is number of tables in the real table is
+    // 0 if no adjustement required
+    uint32_t vrt_bce_table_offset;
     // Main Memory address where the WOF VRT tables are located
     uint32_t vrt_tbls_main_mem_addr;
     // The length of the WOF VRT data in main memory
     uint32_t vrt_tbls_len;
     // The state of the wof routine during initialization. states defined above
     uint8_t wof_init_state;
-    // The address in shared OCC-PGPE SRAM of Quad State 0
-    uint32_t quad_state_0_addr;
-    // The address in shared OCC-PGPE SRAM of Quad State 1
-    uint32_t quad_state_1_addr;
     // The address in shared OCC-PGPE SRAM of the PGPE WOF state
     uint32_t pgpe_wof_state_addr;
     // The address in shared OCC-PGPE SRAM of the Requested Active quads
@@ -350,10 +334,10 @@ typedef struct __attribute__ ((packed))
     uint32_t c_ratio_vdd_volt;
     // Frequency used in ceff_ratio_vdd calc
     uint32_t c_ratio_vdd_freq;
-    // Voltage used in ceff_ratio_vdn calc
-    uint32_t c_ratio_vdn_volt;
-    // Frequency used in ceff_ratio_vdn calc
-    uint32_t c_ratio_vdn_freq;
+    // Voltage used in ceff_ratio_vcs calc
+    uint32_t c_ratio_vcs_volt;
+    // Frequency used in ceff_ratio_vcs calc
+    uint32_t c_ratio_vcs_freq;
     // Holds the state of various async operations relating to sending a VRT
     uint8_t vrt_state;
     uint32_t all_cores_off_before;
@@ -398,6 +382,8 @@ typedef struct __attribute__ ((packed))
     uint32_t ocs_not_dirty_type1_count;  // count of not dirty (type 1) this counter should be 0
     uint32_t ocs_dirty_type0_count;  // count of number of times dirty with type hold (0)
     uint32_t ocs_dirty_type1_count;  // count of number of times dirty with type act (1)
+    uint32_t io_power;  // IO power used to determine VRT
+    uint32_t ambient;  // Ambient used to determine VRT
 } amec_wof_t;
 
 // Structure for sensors used in g_amec for AMESTER for additional debug
@@ -423,14 +409,10 @@ void call_wof_main( void );
 
 void wof_main( void );
 
-uint16_t calculate_step_from_start( uint16_t i_ceff_vdx,
+uint16_t calculate_step_from_start( uint16_t i_vrt_parm,
                                     uint16_t i_step_size,
                                     uint16_t i_min_step,
                                     uint16_t i_max_step );
-
-uint8_t calc_quad_step_from_start( void );
-
-
 
 uint32_t calc_vrt_mainstore_addr( void );
 
@@ -438,7 +420,9 @@ void copy_vrt_to_sram_callback( void );
 
 void wof_vrt_callback( void );
 
-void send_vrt_to_pgpe( uint32_t i_vrt_address );
+void copy_vrt_to_sram( uint32_t i_vrt_address );
+
+void task_send_vrt_to_pgpe( task_t* i_task );
 
 void read_shared_sram( void );
 
@@ -450,7 +434,7 @@ void calculate_core_leakage( void );
 
 void calculate_nest_leakage( void );
 
-void calculate_ceff_ratio_vdn( void );
+void calculate_ceff_ratio_vcs( void );
 
 void calculate_ceff_ratio_vdd( void );
 

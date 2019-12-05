@@ -97,7 +97,6 @@ extern apss_complete_args_t G_gpe_complete_pwr_meas_read_args;
 extern uint32_t G_present_cores;
 extern uint32_t G_proc_fmin_khz;
 extern uint32_t G_proc_fmax_khz;
-extern wof_header_data_t G_wof_header;
 
 extern uint32_t G_khz_per_pstate;
 
@@ -255,147 +254,101 @@ void read_wof_header(void)
     // Get OCCPstateParmBlock out to Amester
     externalize_oppb();
 
-    // Read active quads address, wof tables address, and wof tables len
-    g_amec->wof.vrt_tbls_main_mem_addr = PPMR_ADDRESS_HOMER+WOF_TABLES_OFFSET;
-    g_amec->wof.vrt_tbls_len           = G_pgpe_header.wof_tables_length;
-    g_amec->wof.pgpe_wof_state_addr     = G_pgpe_header.wof_state_address;
-    g_amec->wof.pstate_tbl_sram_addr    = G_pgpe_header.occ_pstate_table_sram_addr;
-
-    MAIN_TRAC_INFO("read_wof_header() 0x%08X", g_amec->wof.vrt_tbls_main_mem_addr);
-
-    // Read in quad state addresses here once
-    g_amec->wof.quad_state_1_addr = g_amec->wof.quad_state_0_addr +
-                                    sizeof(uint64_t); //skip quad state 0
-
-    // Set some of the fields in the pgpe header struct for next set of calcs
-    G_pgpe_header.wof_tables_addr = g_amec->wof.vrt_tbls_main_mem_addr;
-
-    if (G_pgpe_header.wof_tables_addr != 0 &&
-        G_pgpe_header.wof_tables_addr%128 == 0)
+    // Read wof tables address, and wof tables len
+    if(G_pgpe_header.wof_tables_addr == 0)
     {
-        do
-        {
-            // use block copy engine to read WOF header
-            BceRequest l_wof_header_req;
-
-            // Create request
-            l_ssxrc = bce_request_create(&l_wof_header_req,              // block copy object
-                                         &G_pba_bcde_queue,              // main to sram copy engine
-                                         g_amec->wof.vrt_tbls_main_mem_addr,// mainstore address
-                                         (uint32_t) &G_temp_bce_buff,    // SRAM start address
-                                         MIN_BCE_REQ_SIZE,               // size of copy
-                                         SSX_WAIT_FOREVER,               // no timeout
-                                         NULL,                           // no call back
-                                         NULL,                           // no call back args
-                                         ASYNC_REQUEST_BLOCKING);        // blocking request
-            if(l_ssxrc != SSX_OK)
-            {
-                MAIN_TRAC_ERR("read_wof_header: BCDE request create failure rc=[%08X]", -l_ssxrc);
-                l_error = TRUE;
-                break;
-            }
-
-            // Do the actual copy
-            l_ssxrc = bce_request_schedule(&l_wof_header_req);
-            if(l_ssxrc != SSX_OK)
-            {
-                MAIN_TRAC_ERR("read_wof_header: BCE request schedule failure rc=[%08X]", -l_ssxrc);
-                l_error = TRUE;
-                break;
-            }
-
-            // Copy the data into Global WOF header struct
-            memcpy(&G_wof_header,
-                   G_temp_bce_buff.data,
-                   sizeof(wof_header_data_t));
-
-
-            // verify the validity of the magic number
-            uint32_t magic_number = in32(G_pgpe_header.wof_tables_addr);
-            MAIN_TRAC_INFO("read_wof_header() Magic No: 0x%08X", magic_number);
-            if(WOF_MAGIC_NUMBER == magic_number)
-            {
-                // Make sure the header is reporting a valid number of quads i.e. 1 or 6
-                if( (G_wof_header.active_quads_size != ACTIVE_QUAD_SZ_MIN) &&
-                    (G_wof_header.active_quads_size != ACTIVE_QUAD_SZ_MAX) )
-                {
-                    MAIN_TRAC_ERR("read_wof_header: Invalid number of active quads!"
-                                  " Expected: 1 or 6, Actual %d, WOF disabled",
-                                  G_wof_header.active_quads_size );
-                    l_error = TRUE;
-                    break;
-                }
-            }
-            else
-            {
-                MAIN_TRAC_ERR("read_wof_header: Invalid WOF Magic number. Address[0x%08X], Magic Number[0x%08X], WOF disabled",
-                              G_pgpe_header.wof_tables_addr, magic_number);
-                l_error = TRUE;
-                break;
-            }
-
-            MAIN_TRAC_INFO("MAIN: VRT block size %d", G_wof_header.vrt_block_size);
-             // Make wof header data visible to amester
-            g_amec->wof.version              = G_wof_header.version;
-            g_amec->wof.vrt_block_size      = 256;
-            g_amec->wof.vrt_blck_hdr_sz     = G_wof_header.vrt_blck_hdr_sz;
-            g_amec->wof.vrt_data_size       = G_wof_header.vrt_data_size;
-            g_amec->wof.active_quads_size    = G_wof_header.active_quads_size;
-            g_amec->wof.core_count           = G_wof_header.core_count;
-            g_amec->wof.vdn_start            = G_wof_header.vdn_start;
-            g_amec->wof.vdn_step             = G_wof_header.vdn_step;
-            g_amec->wof.vdn_size             = G_wof_header.vdn_size;
-            g_amec->wof.vdd_start            = G_wof_header.vdd_start;
-            g_amec->wof.vdd_step             = G_wof_header.vdd_step;
-            g_amec->wof.vdd_size             = G_wof_header.vdd_size;
-            g_amec->wof.vratio_start         = G_wof_header.vratio_start;
-            g_amec->wof.vratio_step          = G_wof_header.vratio_step;
-            g_amec->wof.vratio_size          = G_wof_header.vratio_size;
-            g_amec->wof.fratio_start         = G_wof_header.fratio_start;
-            g_amec->wof.fratio_step          = G_wof_header.fratio_step;
-            g_amec->wof.fratio_size          = G_wof_header.fratio_size;
-            memcpy(g_amec->wof.vdn_percent, G_wof_header.vdn_percent, 16);
-            g_amec->wof.socket_power_w       = G_wof_header.socket_power_w;
-            g_amec->wof.nest_freq_mhz        = G_wof_header.nest_freq_mhz;
-            g_amec->wof.nom_freq_mhz         = G_wof_header.nom_freq_mhz;
-            g_amec->wof.rdp_capacity         = G_wof_header.rdp_capacity;
-            g_amec->wof.wof_tbls_src_tag     = G_wof_header.wof_tbls_src_tag;
-            g_amec->wof.package_name_hi      = G_wof_header.package_name_hi;
-            g_amec->wof.package_name_lo      = G_wof_header.package_name_lo;
-
-            // one time calculation needed for WOF temperature scaling starting with P9'
-            if(G_pgpe_shared_sram_V_I_readings)
-            {
-               calculate_temperature_scaling_08V();
-            }
-
-            // Initialize wof init state to zero
-            g_amec->wof.wof_init_state  = WOF_DISABLED;
-
-            // Initialize OCS increase/decrease amounts to one step
-            g_amec->wof.ocs_increase_ceff = g_amec->wof.vdd_step;
-            g_amec->wof.ocs_decrease_ceff = g_amec->wof.vdd_step;
-
-            // calculate max ceff ratio from header info
-            G_max_ceff_ratio = ( g_amec->wof.vdd_start +
-                                (g_amec->wof.vdd_step * (g_amec->wof.vdd_size - 1) ) );
-
-        }while( 0 );
-
-        // Check for errors and log, if any
-        if ( l_error )
-        {
-            // We were unable to get the WOF header thus it should not be run.
-            set_clear_wof_disabled( SET,
-                                    WOF_RC_NO_WOF_HEADER_MASK,
-                                    ERC_WOF_NO_WOF_HEADER_MASK );
-        }
+        MAIN_TRAC_ERR("read_wof_header(): WOF tables address is 0, WOF is disabled");
+        l_error = TRUE;
     }
     else
     {
-        // We were unable to get the WOF header thus it should not be run.
-        MAIN_TRAC_ERR("read_wof_header(): WOF header address is 0 or NOT"
-                " 128-byte aligned, WOF is disabled");
+        g_amec->wof.vrt_tbls_main_mem_addr = HOMER_BASE_ADDRESS + G_pgpe_header.wof_tables_addr;
+        g_amec->wof.vrt_tbls_len           = G_pgpe_header.wof_tables_length;
+        g_amec->wof.pgpe_wof_state_addr    = G_pgpe_header.wof_state_address;
+        g_amec->wof.pstate_tbl_sram_addr   = G_pgpe_header.occ_pstate_table_sram_addr;
+
+       MAIN_TRAC_INFO("read_wof_header() WOF Tables start addr 0x%08X", g_amec->wof.vrt_tbls_main_mem_addr);
+
+        if (g_amec->wof.vrt_tbls_main_mem_addr%128 != 0)
+        {
+            MAIN_TRAC_ERR("read_wof_header(): WOF tables address is NOT"
+                    " 128-byte aligned, WOF is disabled");
+            l_error = TRUE;
+        }
+        else
+        {
+            do
+            {
+                // use block copy engine to read WOF header
+                BceRequest l_wof_header_req;
+
+                // Create request
+                l_ssxrc = bce_request_create(&l_wof_header_req,              // block copy object
+                                             &G_pba_bcde_queue,              // main to sram copy engine
+                                             g_amec->wof.vrt_tbls_main_mem_addr,// mainstore address
+                                             (uint32_t) &G_temp_bce_buff,    // SRAM start address
+                                             MIN_BCE_REQ_SIZE,               // size of copy
+                                             SSX_WAIT_FOREVER,               // no timeout
+                                             NULL,                           // no call back
+                                             NULL,                           // no call back args
+                                             ASYNC_REQUEST_BLOCKING);        // blocking request
+                if(l_ssxrc != SSX_OK)
+                {
+                    MAIN_TRAC_ERR("read_wof_header: BCDE request create failure rc=[%08X]", -l_ssxrc);
+                    l_error = TRUE;
+                    break;
+                }
+
+                // Do the actual copy
+                l_ssxrc = bce_request_schedule(&l_wof_header_req);
+                if(l_ssxrc != SSX_OK)
+                {
+                    MAIN_TRAC_ERR("read_wof_header: BCE request schedule failure rc=[%08X]", -l_ssxrc);
+                    l_error = TRUE;
+                    break;
+                }
+
+                // Copy the data into Global WOF header struct
+                memcpy(&g_amec->wof.wof_header,
+                       G_temp_bce_buff.data,
+                       sizeof(wof_header_data_t));
+
+                // verify the validity of the magic number
+                if(WOF_MAGIC_NUMBER != g_amec->wof.wof_header.magic_number)
+                {
+                    MAIN_TRAC_ERR("read_wof_header: Invalid WOF Magic number. Address[0x%08X], Magic Number[0x%08X], WOF disabled",
+                                  g_amec->wof.vrt_tbls_main_mem_addr, g_amec->wof.wof_header.magic_number);
+                    l_error = TRUE;
+                    break;
+                }
+
+                MAIN_TRAC_INFO("read_wof_header: valid WOF Magic No: 0x%08X", g_amec->wof.wof_header.magic_number);
+                MAIN_TRAC_INFO("MAIN: VRT block size %d", g_amec->wof.wof_header.vrt_block_size);
+
+                // one time calculation needed for WOF temperature scaling
+                calculate_temperature_scaling_08V();
+
+                // Initialize wof init state to zero
+                g_amec->wof.wof_init_state  = WOF_DISABLED;
+
+                // Initialize OCS increase/decrease amounts to one step
+                g_amec->wof.ocs_increase_ceff = g_amec->wof.wof_header.vdd_step;
+                g_amec->wof.ocs_decrease_ceff = g_amec->wof.wof_header.vdd_step;
+
+                // calculate max ceff ratio from header info
+                G_max_ceff_ratio = ( g_amec->wof.wof_header.vdd_start +
+                                    (g_amec->wof.wof_header.vdd_step * (g_amec->wof.wof_header.vdd_size - 1) ) );
+
+            }while( 0 );
+
+        } // else 128 aligned address read WOF header
+
+    } // else wof address !0
+
+    // Check for errors and log, if any
+    if ( l_error )
+    {
+        // We were unable to get the WOF header thus WOF should not run.
         set_clear_wof_disabled( SET,
                                 WOF_RC_NO_WOF_HEADER_MASK,
                                 ERC_WOF_NO_WOF_HEADER_MASK );
@@ -437,6 +390,8 @@ bool read_pgpe_header(void)
             G_pgpe_header.pgpe_flags = 0x0000;
             G_pgpe_header.pgpe_hcode_length = 0xA000;
             G_pgpe_header.wof_state_address = 0xFFF2D000;
+            G_pgpe_header.wof_tables_addr = 0x003C0000;
+            G_pgpe_header.wof_tables_length = 0x9C80;
             G_hcode_elog_table_slots = 0;
             G_hcode_elog_table = 0;
             G_pgpe_shared_sram_V_I_readings = false;
@@ -973,11 +928,9 @@ void read_hcode_headers()
             CHECKPOINT(PGPE_IMAGE_HEADER_READ);
 
             // Extract important WOF data into global space
-            // TODO: RTC 209558
-#if 0
             read_wof_header();
             CHECKPOINT(WOF_IMAGE_HEADER_READ);
-#endif
+
             set_clear_wof_disabled( CLEAR,
                                     WOF_RC_NO_CONFIGURED_CORES,
                                     ERC_WOF_NO_CONFIGURED_CORES );

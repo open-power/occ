@@ -37,6 +37,7 @@
 #include <common.h>
 #include "sensor_get_tod_task.h"            // For task_get_tod()
 #include "gpu.h"
+#include "wof.h"
 
 
 //flags for task table
@@ -84,6 +85,8 @@
 
 #define FLAGS_GPE_TIMINGS          RTL_FLAG_MSTR | RTL_FLAG_NOTMSTR | RTL_FLAG_OBS | RTL_FLAG_ACTIVE | RTL_FLAG_MSTR_READY | RTL_FLAG_NO_APSS | RTL_FLAG_RUN |                                       RTL_FLAG_APSS_NOT_INITD
 
+#define FLAGS_SEND_VRT_TO_PGPE     RTL_FLAG_MSTR | RTL_FLAG_NOTMSTR | RTL_FLAG_OBS | RTL_FLAG_ACTIVE | RTL_FLAG_MSTR_READY | RTL_FLAG_NO_APSS | RTL_FLAG_RUN |                                       RTL_FLAG_APSS_NOT_INITD
+
 // Global tick sequences
 // The number and size of these will vary as the real tick sequences are developed over time.
 
@@ -127,10 +130,12 @@ task_t G_task_table[TASK_END] = {
     { FLAGS_24X7,                  task_24x7,                      NULL },  // TASK_ID_24X7
     { FLAGS_GPE_TIMINGS,           task_gpe_timings,               NULL },  // TASK_ID_GPE_TIMINGS
     { FLAGS_GET_TOD,               task_get_tod,                   NULL },  // TASK_ID_GET_TOD
-    { FLAGS_APSS_RESET,            task_apss_reset,                NULL },  // TASK_APSS_RESET
+    { FLAGS_APSS_RESET,            task_apss_reset,                NULL },  // TASK_ID_APSS_RESET
+    { FLAGS_SEND_VRT_TO_PGPE,      task_send_vrt_to_pgpe,          NULL },  // TASK_ID_SEND_VRT_TO_PGPE
 };
 
 const uint8_t G_tick0_seq[] = {
+                                TASK_ID_SEND_VRT_TO_PGPE,
                                 TASK_ID_APSS_RESET,
                                 TASK_ID_APSS_START,
                                 TASK_ID_GET_TOD,
@@ -156,6 +161,7 @@ const uint8_t G_tick0_seq[] = {
                                 TASK_END };
 
 const uint8_t G_tick1_seq[] = {
+                                TASK_ID_SEND_VRT_TO_PGPE,
                                 TASK_ID_APSS_START,
                                 TASK_ID_GET_TOD,
                                 TASK_ID_CORE_DATA_LOW,
@@ -179,6 +185,7 @@ const uint8_t G_tick1_seq[] = {
                                 TASK_END };
 
 const uint8_t G_tick2_seq[] = {
+                                TASK_ID_SEND_VRT_TO_PGPE,
                                 TASK_ID_APSS_RESET,
                                 TASK_ID_APSS_START,
                                 TASK_ID_GET_TOD,
@@ -204,6 +211,7 @@ const uint8_t G_tick2_seq[] = {
                                 TASK_END };
 
 const uint8_t G_tick3_seq[] = {
+                                TASK_ID_SEND_VRT_TO_PGPE,
                                 TASK_ID_APSS_START,
                                 TASK_ID_GET_TOD,
                                 TASK_ID_NEST_DTS,
@@ -228,6 +236,7 @@ const uint8_t G_tick3_seq[] = {
                                 TASK_END };
 
 const uint8_t G_tick4_seq[] = {
+                                TASK_ID_SEND_VRT_TO_PGPE,
                                 TASK_ID_APSS_RESET,
                                 TASK_ID_APSS_START,
                                 TASK_ID_GET_TOD,
@@ -253,6 +262,7 @@ const uint8_t G_tick4_seq[] = {
                                 TASK_END };
 
 const uint8_t G_tick5_seq[] = {
+                                TASK_ID_SEND_VRT_TO_PGPE,
                                 TASK_ID_APSS_START,
                                 TASK_ID_GET_TOD,
                                 TASK_ID_CORE_DATA_LOW,
@@ -276,6 +286,7 @@ const uint8_t G_tick5_seq[] = {
                                 TASK_END };
 
 const uint8_t G_tick6_seq[] = {
+                                TASK_ID_SEND_VRT_TO_PGPE,
                                 TASK_ID_APSS_RESET,
                                 TASK_ID_APSS_START,
                                 TASK_ID_GET_TOD,
@@ -301,6 +312,7 @@ const uint8_t G_tick6_seq[] = {
                                 TASK_END };
 
 const uint8_t G_tick7_seq[] = {
+                                TASK_ID_SEND_VRT_TO_PGPE,
                                 TASK_ID_APSS_START,
                                 TASK_ID_GET_TOD,
                                 TASK_ID_GPU_SM,
@@ -324,6 +336,7 @@ const uint8_t G_tick7_seq[] = {
                                 TASK_END };
 
 const uint8_t G_tick8_seq[] = {
+                                TASK_ID_SEND_VRT_TO_PGPE,
                                 TASK_ID_APSS_RESET,
                                 TASK_ID_APSS_START,
                                 TASK_ID_GET_TOD,
@@ -349,6 +362,7 @@ const uint8_t G_tick8_seq[] = {
                                 TASK_END };
 
 const uint8_t G_tick9_seq[] = {
+                                TASK_ID_SEND_VRT_TO_PGPE,
                                 TASK_ID_APSS_START,
                                 TASK_ID_GET_TOD,
                                 TASK_ID_CORE_DATA_LOW,
@@ -372,6 +386,7 @@ const uint8_t G_tick9_seq[] = {
                                 TASK_END };
 
 const uint8_t G_tick10_seq[] = {
+                                TASK_ID_SEND_VRT_TO_PGPE,
                                 TASK_ID_APSS_RESET,
                                 TASK_ID_APSS_START,
                                 TASK_ID_GET_TOD,
@@ -397,6 +412,7 @@ const uint8_t G_tick10_seq[] = {
                                 TASK_END };
 
 const uint8_t G_tick11_seq[] = {
+                                TASK_ID_SEND_VRT_TO_PGPE,
                                 TASK_ID_APSS_START,
                                 TASK_ID_GET_TOD,
                                 TASK_ID_GPU_SM,
@@ -420,6 +436,7 @@ const uint8_t G_tick11_seq[] = {
                                 TASK_END };
 
 const uint8_t G_tick12_seq[] = {
+                                TASK_ID_SEND_VRT_TO_PGPE,
                                 TASK_ID_APSS_RESET,
                                 TASK_ID_APSS_START,
                                 TASK_ID_GET_TOD,
@@ -445,6 +462,7 @@ const uint8_t G_tick12_seq[] = {
                                 TASK_END };
 
 const uint8_t G_tick13_seq[] = {
+                                TASK_ID_SEND_VRT_TO_PGPE,
                                 TASK_ID_APSS_START,
                                 TASK_ID_GET_TOD,
                                 TASK_ID_CORE_DATA_LOW,
@@ -468,6 +486,7 @@ const uint8_t G_tick13_seq[] = {
                                 TASK_END };
 
 const uint8_t G_tick14_seq[] = {
+                                TASK_ID_SEND_VRT_TO_PGPE,
                                 TASK_ID_APSS_RESET,
                                 TASK_ID_APSS_START,
                                 TASK_ID_GET_TOD,
@@ -493,6 +512,7 @@ const uint8_t G_tick14_seq[] = {
                                 TASK_END };
 
 const uint8_t G_tick15_seq[] = {
+                                TASK_ID_SEND_VRT_TO_PGPE,
                                 TASK_ID_APSS_START,
                                 TASK_ID_GET_TOD,
                                 TASK_ID_GPU_SM,
