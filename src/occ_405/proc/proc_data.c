@@ -531,6 +531,7 @@ void task_nest_dts( task_t * i_task )
     uint16_t    l_avg = 0;
     uint16_t    l_nestDtsTemp = 0;
     uint8_t     l_nestDtsCnt = 0;  // Number of valid Nest DTSs
+    uint8_t     k = 0;
     bool        l_nestDtsValid = FALSE;
     static bool L_scheduled = FALSE;
     static bool L_idle_trace = FALSE;
@@ -559,37 +560,23 @@ void task_nest_dts( task_t * i_task )
             if ((ASYNC_REQUEST_STATE_COMPLETE == G_nest_dts_gpe_req.request.completion_state) &&
                 (0 == G_nest_dts_parms.error.error))
             {
-                // check valid and temperature for current nest DTS being processed
-                l_nestDtsValid = l_parms->data.sensor0.fields.valid;
-                // temperature is only 8 bits of reading field
-                l_nestDtsTemp = (l_parms->data.sensor0.fields.reading & 0xFF);
-                //Hardware bug workaround:  Module test will detect bad DTS and write coefficients
-                //to force a reading of 0 or negative to indicate the DTS is bad.
-                //Ignore any DTS that is not valid or marked bad
-                if( (l_nestDtsValid) && ( (l_nestDtsTemp & DTS_INVALID_MASK) != DTS_INVALID_MASK) &&
-                    (l_nestDtsTemp != 0) )
+                for (k = 0; k < NEST_DTS_COUNT; k++)
                 {
-                    l_avg += l_nestDtsTemp;
-                    l_nestDtsCnt++;
-                }
+                    // check valid and temperature for current nest DTS being processed
+                    l_nestDtsValid = l_parms->data.sensor[k].fields.valid;
+                    // temperature is only 8 bits of reading field
+                    l_nestDtsTemp = (l_parms->data.sensor[k].fields.reading & 0xFF);
 
-                l_nestDtsValid = l_parms->data.sensor1.fields.valid;
-                l_nestDtsTemp = (l_parms->data.sensor1.fields.reading & 0xFF);
-                if( (l_nestDtsValid) && ( (l_nestDtsTemp & DTS_INVALID_MASK) != DTS_INVALID_MASK) &&
-                    (l_nestDtsTemp != 0) )
-                {
-                    l_avg += l_nestDtsTemp;
-                    l_nestDtsCnt++;
-                }
-
-                l_nestDtsValid = l_parms->data.sensor2.fields.valid;
-                l_nestDtsTemp = (l_parms->data.sensor2.fields.reading & 0xFF);
-                if( (l_nestDtsValid) && ( (l_nestDtsTemp & DTS_INVALID_MASK) != DTS_INVALID_MASK) &&
-                    (l_nestDtsTemp != 0) )
-                {
-                    l_avg += l_nestDtsTemp;
-                    l_nestDtsCnt++;
-                }
+                    //Hardware bug workaround:  Module test will detect bad DTS and write coefficients
+                    //to force a reading of 0 or negative to indicate the DTS is bad.
+                    //Ignore any DTS that is not valid or marked bad
+                    if( (l_nestDtsValid) && ( (l_nestDtsTemp & DTS_INVALID_MASK) != DTS_INVALID_MASK) &&
+                        (l_nestDtsTemp != 0) )
+                    {
+                        l_avg += l_nestDtsTemp;
+                        l_nestDtsCnt++;
+                    }
+                } //for loop
 
                 if(l_nestDtsCnt)
                 {

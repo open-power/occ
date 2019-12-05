@@ -27,14 +27,22 @@
 
 #include <eq_config.h>
 
+#define NEST_DTS_COUNT 6
+
+#define N0_DTS 0
+#define N1_DTS 1
+#define SE_PAU_DTS 2
+#define NE_PAU_DTS 3
+#define SW_PAU_DTS 4
+#define NW_PAU_DTS 5
+
 // Make struct size a multiple of 8 bytes for performance.
 typedef struct
 {
-    sensor_result_t sensor0;
-    sensor_result_t unused;
-    sensor_result_t sensor1;
-    sensor_result_t sensor2;
+    sensor_result_t sensor[NEST_DTS_COUNT];
+    uint32_t  reserved;
 } NestDts_t;
 
 uint32_t get_nest_dts(NestDts_t* o_data);
 #endif
+
