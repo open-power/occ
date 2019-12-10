@@ -64,6 +64,7 @@ extern opal_proc_voting_reason_t G_amec_opal_proc_throt_reason;
 extern bool G_htmgt_notified_of_error;
 extern bool G_smf_mode;
 
+extern data_cnfg_t * G_data_cnfg;
 // This table contains tunable parameter information that can be exposed to
 // customers (only Master OCC should access/control this table)
 cmdh_tunable_param_table_t G_mst_tunable_parameter_table[CMDH_DEFAULT_TUNABLE_PARAM_NUM] =
@@ -335,12 +336,14 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
             l_tempSensorList[l_sensorHeader.count].id = G_amec_sensor_list[TEMPPROCTHRMC0 + k]->ipmi_sid;
             l_tempSensorList[l_sensorHeader.count].fru_type = DATA_FRU_PROC;
             l_tempSensorList[l_sensorHeader.count].value = (G_amec_sensor_list[TEMPPROCTHRMC0 + k]->sample) & 0xFF;
+            l_tempSensorList[l_sensorHeader.count].throttle = G_data_cnfg->thrm_thresh.data[DATA_FRU_PROC].dvfs;
+
             l_sensorHeader.count++;
         }
     }
 
     // Add the memory temperatures
-    uint8_t l_membuf, l_dimm = 0;
+    uint8_t l_membuf, l_dimm = 0, l_fru_type = 0xFF;
     static bool l_traced_missing_sid = FALSE;
     for (l_membuf=0; l_membuf < MAX_NUM_MEM_CONTROLLERS; l_membuf++)
     {
@@ -348,9 +351,10 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
         {
             //Add entry for membufs.
             uint32_t l_temp_sid = g_amec->proc[0].memctl[l_membuf].membuf.temp_sid;
+            l_fru_type = g_amec->proc[0].memctl[l_membuf].membuf.membuf_hottest.temp_type;
             l_tempSensorList[l_sensorHeader.count].id = l_temp_sid;
-            l_tempSensorList[l_sensorHeader.count].fru_type =
-                g_amec->proc[0].memctl[l_membuf].membuf.membuf_hottest.temp_type;
+            l_tempSensorList[l_sensorHeader.count].fru_type = l_fru_type;
+            l_tempSensorList[l_sensorHeader.count].throttle = G_data_cnfg->thrm_thresh.data[l_fru_type].dvfs;
 
             if (G_membuf_timeout_logged_bitmap & (MEMBUF0_PRESENT_MASK >> l_membuf))
             {
@@ -384,9 +388,10 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
 
                 if (l_temp_sid != 0)
                 {
+                    l_fru_type = g_amec->proc[0].memctl[l_membuf].membuf.dimm_temps[l_dimm].temp_type;
                     l_tempSensorList[l_sensorHeader.count].id = l_temp_sid;
-                    l_tempSensorList[l_sensorHeader.count].fru_type =
-                        g_amec->proc[0].memctl[l_membuf].membuf.dimm_temps[l_dimm].temp_type;
+                    l_tempSensorList[l_sensorHeader.count].fru_type = l_fru_type;
+                    l_tempSensorList[l_sensorHeader.count].throttle = G_data_cnfg->thrm_thresh.data[l_fru_type].dvfs;
 
                     //If a dimm timed out long enough, we should return 0xFFFF for that sensor.
                     if (G_dimm_temp_expired_bitmap.bytes[l_membuf] & (DIMM_SENSOR0 >> l_dimm))
@@ -413,6 +418,7 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
         {
             l_tempSensorList[l_sensorHeader.count].id = AMECSENSOR_PTR(TEMPVDD)->ipmi_sid;
             l_tempSensorList[l_sensorHeader.count].fru_type = DATA_FRU_VRM_VDD;
+            l_tempSensorList[l_sensorHeader.count].throttle = G_data_cnfg->thrm_thresh.data[DATA_FRU_VRM_VDD].dvfs;
             if (G_vrm_vdd_temp_expired)
             {
                 l_tempSensorList[l_sensorHeader.count].value = 0xFF;
@@ -433,6 +439,8 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
             // GPU core temperature
             l_tempSensorList[l_sensorHeader.count].id = G_amec_sensor_list[TEMPGPU0 + k]->ipmi_sid;
             l_tempSensorList[l_sensorHeader.count].fru_type = DATA_FRU_GPU_CORE;
+            l_tempSensorList[l_sensorHeader.count].throttle = 0xFF; // We do not throttle for GPU temps at this time.
+
             if(g_amec->gpu[k].status.coreTempFailure)
             {
                // failed to read core temperature return 0xFF
@@ -453,6 +461,8 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
             // GPU memory temperature
             l_tempSensorList[l_sensorHeader.count].id = G_amec_sensor_list[TEMPGPU0MEM + k]->ipmi_sid;
             l_tempSensorList[l_sensorHeader.count].fru_type = DATA_FRU_GPU_MEM;
+            l_tempSensorList[l_sensorHeader.count].throttle = 0xFF; // We do not throttle for GPU temps at this time.
+
             if(g_amec->gpu[k].status.memTempFailure)
             {
                // failed to read memory temperature return 0xFF
@@ -720,14 +730,14 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
     l_extnSensorList[l_sensorHeader.count].data[1] = CONVERT_UINT16_UINT8_HIGH(freq);
     l_extnSensorList[l_sensorHeader.count].data[2] = CONVERT_UINT16_UINT8_LOW(freq);
     l_sensorHeader.count++;
-    l_extnSensorList[l_sensorHeader.count].name = EXTN_NAME_FNOM;
-    freq = G_sysConfigData.sys_mode_freq.table[OCC_MODE_NOMINAL];
+    l_extnSensorList[l_sensorHeader.count].name = EXTN_NAME_FBAS;
+    freq = G_sysConfigData.sys_mode_freq.table[OCC_MODE_WOF_BASE];
     l_extnSensorList[l_sensorHeader.count].data[0] = proc_freq2pstate(freq);
     l_extnSensorList[l_sensorHeader.count].data[1] = CONVERT_UINT16_UINT8_HIGH(freq);
     l_extnSensorList[l_sensorHeader.count].data[2] = CONVERT_UINT16_UINT8_LOW(freq);
     l_sensorHeader.count++;
-    l_extnSensorList[l_sensorHeader.count].name = EXTN_NAME_FTURBO;
-    freq = G_sysConfigData.sys_mode_freq.table[OCC_MODE_STATIC_FREQ_POINT];
+    l_extnSensorList[l_sensorHeader.count].name = EXTN_NAME_FUTURBO;
+    freq = G_sysConfigData.sys_mode_freq.table[OCC_MODE_UTURBO];
     if (freq > 0)
     {
         l_extnSensorList[l_sensorHeader.count].data[0] = proc_freq2pstate(freq);
@@ -735,8 +745,8 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
         l_extnSensorList[l_sensorHeader.count].data[2] = CONVERT_UINT16_UINT8_LOW(freq);
     }
     l_sensorHeader.count++;
-    l_extnSensorList[l_sensorHeader.count].name = EXTN_NAME_FUTURBO;
-    freq = G_sysConfigData.sys_mode_freq.table[OCC_MODE_UTURBO];
+    l_extnSensorList[l_sensorHeader.count].name = EXTN_NAME_FMAX;
+    freq = G_sysConfigData.sys_mode_freq.table[OCC_MODE_FMF];
     if (freq > 0)
     {
         l_extnSensorList[l_sensorHeader.count].data[0] = proc_freq2pstate(freq);

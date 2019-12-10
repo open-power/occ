@@ -66,9 +66,9 @@ typedef enum
 #define SENSOR_CAPS "CAPS"
 #define SENSOR_EXTN "EXTN"
 #define EXTN_NAME_FMIN    0x464D494E // "FMIN"
-#define EXTN_NAME_FNOM    0x464E4F4D // "FNOM"
-#define EXTN_NAME_FTURBO  0x46540000 // "FT"
+#define EXTN_NAME_FBAS    0x46424153 // "FBAS"
 #define EXTN_NAME_FUTURBO 0x46555400 // "FUT"
+#define EXTN_NAME_FMAX    0x464D4158 // "FMAX"
 #define EXTN_NAME_CLIP    0x434C4950 // "CLIP"
 #define EXTN_NAME_WOFC    0x574F4643 // "WOFC"
 #define EXTN_NAME_ERRHIST 0x45525248 // "ERRH"
@@ -187,6 +187,8 @@ typedef struct __attribute__ ((packed)) cmdh_poll_temp_sensor
     uint32_t id;       // Sensor id.
     uint8_t  fru_type;
     uint8_t  value;    // current temperature sensor reading in degrees C
+    uint8_t  throttle;
+    uint8_t  _reserved;
 } cmdh_poll_temp_sensor_t;
 
 typedef struct __attribute__ ((packed)) cmdh_poll_freq_sensor
