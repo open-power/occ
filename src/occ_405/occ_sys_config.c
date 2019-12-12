@@ -163,10 +163,6 @@ occSysConfigData_t G_sysConfigData =
         .bus = 0,
         .rail = 0,
     },
-    .avsbus_vdn = {
-        .bus = 0,
-        .rail = 0,
-    },
 
     .proc_power_adder = 0,
     .vdd_current_rollover_10mA = 0xffff,

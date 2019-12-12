@@ -212,10 +212,6 @@ enum occExtReasonCode
 
     ERC_FW_ZERO_FREQ_LIMIT                      = 0x0090,
 
-    ERC_AVSBUS_VDD_VOLTAGE_FAILURE              = 0x00AA,
-    ERC_AVSBUS_VDD_CURRENT_FAILURE              = 0x00AB,
-    ERC_AVSBUS_VDN_VOLTAGE_FAILURE              = 0x00AC,
-    ERC_AVSBUS_VDN_CURRENT_FAILURE              = 0x00AD,
     ERC_AVSBUS_VDD_TEMPERATURE_FAILURE          = 0x00AF,
 
     ERC_PGPE_BEACON_TIMEOUT                     = 0x00B0,

@@ -68,7 +68,6 @@ extern dcom_slv_inbox_t G_dcom_slv_inbox_rx;
 extern opal_proc_voting_reason_t G_amec_opal_proc_throt_reason;
 extern uint16_t G_proc_fmax_mhz;
 extern GpeRequest G_wof_vrt_req;
-extern bool G_pgpe_shared_sram_V_I_readings;
 
 //*************************************************************************
 // Macros
@@ -388,7 +387,7 @@ void amec_slv_common_tasks_pre(void)
     // If sensors were not updated due to EPOW event, skip remaining tasks
     if (amec_update_apss_sensors())
     {
-        // Read the AVS Bus sensors (Vdd / Vdn)
+        // Read the AVS Bus sensors
         amec_update_avsbus_sensors();
 
         // Over-subscription check
@@ -437,14 +436,8 @@ void amec_slv_common_tasks_post(void)
         // Call the OCC slave's performance check
         amec_slv_check_perf();
 
-        //-------------------------------------------------------
-        // Run WOF Algorithm if we are getting readings from PGPE
-        // Else WOF will run in slave state 4
-        //-------------------------------------------------------
-        if(G_pgpe_shared_sram_V_I_readings)
-        {
-            call_wof_main();
-        }
+        // Run WOF Algorithm every tick
+        call_wof_main();
 
         // Call the every tick trace recording if it has been configured via Amester.
         // If not configured, this call will return immediately.
@@ -623,15 +616,6 @@ void amec_slv_state_4(void)
           L_membuf_addr = 0;
       else
           L_membuf_addr = 8;
-  }
-
-  //-------------------------------------------------------
-  // Run WOF Algorithm if we are NOT getting readings from PGPE
-  // Else WOF will run every tick with new PGPE readings
-  //-------------------------------------------------------
-  if(!G_pgpe_shared_sram_V_I_readings)
-  {
-      call_wof_main();
   }
 
 }

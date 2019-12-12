@@ -80,7 +80,6 @@ extern task_t G_task_table[TASK_END];
 
 extern uint16_t G_configured_mbas;
 extern uint8_t G_injected_epow_asserted;
-extern bool    G_pgpe_shared_sram_V_I_readings;
 
 extern uint8_t G_gpu_volt_type[MAX_GPU_DOMAINS][MAX_NUM_GPU_PER_DOMAIN];
 
@@ -497,82 +496,10 @@ bool amec_update_apss_sensors(void)
 } // end amec_update_apss_sensors()
 
 
-// Read the current from AVS Bus and update sensors
-void process_avsbus_current()
-{
-    if (G_avsbus_vdd_monitoring)
-    {
-        // Read Vdd current (returns 10mA)
-        uint32_t current = avsbus_read(AVSBUS_VDD, AVSBUS_CURRENT);
-        if (current != 0)
-        {
-            // If Vdd Current rolls over prior to 0xFFFF that we need to check if
-            // this reading rolled over from the status reg before updating the sensor
-            if (G_sysConfigData.vdd_current_rollover_10mA != 0xFFFF)
-            {
-                 G_check_vdd_current_10mA_for_rollover = current;
-            }
-            else
-            {
-                // don't need to check if this reading rolled over
-                G_check_vdd_current_10mA_for_rollover = 0;
-                // Update sensor Current value stored in the sensor should be in 10mA (A scale -2)
-                sensor_update(AMECSENSOR_PTR(CURVDD), (uint16_t)current);
-
-                // Update the chip voltage and power sensors after every current reading
-                update_avsbus_power_sensors(AVSBUS_VDD);
-            }
-        }
-    }
-    if (G_avsbus_vdn_monitoring)
-    {
-        // Read Vdn current (returns 10mA)
-        uint32_t current = avsbus_read(AVSBUS_VDN, AVSBUS_CURRENT);
-        if (current != 0)
-        {
-            // Current value stored in the sensor should be in 10mA (A scale -2)
-            sensor_update(AMECSENSOR_PTR(CURVDN), (uint16_t)current);
-
-            // Update the chip voltage and power sensors after every current reading
-            update_avsbus_power_sensors(AVSBUS_VDN);
-        }
-    }
-}
-
-
-// Read the voltage from AVS Bus and update sensors
-void process_avsbus_voltage()
-{
-    if (G_avsbus_vdd_monitoring)
-    {
-        // Read Vdd voltage (returns mV)
-        uint32_t voltage = avsbus_read(AVSBUS_VDD, AVSBUS_VOLTAGE);
-        if (voltage != 0)
-        {
-            // Voltage value stored in the sensor should be in 100uV (mV scale -1)
-            voltage *= 10;
-            sensor_update(AMECSENSOR_PTR(VOLTVDD), (uint16_t)voltage);
-        }
-    }
-    if (G_avsbus_vdn_monitoring)
-    {
-        // Read Vdn voltage (returns mV)
-        uint32_t voltage = avsbus_read(AVSBUS_VDN, AVSBUS_VOLTAGE);
-        if (voltage != 0)
-        {
-            // Voltage value stored in the sensor should be in 100uV (mV scale -1)
-            voltage *= 10;
-            sensor_update(AMECSENSOR_PTR(VOLTVDN), (uint16_t)voltage);
-        }
-    }
-}
-
-
 // Calculate chip voltage and power and update sensors
 void update_avsbus_power_sensors(const avsbus_type_e i_type)
 {
     static bool L_throttle_vdd = FALSE;
-    static bool L_throttle_vdn = FALSE;
     bool * L_throttle = &L_throttle_vdd;
     uint32_t l_loadline = G_oppb.vdd_sysparm.loadline_uohm;
     uint32_t l_distloss = G_oppb.vdd_sysparm.distloss_uohm;
@@ -581,17 +508,6 @@ void update_avsbus_power_sensors(const avsbus_type_e i_type)
     uint32_t l_voltageChip = VOLTVDDSENSE;
     uint32_t l_powerSensor = PWRVDD;
     uint32_t l_powerSensor2 = PWRVDN;
-    if (AVSBUS_VDN == i_type)
-    {
-        L_throttle = &L_throttle_vdn;
-        l_loadline = G_oppb.vdn_sysparm.loadline_uohm;
-        l_distloss = G_oppb.vdn_sysparm.distloss_uohm;
-        l_currentSensor = CURVDN;
-        l_voltageSensor = VOLTVDN;
-        l_voltageChip = VOLTVDNSENSE;
-        l_powerSensor = PWRVDN;
-        l_powerSensor2 = PWRVDD;
-    }
 
     // Read latest voltage/current sensors
     uint32_t l_voltage_100uv = 0;
@@ -654,9 +570,9 @@ void update_avsbus_power_sensors(const avsbus_type_e i_type)
                   (G_sysConfigData.apss_adc_map.vcs_vio_vpcie[G_pbax_id.chip_id] == SYSCFG_INVALID_ADC_CHAN) ) )
             {
                // no proc pwr from APSS, update the processor power sensor with AVS bus total processor power
-               // Vdd + Vdn + fixed adder for parts not measured (i.e. Vddr, Vcs, Vio etc)
+               // Vdd + Vdn
                sensor_t *l_sensor2 = getSensorByGsid(l_powerSensor2);
-               const uint16_t l_proc_power = (uint16_t)l_power + l_sensor2->sample + G_sysConfigData.proc_power_adder;
+               const uint16_t l_proc_power = (uint16_t)l_power + l_sensor2->sample;
                sensor_update(AMECSENSOR_PTR(PWRPROC), l_proc_power);
             }
         }
@@ -671,171 +587,46 @@ void update_avsbus_power_sensors(const avsbus_type_e i_type)
 // Name: amec_update_avsbus_sensors
 //
 // Description: Read AVS Bus data and update sensors (called every tick)
-//  If reading V/I from AVSbus
-//   Tick 0: start read current (for Vdd/Vdn)
-//   Tick 1: process current, start voltage read (Vdd/Vdn)
-//   Tick 2: process voltage, start Vdd temp read
-//   Tick 3: process Vdd temp, start current read (Vdd/Vdn)
-//   Tick 4: process current, start voltage read (Vdd/Vdn)
-//   Tick 5: process voltage, start status read (Vdd/Vdn)
-//   Tick 6: process status, start current read (Vdd/Vdn)
-//   (back to tick 1)
-//
-//   Vdd/Vdn current and voltage are read every 3 ticks
-//   Vdd temperature and status is read every 6 ticks
-//
-//  If reading V/I from OCC-PGPE Shared SRAM
-//   Tick 0: start read current (for Vdd)
-//   Tick 1: process current, start status read (Vdd)
+//  reading V/I from OCC-PGPE Shared SRAM, only need to read Vdd temperature directly from AVSbus
+//   Tick 0: start Vdd temp read
+//   Tick 1: process Vdd temp, start status read (Vdd)
 //   Tick 2: process status, start Vdd temp read
-//   Tick 3: process Vdd temp, start current read (Vdd)
 //   (back to tick 1)
 //
-//   Vdd current is read every 3 ticks
-//   Vdd temperature and status is read every 3 ticks
+//   Vdd temperature and status is read every 2 ticks
 //
 // Thread: RealTime Loop
 //
 // End Function Specification
 void amec_update_avsbus_sensors(void)
 {
-    // general order Vdd temp, voltage, current, status, Vdd temp, voltage....
-    // status must happen immediately after current to handle if current overflow is enabled
     static enum {
-        AVSBUS_STATE_DISABLED           = 0,
-        AVSBUS_STATE_INITIATE_READ      = 1,
-        AVSBUS_STATE_PROCESS_TEMPERATURE= 2,
-        AVSBUS_STATE_PROCESS_VOLTAGE    = 3,
-        AVSBUS_STATE_PROCESS_CURRENT    = 4,
-        AVSBUS_STATE_PROCESS_STATUS     = 5
-    } L_avsbus_state = AVSBUS_STATE_INITIATE_READ;
+        AVSBUS_STATE_DISABLED            = 0,
+        AVSBUS_STATE_INITIATE_READ       = 1,
+        AVSBUS_STATE_PROCESS_TEMPERATURE = 2,
+        AVSBUS_STATE_PROCESS_STATUS      = 3
+    }
+    L_avsbus_state = AVSBUS_STATE_INITIATE_READ;
 
     if (isSafeStateRequested())
     {
         L_avsbus_state = AVSBUS_STATE_DISABLED;
         G_avsbus_vdd_monitoring = FALSE;
-        G_avsbus_vdn_monitoring = FALSE;
     }
 
     switch (L_avsbus_state)
     {
         case AVSBUS_STATE_INITIATE_READ:
             // Start reading from AVS bus
-            if(!G_pgpe_shared_sram_V_I_readings)
-            {
-                // Start reading from AVS bus, what we start with depends on the amec slave state
-                // with goal of processing status on the same tick that WOF runs (amec slave state 4)
-                // Want processing of Temperature on state 1, voltage on 2, current on 3, to give status on 4
-                // can only start with temperature or voltage, since the status must be last and requires
-                // voltage and current to have been read in order to update the power sensor
-                switch ( G_amec_slv_state.state )
-                {
-                    case 0:
-                    case 4:
-                        // Initiate AVS Bus read for Vdd temperature
-                        // temperature will be processed on next tick (state 1/5)
-                        TRAC_IMP("amec_update_avsbus_sensors: Starting with temperature in slave state %d", G_amec_slv_state.state);
-                        avsbus_read_start(AVSBUS_VDD, AVSBUS_TEMPERATURE);
-                        L_avsbus_state = AVSBUS_STATE_PROCESS_TEMPERATURE;
-                        break;
-                    case 1:
-                    case 5:
-                        // Initiate read of voltages
-                        // voltages will be processed on next tick (state 2/6)
-                        TRAC_IMP("amec_update_avsbus_sensors: Starting with voltage in slave state %d", G_amec_slv_state.state);
-                        initiate_avsbus_reads(AVSBUS_VOLTAGE);
-                        L_avsbus_state = AVSBUS_STATE_PROCESS_VOLTAGE;
-                        break;
-                    case 2:
-                    case 3:
-                    case 6:
-                    case 7:
-                        // Need to wait another tick, can only start with temperature or voltage readings
-                        break;
-                    default:
-                        // this should never happen, this would mean the whole state machine is broken!
-                        // just start reading with temperature
-                        TRAC_ERR("amec_update_avsbus_sensors: INVALID AMEC SLAVE STATE 0x%02X", G_amec_slv_state.state);
-                        avsbus_read_start(AVSBUS_VDD, AVSBUS_TEMPERATURE);
-                        L_avsbus_state = AVSBUS_STATE_PROCESS_TEMPERATURE;
-                        break;
-                }  // switch G_amec_slv_state.state
-
-            }  // if reading V/I from AVSbus
-            else
-            {
-                // we are reading V/I from PGPE except if internal flag got set for OCC
-                // to read Vdd Current in order to handle rollover detection
-                if(G_internal_flags & INT_FLAG_ENABLE_VDD_CURRENT_READ)
-                {
-                    // Vdd current enabled, start with initiate read of Vdd current
-                    // Before starting the Current read clear the Vdd OCW bit if it is being used for rollover detection
-                    if (G_sysConfigData.vdd_current_rollover_10mA != 0xFFFF)
-                    {
-                        clear_status_errors(G_sysConfigData.avsbus_vdd.bus, AVSBUS_STATUS_OVER_CURRENT_MASK);
-                    }
-                    initiate_avsbus_reads(AVSBUS_CURRENT);
-                    L_avsbus_state = AVSBUS_STATE_PROCESS_CURRENT;
-                }
-                else
-                {
-                    // Initiate AVS Bus read for Vdd temperature
-                    avsbus_read_start(AVSBUS_VDD, AVSBUS_TEMPERATURE);
-                    L_avsbus_state = AVSBUS_STATE_PROCESS_TEMPERATURE;
-                }
-            }  // else reading V/I from PGPE Shared SRAM
+            // Initiate AVS Bus read for Vdd temperature
+            avsbus_read_start(AVSBUS_VDD, AVSBUS_TEMPERATURE);
+            L_avsbus_state = AVSBUS_STATE_PROCESS_TEMPERATURE;
 
             break;  // case AVSBUS_STATE_INITIATE_READ
 
         case AVSBUS_STATE_PROCESS_TEMPERATURE:
             // Read and process Vdd temperature
             avsbus_read(AVSBUS_VDD, AVSBUS_TEMPERATURE);
-
-            // determine what to read next
-            if(!G_pgpe_shared_sram_V_I_readings)
-            {
-                // Initiate read of voltages
-                initiate_avsbus_reads(AVSBUS_VOLTAGE);
-                L_avsbus_state = AVSBUS_STATE_PROCESS_VOLTAGE;
-            }
-            else if(G_internal_flags & INT_FLAG_ENABLE_VDD_CURRENT_READ)
-            {
-                // Initiate read of Vdd current
-                // this will only read Vdd since Vdn monitoring was turned off due to G_pgpe_shared_sram_V_I_readings
-                // in data_store_avsbus_config()
-                // Before starting the Current read clear the Vdd OCW bit if it is being used for rollover detection
-                if (G_sysConfigData.vdd_current_rollover_10mA != 0xFFFF)
-                {
-                    clear_status_errors(G_sysConfigData.avsbus_vdd.bus, AVSBUS_STATUS_OVER_CURRENT_MASK);
-                }
-                initiate_avsbus_reads(AVSBUS_CURRENT);
-                L_avsbus_state = AVSBUS_STATE_PROCESS_CURRENT;
-            }
-            else
-            {
-                // Initiate read of status
-                initiate_avsbus_read_status();
-                L_avsbus_state = AVSBUS_STATE_PROCESS_STATUS;
-            }
-            break;
-
-        case AVSBUS_STATE_PROCESS_VOLTAGE:
-            // Process the voltage readings
-            process_avsbus_voltage();
-
-            // Initiate read of currents
-            // Before starting the Current read clear the Vdd OCW bit if it is being used for rollover detection
-            if (G_sysConfigData.vdd_current_rollover_10mA != 0xFFFF)
-            {
-                clear_status_errors(G_sysConfigData.avsbus_vdd.bus, AVSBUS_STATUS_OVER_CURRENT_MASK);
-            }
-            initiate_avsbus_reads(AVSBUS_CURRENT);
-            L_avsbus_state = AVSBUS_STATE_PROCESS_CURRENT;
-            break;
-
-        case AVSBUS_STATE_PROCESS_CURRENT:
-            // Process the current readings
-            process_avsbus_current();
 
             // Initiate read of status
             initiate_avsbus_read_status();
@@ -862,12 +653,9 @@ void amec_update_avsbus_sensors(void)
             break;
     }
 
-    // if we are using V/I readings from PGPE Shared memory, read and update the sensors now
+    // read and update the V/I sensors from PGPE AVSbus readings
     // this will also save the data for WOF to use on this tick
-    if(G_pgpe_shared_sram_V_I_readings)
-    {
-        read_pgpe_produced_wof_values();
-    }
+    read_pgpe_produced_wof_values();
 
 } // end amec_update_avsbus_sensors()
 

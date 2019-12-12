@@ -450,6 +450,10 @@ int32_t interpolate_linear( int32_t i_X,
                             int32_t i_y1,
                             int32_t i_y2 );
 
+void get_poundV_points( uint32_t i_freq_mhz,
+                        uint8_t* o_point1_index,
+                        uint8_t* o_point2_index);
+
 void calculate_temperature_scaling_08V( void );
 
 uint32_t calculate_multiplier( int32_t i_temp );

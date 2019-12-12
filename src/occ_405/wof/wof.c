@@ -50,7 +50,6 @@ extern GpeRequest   G_wof_control_req;
 extern uint32_t     G_nest_frequency_mhz;
 extern volatile pstateStatus G_proc_pstate_status;
 extern uint8_t G_occ_interrupt_type;
-extern bool    G_pgpe_shared_sram_V_I_readings;
 extern uint16_t G_allow_trace_flags;
 
 //******************************************************************************
@@ -863,16 +862,7 @@ void read_shared_sram( void )
 
     g_wof->v_clip  = l_wofstate.fields.vclip_mv;
 
-   // Update Fclip Freq and Vratio for P9 only. P9 prime uses values updated in read_pgpe_produced_wof_values()
-   if( (!G_pgpe_shared_sram_V_I_readings) ||
-       (G_internal_flags & INT_FLAG_DISABLE_CEFF_TRACKING) )
-   {
-       g_wof->v_ratio = l_wofstate.fields.vratio;
-       sensor_update(AMECSENSOR_PTR(VRATIO), (uint16_t)l_wofstate.fields.vratio);
-
-       // convert f_clip_ps from Pstate to frequency(mHz)
-       g_wof->f_clip_freq = (proc_pstate2freq(g_wof->f_clip_ps))/1000;
-   }
+   // Fclip Freq and Vratio are updated in read_pgpe_produced_wof_values()
 
     g_wof->f_ratio = 1;
 
@@ -966,17 +956,13 @@ void read_pgpe_produced_wof_values( void )
         sensor_update(AMECSENSOR_PTR(VOLTVDN), l_voltage);
     }
 
-    // don't use Vdd current from PGPE if it was enabled for OCC to read from AVSbus
-    if(!(G_internal_flags & INT_FLAG_ENABLE_VDD_CURRENT_READ))
+    // Save Vdd current to sensor
+    l_current = (uint16_t)l_PgpeWofValues.dw1.fields.idd_avg_ma;
+    if (l_current != 0)
     {
-        // Save Vdd current to sensor
-        l_current = (uint16_t)l_PgpeWofValues.dw1.fields.idd_avg_ma;
-        if (l_current != 0)
-        {
-            // Current value stored in the sensor should be in 10mA (A scale -2)
-            // Reading from SRAM is already in 10mA
-            sensor_update(AMECSENSOR_PTR(CURVDD), l_current);
-        }
+        // Current value stored in the sensor should be in 10mA (A scale -2)
+        // Reading from SRAM is already in 10mA
+        sensor_update(AMECSENSOR_PTR(CURVDD), l_current);
     }
 
     // Save Vdn current to sensor
@@ -990,21 +976,16 @@ void read_pgpe_produced_wof_values( void )
 
     // Update the chip voltage and power sensors
     update_avsbus_power_sensors(AVSBUS_VDD);
-    update_avsbus_power_sensors(AVSBUS_VDN);
 
     // populate values used by WOF alg
 
-    // these are only used for Ceff frequency tracking
-    if(!(G_internal_flags & INT_FLAG_DISABLE_CEFF_TRACKING))
-    {
-       // Average Frequency
-       l_freq = proc_pstate2freq((Pstate_t)l_PgpeWofValues.dw0.fields.average_frequency_pstate);
-       // value returned in kHz, save in MHz
-       g_wof->c_ratio_vdd_freq = (l_freq / 1000);
-       g_wof->f_clip_freq = g_wof->c_ratio_vdd_freq;
-       g_wof->v_ratio = l_PgpeWofValues.dw0.fields.vratio_avg;
-       sensor_update(AMECSENSOR_PTR(VRATIO), (uint16_t)g_wof->v_ratio);
-    }
+    // Average Frequency
+    l_freq = proc_pstate2freq((Pstate_t)l_PgpeWofValues.dw0.fields.average_frequency_pstate);
+    // value returned in kHz, save in MHz
+    g_wof->c_ratio_vdd_freq = (l_freq / 1000);
+    g_wof->f_clip_freq = g_wof->c_ratio_vdd_freq;
+    g_wof->v_ratio = l_PgpeWofValues.dw0.fields.vratio_avg;
+    sensor_update(AMECSENSOR_PTR(VRATIO), (uint16_t)g_wof->v_ratio);
 
     // save the full PGPE WOF values for debug
     g_wof->pgpe_wof_values_dw0 = l_PgpeWofValues.dw0.value;
@@ -1369,7 +1350,8 @@ void calculate_ceff_ratio_vdd( void )
 // TODO - RTC 209558
 #if 0
     uint32_t l_raw_ceff_ratio = 0;
-    static bool L_trace_not_tracking = true;
+    uint8_t l_point1_index = 0;
+    uint8_t l_point2_index = 0;
 
     // If we get v_ratio of 0 from pgpe, force ceff_ratio_vdd to 0;
     if( g_wof->v_ratio == 0 )
@@ -1378,118 +1360,52 @@ void calculate_ceff_ratio_vdd( void )
     }
     else
     {
-        // If not tracking ceff to frequency use turbo
-        if( (G_internal_flags & INT_FLAG_DISABLE_CEFF_TRACKING) ||
-           !(G_pgpe_shared_sram_V_I_readings) )
+        // track Ceff ratio with currrent average frequency from PGPE (c_ratio_vdd_freq)
+        // Need to do some linear interpolation with #V data, find the two #V points that
+        // the average frequency falls between
+        // NOTE: g_wof->c_ratio_vdd_freq == g_wof->f_clip_freq is the average frequency
+        //       and were updated in read_pgpe_produced_wof_values()
+        get_poundV_points( g_wof->c_ratio_vdd_freq,
+                           &l_point1_index,
+                           &l_point2_index);
+
+        // Calculate Vdd AC Current average TDP by interpolating #V current@g_wof->c_ratio_vdd_freq
+        g_wof->iac_tdp_vdd = interpolate_linear( g_wof->c_ratio_vdd_freq,
+                                                 G_oppb.operating_points[l_point1_index].frequency_mhz,
+                                                 G_oppb.operating_points[l_point2_index].frequency_mhz,
+                                                 G_oppb.operating_points[l_point1_index].idd_tdp_ac_10ma,
+                                                 G_oppb.operating_points[l_point2_index].idd_tdp_ac_10ma);
+
+        // Calculate Vdd voltage average TDP by interpolating #V voltage@g_wof->c_ratio_vdd_freq
+        // *10 to convert mV to 100uV
+        g_wof->vdd_avg_tdp_100uv = 10 * interpolate_linear( g_wof->c_ratio_vdd_freq,
+                                                            G_oppb.operating_points[l_point1_index].frequency_mhz,
+                                                            G_oppb.operating_points[l_point2_index].frequency_mhz,
+                                                            G_oppb.operating_points[l_point1_index].vdd_mv,
+                                                            G_oppb.operating_points[l_point2_index].vdd_mv);
+
+        if(G_allow_trace_flags & ALLOW_CEFF_RATIO_VDD_TRACE)
         {
-           if(L_trace_not_tracking)
-           {
-               INTR_TRAC_INFO("ceff_ratio_vdd: Not tracking freq: Internal Flags[0x%08X]  PGPE SRAM?[%d] F[%d]",
-                              G_internal_flags,
-                              G_pgpe_shared_sram_V_I_readings,
-                              g_wof->c_ratio_vdd_freq);
-
-               L_trace_not_tracking = false;
-           }
-
-           // Read iac_tdp_vdd from OCCPstateParmBlock struct
-           g_wof->iac_tdp_vdd = G_oppb.lac_tdp_vdd_turbo_10ma;
-
-           // Get Vturbo and convert to 100uV (mV -> 100uV) = mV*10
-           g_wof->vdd_avg_tdp_100uv = 10 * G_oppb.operating_points[TURBO].vdd_mv;
-
-           // Use Fturbo
-           g_wof->c_ratio_vdd_freq =
-               G_oppb.operating_points[TURBO].frequency_mhz * g_wof->f_ratio;
+            INTR_TRAC_INFO("ceff_ratio_vdd: F[%d] between #V OP index[%d] freq[%d] and index[%d] freq[%d]",
+                            g_wof->c_ratio_vdd_freq,
+                            l_point1_index, G_oppb.operating_points[l_point1_index].frequency_mhz,
+                            l_point2_index, G_oppb.operating_points[l_point2_index].frequency_mhz);
+            INTR_TRAC_INFO("ceff_ratio_vdd: interpolated iac_tdp_vdd[%d] point1[%d] point2[%d]",
+                            g_wof->iac_tdp_vdd,
+                            G_oppb.operating_points[l_point1_index].idd_tdp_ac_10ma,
+                            G_oppb.operating_points[l_point2_index].idd_tdp_ac_10ma);
+            INTR_TRAC_INFO("ceff_ratio_vdd: interpolated vdd_avg_tdp_100uv[%d] point1[%d] point2[%d]",
+                            g_wof->vdd_avg_tdp_100uv,
+                            G_oppb.operating_points[l_point1_index].vdd_mv * 10,
+                            G_oppb.operating_points[l_point2_index].vdd_mv * 10);
         }
-        else // track Ceff ratio with currrent average frequency
-        {
-           // NOTE: g_wof->c_ratio_vdd_freq == g_wof->f_clip_freq is the average frequency
-           //       and were updated in read_pgpe_produced_wof_values()
-           // P9' we only have nominal and turbo Iac TDP Vdd from PGPE so only interpolate in that range
-           if(g_wof->c_ratio_vdd_freq <= G_oppb.operating_points[NOMINAL].frequency_mhz)
-           {
-                // Below nominal use nominal
-                if( (!L_trace_not_tracking) ||
-                    (G_allow_trace_flags & ALLOW_CEFF_RATIO_VDD_TRACE) )
-                {
-                   INTR_TRAC_INFO("ceff_ratio_vdd: Freq[%d] below nominal[%d]",
-                                   g_wof->c_ratio_vdd_freq,
-                                   G_oppb.operating_points[NOMINAL].frequency_mhz);
-                   L_trace_not_tracking = true;
-                }
-
-                g_wof->iac_tdp_vdd = G_oppb.lac_tdp_vdd_nominal_10ma;
-
-                // *10 to convert mV to 100uV
-                g_wof->vdd_avg_tdp_100uv = 10 * G_oppb.operating_points[NOMINAL].vdd_mv;
-
-                g_wof->c_ratio_vdd_freq = G_oppb.operating_points[NOMINAL].frequency_mhz;
-
-           }
-           else if(g_wof->c_ratio_vdd_freq >= G_oppb.operating_points[TURBO].frequency_mhz)
-           {
-                // Above turbo use turbo
-               if( (!L_trace_not_tracking) ||
-                   (G_allow_trace_flags & ALLOW_CEFF_RATIO_VDD_TRACE) )
-               {
-                   INTR_TRAC_INFO("ceff_ratio_vdd: Freq[%d] above turbo[%d]",
-                                  g_wof->c_ratio_vdd_freq,
-                                  G_oppb.operating_points[TURBO].frequency_mhz);
-                   L_trace_not_tracking = true;
-               }
-
-                g_wof->iac_tdp_vdd = G_oppb.lac_tdp_vdd_turbo_10ma;
-
-                // *10 to convert mV to 100uV
-                g_wof->vdd_avg_tdp_100uv = 10 * G_oppb.operating_points[TURBO].vdd_mv;
-
-                g_wof->c_ratio_vdd_freq = G_oppb.operating_points[TURBO].frequency_mhz;
-           }
-           else
-           {
-              // Frequency is between nominal and turbo do linear interpolation
-
-              // Calculate Vdd AC Current average TDP by interpolating #V current@g_wof->c_ratio_vdd_freq
-              g_wof->iac_tdp_vdd = interpolate_linear( g_wof->c_ratio_vdd_freq,
-                                                       G_oppb.operating_points[NOMINAL].frequency_mhz,
-                                                       G_oppb.operating_points[TURBO].frequency_mhz,
-                                                       G_oppb.lac_tdp_vdd_nominal_10ma,
-                                                       G_oppb.lac_tdp_vdd_turbo_10ma);
-
-              // Calculate Vdd voltage average TDP by interpolating #V voltage@g_wof->c_ratio_vdd_freq
-              // *10 to convert mV to 100uV
-              g_wof->vdd_avg_tdp_100uv = 10 * interpolate_linear( g_wof->c_ratio_vdd_freq,
-                                                                  G_oppb.operating_points[NOMINAL].frequency_mhz,
-                                                                  G_oppb.operating_points[TURBO].frequency_mhz,
-                                                                  G_oppb.operating_points[NOMINAL].vdd_mv,
-                                                                  G_oppb.operating_points[TURBO].vdd_mv);
-              if( (!L_trace_not_tracking) ||
-                  (G_allow_trace_flags & ALLOW_CEFF_RATIO_VDD_TRACE) )
-              {
-                  INTR_TRAC_INFO("ceff_ratio_vdd: F[%d] between nominal[%d] and turbo[%d]",
-                                  g_wof->c_ratio_vdd_freq,
-                                  G_oppb.operating_points[NOMINAL].frequency_mhz,
-                                  G_oppb.operating_points[TURBO].frequency_mhz);
-                  INTR_TRAC_INFO("ceff_ratio_vdd: interpolated iac_tdp_vdd[%d] nominal[%d] turbo[%d]",
-                                  g_wof->iac_tdp_vdd,
-                                  G_oppb.lac_tdp_vdd_nominal_10ma,
-                                  G_oppb.lac_tdp_vdd_turbo_10ma);
-                  INTR_TRAC_INFO("ceff_ratio_vdd: interpolated vdd_avg_tdp_100uv[%d] nominal[%d] turbo[%d]",
-                                  g_wof->vdd_avg_tdp_100uv,
-                                  G_oppb.operating_points[NOMINAL].vdd_mv * 10,
-                                  G_oppb.operating_points[TURBO].vdd_mv * 10);
-                  L_trace_not_tracking = true;
-              }
-           }
-        }  // else track to frequency
 
         g_wof->c_ratio_vdd_volt = multiply_ratio( g_wof->vdd_avg_tdp_100uv,
                                                   g_wof->v_ratio );
 
         // Calculate ceff_tdp_vdd
         // iac_tdp_vdd / ((V@Freq*Vratio)^1.3 * (Freq*Fratio))
-        // Freq is either Turbo (not tracking to frequency) or the average frequency from PGPE
+        // Freq is the average frequency from PGPE
         g_wof->ceff_tdp_vdd =
                     calculate_effective_capacitance( g_wof->iac_tdp_vdd,
                                                      g_wof->c_ratio_vdd_volt,
@@ -1654,6 +1570,52 @@ int32_t interpolate_linear( int32_t i_X,
     }
 }
 
+/**
+ * get_poundV_points
+ *
+ * Description: Helper function that takes in a frequency (MHz) and returns the indicies
+ *              for the 2 points in #V that the frequency falls between
+ */
+void get_poundV_points( uint32_t i_freq_mhz,
+                        uint8_t* o_point1_index,
+                        uint8_t* o_point2_index)
+{
+    int i;
+    // this should never happen that we get a frequency > the highest VPD point
+    // for now just trace we may decide later that this should cause a WOF reset
+    if(i_freq_mhz > G_oppb.operating_points[NUM_PV_POINTS-1].frequency_mhz)
+    {
+       INTR_TRAC_ERR("get_poundV_points: Frequency[%d] is higher than max VPD[%d]",
+                      i_freq_mhz, G_oppb.operating_points[NUM_PV_POINTS-1].frequency_mhz);
+
+       *o_point1_index = NUM_PV_POINTS-1;
+       *o_point2_index = NUM_PV_POINTS-1;
+    }
+    else
+    {
+        *o_point1_index = 0;
+        *o_point2_index = 0;
+
+        for(i = 0; i < NUM_PV_POINTS; i++)
+        {
+            if(i_freq_mhz <= G_oppb.operating_points[i].frequency_mhz)
+            {
+                *o_point1_index = i;
+                *o_point2_index = i;
+
+                // set point 1 to be the previous VPD point, leave equal to 2nd point
+                // if freq was found to be below first VPD point or equal to a VPD point
+                if( (i != 0) && (i_freq_mhz != G_oppb.operating_points[i].frequency_mhz) )
+                {
+                    *o_point1_index = i-1;
+                }
+
+                break;
+            }
+        }
+    }
+    return;
+}
 
 /**
  * calculate_temperature_scaling_08V
@@ -2442,7 +2404,7 @@ void print_oppb( void )
 // TODO - RTC 209558
 #if 0
     int i;
-    for(i = 0; i < VPD_PV_POINTS; i++)
+    for(i = 0; i < NUM_PV_POINTS; i++)
     {
         CMDH_TRAC_INFO("operating_points[%d] = Freq[%d] vdd_mv[%d] ",
                        i,
@@ -2466,166 +2428,124 @@ void print_oppb( void )
  */
 uint32_t prevent_over_current( uint32_t i_ceff_ratio )
 {
-    static uint8_t L_method_trace = 0;  // P9 or P10 to indicate what method we are using to trace
-    static uint8_t L_oc_prevention_timer = 0;
     static uint8_t L_ocs_dirty_prev = 0;
     uint32_t l_clipped_ratio = i_ceff_ratio;
     uint32_t l_new_ratio_from_measured = 0;
     uint32_t l_new_ratio_from_prev = 0;
 
     // determine if Ceff needs to be adjusted for overcurrent
-    // different process between P9 and P10
+    if(l_clipped_ratio > G_max_ceff_ratio)
+         l_clipped_ratio = G_max_ceff_ratio;
 
-    if( (!(G_internal_flags & INT_FLAG_ENABLE_P10_OCS)) ||
-        (!G_pgpe_shared_sram_V_I_readings) )
+    if((g_wof->ocs_dirty & OCS_PGPE_DIRTY_MASK) == 0)
     {
-       if(L_method_trace != 9)
-       {
-           INTR_TRAC_IMP("Using P9 Overcurrent method");
-           L_method_trace = 9;
-       }
-       if( i_ceff_ratio > MAX_CEFF_RATIO ) // 10000 = 1.0 ratio
-       {
-           INCREMENT_ERR_HISTORY( ERRH_CEFF_RATIO_VDD_EXCURSION );
-           l_clipped_ratio = MAX_CEFF_RATIO;
+        // no over current condition detected on previous PGPE tick time
+        // decrease OC CeffRatio addr, stop at 0
+        if(g_wof->vdd_oc_ceff_add > g_wof->ocs_decrease_ceff)
+        {
+            g_wof->vdd_oc_ceff_add -= g_wof->ocs_decrease_ceff;
 
-           // If over current timer not started, start it.
-           if( L_oc_prevention_timer == 0 )
-           {
-               L_oc_prevention_timer = 10; // 10 WOF iterations
-           }
-           else
-           {
-               L_oc_prevention_timer--;
-           }
-       }
-       else if( L_oc_prevention_timer != 0 ) // Timer is running
-       {
-           l_clipped_ratio = MAX_CEFF_RATIO;
-           L_oc_prevention_timer--;
-       }
+            // now determine if any adjustment is needed
+            if(i_ceff_ratio < g_wof->vdd_ceff_ratio_adj_prev)
+            {
+                 // new measured ratio is lower than previous add the adder but max out at previous
+                 l_clipped_ratio += g_wof->vdd_oc_ceff_add;
+                 if(l_clipped_ratio > g_wof->vdd_ceff_ratio_adj_prev)
+                     l_clipped_ratio = g_wof->vdd_ceff_ratio_adj_prev;
+            }
+        }
+        else // no adjustment to ceff ratio
+        {
+            g_wof->vdd_oc_ceff_add = 0;
+        }
+        if( (L_ocs_dirty_prev != g_wof->ocs_dirty) &&
+            (G_allow_trace_flags & ALLOW_WOF_OCS_TRACE) )
+        {
+           INTR_TRAC_IMP("OCS NOW CLEAN: Adder[%d]  Measured[%d] Previous[%d] Adjusted[%d]",
+                           g_wof->vdd_oc_ceff_add,
+                           i_ceff_ratio,
+                           g_wof->vdd_ceff_ratio_adj_prev,
+                           l_clipped_ratio);
+        }
+
     }
-    else  // P10 method
+    else if(g_wof->ocs_dirty == (OCS_PGPE_DIRTY_MASK | OCS_PGPE_DIRTY_TYPE_MASK)) // dirty type 1 (act)
     {
-       if(L_method_trace != 10)
-       {
-           INTR_TRAC_IMP("Using P10 Overcurrent method");
-           L_method_trace = 10;
-       }
+        INCREMENT_ERR_HISTORY( ERRH_CEFF_RATIO_VDD_EXCURSION );
 
-       if(l_clipped_ratio > G_max_ceff_ratio)
-            l_clipped_ratio = G_max_ceff_ratio;
+        // over current condition detected on previous PGPE tick time
+        // increase OC CeffRatio addr stop at max
+        g_wof->vdd_oc_ceff_add += g_wof->ocs_increase_ceff;
 
-       if((g_wof->ocs_dirty & OCS_PGPE_DIRTY_MASK) == 0)
-       {
-           // no over current condition detected on previous PGPE tick time
-           // decrease OC CeffRatio addr, stop at 0
-           if(g_wof->vdd_oc_ceff_add > g_wof->ocs_decrease_ceff)
-           {
-               g_wof->vdd_oc_ceff_add -= g_wof->ocs_decrease_ceff;
+        if(g_wof->vdd_oc_ceff_add > G_max_ceff_ratio)
+        {
+            g_wof->vdd_oc_ceff_add = G_max_ceff_ratio;
+        }
 
-               // now determine if any adjustment is needed
-               if(i_ceff_ratio < g_wof->vdd_ceff_ratio_adj_prev)
-               {
-                    // new measured ratio is lower than previous add the adder but max out at previous
-                    l_clipped_ratio += g_wof->vdd_oc_ceff_add;
-                    if(l_clipped_ratio > g_wof->vdd_ceff_ratio_adj_prev)
-                        l_clipped_ratio = g_wof->vdd_ceff_ratio_adj_prev;
-               }
-           }
-           else // no adjustment to ceff ratio
-           {
-               g_wof->vdd_oc_ceff_add = 0;
-           }
-           if( (L_ocs_dirty_prev != g_wof->ocs_dirty) &&
-               (G_allow_trace_flags & ALLOW_WOF_OCS_TRACE) )
-           {
-              INTR_TRAC_IMP("OCS NOW CLEAN: Adder[%d]  Measured[%d] Previous[%d] Adjusted[%d]",
-                              g_wof->vdd_oc_ceff_add,
-                              i_ceff_ratio,
-                              g_wof->vdd_ceff_ratio_adj_prev,
-                              l_clipped_ratio);
-           }
+        // Calculate adjusted Ceff Ratio for new and previous
+        // Add the full accumulated adder to the new measured ceff
+        l_new_ratio_from_measured = i_ceff_ratio + g_wof->vdd_oc_ceff_add;
 
-       }
-       else if(g_wof->ocs_dirty == (OCS_PGPE_DIRTY_MASK | OCS_PGPE_DIRTY_TYPE_MASK)) // dirty type 1 (act)
-       {
-           INCREMENT_ERR_HISTORY( ERRH_CEFF_RATIO_VDD_EXCURSION );
+        // only add one ceff adder to the previous
+        l_new_ratio_from_prev = g_wof->vdd_ceff_ratio_adj_prev + g_wof->ocs_increase_ceff;
 
-           // over current condition detected on previous PGPE tick time
-           // increase OC CeffRatio addr stop at max
-           g_wof->vdd_oc_ceff_add += g_wof->ocs_increase_ceff;
+        // use the max for the new Ceff Ratio
+        if(l_new_ratio_from_measured > l_new_ratio_from_prev)
+        {
+            l_clipped_ratio = l_new_ratio_from_measured;
+        }
+        else
+        {
+            l_clipped_ratio = l_new_ratio_from_prev;
+        }
 
-           if(g_wof->vdd_oc_ceff_add > G_max_ceff_ratio)
-           {
-               g_wof->vdd_oc_ceff_add = G_max_ceff_ratio;
-           }
+        if(l_clipped_ratio > G_max_ceff_ratio)
+           l_clipped_ratio = G_max_ceff_ratio;
 
-           // Calculate adjusted Ceff Ratio for new and previous
-           // Add the full accumulated adder to the new measured ceff
-           l_new_ratio_from_measured = i_ceff_ratio + g_wof->vdd_oc_ceff_add;
+        if( (L_ocs_dirty_prev != g_wof->ocs_dirty) &&
+            (G_allow_trace_flags & ALLOW_WOF_OCS_TRACE) )
+        {
+           INTR_TRAC_IMP("OCS DIRTY ACT TYPE: Measured[%d] Previous[%d] Adjusted[%d]",
+                           i_ceff_ratio,
+                           g_wof->vdd_ceff_ratio_adj_prev,
+                           l_clipped_ratio);
+        }
 
-           // only add one ceff adder to the previous
-           l_new_ratio_from_prev = g_wof->vdd_ceff_ratio_adj_prev + g_wof->ocs_increase_ceff;
+    }
+    else // OCS Dirty but type is 0 (block action)
+    {
+        INCREMENT_ERR_HISTORY(ERRH_OCS_DIRTY_BLOCK);
 
-           // use the max for the new Ceff Ratio
-           if(l_new_ratio_from_measured > l_new_ratio_from_prev)
-           {
-               l_clipped_ratio = l_new_ratio_from_measured;
-           }
-           else
-           {
-               l_clipped_ratio = l_new_ratio_from_prev;
-           }
+        // over current condition detected on previous PGPE tick time
+        // but type is block action so no adjustment to the new measured or addr
+        // default to use max of new and previous but command allows switching to
+        // test alg always using new
+        if(g_wof->vdd_ceff_ratio_adj_prev > l_clipped_ratio)
+        {
+            l_clipped_ratio = g_wof->vdd_ceff_ratio_adj_prev;
 
-           if(l_clipped_ratio > G_max_ceff_ratio)
-              l_clipped_ratio = G_max_ceff_ratio;
+            if(l_clipped_ratio > G_max_ceff_ratio)
+               l_clipped_ratio = G_max_ceff_ratio;
+        }
+        if(G_internal_flags & INT_FLAG_ENABLE_OCS_HOLD_NEW)  // debug enabled to use new?
+            l_clipped_ratio = i_ceff_ratio;
 
-           if( (L_ocs_dirty_prev != g_wof->ocs_dirty) &&
-               (G_allow_trace_flags & ALLOW_WOF_OCS_TRACE) )
-           {
-              INTR_TRAC_IMP("OCS DIRTY ACT TYPE: Measured[%d] Previous[%d] Adjusted[%d]",
-                              i_ceff_ratio,
-                              g_wof->vdd_ceff_ratio_adj_prev,
-                              l_clipped_ratio);
-           }
+        if( (L_ocs_dirty_prev != g_wof->ocs_dirty) &&
+            (G_allow_trace_flags & ALLOW_WOF_OCS_TRACE) )
+        {
+           INTR_TRAC_IMP("OCS DIRTY HOLD TYPE: Measured[%d] Previous[%d] Using[%d]",
+                           i_ceff_ratio,
+                           g_wof->vdd_ceff_ratio_adj_prev,
+                           l_clipped_ratio);
+        }
+    }
 
-       }
-       else // OCS Dirty but type is 0 (block action)
-       {
-           INCREMENT_ERR_HISTORY(ERRH_OCS_DIRTY_BLOCK);
+    // save to previous
+    g_wof->vdd_ceff_ratio_adj_prev = l_clipped_ratio;
+    L_ocs_dirty_prev = g_wof->ocs_dirty;
 
-           // over current condition detected on previous PGPE tick time
-           // but type is block action so no adjustment to the new measured or addr
-           // default to use max of new and previous but command allows switching to
-           // test alg always using new
-           if(g_wof->vdd_ceff_ratio_adj_prev > l_clipped_ratio)
-           {
-               l_clipped_ratio = g_wof->vdd_ceff_ratio_adj_prev;
-
-               if(l_clipped_ratio > G_max_ceff_ratio)
-                  l_clipped_ratio = G_max_ceff_ratio;
-           }
-           if(G_internal_flags & INT_FLAG_ENABLE_OCS_HOLD_NEW)  // debug enabled to use new?
-               l_clipped_ratio = i_ceff_ratio;
-
-           if( (L_ocs_dirty_prev != g_wof->ocs_dirty) &&
-               (G_allow_trace_flags & ALLOW_WOF_OCS_TRACE) )
-           {
-              INTR_TRAC_IMP("OCS DIRTY HOLD TYPE: Measured[%d] Previous[%d] Using[%d]",
-                              i_ceff_ratio,
-                              g_wof->vdd_ceff_ratio_adj_prev,
-                              l_clipped_ratio);
-           }
-       }
-
-       // save to previous
-       g_wof->vdd_ceff_ratio_adj_prev = l_clipped_ratio;
-       L_ocs_dirty_prev = g_wof->ocs_dirty;
-
-       // update sensor for calculated CeffRatio addr
-       sensor_update(AMECSENSOR_PTR(OCS_ADDR), (uint16_t)g_wof->vdd_oc_ceff_add);
-    }  // else P10 method
+    // update sensor for calculated CeffRatio addr
+    sensor_update(AMECSENSOR_PTR(OCS_ADDR), (uint16_t)g_wof->vdd_oc_ceff_add);
 
     return l_clipped_ratio;
 }

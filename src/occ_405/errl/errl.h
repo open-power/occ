@@ -287,16 +287,16 @@ extern hcode_elog_entry_t *G_hcode_elog_table;
 extern uint32_t            G_hcode_elog_table_slots;
 
 typedef enum {
-    ERRH_AVSBUS_VDD_CURRENT          =  0x01,
-    ERRH_AVSBUS_VDD_VOLTAGE          =  0x02,
-    ERRH_AVSBUS_VDN_CURRENT          =  0x03,
-    ERRH_AVSBUS_VDN_VOLTAGE          =  0x04,
+    // unused -  0x01,
+    // unused - 0x02,
+    // unused -  0x03,
+    // unused -  0x04,
     // unused - 0x05
     // unused - 0x06
     ERRH_AVSBUS_VDD_STATUS_READ_FAIL =  0x07,
-    ERRH_AVSBUS_VDN_STATUS_READ_FAIL =  0x08,
+    // unused -  0x08,
     ERRH_AVSBUS_VDD_OVER_CURRENT     =  0x09,
-    ERRH_AVSBUS_VDN_OVER_CURRENT     =  0x0A,
+    // unused -  0x0A,
     ERRH_INVALID_APSS_DATA           =  0x0B,
     ERRH_APSS_COMPLETE_ERROR         =  0x0C,
     ERRH_APSS_COMPLETE_TIMEOUT       =  0x0D,

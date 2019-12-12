@@ -616,11 +616,10 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
             l_pwrData.sys_pwr_accumul = G_amec_sensor_list[PWRSYS]->accumulator;
         }
 
-        // Proc power is from AVS bus, return readings if reading Vdd and Vdn else return 0's
-        if( (G_avsbus_vdd_monitoring) && (G_avsbus_vdn_monitoring) )
+        else
         {
-            // when no APSS present proc readings are updated based on AVS timing use PWRVDD/N timing (2 ticks)
-            l_pwrData.proc_pwr_update_time = G_mics_per_tick * 2;
+            // when no APSS present proc readings are updated based on AVS readings from PGPE every tick
+            l_pwrData.proc_pwr_update_time = G_mics_per_tick;
             l_pwrData.proc_pwr_current = G_amec_sensor_list[PWRPROC]->sample;
             l_pwrData.proc_pwr_update_tag = G_amec_sensor_list[PWRPROC]->update_tag;
             l_pwrData.proc_pwr_accumul = G_amec_sensor_list[PWRPROC]->accumulator;

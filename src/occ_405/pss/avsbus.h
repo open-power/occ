@@ -29,9 +29,6 @@
 #include <errl.h>
 
 extern bool G_avsbus_vdd_monitoring;
-extern bool G_avsbus_vdn_monitoring;
-
-extern uint32_t G_check_vdd_current_10mA_for_rollover;
 
 #define AVSBUS_STATUS_OVER_CURRENT_MASK     0x4000
 #define AVSBUS_STATUS_UNDER_VOLTAGE_MASK    0x2000
@@ -44,28 +41,25 @@ extern uint32_t G_check_vdd_current_10mA_for_rollover;
 typedef enum
 {
     AVSBUS_VDD = 0x00,
-    AVSBUS_VDN = 0x01,
-    AVSBUS_TYPE_MAX = 2 // Number of bus types
+    AVSBUS_TYPE_MAX = 1 // Number of bus types
 } avsbus_type_e;
 
 typedef enum
 {
     // This enum contains the AVS Bus CmdDataType that can be read
-    AVSBUS_VOLTAGE          = 0x00,
-    AVSBUS_CURRENT          = 0x02,
     AVSBUS_TEMPERATURE      = 0x03,
     AVSBUS_STATUS           = 0x0E,
-    AVSBUS_CMDS_MAX = 4 // Number of supported AVS bus commands
+    AVSBUS_CMDS_MAX = 2 // Number of supported AVS bus commands
 } avsbus_cmdtype_e;
 
 // Setup the AVS Bus for reading
 void avsbus_init();
 
-// Initiate AVS Bus read for specified cmdtype (Voltage / Current)
+// Initiate AVS Bus read for specified cmdtype (Temperature)
 // (results can then be read on the next tick)
 void initiate_avsbus_reads(avsbus_cmdtype_e i_cmdType);
 
-// Initiate read for specified type (Vdd/Vdn) and cmd (Voltage/Current/Temperature)
+// Initiate read for specified type (Vdd) and cmd (Temperature)
 void avsbus_read_start(const avsbus_type_e i_type,
                        const avsbus_cmdtype_e i_cmdtype);
 

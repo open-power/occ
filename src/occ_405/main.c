@@ -66,18 +66,10 @@
 // in SRAM
 bool G_ipl_time = false;
 
-// Defaults for Reading V/I from OCC-PGPE Shared SRAM
-// if reading from shared SRAM is supported we will read every tick and
-// run WOF every tick.  All defaults will assume not supported.
-
-// indication on where OCC is getting voltage/current readings from
-// PGPE shared SRAM or reading directly from AVSbus
-bool G_pgpe_shared_sram_V_I_readings = false;
-
 // timeout, as number of WOF ticks, for PGPE VRT command
-uint8_t G_max_vrt_chances = MAX_VRT_CHANCES_EVERY_8TH_TICK;
+uint8_t G_max_vrt_chances = MAX_VRT_CHANCES_EVERY_TICK;
 // timeout, as number of WOF ticks, for PGPE WOF Control command
-uint8_t G_max_wof_control_chances = MAX_WOF_CONTROL_CHANCES_EVERY_8TH_TICK;
+uint8_t G_max_wof_control_chances = MAX_WOF_CONTROL_CHANCES_EVERY_TICK;
 
 uint32_t G_max_ceff_ratio = MAX_CEFF_RATIO;
 
@@ -394,7 +386,6 @@ bool read_pgpe_header(void)
             G_pgpe_header.wof_tables_length = 0x9C80;
             G_hcode_elog_table_slots = 0;
             G_hcode_elog_table = 0;
-            G_pgpe_shared_sram_V_I_readings = false;
             MAIN_TRAC_IMP("read_pgpe_header: Using fake PGPE header: shared sram addr[0x%08X]",
                           G_pgpe_header.shared_sram_addr);
         }
@@ -453,18 +444,10 @@ bool read_pgpe_header(void)
                 userdata2 = WORD_LOW(G_pgpe_header.shared_sram_addr);
                 break;
             }
-            // verify what version of OCC-PGPE shared SRAM we have so we know how we are reading
-            // voltage and current
+
+            // verify version of OCC-PGPE shared SRAM
             pgpe_shared_magic_number = in32(G_pgpe_header.shared_sram_addr);
-            // older PGPE P9 code didn't fill in the magic number, if 0 assume P9
-            if (pgpe_shared_magic_number == 0)
-            {
-                // no support for reading voltage/current from PGPE, OCC reads via AVS bus
-                G_pgpe_shared_sram_V_I_readings = false;
-                MAIN_TRAC_IMP("Reading V/I from AVSbus for PGPE shared SRAM magic number[0x%08x]",
-                               pgpe_shared_magic_number);
-            }
-            else if(pgpe_shared_magic_number == OPS_MAGIC_NUMBER_P10)
+            if(pgpe_shared_magic_number == OPS_MAGIC_NUMBER_P10)
             {
 #if 0
                 // TODO: RTC 209558
@@ -490,15 +473,8 @@ bool read_pgpe_header(void)
                 }
                 else
                 {
-                    // read voltage/current from OCC-PGPE shared SRAM
-                    MAIN_TRAC_IMP("Reading V/I from PGPE Shared SRAM addr[0x%08X] for Magic Number[0x%08X]",
+                    MAIN_TRAC_IMP("Valid PGPE produced WOF values SRAM addr[0x%08X] for Magic Number[0x%08X]",
                                G_pgpe_header.pgpe_produced_wof_values_addr, pgpe_shared_magic_number);
-                    G_pgpe_shared_sram_V_I_readings = true;
-
-                    // this also means we will be running WOF every tick, update WOF timeouts
-                    // for runnning every tick to keep same timeout
-                    G_max_vrt_chances = MAX_VRT_CHANCES_EVERY_TICK;
-                    G_max_wof_control_chances = MAX_WOF_CONTROL_CHANCES_EVERY_TICK;
                 }
 #endif
             }
