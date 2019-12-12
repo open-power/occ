@@ -605,7 +605,7 @@ void addTraceToErrl(
         //copy the data into error the offset is the size of the current errorlog
         void * l_p = io_err;
 
-        // Caculate trace data address. Starting from errl address + sizeof(ErrlEntry_t + ErrlUserDetailsEntry_t).
+        // Calculate trace data address. Starting from errl address + sizeof(ErrlEntry_t + ErrlUserDetailsEntry_t).
         l_traceAddr = l_p + io_err->iv_userDetails.iv_entrySize + l_headerSz;
 
         // check if user request to add trace from a specific trace buffer

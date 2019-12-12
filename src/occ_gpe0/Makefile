@@ -68,7 +68,7 @@ $(LINK_SCRIPT): link.cmd
 	$(CPP) -E -x c -P $(DEFS) link.cmd -o $(LINK_SCRIPT)
 
 #Create an obj directory if needed
-$(LINK_OBJS) $(OBJS) $(OBJS:.o=.d): | $(OBJDIR) $(OBJDIRS)
+$(LINK_OBJS) $(OBJS) $(OBJS:.o=.d): | $(OBJDIRS)
 
 $(OBJDIRS):
 	mkdir -p $(OBJDIRS)

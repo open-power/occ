@@ -645,7 +645,7 @@ void amec_slv_freq_smh(void)
             core_num = (quad*NUM_CORES_PER_QUAD) + core_idx;
 
             // ignore core if freq request is 0 (core not present when amec_slv_proc_voting_box ran)
-            if(g_amec->proc[0].core[core_num].f_request != 0)
+            if((core_num < MAX_CORES) && (g_amec->proc[0].core[core_num].f_request != 0))
             {
                l_atLeast1Core[quad] = TRUE;
                l_atLeast1Quad = TRUE;

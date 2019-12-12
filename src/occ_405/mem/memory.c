@@ -84,9 +84,6 @@ void task_memory_control( task_t * i_task )
 
     uint32_t       gpe_rc = 0;
 
-    uint8_t mc   = 0;
-    uint8_t port = 0;
-
     // Pointer to the task data structure
     memory_control_task_t* memControlTask =  (memory_control_task_t*) i_task->data_ptr;
 
@@ -95,8 +92,6 @@ void task_memory_control( task_t * i_task )
     do
     {
         memIndex = memControlTask->curMemIndex;
-        mc   = memIndex>>2;
-        port = memIndex&3;
 
         //First, check to see if the previous GPE request still running
         //A request is considered idle if it is not attached to any of the

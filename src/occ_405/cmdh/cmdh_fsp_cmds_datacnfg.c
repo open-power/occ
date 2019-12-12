@@ -2106,7 +2106,6 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
     uint8_t                         l_num_dimms = 0;
     uint8_t                         l_dimm_num = 0;
     uint8_t                         num_data_sets = 0;
-    cmdh_mem_cfg_data_set_t*        data_sets_ptr;
     int                             i;
 
     do
@@ -2119,7 +2118,7 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
         for(memctl=0; memctl < MAX_NUM_MEM_CONTROLLERS; ++memctl)
         {
             g_amec->proc[0].memctl[memctl].membuf.temp_sid = 0;
-            for(dimm=0; dimm < NUM_DIMMS_PER_MEM_CONTROLLER; ++dimm)
+            for(dimm=0; dimm < NUM_DIMMS_PER_OCMB; ++dimm)
             {
                 g_amec->proc[0].memctl[memctl].membuf.dimm_temps[dimm].temp_sid = 0;
             }
@@ -2135,7 +2134,6 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
                 G_sysConfigData.default_mem_pwr_ctl = l_cmd_ptr->header.default_mem_pwr_ctl;
 
                 num_data_sets = ((cmdh_mem_cfg_v21_t*) l_cmd_ptr)->header.num_data_sets;
-                data_sets_ptr = ((cmdh_mem_cfg_v21_t*) l_cmd_ptr)->data_set;
 
                 // Verify the actual data length matches the expected data length for this version
                 l_exp_data_length = sizeof(cmdh_mem_cfg_header_v21_t) - sizeof(cmdh_fsp_cmd_header_t) +
@@ -2151,7 +2149,6 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
                 G_sysConfigData.default_mem_pwr_ctl = MEM_PWR_CTL_NO_SUPPORT;
 
                 num_data_sets = ((cmdh_mem_cfg_v20_t*) l_cmd_ptr)->header.num_data_sets;
-                data_sets_ptr = ((cmdh_mem_cfg_v20_t*) l_cmd_ptr)->data_set;
 
                 // Verify the actual data length matches the expected data length for this version
                 l_exp_data_length = sizeof(cmdh_mem_cfg_header_v20_t) - sizeof(cmdh_fsp_cmd_header_t) +
