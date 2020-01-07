@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2016,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2016,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -65,9 +65,9 @@ enum MESSAGE_ID_IPI2HI
 #define PGPE_RC_OCC_NOT_PMCR_OWNER              0x14
 #define PGPE_RC_PM_COMPLEX_SUSPEND_SAFE_MODE    0x15
 
-#define PGPE_RC_REQ_WHILE_PENDING_ACK   0x21
+#define PGPE_RC_REQ_WHILE_PENDING_ACK           0x21
 #define PGPE_RC_NULL_VRT_POINTER                0x22
-#define PGPE_RC_INVALID_PMCR_OWNER         0x23
+#define PGPE_RC_INVALID_PMCR_OWNER              0x23
 
 //
 // PMCR Owner
@@ -134,7 +134,9 @@ typedef struct ipcmsg_wof_control
 typedef struct ipcmsg_wof_vrt
 {
     ipcmsg_base_t   msg_cb;
-    uint8_t         pad[3];
+    uint8_t         vratio_mode;         // 0 = variable; 1 = fixed
+    uint8_t         fixed_vratio_index;  // if vratio_mode = fixed, index to use
+    uint8_t         pad[1];
     VRT_t*          idd_vrt_ptr; // VDD Voltage Ratio Table
     uint32_t        vdd_ceff_ratio; // Used for VDD
     uint32_t        vcs_ceff_ratio; // Used for VCS
@@ -156,7 +158,7 @@ typedef struct
     Pstate_t   pstate;
 
     /// Assocated Frequency (in MHz)
-    uint16_t    frequency_mhz;
+    uint16_t   frequency_mhz;
 
     /// Internal VDD voltage ID at the output of the PFET header
     uint8_t    internal_vdd_vid;
@@ -405,7 +407,7 @@ typedef struct
     uint64_t            reserved1;
 
     /// PGPE Produced WOF Values
-    pgpe_wof_values_t    pgpe_wof_values;
+    pgpe_wof_values_t   pgpe_wof_values;
 
     /// XGPE Produced WOF Values
     xgpe_wof_values_t    xgpe_wof_values;

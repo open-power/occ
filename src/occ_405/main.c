@@ -324,6 +324,13 @@ void read_wof_header(void)
                 // Initialize wof init state to zero
                 g_amec->wof.wof_init_state  = WOF_DISABLED;
 
+                // Default to no overrides
+                g_amec->wof.vcs_override_index = WOF_VRT_IDX_NO_OVERRIDE;
+                g_amec->wof.vdd_override_index = WOF_VRT_IDX_NO_OVERRIDE;
+                g_amec->wof.io_pwr_override_index = WOF_VRT_IDX_NO_OVERRIDE;
+                g_amec->wof.ambient_override_index = WOF_VRT_IDX_NO_OVERRIDE;
+                g_amec->wof.v_ratio_override_index = WOF_VRT_IDX_NO_OVERRIDE;
+
                 // Initialize OCS increase/decrease amounts to one step
                 g_amec->wof.ocs_increase_ceff = g_amec->wof.wof_header.vdd_step;
                 g_amec->wof.ocs_decrease_ceff = g_amec->wof.wof_header.vdd_step;

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -33,6 +33,8 @@
 #include "amec_smh.h"
 #include "amec_master_smh.h"
 #include <pgpe_shared.h>
+
+extern amec_sys_t g_amec_sys;
 
 // SSX Block Copy Request for copying mfg Pstate table from HOMER to SRAM
 BceRequest G_mfg_pba_request;
@@ -607,100 +609,158 @@ uint8_t cmdh_mnfg_get_sensor(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
 // Function Specification
 //
-// Name:  cmdh_mnfg_request_quad_pstate
+// Name:  cmdh_mnfg_select_wof_vrt
 //
-// Description: This function handles the manufacturing command to request
-// a Pstate per Quad.
+// Description: This function handles the manufacturing command to overwrite
+//  WOF VRT dimensions
 //
 // End Function Specification
-uint8_t cmdh_mnfg_request_quad_pstate(const cmdh_fsp_cmd_t * i_cmd_ptr,
+uint8_t cmdh_mnfg_select_wof_vrt(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                             cmdh_fsp_rsp_t * o_rsp_ptr)
 {
     uint8_t                     l_rc = ERRL_RC_SUCCESS;
     uint16_t                    l_datalength = 0;
     uint16_t                    l_resp_data_length = 0;
-    uint8_t                     l_pmin = 0xFF;
-    uint8_t                     l_pmax = 0xFF;
-    uint8_t                     l_pstate_request = 0xFF;
-    uint8_t                     l_quad = 0;
-    mnfg_quad_pstate_cmd_t     *l_cmd_ptr = (mnfg_quad_pstate_cmd_t*) i_cmd_ptr;
-    mnfg_quad_pstate_rsp_t     *l_rsp_ptr = (mnfg_quad_pstate_rsp_t*) o_rsp_ptr;
+    mnfg_select_wof_vrt_cmd_t  *l_cmd_ptr = (mnfg_select_wof_vrt_cmd_t*) i_cmd_ptr;
+    mnfg_select_wof_vrt_rsp_t  *l_rsp_ptr = (mnfg_select_wof_vrt_rsp_t*) o_rsp_ptr;
 
     do
     {
-        if(!IS_OCC_STATE_ACTIVE())
-        {
-            TRAC_ERR("cmdh_mnfg_request_quad_pstate: OCC must be active to request pstate");
-            l_rc = ERRL_RC_INVALID_STATE;
-            break;
-        }
-
-        if(G_sysConfigData.system_type.kvm)
-        {
-            TRAC_ERR("cmdh_mnfg_request_quad_pstate: Must be PowerVM to request pstate");
-            l_rc = ERRL_RC_INVALID_CMD;
-            break;
-        }
-
-        // Check command packet data length
+        // Check command packet data length and action
         l_datalength = CMDH_DATALEN_FIELD_UINT16(i_cmd_ptr);
-        if(l_datalength != (sizeof(mnfg_quad_pstate_cmd_t) -
-                            sizeof(cmdh_fsp_cmd_header_t)))
+        // make sure length is at least two bytes to look at length based on action
+        // query has no additional bytes beyond the 2 byte subcmd/action
+        if(l_datalength < 2)
         {
-            TRAC_ERR("cmdh_mnfg_request_quad_pstate: incorrect data length. exp[%d] act[%d]",
-                     (sizeof(mnfg_quad_pstate_cmd_t) -
-                      sizeof(cmdh_fsp_cmd_header_t)),
+            TRAC_ERR("cmdh_mnfg_select_wof_vrt: data length [%d] must be at least 2 bytes",
                       l_datalength);
             l_rc = ERRL_RC_INVALID_CMD_LEN;
             break;
         }
-
-        // Check version
-        if(l_cmd_ptr->version != MFG_QUAD_PSTATE_VERSION)
+        else if( ( (l_cmd_ptr->action == MFG_SELECT_WOF_VRT_QUERY) && (l_datalength != 2) ) ||
+                 ( (l_cmd_ptr->action == MFG_SELECT_WOF_VRT_WRITE) &&
+                   (l_datalength != (sizeof(mnfg_select_wof_vrt_cmd_t) - sizeof(cmdh_fsp_cmd_header_t))) )
+               )
         {
-            TRAC_ERR("cmdh_mnfg_request_quad_pstate: incorrect version. exp[%d] act[%d]",
-                     MFG_QUAD_PSTATE_VERSION,
-                     l_cmd_ptr->version);
+            TRAC_ERR("cmdh_mnfg_select_wof_vrt: incorrect data length [%d] for action[%d]",
+                      l_datalength,
+                      l_cmd_ptr->action);
+            l_rc = ERRL_RC_INVALID_CMD_LEN;
+            break;
+        }
+        if( (l_cmd_ptr->action != MFG_SELECT_WOF_VRT_QUERY) &&
+            (l_cmd_ptr->action != MFG_SELECT_WOF_VRT_WRITE) )
+        {
+            TRAC_ERR("cmdh_mnfg_select_wof_vrt: invalid action[%d]",
+                      l_cmd_ptr->action);
             l_rc = ERRL_RC_INVALID_DATA;
             break;
         }
 
-        // only allow a Pstate within the current range based on mode
-        l_pmin = proc_freq2pstate(g_amec->sys.fmin);
-        l_pmax = proc_freq2pstate(g_amec->sys.fmax);
-
-        // Process each quad Pstate request, clip any request to min/max
-        // 0xFF has special meaning that OCC is in control
-        for(l_quad = 0; l_quad < MAXIMUM_QUADS; l_quad++)
+        // process write action
+        if(l_cmd_ptr->action == MFG_SELECT_WOF_VRT_WRITE)
         {
-            l_pstate_request = l_cmd_ptr->quad_pstate_in[l_quad];
-            if(l_pstate_request != 0xFF)
+            if( (l_cmd_ptr->vcs_index != WOF_VRT_IDX_NO_OVERRIDE) &&
+                (l_cmd_ptr->vcs_index >= g_amec_sys.wof.wof_header.vcs_size) )
             {
-                // pmin is lowest frequency corresponding to highest pState value
-                if(l_pstate_request > l_pmin)
-                   l_pstate_request = l_pmin;
+                TRAC_INFO("cmdh_mnfg_select_wof_vrt: VCS index[%d] out of range using last index[%d]",
+                          l_cmd_ptr->vcs_index,
+                          (g_amec_sys.wof.wof_header.vcs_size - 1));
 
-                // pmax is highest frequency corresponding to lowest pState value
-                else if(l_pstate_request < l_pmax)
-                   l_pstate_request = l_pmax;
+                g_amec_sys.wof.vcs_override_index = g_amec_sys.wof.wof_header.vcs_size - 1;
             }
-            // save the quad pState request for amec and return in rsp data
-            g_amec->mnfg_parms.quad_pstate[l_quad] = l_pstate_request;
-            l_rsp_ptr->quad_pstate_out[l_quad] = l_pstate_request;
-            TRAC_INFO("cmdh_mnfg_request_quad_pstate: Quad %d Pstate in = 0x%02x Pstate out = 0x%02x",
-                      l_quad,
-                      l_cmd_ptr->quad_pstate_in[l_quad],
-                      l_rsp_ptr->quad_pstate_out[l_quad]);
-        }
+            else
+                g_amec_sys.wof.vcs_override_index = l_cmd_ptr->vcs_index;
+
+            if( (l_cmd_ptr->vdd_index != WOF_VRT_IDX_NO_OVERRIDE) &&
+                (l_cmd_ptr->vdd_index >= g_amec_sys.wof.wof_header.vdd_size) )
+            {
+                TRAC_INFO("cmdh_mnfg_select_wof_vrt: VDD index[%d] out of range using last index[%d]",
+                          l_cmd_ptr->vdd_index,
+                          (g_amec_sys.wof.wof_header.vdd_size - 1));
+
+                g_amec_sys.wof.vdd_override_index = g_amec_sys.wof.wof_header.vdd_size - 1;
+            }
+            else
+                g_amec_sys.wof.vdd_override_index = l_cmd_ptr->vdd_index;
+
+            if( (l_cmd_ptr->io_pwr_index != WOF_VRT_IDX_NO_OVERRIDE) &&
+                (l_cmd_ptr->io_pwr_index >= g_amec_sys.wof.wof_header.io_pwr_size) )
+            {
+                TRAC_INFO("cmdh_mnfg_select_wof_vrt: IO Power index[%d] out of range using last index[%d]",
+                          l_cmd_ptr->io_pwr_index,
+                          (g_amec_sys.wof.wof_header.io_pwr_size - 1));
+
+                g_amec_sys.wof.io_pwr_override_index = g_amec_sys.wof.wof_header.io_pwr_size - 1;
+            }
+            else
+                g_amec_sys.wof.io_pwr_override_index = l_cmd_ptr->io_pwr_index;
+
+            if( (l_cmd_ptr->ambient_index != WOF_VRT_IDX_NO_OVERRIDE) &&
+                (l_cmd_ptr->ambient_index >= g_amec_sys.wof.wof_header.ambient_size) )
+            {
+                TRAC_INFO("cmdh_mnfg_select_wof_vrt: Ambient index[%d] out of range using last index[%d]",
+                          l_cmd_ptr->ambient_index,
+                          (g_amec_sys.wof.wof_header.ambient_size - 1));
+
+                g_amec_sys.wof.ambient_override_index = g_amec_sys.wof.wof_header.ambient_size - 1;
+            }
+            else
+                g_amec_sys.wof.ambient_override_index = l_cmd_ptr->ambient_index;
+
+            if( (l_cmd_ptr->v_ratio_index != WOF_VRT_IDX_NO_OVERRIDE) &&
+                (l_cmd_ptr->v_ratio_index >= g_amec_sys.wof.wof_header.vratio_size) )
+            {
+                TRAC_INFO("cmdh_mnfg_select_wof_vrt: V Ratio index[%d] out of range using last index[%d]",
+                          l_cmd_ptr->v_ratio_index,
+                          (g_amec_sys.wof.wof_header.vratio_size - 1));
+
+                g_amec_sys.wof.v_ratio_override_index = g_amec_sys.wof.wof_header.vratio_size - 1;
+            }
+            else
+                g_amec_sys.wof.v_ratio_override_index = l_cmd_ptr->v_ratio_index;
+
+        }  // if write action
+
+        // populate return data -- same data for all valid actions
+        l_rsp_ptr->vcs0 = g_amec_sys.wof.wof_header.vcs_start;
+        l_rsp_ptr->vcs_step = g_amec_sys.wof.wof_header.vcs_step;
+        l_rsp_ptr->vcs_max_index = g_amec_sys.wof.wof_header.vcs_size - 1;
+        l_rsp_ptr->vcs_cur_index = g_amec_sys.wof.vcs_override_index;
+        l_rsp_ptr->reserved1 = 0;
+
+        l_rsp_ptr->vdd0 = g_amec_sys.wof.wof_header.vdd_start;
+        l_rsp_ptr->vdd_step = g_amec_sys.wof.wof_header.vdd_step;
+        l_rsp_ptr->vdd_max_index = g_amec_sys.wof.wof_header.vdd_size - 1;
+        l_rsp_ptr->vdd_cur_index = g_amec_sys.wof.vdd_override_index;
+        l_rsp_ptr->reserved2 = 0;
+
+        l_rsp_ptr->io_pwr0 = g_amec_sys.wof.wof_header.io_pwr_start;
+        l_rsp_ptr->io_pwr_step = g_amec_sys.wof.wof_header.io_pwr_step;
+        l_rsp_ptr->io_pwr_max_index = g_amec_sys.wof.wof_header.io_pwr_size - 1;
+        l_rsp_ptr->io_pwr_cur_index = g_amec_sys.wof.io_pwr_override_index;
+        l_rsp_ptr->reserved3 = 0;
+
+        l_rsp_ptr->ambient0 = g_amec_sys.wof.wof_header.ambient_start;
+        l_rsp_ptr->ambient_step = g_amec_sys.wof.wof_header.ambient_step;
+        l_rsp_ptr->ambient_max_index = g_amec_sys.wof.wof_header.ambient_size - 1;
+        l_rsp_ptr->ambient_cur_index = g_amec_sys.wof.ambient_override_index;
+        l_rsp_ptr->reserved4 = 0;
+
+        l_rsp_ptr->v_ratio0 = g_amec_sys.wof.wof_header.vratio_start;
+        l_rsp_ptr->v_ratio_step = g_amec_sys.wof.wof_header.vratio_step;
+        l_rsp_ptr->v_ratio_max_index = g_amec_sys.wof.wof_header.vratio_size - 1;
+        l_rsp_ptr->v_ratio_cur_index = g_amec_sys.wof.v_ratio_override_index;
+        l_rsp_ptr->reserved5 = 0;
+
+        l_resp_data_length = sizeof(mnfg_select_wof_vrt_rsp_t) - sizeof(cmdh_fsp_rsp_header_t);
 
     }while(0);
 
     // Populate the response data header
     G_rsp_status = l_rc;
-    l_resp_data_length = sizeof(mnfg_quad_pstate_rsp_t) - sizeof(cmdh_fsp_rsp_header_t);
-    l_rsp_ptr->data_length[0] = ((uint8_t *)&l_resp_data_length)[0];
-    l_rsp_ptr->data_length[1] = ((uint8_t *)&l_resp_data_length)[1];
-
+    o_rsp_ptr->data_length[0] = ((uint8_t *)&l_resp_data_length)[0];
+    o_rsp_ptr->data_length[1] = ((uint8_t *)&l_resp_data_length)[1];
     return l_rc;
 }
 
@@ -862,12 +922,12 @@ errlHndl_t cmdh_mnfg_test_parse (const cmdh_fsp_cmd_t * i_cmd_ptr,
             l_rc = cmdh_mnfg_mem_slew(i_cmd_ptr, o_rsp_ptr);
             break;
 
-        case MNFG_QUAD_PSTATE:
-            l_rc = cmdh_mnfg_request_quad_pstate(i_cmd_ptr, o_rsp_ptr);
-            break;
-
         case MNFG_READ_PSTATE_TABLE:
             l_rc = cmdh_mnfg_read_pstate_table(i_cmd_ptr, o_rsp_ptr);
+            break;
+
+        case MNFG_SELECT_WOF_VRT:
+            l_rc = cmdh_mnfg_select_wof_vrt(i_cmd_ptr, o_rsp_ptr);
             break;
 
         default:

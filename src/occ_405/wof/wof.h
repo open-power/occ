@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2016,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2016,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -53,6 +53,10 @@ extern uint32_t G_max_ceff_ratio;
 #define WOF_TABLES_OFFSET           0xC0000 // Relative to PPMR_ADDRESS_HOMER
 #define MAX_CEFF_RATIO              10000   // 1.0 ratio = 10000
                                             // (scaled to avoid floating point)
+// value to indicate VRT dimension does not have an override set by mfg test cmd
+// else the override value is the index to use
+#define WOF_VRT_IDX_NO_OVERRIDE     0xFF
+
 //******************************************************************************
 // Bit Vector Masks
 //******************************************************************************
@@ -205,12 +209,22 @@ typedef struct __attribute__ ((packed))
     wof_header_data_t wof_header;
     // Calculated step from start for VDD
     uint16_t vdd_step_from_start;
+    // override sent for Vdd index via mfg test cmd 0xff indicates no override
+    uint8_t vdd_override_index;
     // Calculated step from start for VCS
     uint16_t vcs_step_from_start;
+    // override sent for Vcs index via mfg test cmd 0xff indicates no override
+    uint8_t vcs_override_index;
     // Calculated step from start for IO Power
     uint16_t io_pwr_step_from_start;
+    // override sent for IO power index via mfg test cmd 0xff indicates no override
+    uint8_t io_pwr_override_index;
     // Calculated step from start for ambient
     uint16_t ambient_step_from_start;
+    // override sent for ambient index via mfg test cmd 0xff indicates no override
+    uint8_t ambient_override_index;
+    // override sent for Vratio index via mfg test cmd 0xff indicates no override
+    uint8_t v_ratio_override_index;
     // Array to hold the core voltages per quad (in 100uV)
     uint32_t v_core_100uV[MAXIMUM_QUADS];
     // Bit vector to hold the power on status of all 24 cores

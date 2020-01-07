@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2016,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2016,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -516,30 +516,63 @@ void wof_main( void )
     calculate_ceff_ratio_vdd();
     calculate_ceff_ratio_vcs();
 
-    // Calculate how many steps from the beginning for each VRT parm
-    g_wof->vcs_step_from_start =
+    // Calculate how many steps from the beginning for each VRT parm that is not currently
+    // being overwritten by mfg select VRT command
+    if(g_wof->vcs_override_index == WOF_VRT_IDX_NO_OVERRIDE)
+    {
+        g_wof->vcs_step_from_start =
                              calculate_step_from_start( g_wof->ceff_ratio_vcs,
                                                         g_wof->wof_header.vcs_step,
                                                         g_wof->wof_header.vcs_start,
                                                         g_wof->wof_header.vcs_size );
+    }
+    else
+    {
+        // Use override value for VCS
+        g_wof->vcs_step_from_start = g_wof->vcs_override_index;
+    }
 
-    g_wof->vdd_step_from_start =
+    if(g_wof->vdd_override_index == WOF_VRT_IDX_NO_OVERRIDE)
+    {
+        g_wof->vdd_step_from_start =
                              calculate_step_from_start( g_wof->ceff_ratio_vdd,
                                                         g_wof->wof_header.vdd_step,
                                                         g_wof->wof_header.vdd_start,
                                                         g_wof->wof_header.vdd_size );
+    }
+    else
+    {
+        // Use override value for VDD
+        g_wof->vdd_step_from_start = g_wof->vdd_override_index;
+    }
 
-    g_wof->io_pwr_step_from_start =
+    if(g_wof->io_pwr_override_index == WOF_VRT_IDX_NO_OVERRIDE)
+    {
+        g_wof->io_pwr_step_from_start =
                              calculate_step_from_start( g_wof->io_power,
                                                         g_wof->wof_header.io_pwr_step,
                                                         g_wof->wof_header.io_pwr_start,
                                                         g_wof->wof_header.io_pwr_size );
+    }
+    else
+    {
+        // Use override value for IO Power
+        g_wof->io_pwr_step_from_start = g_wof->io_pwr_override_index;
+    }
 
-    g_wof->ambient_step_from_start =
+    if(g_wof->ambient_override_index == WOF_VRT_IDX_NO_OVERRIDE)
+    {
+        g_wof->ambient_step_from_start =
                              calculate_step_from_start( g_wof->ambient,
                                                         g_wof->wof_header.ambient_step,
                                                         g_wof->wof_header.ambient_start,
                                                         g_wof->wof_header.ambient_size );
+    }
+    else
+    {
+        // Use override value for ambient
+        g_wof->ambient_step_from_start = g_wof->ambient_override_index;
+    }
 
     // Compute the Main Memory address of the desired VRT table given
     // the calculated steps from start
@@ -706,15 +739,37 @@ void copy_vrt_to_sram_callback( void )
     // Set the parameters for the GpeRequest
     G_wof_vrt_parms.idd_vrt_ptr = (VRT_t*)l_buffer_address;
 
-    if(g_wof->wof_init_state < INITIAL_VRT_SENT_WAITING)
+    // check for Vratio override
+    if(g_wof->v_ratio_override_index == WOF_VRT_IDX_NO_OVERRIDE)
     {
-        // We didn't calculate this VRT set ceff ratios to 0xFF's
-        G_wof_vrt_parms.vdd_ceff_ratio = 0xFFFFFFFF;
-        G_wof_vrt_parms.vcs_ceff_ratio = 0xFFFFFFFF;
+        // no override
+        G_wof_vrt_parms.vratio_mode = 0;
     }
-    else // send ratios used to determine VRT
+    else
+    {
+        // there is an override
+        G_wof_vrt_parms.vratio_mode = 1;
+    }
+    G_wof_vrt_parms.fixed_vratio_index = g_wof->v_ratio_override_index;
+
+    if( (g_wof->wof_init_state < INITIAL_VRT_SENT_WAITING) ||
+        (g_wof->vdd_override_index != WOF_VRT_IDX_NO_OVERRIDE) )
+    {
+        // We didn't calculate this VRT using a real Vdd set ceff ratio to 0xFF's
+        G_wof_vrt_parms.vdd_ceff_ratio = 0xFFFFFFFF;
+    }
+    else // send Vdd ratio used to determine VRT
     {
         G_wof_vrt_parms.vdd_ceff_ratio = g_wof->ceff_ratio_vdd;
+    }
+    if( (g_wof->wof_init_state < INITIAL_VRT_SENT_WAITING) ||
+        (g_wof->vcs_override_index != WOF_VRT_IDX_NO_OVERRIDE) )
+    {
+        // We didn't calculate this VRT using a real Vcs set ceff ratio to 0xFF's
+        G_wof_vrt_parms.vcs_ceff_ratio = 0xFFFFFFFF;
+    }
+    else // send Vcs ratio used to determine VRT
+    {
         G_wof_vrt_parms.vcs_ceff_ratio = g_wof->ceff_ratio_vcs;
     }
 

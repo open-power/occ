@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -36,8 +36,8 @@ typedef enum {
     MNFG_GET_SENSOR         = 0x06,
     MNFG_OVERSUB_EMULATION  = 0x07,
     MNFG_MEMORY_SLEW        = 0x09,
-    MNFG_QUAD_PSTATE        = 0x0A,
     MNFG_READ_PSTATE_TABLE  = 0x0B,
+    MNFG_SELECT_WOF_VRT     = 0x0F,
 } MNFG_CMD;
 
 #define MNFG_INTF_SLEW_START    0x00
@@ -166,24 +166,52 @@ typedef struct __attribute__ ((packed))
     uint16_t                checksum;
 }cmdh_mfg_get_sensor_resp_t;
 
-#define MFG_QUAD_PSTATE_VERSION 0
+#define MFG_SELECT_WOF_VRT_QUERY 0
+#define MFG_SELECT_WOF_VRT_WRITE 1
 
-// Used by OCC to get mnfg request quad pstate command
+// Used by OCC to mnfg request select WOF VRT command
 typedef struct __attribute__ ((packed))
 {
     struct    cmdh_fsp_cmd_header;
     uint8_t   sub_cmd;
-    uint8_t   version;
-    uint8_t   quad_pstate_in[MAXIMUM_QUADS];
-}mnfg_quad_pstate_cmd_t;
+    uint8_t   action;
+    uint8_t   vcs_index;
+    uint8_t   vdd_index;
+    uint8_t   io_pwr_index;
+    uint8_t   ambient_index;
+    uint8_t   v_ratio_index;
+}mnfg_select_wof_vrt_cmd_t;
 
-// Used by OCC firmware to respond to mnfg request quad pstate command
+// Used by OCC firmware to respond to mnfg request select WOF VRT command
 typedef struct __attribute__ ((packed))
 {
     struct    cmdh_fsp_rsp_header;
-    uint8_t   quad_pstate_out[MAXIMUM_QUADS];
-}mnfg_quad_pstate_rsp_t;
-
+    uint16_t  vcs0;
+    uint16_t  vcs_step;
+    uint8_t   vcs_max_index;
+    uint8_t   vcs_cur_index;
+    uint16_t  reserved1;
+    uint16_t  vdd0;
+    uint16_t  vdd_step;
+    uint8_t   vdd_max_index;
+    uint8_t   vdd_cur_index;
+    uint16_t  reserved2;
+    uint16_t  io_pwr0;
+    uint16_t  io_pwr_step;
+    uint8_t   io_pwr_max_index;
+    uint8_t   io_pwr_cur_index;
+    uint16_t  reserved3;
+    uint16_t  ambient0;
+    uint16_t  ambient_step;
+    uint8_t   ambient_max_index;
+    uint8_t   ambient_cur_index;
+    uint16_t  reserved4;
+    uint16_t  v_ratio0;
+    uint16_t  v_ratio_step;
+    uint8_t   v_ratio_max_index;
+    uint8_t   v_ratio_cur_index;
+    uint16_t  reserved5;
+}mnfg_select_wof_vrt_rsp_t;
 
 #define MFG_PSTATE_READ_REQUEST_QUERY 0xFF
 #define MFG_PSTATE_READ_QUERY_RSP_SIZE  8
@@ -219,7 +247,7 @@ uint8_t cmdh_mnfg_get_sensor(const cmdh_fsp_cmd_t * i_cmd_ptr,
 uint8_t cmdh_mnfg_run_stop_slew(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                       cmdh_fsp_rsp_t * o_rsp_ptr);
 
-uint8_t cmdh_mnfg_request_quad_pstate(const cmdh_fsp_cmd_t * i_cmd_ptr,
+uint8_t cmdh_mnfg_select_wof_vrt(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                              cmdh_fsp_rsp_t * o_rsp_ptr);
 
 uint8_t cmdh_mnfg_read_pstate_table(const cmdh_fsp_cmd_t * i_cmd_ptr,
