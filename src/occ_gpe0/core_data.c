@@ -40,7 +40,7 @@ uint32_t get_core_data(uint32_t i_core,
     uint32_t size = sizeof(CoreData) / sizeof(uint64_t);
     uint64_t* core_data64 = (uint64_t*)o_data;
     uint32_t quadSelect = CHIPLET_QUAD_BASE((i_core / CORES_PER_QUAD));
-    uint32_t dtsCoreSelect = DTS_CHIPLET_CORE_OFFSET(i_core) + quadSelect;
+    uint32_t dtsCoreSelect = DTS_CHIPLET_CORE_OFFSET(i_core % CORES_PER_QUAD) + quadSelect;
     uint32_t raceTrackSelect = quadSelect + EQ_DTS_RACETRACK_OFFSET;
 
     uint32_t i;
