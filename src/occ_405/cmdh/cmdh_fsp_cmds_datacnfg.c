@@ -1862,7 +1862,7 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
                             g_amec->proc[0].memctl[l_membuf_num].membuf.temp_sid = l_data_set->temp_sensor_id;
 
                             // Store the thermal sensor type
-                            g_amec->proc[0].memctl[l_membuf_num].membuf.membuf_hottest.temp_type = l_data_set->dimm_info2;
+                            g_amec->proc[0].memctl[l_membuf_num].membuf.membuf_hottest.temp_fru_type = l_data_set->dimm_info2;
 
                             G_present_membufs |= MEMBUF0_PRESENT_MASK >> l_membuf_num;
 
@@ -1877,10 +1877,40 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
                             g_amec->proc[0].memctl[l_membuf_num].membuf.dimm_temps[l_dimm_num].temp_sid =
                                 l_data_set->temp_sensor_id;
 
-                            // Store the thermal sensor type
-                            g_amec->proc[0].memctl[l_membuf_num].membuf.dimm_temps[l_dimm_num].temp_type =
-                                l_data_set->dimm_info2;
-
+                            // Store the temperature sensor fru type
+                            // The 2 external temp sensors may be used for non-dimm fru type i.e. PMIC, mem controller...
+                            // this fru type is coming from attributes setup by HWP during IPL and then read by (H)TMGT
+                            if(l_data_set->dimm_info2 == DATA_FRU_DIMM)
+                            {
+                                  g_amec->proc[0].memctl[l_membuf_num].membuf.dimm_temps[l_dimm_num].temp_fru_type = DATA_FRU_DIMM;
+                                  g_amec->proc[0].memctl[l_membuf_num].membuf.dimm_temps[l_dimm_num].dts_type_mask = OCM_DTS_TYPE_DIMM_MASK;
+                            }
+                            else if(l_data_set->dimm_info2 == DATA_FRU_MEMCTRL_DRAM)
+                            {
+                                  g_amec->proc[0].memctl[l_membuf_num].membuf.dimm_temps[l_dimm_num].temp_fru_type = DATA_FRU_MEMCTRL_DRAM;
+                                  g_amec->proc[0].memctl[l_membuf_num].membuf.dimm_temps[l_dimm_num].dts_type_mask = OCM_DTS_TYPE_MEMCTRL_DRAM_MASK;
+                            }
+                            else if(l_data_set->dimm_info2 == DATA_FRU_PMIC)
+                            {
+                                  g_amec->proc[0].memctl[l_membuf_num].membuf.dimm_temps[l_dimm_num].temp_fru_type = DATA_FRU_PMIC;
+                                  g_amec->proc[0].memctl[l_membuf_num].membuf.dimm_temps[l_dimm_num].dts_type_mask = OCM_DTS_TYPE_PMIC_MASK;
+                            }
+                            else if(l_data_set->dimm_info2 == DATA_FRU_MEMCTRL_EXT)
+                            {
+                                  g_amec->proc[0].memctl[l_membuf_num].membuf.dimm_temps[l_dimm_num].temp_fru_type = DATA_FRU_MEMCTRL_EXT;
+                                  g_amec->proc[0].memctl[l_membuf_num].membuf.dimm_temps[l_dimm_num].dts_type_mask = OCM_DTS_TYPE_MEMCTRL_EXT_MASK;
+                            }
+                            else // sensor not used
+                            {
+                                  g_amec->proc[0].memctl[l_membuf_num].membuf.dimm_temps[l_dimm_num].temp_fru_type = DATA_FRU_NOT_USED;
+                                  g_amec->proc[0].memctl[l_membuf_num].membuf.dimm_temps[l_dimm_num].dts_type_mask = 0;
+                                  if (l_data_set->dimm_info2 != DATA_FRU_NOT_USED)
+                                  {
+                                        // not a valid fru type
+                                        CMDH_TRAC_ERR("data_store_mem_cfg: Got invalid fru type[0x%02X] for mem buf[%d] dimm[%d]",
+                                                      l_data_set->dimm_info2, l_membuf_num, l_dimm_num);
+                                  }
+                            }
                             l_num_dimms++;
                         }
                     } // end OCMB Memory

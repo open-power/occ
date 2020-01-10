@@ -200,13 +200,13 @@ errlHndl_t AMEC_data_write_thrm_thresholds(const OCC_MODE i_mode)
         //
 
         // Store the DVFS thermal setpoint in 0.1 degrees C
-        l_dvfs_temp = l_frudata[DATA_FRU_INTERNAL_MEMC_SENS].dvfs;
+        l_dvfs_temp = l_frudata[DATA_FRU_MEMBUF].dvfs;
         g_amec->thermalmembuf.setpoint = l_dvfs_temp * 10;
         // Store the error temperature for OT detection
-        l_error = l_frudata[DATA_FRU_INTERNAL_MEMC_SENS].error;
+        l_error = l_frudata[DATA_FRU_MEMBUF].error;
         g_amec->thermalmembuf.ot_error = l_error;
         // Store the temperature timeout value
-        g_amec->thermalmembuf.temp_timeout = l_frudata[DATA_FRU_INTERNAL_MEMC_SENS].max_read_timeout;
+        g_amec->thermalmembuf.temp_timeout = l_frudata[DATA_FRU_MEMBUF].max_read_timeout;
 
         TRAC_INFO("AMEC_data_write_thrm_thresholds: membuf setpoints - DVFS: %u, Error: %u",
                   l_dvfs_temp, l_error);
@@ -228,6 +228,47 @@ errlHndl_t AMEC_data_write_thrm_thresholds(const OCC_MODE i_mode)
                   l_dvfs_temp, l_error);
 
         //
+        // Store the Memctrl+DIMM thermal dat
+        //
+        l_dvfs_temp = l_frudata[DATA_FRU_MEMCTRL_DRAM].dvfs;
+        g_amec->thermalmcdimm.setpoint = l_dvfs_temp * 10;
+        // Store the error temperature for OT detection
+        l_error = l_frudata[DATA_FRU_MEMCTRL_DRAM].error;
+        g_amec->thermalmcdimm.ot_error = l_error;
+        // Store the temperature timeout value
+        g_amec->thermalmcdimm.temp_timeout = l_frudata[DATA_FRU_DIMM].max_read_timeout;
+
+        TRAC_INFO("AMEC_data_write_thrm_thresholds: MC+DIMM setpoints - DVFS: %u, Error: %u",
+                  l_dvfs_temp, l_error);
+        //
+        // Store the PMIC thermal data
+        //
+
+        // Store the DVFS thermal setpoint in 0.1 degrees C
+        l_dvfs_temp = l_frudata[DATA_FRU_PMIC].dvfs;
+        g_amec->thermalpmic.setpoint = l_dvfs_temp * 10;
+        // Store the error temperature for OT detection
+        l_error = l_frudata[DATA_FRU_PMIC].error;
+        g_amec->thermalpmic.ot_error = l_error;
+        // Store the temperature timeout value
+        g_amec->thermalpmic.temp_timeout = l_frudata[DATA_FRU_PMIC].max_read_timeout;
+
+        TRAC_INFO("AMEC_data_write_thrm_thresholds: PMIC setpoints - DVFS: %u, Error: %u",
+                  l_dvfs_temp, l_error);
+
+
+        // Store the DVFS thermal setpoint in 0.1 degrees C
+        l_dvfs_temp = l_frudata[DATA_FRU_MEMCTRL_EXT].dvfs;
+        g_amec->thermalmcext.setpoint = l_dvfs_temp * 10;
+        // Store the error temperature for OT detection
+        l_error = l_frudata[DATA_FRU_MEMCTRL_EXT].error;
+        g_amec->thermalmcext.ot_error = l_error;
+        // Store the temperature timeout value
+        g_amec->thermalmcext.temp_timeout = l_frudata[DATA_FRU_MEMCTRL_EXT].max_read_timeout;
+
+        TRAC_INFO("AMEC_data_write_thrm_thresholds: External MC setpoints - DVFS: %u, Error: %u",
+                  l_dvfs_temp, l_error);
+
         // Store the VRM Vdd thermal data
         //
 

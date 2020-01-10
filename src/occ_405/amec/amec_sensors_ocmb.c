@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -110,9 +110,10 @@ void amec_update_ocmb_sensors(uint8_t i_membuf)
 // End Function Specification
 void amec_update_ocmb_dimm_dts_sensors(OcmbMemData * i_sensor_cache, uint8_t i_membuf)
 {
+// confirmed ok to use same values for all types (internal mc, dimm, external mc, pmic...)
 #define MIN_VALID_DIMM_TEMP 1
 #define MAX_VALID_DIMM_TEMP 125 //according to Mike Pardiek 04/23/2019
-#define MAX_MEM_TEMP_CHANGE 2
+#define MAX_MEM_TEMP_CHANGE 4
 
     uint32_t k;
     uint16_t l_dts[NUM_DIMMS_PER_OCMB] = {0};
@@ -303,94 +304,111 @@ void amec_update_ocmb_dts_sensors(OcmbMemData * i_sensor_cache, uint8_t i_membuf
     amec_membuf_t* l_membuf_ptr = &g_amec->proc[0].memctl[i_membuf].membuf;
     fru_temp_t* l_fru = &l_membuf_ptr->membuf_hottest;
 
-    l_prev_temp = l_fru->cur_temp;
-    if(!l_prev_temp)
+    if(l_fru->temp_fru_type == DATA_FRU_MEMBUF)
     {
-        l_prev_temp = l_sens_temp;
-    }
-
-    //Check DTS status bits
-    if(i_sensor_cache->status.fields.ubdts0_valid &&
-       (!i_sensor_cache->status.fields.ubdts0_err))
-    {
-        //make sure temperature is within a 'reasonable' range.
-        if(l_sens_temp < MIN_VALID_MEMBUF_TEMP ||
-           l_sens_temp > MAX_VALID_MEMBUF_TEMP)
+        l_prev_temp = l_fru->cur_temp;
+        if(!l_prev_temp)
         {
-            //set a flag so that if we end up logging an error we have something to debug why
-            l_fru->flags |= FRU_TEMP_OUT_OF_RANGE;
+            l_prev_temp = l_sens_temp;
+        }
+
+        //Check DTS status bits
+        if( (i_sensor_cache->status.fields.ubdts0_valid) &&
+            (!i_sensor_cache->status.fields.ubdts0_err) )
+        {
+            //make sure temperature is within a 'reasonable' range.
+            if( (l_sens_temp < MIN_VALID_MEMBUF_TEMP) ||
+                (l_sens_temp > MAX_VALID_MEMBUF_TEMP) )
+            {
+                //set a flag so that if we end up logging an error we have something to debug why
+                l_fru->flags |= FRU_TEMP_OUT_OF_RANGE;
+                l_dts = l_prev_temp;
+            }
+            else
+            {
+                //don't allow temp to change more than is reasonable since last read
+                if(l_sens_temp > (l_prev_temp + MAX_MEM_TEMP_CHANGE))
+                {
+                    l_dts = l_prev_temp + MAX_MEM_TEMP_CHANGE;
+                    if(!l_fru->flags)
+                    {
+                        TRAC_INFO("membuf temp rose faster than reasonable: membuf[%d] prev[%d] cur[%d]",
+                                  i_membuf, l_prev_temp, l_sens_temp);
+                        l_fru->flags |= FRU_TEMP_FAST_CHANGE;
+                    }
+                }
+                else if (l_sens_temp < (l_prev_temp - MAX_MEM_TEMP_CHANGE))
+                {
+                    l_dts = l_prev_temp - MAX_MEM_TEMP_CHANGE;
+                    if(!l_fru->flags)
+                    {
+                        TRAC_INFO("membuf temp fell faster than reasonable: cent[%d] prev[%d] cur[%d]",
+                                  i_membuf, l_prev_temp, l_sens_temp);
+                        l_fru->flags |= FRU_TEMP_FAST_CHANGE;
+                    }
+                }
+                else //reasonable amount of change occurred
+                {
+                    l_dts = l_sens_temp;
+                    l_fru->flags &= ~FRU_TEMP_FAST_CHANGE;
+                }
+
+                //Notify thermal thread that temperature has been updated
+                G_membuf_temp_updated_bitmap |= (MEMBUF0_PRESENT_MASK >> i_membuf);
+
+                //clear error flags
+                l_fru->flags &= FRU_TEMP_FAST_CHANGE;
+            }
+        }
+        else //status was INVALID
+        {
+            if(L_ran_once[i_membuf])
+            {
+                //Trace the error if we haven't traced it already for this sensor
+                if( (!(l_fru->flags & FRU_SENSOR_STATUS_INVALID)) &&
+                    (i_sensor_cache->status.fields.ubdts0_err) )
+                {
+                    TRAC_ERR("Membuf %d temp sensor error.", i_membuf);
+                }
+
+                l_fru->flags |= FRU_SENSOR_STATUS_INVALID;
+            }
+
+            //use last temperature
             l_dts = l_prev_temp;
         }
-        else
+
+        L_ran_once[i_membuf] = TRUE;
+
+        // Update Interim Data - later this will get picked up to form membuf sensor
+        l_fru->cur_temp = l_dts;
+
+        //Check if at or above the error temperature
+        if(l_dts >= g_amec->thermalmembuf.ot_error)
         {
-            //don't allow temp to change more than is reasonable for 2ms
-            if(l_sens_temp > (l_prev_temp + MAX_MEM_TEMP_CHANGE))
-            {
-                l_dts = l_prev_temp + MAX_MEM_TEMP_CHANGE;
-                if(!l_fru->flags)
-                {
-                    TRAC_INFO("membuf temp rose faster than reasonable: membuf[%d] prev[%d] cur[%d]",
-                              i_membuf, l_prev_temp, l_sens_temp);
-                    l_fru->flags |= FRU_TEMP_FAST_CHANGE;
-                }
-            }
-            else if (l_sens_temp < (l_prev_temp - MAX_MEM_TEMP_CHANGE))
-            {
-                l_dts = l_prev_temp - MAX_MEM_TEMP_CHANGE;
-                if(!l_fru->flags)
-                {
-                    TRAC_INFO("membuf temp fell faster than reasonable: membuf[%d] prev[%d] cur[%d]",
-                                  i_membuf, l_prev_temp, l_sens_temp);
-                    l_fru->flags |= FRU_TEMP_FAST_CHANGE;
-                }
-            }
-            else //reasonable amount of change occurred
-            {
-                l_dts = l_sens_temp;
-                l_fru->flags &= ~FRU_TEMP_FAST_CHANGE;
-            }
-
-            //Notify thermal thread that temperature has been updated
-            G_membuf_temp_updated_bitmap |= MEMBUF0_PRESENT_MASK >> i_membuf;
-
-            //clear error flags
-            l_fru->flags &= FRU_TEMP_FAST_CHANGE;
-        }
-    }
-    else //status was INVALID
-    {
-        if(L_ran_once[i_membuf])
-        {
-            //Trace the error if we haven't traced it already for this sensor
-            if(!(l_fru->flags & FRU_SENSOR_STATUS_INVALID) &&
-               i_sensor_cache->status.fields.ubdts0_err)
-            {
-                TRAC_ERR("Membuf %d temp sensor error.", i_membuf);
-            }
-
-            l_fru->flags |= FRU_SENSOR_STATUS_INVALID;
+            //Set a bit so that this dimm can be called out by the thermal thread
+            G_membuf_overtemp_bitmap |= (MEMBUF0_PRESENT_MASK >> i_membuf);
         }
 
-        //use last temperature
-        l_dts = l_prev_temp;
+        // Update Interim Data - later this will get picked up to form membuf sensor
+        l_membuf_ptr->membuf_hottest.cur_temp = l_dts;
+
+        // Update individual membuf temperature
+        sensor_update(&l_membuf_ptr->tempmembuf, l_dts);
+
+        AMEC_DBG("Membuf[%d]: HotMembuf=%d\n",i_membuf,l_dts);
     }
-
-    L_ran_once[i_membuf] = TRUE;
-
-    //Check if at or above the error temperature
-    if(l_dts >= g_amec->thermalmembuf.ot_error)
+    else // internal sensor not being used$
     {
-        //Set a bit so that this dimm can be called out by the thermal thread
-        G_membuf_overtemp_bitmap |= (MEMBUF0_PRESENT_MASK >> i_membuf);
+        // make sure temperature is 0 indicating not present
+        l_fru->cur_temp = 0;
+
+        //Notify thermal thread that temperature has been updated so no timeout error is logged
+        G_membuf_temp_updated_bitmap |= MEMBUF0_PRESENT_MASK >> i_membuf;
+
+        //clear error flags
+        l_fru->flags = 0;
     }
-
-    // Update Interim Data - later this will get picked up to form membuf sensor
-    l_membuf_ptr->membuf_hottest.cur_temp = l_dts;
-
-    // Update individual membuf temperature
-    sensor_update(&l_membuf_ptr->tempmembuf, l_dts);
-
-    AMEC_DBG("Membuf[%d]: HotMembuf=%d\n",i_membuf,l_dts);
 }
 
 // Function Specification
@@ -407,34 +425,102 @@ void amec_update_ocmb_temp_sensors(void)
     uint32_t k, l_dimm;
     uint32_t l_hot_dimm = 0;
     uint32_t l_hot_mb = 0;
-    uint32_t l_cur_temp = 0;
+    uint32_t l_hot_mb_dimm = 0;
+    uint32_t l_hot_pmic = 0;
+    uint32_t l_hot_ext_mb = 0;
+    uint8_t  l_ot_error = 0;
+    uint8_t  l_cur_temp = 0;
+    uint8_t  l_fru_type = DATA_FRU_NOT_USED;
+    static bool L_ot_traced[MAX_NUM_OCMBS][NUM_DIMMS_PER_OCMB] = {{false}};
 
-    // -----------------------------------------------------------
-    // Find hottest temperature from all membufs for this Proc chip
-    // Find hottest temperature from all DIMMs for this Proc chip
-    // -----------------------------------------------------------
     for(k=0; k < MAX_NUM_OCMBS; k++)
     {
+        // Find hottest temperature from all internal membufs for this Proc chip
         if(g_amec->proc[0].memctl[k].membuf.membuf_hottest.cur_temp > l_hot_mb)
         {
             l_hot_mb = g_amec->proc[0].memctl[k].membuf.membuf_hottest.cur_temp;
         }
-        // Find hottest DIMM
+
+        // process each of the thermal sensors (stored as "dimm" temps)
+        // based on what type they are for and finding the hottest for each type
         for(l_dimm=0; l_dimm < NUM_DIMMS_PER_OCMB; l_dimm++)
         {
+           l_fru_type = g_amec->proc[0].memctl[k].membuf.dimm_temps[l_dimm].temp_fru_type;
            l_cur_temp = g_amec->proc[0].memctl[k].membuf.dimm_temps[l_dimm].cur_temp;
-           if(l_cur_temp > l_hot_dimm)
+
+           switch(l_fru_type)
            {
-              l_hot_dimm = l_cur_temp;
+               case DATA_FRU_DIMM:
+                  l_ot_error = g_amec->thermaldimm.ot_error;
+                  if(l_cur_temp > l_hot_dimm)
+                  {
+                     l_hot_dimm = l_cur_temp;
+                  }
+                  break;
+
+               case DATA_FRU_MEMCTRL_DRAM:
+                  l_ot_error = g_amec->thermalmcdimm.ot_error;
+                  if(l_cur_temp > l_hot_mb_dimm)
+                  {
+                     l_hot_mb_dimm = l_cur_temp;
+                  }
+                  break;
+
+               case DATA_FRU_PMIC:
+                  l_ot_error = g_amec->thermalpmic.ot_error;
+                  if(l_cur_temp > l_hot_pmic)
+                  {
+                     l_hot_pmic = l_cur_temp;
+                  }
+                  break;
+
+               case DATA_FRU_MEMCTRL_EXT:
+                  l_ot_error = g_amec->thermalmcext.ot_error;
+                  if(l_cur_temp > l_hot_ext_mb)
+                  {
+                     l_hot_ext_mb = l_cur_temp;
+                  }
+                  break;
+
+               case DATA_FRU_NOT_USED:
+               default:
+                  // ignore reading
+                  l_ot_error = 0;
+                  break;
+           } // end switch fru type
+
+           // check if this "DIMM" sensor is over its error temperature
+           if( l_ot_error && (l_cur_temp >= l_ot_error) )
+           {
+               //Set a bit so that this sensor can be called out by the thermal thread
+               G_dimm_overtemp_bitmap.bytes[k] |= (DIMM_SENSOR0 >> l_dimm);
+               // trace first time OT per DIMM DTS sensor
+               if( !L_ot_traced[k][l_dimm] )
+               {
+                  TRAC_ERR("amec_update_ocmb_temp_sensors: OCMB[%d] DTS[%d] type[0x%02X] reached error temp[%d]. current[%d]",
+                           k,
+                           l_dimm,
+                           l_fru_type,
+                           l_ot_error,
+                           l_cur_temp);
+                  L_ot_traced[k][l_dimm] = true;
+               }
            }
-        }
-    }
-    sensor_update(&g_amec->proc[0].tempmembufthrm,l_hot_mb);
+        } // end for each "dimm" thermal sensor
+    } // end for each OCMB
+
     sensor_update(&g_amec->proc[0].tempdimmthrm,l_hot_dimm);
     AMEC_DBG("HotMembuf=%d, HotDimm=%d\n", l_hot_mb, l_hot_dimm);
 
-}
+    sensor_update(&g_amec->proc[0].tempmcdimmthrm,l_hot_mb_dimm);
+    AMEC_DBG("HotMCDimm=%d\n",l_hot_mb_dimm);
 
+    sensor_update(&g_amec->proc[0].temppmicthrm,l_hot_pmic);
+    AMEC_DBG("HotPmic=%d\n",l_hot_pmic);
+
+    sensor_update(&g_amec->proc[0].tempmcextthrm,l_hot_ext_mb);
+    AMEC_DBG("HotExternalMembuf=%d\n",l_hot_ext_mb);
+}
 
 // Function Specification
 //

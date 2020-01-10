@@ -751,6 +751,30 @@ void amec_slv_mem_voting_box(void)
         kvm_reason = MEMORY_OVER_TEMP;
     }
 
+    // Check vote from Mem ctrl+DIMM thermal control loop
+    if (l_vote > g_amec->thermalmcdimm.speed_request)
+    {
+        l_vote = g_amec->thermalmcdimm.speed_request;
+        l_reason = AMEC_MEM_VOTING_REASON_MCDIMM;
+        kvm_reason = MEMORY_OVER_TEMP;
+    }
+
+    // Check vote from Pmic thermal control loop
+    if (l_vote > g_amec->thermalpmic.speed_request)
+    {
+        l_vote = g_amec->thermalpmic.speed_request;
+        l_reason = AMEC_MEM_VOTING_REASON_PMIC;
+        kvm_reason = MEMORY_OVER_TEMP;
+    }
+
+    // Check vote from external mem controller thermal control loop
+    if (l_vote > g_amec->thermalmcext.speed_request)
+    {
+        l_vote = g_amec->thermalmcext.speed_request;
+        l_reason = AMEC_MEM_VOTING_REASON_MC_EXT;
+        kvm_reason = MEMORY_OVER_TEMP;
+    }
+
     // Check if memory autoslewing is enabled
     if (g_amec->mnfg_parms.mem_autoslew)
     {

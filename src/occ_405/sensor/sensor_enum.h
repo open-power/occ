@@ -590,8 +590,11 @@ enum e_gsid
     // ------------------------------------------------------
     // Memory Buffers
     // ------------------------------------------------------
-    TEMPMEMBUFTHRM, // Hottest memory buffer temperature for this OCC
-    TEMPDIMMTHRM,   // Hottest DIMM temperature across all DIMMs for this OCC
+    TEMPMEMBUFTHRM,
+    TEMPDIMMTHRM,
+    TEMPMCDIMMTHRM,
+    TEMPPMICTHRM,
+    TEMPMCEXTTHRM,
 
     // ------------------------------------------------------
     // GPU Sensors

@@ -124,11 +124,19 @@ typedef struct
   amec_mem_speed_t last_mem_speed_sent;
 } amec_portpair_t;
 
+// bit masks for fru_temp_t flags
+#define FRU_SENSOR_STATUS_STALLED       0x01
 #define FRU_SENSOR_STATUS_ERROR         0x02
 #define FRU_SENSOR_STATUS_VALID_OLD     0x04
 #define FRU_TEMP_OUT_OF_RANGE           0x08
 #define FRU_SENSOR_STATUS_INVALID       0x10 //membuf only
 #define FRU_TEMP_FAST_CHANGE            0x20
+
+// OpenCAPI memory only bit masks for fru_temp_t dts_type_mask
+#define OCM_DTS_TYPE_DIMM_MASK          0x01
+#define OCM_DTS_TYPE_MEMCTRL_DRAM_MASK  0x02
+#define OCM_DTS_TYPE_PMIC_MASK          0x04
+#define OCM_DTS_TYPE_MEMCTRL_EXT_MASK   0x08
 
 typedef struct
 {
@@ -139,7 +147,11 @@ typedef struct
     uint32_t temp_sid;
 
     // Type of thermal sensor this represents
-    eConfigDataFruType  temp_type;
+    eConfigDataFruType  temp_fru_type;
+
+    // Indicates what this temperature is for
+    uint8_t  dts_type_mask;
+
 }fru_temp_t;
 
 typedef struct
@@ -434,6 +446,9 @@ typedef struct
   // Memory Summary Sensors
   sensor_t tempmembufthrm;
   sensor_t tempdimmthrm;
+  sensor_t tempmcdimmthrm; // hottest of all DATA_FRU_MEMCTRL_DRAM monitored by this OCC
+  sensor_t temppmicthrm;   // hottest of all DATA_FRU_PMIC monitored by this OCC
+  sensor_t tempmcextthrm;  // hottest of all DATA_FRU_MEMCTRL_EXT monitored by this OCC
   sensor_t mempwrthrot;
   sensor_t memotthrot;
 
@@ -591,6 +606,12 @@ typedef struct
   amec_controller_t     thermalmembuf;
   // Thermal Controller based on DIMM temperatures
   amec_controller_t     thermaldimm;
+  // Thermal Controller based on temperature sensors covering both Memctrl+DIMM
+  amec_controller_t     thermalmcdimm;
+  // Thermal Controller based on PMIC temperatures
+  amec_controller_t     thermalpmic;
+  // Thermal Controller based on external mem controller temperatures
+  amec_controller_t     thermalmcext;
   // Thermal Controller based on VRM Vdd temperatures
   amec_controller_t     thermalvdd;
 

@@ -1991,8 +1991,8 @@ bool gpu_read_temp_sm()
                 g_amec->gpu[G_current_gpu_id].status.retryCount = 0;
 
                 // check if there is an overtemp that hasn't been reported
-                if((G_data_cnfg->thrm_thresh.data[DATA_FRU_GPU_CORE].error) &&
-                   (l_temp > G_data_cnfg->thrm_thresh.data[DATA_FRU_GPU_CORE].error) &&
+                if((G_data_cnfg->thrm_thresh.data[DATA_FRU_GPU].error) &&
+                   (l_temp > G_data_cnfg->thrm_thresh.data[DATA_FRU_GPU].error) &&
                    (!g_amec->gpu[G_current_gpu_id].status.overtempError) )
                 {
                     g_amec->gpu[G_current_gpu_id].status.overtempError = TRUE;

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -117,8 +117,8 @@ void amec_controller_membuf_thermal();
  *  This function implements a Proportional Controller for the
  *  thermal control loop based on DIMM temperatures. Although it
  *  doesn't return any results, it populates the thermal vote in
- *  the field g_amec->thermaldimm.speed_request.
- *
+ *  the fields g_amec->thermaldimm.speed_request, g_amec->thermalmcdimm.speed_request,
+ *  g_amec->thermalpmic.speed_request and g_amec->thermalmcext.speed_request
  */
 void amec_controller_dimm_thermal();
 

@@ -73,16 +73,20 @@ typedef enum
 typedef enum
 {
     DATA_FRU_PROC               = 0x00,  // Processor (hottest core temperature)
-    DATA_FRU_INTERNAL_MEMC_SENS = 0x01,  // Internal memory controller sensor
+    DATA_FRU_MEMBUF             = 0x01,  // Internal memory controller sensor
     DATA_FRU_DIMM               = 0x02,
-    DATA_FRU_MEMC_AND_DIMM      = 0x03,  // Memory controller + DIMM
-    DATA_FRU_GPU_CORE           = 0x04,
+    DATA_FRU_MEMCTRL_DRAM       = 0x03,  // Memory controller + DIMM
+    DATA_FRU_GPU                = 0x04,
     DATA_FRU_GPU_MEM            = 0x05,
-    DATA_FRU_VRM_VDD            = 0x06,  // this is an actual temperature reading for VRM Vdd
+    DATA_FRU_VRM_VDD            = 0x06,  // This is an actual temperature reading for VRM Vdd
     DATA_FRU_PMIC               = 0x07,
-    DATA_FRU_EXTERNAL_MEMC_SENS = 0x08,  // External memory controller sensor
+    DATA_FRU_MEMCTRL_EXT        = 0x08,  // External memory controller sensor
     DATA_FRU_MAX,
 } eConfigDataFruType;
+
+// For OCM the mapping of sensors to fru type comes in mem config data from (H)TMGT and some may not be used
+// OCC should ignore readings from all sesnors marked as not used
+#define DATA_FRU_NOT_USED       0xFF
 
 typedef enum
 {
