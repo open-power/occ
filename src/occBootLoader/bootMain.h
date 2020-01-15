@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2014,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2014,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -92,6 +92,11 @@ typedef enum CHKPOINT
 
 #define WRITE_TO_SPRG1_AND_HALT(rc) \
     ({__asm__ __volatile__ ("mtsprg1 %0;" "tw 31,0,0;": : "r" (rc));})
+
+// Write rc to SPRG1, data2 to SPRG2, and data3 to SPRG3 (additional debug)
+#define WRITE_TO_SPRGx_AND_HALT(rc,data2,data3) \
+    ({__asm__ __volatile__ ("mtsprg1 %0;" "mtsprg2 %1;" "mtsprg3 %2;" "tw 31,0,0;": : \
+                            "r" (rc), "r" (data2), "r" (data3));})
 
 //*************************************************************************/
 // Structures

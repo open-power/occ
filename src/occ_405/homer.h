@@ -29,22 +29,26 @@
 #define _homer_h
 
 
-// Offset into the HOMER of the host data section and the size
 #define HOMER_BASE_ADDRESS    0x80000000
 #define HOMER_SPACE_SIZE      0x00400000       // 4 MB
 
-#define HOMER_HD_OFFSET       0x000C0000
-#define HOMER_HD_ADDRESS     (HOMER_BASE_ADDRESS+HOMER_HD_OFFSET)
-#define HOMER_HD_SZ           (128 * 1024)
+// OCC image (bootloader + 405 + GPE0 + GPE1) is at HOMER offset 0 (896kB)
 
-// OPAL table address in HOMER
-#define OPAL_OFFSET_HOMER   0x000E2000 // Offset address of OPAL relative to HOMER
-#define OPAL_DYNAMIC_OFFSET 0x0B80     // Offset address of dynamic space (relative to OPAL start address)
+// OCC/HTMGT command buffer offset in HOMER (4kB)
+#define OCC_HTMGT_CMD_OFFSET_HOMER   0x000E0000
+#define OCC_HTMGT_CMD_ADDRESS_HOMER  (HOMER_BASE_ADDRESS+OCC_HTMGT_CMD_OFFSET_HOMER)
 
-#define OPAL_ADDRESS_HOMER         (HOMER_BASE_ADDRESS+OPAL_OFFSET_HOMER)   // OPAL start address
-#define OPAL_STATIC_ADDRESS_HOMER   OPAL_ADDRESS_HOMER                      // OPAL's Static Address
-#define OPAL_DYNAMIC_ADDRESS_HOMER (OPAL_ADDRESS_HOMER+OPAL_DYNAMIC_OFFSET) // OPAL's Dynamic Address
+// OCC/HTMGT response buffer offset in HOMER (4kB)
+#define OCC_HTMGT_RSP_OFFSET_HOMER   0x000E1000
+#define OCC_HTMGT_RSP_ADDRESS_HOMER  (HOMER_BASE_ADDRESS+OCC_HTMGT_RSP_OFFSET_HOMER)
 
+// OPAL Shared Memory Interface
+#define OPAL_OFFSET_HOMER            0x000E2000 // Offset address of OPAL relative to HOMER
+#define OPAL_DYNAMIC_OFFSET          0x0B80     // Offset address of dynamic space (relative to OPAL start address)
+
+#define OPAL_ADDRESS_HOMER           (HOMER_BASE_ADDRESS+OPAL_OFFSET_HOMER)   // OPAL start address
+#define OPAL_STATIC_ADDRESS_HOMER     OPAL_ADDRESS_HOMER                      // OPAL's Static Address
+#define OPAL_DYNAMIC_ADDRESS_HOMER   (OPAL_ADDRESS_HOMER+OPAL_DYNAMIC_OFFSET) // OPAL's Dynamic Address
 
 // Inband OCC command buffer offset in HOMER from the start of OPAL data
 #define INBAND_OCC_CMD_OFFSET_HOMER  0x00000C00
@@ -54,13 +58,16 @@
 #define INBAND_OCC_RSP_OFFSET_HOMER  0x00001C00
 #define INBAND_OCC_RSP_ADDRESS_HOMER (OPAL_ADDRESS_HOMER+INBAND_OCC_RSP_OFFSET_HOMER)
 
-// OCC/HTMGT command buffer offset in HOMER
-#define OCC_HTMGT_CMD_OFFSET_HOMER  0x000E0000
-#define OCC_HTMGT_CMD_ADDRESS_HOMER (HOMER_BASE_ADDRESS+OCC_HTMGT_CMD_OFFSET_HOMER)
+// Reserved (40kB)
 
-// OCC/HTMGT response buffer offset in HOMER
-#define OCC_HTMGT_RSP_OFFSET_HOMER  0x000E1000
-#define OCC_HTMGT_RSP_ADDRESS_HOMER (HOMER_BASE_ADDRESS+OCC_HTMGT_RSP_OFFSET_HOMER)
+// Host data address and size in HOMER (8kB)
+#define HOMER_HD_OFFSET              0x000F4000
+#define HOMER_HD_ADDRESS             (HOMER_BASE_ADDRESS+HOMER_HD_OFFSET)
+#define HOMER_HD_SZ                  (8 * 1024)
+
+// Reserved (40kB)
+
+// HCODE data starts at HOMER offset 0x00100000 (3MB)
 
 // PPMR Header space
 #define PPMR_OFFSET_HOMER    0x00300000                             // PPMR image HOMER offset

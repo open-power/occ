@@ -46,15 +46,8 @@ L_pgpe_enabled = 0
 
 # Simics is not actively running (issue manual run commands between operations)
 G_run_time = 1
-
-# P9
-proc = "proc0"
-G_occsram_trace_length = "0x2028"
-G_occsram_err_trace  = "0xFFFB4000"
-G_occsram_inf_trace  = "0xFFFB6000"
-G_occsram_imp_trace  = "0xFFFB8000"
-G_occsram_cmd_buffer = "0xFFFBE000"
-G_occsram_rsp_buffer = "0xFFFBF000"
+# Set bypass to 1 to bypass the bootloader and start the 405 code directly
+G_bypass_bootloader = 0
 
 # P10
 proc = "dcm0.chip0"
@@ -2280,14 +2273,27 @@ def occ_init(code_dir, flg_pgpe, flg_verbose):
     # 000E3C00 -   Inband Response Buffer (4k)
     # 00300000 - PPMR Header (4k)
 
-    print("==> Requesting 405 chip level reset and set pc to __ssx_boot");
-    # Request a 405 chip level reset and set the 405 pc to __ssx_boot
+    # Request a 405 chip level reset and set the 405 pc
     cli.run_command("backplane0."+proc+".occ_cmp.proc_405.write-reg reg-name = dbcr0 value = 0x20000000")
-    cli.run_command("backplane0."+proc+".occ_cmp.proc_405.write-reg reg-name = pc value = (backplane0."+proc+".occ_cmp.proc_405.sym __ssx_boot)")
-    cli.run_command("backplane0."+proc+".occ_cmp.proc_405.enable")
+    if G_bypass_bootloader == 1:
+        # Set PC to 405 code (bypass OCC bootloader)
+        print("==> Requesting 405 chip level reset and set pc to __ssx_boot (OCC 405 code - no bootloader)");
+        cli.run_command("backplane0."+proc+".occ_cmp.proc_405.write-reg reg-name = pc value = (backplane0."+proc+".occ_cmp.proc_405.sym __ssx_boot)")
+    else:
+        # Set PC to default (will start with OCC bootloader)
+        print("==> Requesting 405 chip level reset and set pc to 0xFFFFFFFC (OCC bootloader will run)");
+        cli.run_command("backplane0."+proc+".occ_cmp.proc_405.write-reg reg-name = pc value = 0xFFFFFFFC") # Start boot loader
 
-    print("==> write 0xFFFFFFFC to 0x4BF40002");
-    cli.run_command("backplane0."+proc+".occ_cmp.oci_space.write 0xFFFFFFFC 0x4BF40002 size = 4")
+        print("==> Write instruction to branch to start of 405 code (0xFFF40000) at SRAM Boot Vector 3 (0xFFFFFFFC)");
+        cli.run_command("backplane0."+proc+".occ_cmp.oci_space.write 0xFFFFFFFC 0x4BF40002 size = 4")
+
+        # SRAM - FFF4000 is start of PPC405 Code
+        print("==> Write instructions to branch to bootloader (start of HOMER) at start of 405 code (0xFFF40000)");
+        # (branch is too far for single instruction, so must use CTR)
+        cli.run_command("backplane0."+proc+".occ_cmp.oci_space.write 0xFFF40000 0x3C208000 size = 4") # lis     r1,-32768
+        cli.run_command("backplane0."+proc+".occ_cmp.oci_space.write 0xFFF40004 0x60210040 size = 4") # ori     r1,r1,64
+        cli.run_command("backplane0."+proc+".occ_cmp.oci_space.write 0xFFF40008 0x7C2903A6 size = 4") # mtctr   r1
+        cli.run_command("backplane0."+proc+".occ_cmp.oci_space.write 0xFFF4000C 0x4E800420 size = 4") # bctr
 
     # Create 16K OCC cache
     print("==> Creating 16K OCC cache");
@@ -2297,28 +2303,28 @@ def occ_init(code_dir, flg_pgpe, flg_verbose):
     cli.run_command("backplane0."+proc+".occ_cmp.oci_space.add-map base = 0x00000000 device = backplane0."+proc+".occ_cmp.ram_cacheable length = 0x4000 align-size = 8192")
 
     # Load the code binaries into main memory
-    print("==> Loading OCC image: ${simics_binaries}/image.bin @ 0x00000000")
-    cli.run_command("system_cmp0.memory_image0.load-file binaries/image.bin 0x00000000")
+    if G_bypass_bootloader != 1:
+        print("==> Loading OCC image: ${simics_binaries}/image.bin @ 0x00000000")
+        cli.run_command("system_cmp0.memory_image0.load-file binaries/image.bin 0x00000000")
     print("==> Loading fake PPMR header (ppmr.bin)")
     cli.run_command("system_cmp0.memory_image0.load-file binaries/ppmr.bin  0x00300000")
     print("==> Loading fake OPPB header (oppb.bin)")
     cli.run_command("system_cmp0.memory_image0.load-file binaries/oppb.bin  0x00320000")
 
-    # SRAM - FFF4000 is start of PPC405 Code + Data area "3C20800060210040 7C2903A64E800420"
-    print("==> write 0xFFF4000x");
-    cli.run_command("backplane0."+proc+".occ_cmp.oci_space.write 0xFFF40000 0x3C208000 size = 4")
-    cli.run_command("backplane0."+proc+".occ_cmp.oci_space.write 0xFFF40004 0x60210040 size = 4")
-    cli.run_command("backplane0."+proc+".occ_cmp.oci_space.write 0xFFF40008 0x7C2903A6 size = 4")
-    cli.run_command("backplane0."+proc+".occ_cmp.oci_space.write 0xFFF4000C 0x4E800420 size = 4")
+    # Dump 405 PC
+    cli.run_command("backplane0."+proc+".occ_cmp.proc_405.read-reg reg-name = pc")
+
+    print("==> Enabling 405");
+    cli.run_command("backplane0."+proc+".occ_cmp.proc_405.enable")
 
     # HOMER init
-    print("==> Initialize OCC Host Config Data in HOMER (0x800C0000)")
-    cli.run_command("backplane0."+proc+".occ_cmp.oci_space.write 0x800C0000 0x000000A0 -b") # Version
-    cli.run_command("backplane0."+proc+".occ_cmp.oci_space.write 0x800C0004 0x00000964 -b") # Nest Frequency
-    cli.run_command("backplane0."+proc+".occ_cmp.oci_space.write 0x800C0008 0x00000000 -b") # Interrupt Type (FSP)
-    cli.run_command("backplane0."+proc+".occ_cmp.oci_space.write 0x800C000C 0x00000000 -b") # SMB
-    cli.run_command("backplane0."+proc+".occ_cmp.oci_space.read  0x800C0000 8")
-    cli.run_command("backplane0."+proc+".occ_cmp.oci_space.read  0x800C0008 8")
+    print("==> Initialize OCC Host Config Data in HOMER (0x800F4000)")
+    cli.run_command("backplane0."+proc+".occ_cmp.oci_space.write 0x800F4000 0x000000A0 -b") # Version
+    cli.run_command("backplane0."+proc+".occ_cmp.oci_space.write 0x800F4004 0x00000964 -b") # Nest Frequency
+    cli.run_command("backplane0."+proc+".occ_cmp.oci_space.write 0x800F4008 0x00000000 -b") # Interrupt Type (FSP)
+    cli.run_command("backplane0."+proc+".occ_cmp.oci_space.write 0x800F400C 0x00000000 -b") # SMB
+    cli.run_command("backplane0."+proc+".occ_cmp.oci_space.read  0x800F4000 8")
+    cli.run_command("backplane0."+proc+".occ_cmp.oci_space.read  0x800F4008 8")
 
     print("==> Trigger 405 start??? (write barmsk0 to 0x7f00000)");
     cli.run_command("backplane0."+proc+".bridge_cmp.pba->pba_barmsk0=0x0000000007f00000")
@@ -2338,6 +2344,10 @@ def occ_init(code_dir, flg_pgpe, flg_verbose):
         command = "backplane0."+proc+".occ_cmp.ocb_agen->OCB_AGEN_CCSR" # Display CCSR
         print("==> " + command)
         cli.run_command(command)
+
+    if (G_bypass_bootloader != 1) and flg_pgpe:
+        # Allow bootloader to run a while (sram test/copy code images)
+        cli.quiet_run_command("run 40 ms", output_mode = output_modes.formatted_text)
 
     return RC
 

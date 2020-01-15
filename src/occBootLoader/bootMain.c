@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2014,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2014,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -172,6 +172,7 @@ void main()
     {
         WRITE_TO_SPRG1_AND_HALT(l_checksum);
     }
+
     WRITE_TO_SPRG0(BOOT_CALCULTE_CHKSUM_CHKPOINT_GPE0);
 
     // Calculate checksum for GPE0 SRAM
@@ -182,8 +183,9 @@ void main()
     // If checksum does not match, store bad checksum into SPRG1 and halt
     if(l_checksum != l_hdrPtr->gpe0_checksum)
     {
-        WRITE_TO_SPRG1_AND_HALT(l_checksum);
+        WRITE_TO_SPRGx_AND_HALT(l_checksum, l_hdrPtr->gpe0_checksum, l_hdrPtr->gpe0_size);
     }
+
     WRITE_TO_SPRG0(BOOT_CALCULTE_CHKSUM_CHKPOINT_GPE1);
 
     // Calculate checksum for GPE1 SRAM
@@ -194,7 +196,7 @@ void main()
     // If checksum does not match, store bad checksum into SPRG1 and halt
     if(l_checksum != l_hdrPtr->gpe1_checksum)
     {
-        WRITE_TO_SPRG1_AND_HALT(l_checksum);
+        WRITE_TO_SPRGx_AND_HALT(l_checksum, l_hdrPtr->gpe1_checksum, l_hdrPtr->gpe1_size);
     }
 
     // set checkpoint to get nest frequency

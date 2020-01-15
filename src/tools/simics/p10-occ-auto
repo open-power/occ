@@ -67,6 +67,9 @@ simics_machine="p10_standalone"
 
 G_simics_options=""
 
+# Set bypass to 1 to bypass the bootloader and start the 405 code directly
+let G_bypass_bootloader=0
+
 # Get the directory of this script
 current_script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd -P)"
 
@@ -316,7 +319,7 @@ main()
 
     echo "==> autosim --startserver -machine $simics_machine"
     autosim --startserver --machine $simics_machine
-    if [ $? == 0 ]; then
+    if [ $? -eq 0 ]; then
         echo SERVER STARTED
     else
         echo -e "${red}ERROR: Return Code from autosim startserver :  $?${normal}"
@@ -329,7 +332,7 @@ main()
     # Start simics without run
     echo "==> autosim --startsim --notar -machine $simics_machine --norun"
     autosim --startsim --notar --machine $simics_machine --norun
-    if [ $? == 0 ]; then
+    if [ $? -eq 0 ]; then
         echo SIM STARTED
     else
         echo -e "${red}ERROR: Return Code from autosim startsim :  $?${normal}"
@@ -346,7 +349,7 @@ main()
     # Read utility functions
     printHeader "LOADING $occ_setup_file"
     autosim --simcmd 'run-python-file "'$occ_setup_file'"'
-    if [ $? == 0 ]; then
+    if [ $? -eq 0 ]; then
         echo OCC SIMICs Python commands loaded.
     else
         echo -e "${red}ERROR: OCC SIMICs Python commands not loaded :  $?${normal}"
@@ -798,7 +801,7 @@ WaitForResponse()
         #echo "END FILE"
         RemoteReturnCode=$(egrep '^RemoteReturnCode = ' $tempfile | tail -n 1 | tr -d '\r')
         #echo "...RC=$RemoteReturnCode"
-        if [ ${#RemoteReturnCode} != 0 ]; then
+        if [ ${#RemoteReturnCode} -ne 0 ]; then
             let RemoteReturnCode=${RemoteReturnCode##* = }
             #echo "......RC=$RemoteReturnCode"
             if [ $RemoteReturnCode -ge $((0xE0)) ] && [ $RemoteReturnCode -le $((0xEF)) ] ; then
@@ -930,7 +933,7 @@ WaitForCheckpoint()
 
         RemoteReturnCode=$(egrep '^RemoteReturnCode = ' $tempfile | tail -n 1 | tr -d '\r')
         #echo "...RC=$RemoteReturnCode"
-        if [ ${#RemoteReturnCode} != 0 ]; then
+        if [ ${#RemoteReturnCode} -ne 0 ]; then
             let RemoteReturnCode=${RemoteReturnCode##* = }
             #echo "......RC=$RemoteReturnCode"
             if [ $RemoteReturnCode -eq $((0xE1)) ]; then
@@ -1109,14 +1112,28 @@ SetupOccImage()
         # 000E3C00 -   Inband Response Buffer (4k)
         # 00300000 - PPMR Header (4k)
 
-        # Request a 405 chip level reset and set the 405 pc to __ssx_boot
-        echo -e "==> Requesting 405 chip level reset and set pc to __ssx_boot"
+        # Request a 405 chip level reset and set the 405 pc
         autosim --simcmd 'backplane0.'$proc'.occ_cmp.proc_405.write-reg reg-name = dbcr0 value = 0x20000000'
-        autosim --simcmd 'backplane0.'$proc'.occ_cmp.proc_405.write-reg reg-name = pc value = (backplane0.'$proc'.occ_cmp.proc_405.sym __ssx_boot)'
-        autosim --simcmd 'backplane0.'$proc'.occ_cmp.proc_405.enable'
+        if [ $G_bypass_bootloader -eq 1 ]; then
+            # Set PC to 405 code (bypass OCC bootloader)
+            echo -e "==> Requesting 405 chip level reset and set pc to __ssx_boot (OCC 405 code - no bootloader)"
+            autosim --simcmd 'backplane0.'$proc'.occ_cmp.proc_405.write-reg reg-name = pc value = (backplane0.'$proc'.occ_cmp.proc_405.sym __ssx_boot)'
+        else
+            # Set PC to default (will start with OCC bootloader)
+            echo -e "==> Requesting 405 chip level reset and set pc to 0xFFFFFFFC (OCC bootloader will run)"
+            autosim --simcmd 'backplane0.'$proc'.occ_cmp.proc_405.write-reg reg-name = pc value = 0xFFFFFFFC'
 
-        echo -e "\n==> write 0xFFFFFFFC to 0x4BF40002"
-        autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.write 0xFFFFFFFC 0x4BF40002 size = 4'
+            echo -e "\n==> Write instruction to branch to start of 405 code (0xFFF40000) at SRAM Boot Vector 3 (0xFFFFFFFC)"
+            autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.write 0xFFFFFFFC 0x4BF40002 size = 4'
+
+            # SRAM - FFF4000 is start of PPC405 Code
+            echo -e "\n==> Write instructions to branch to bootloader (start of HOMER) at start of 405 code (0xFFF40000)"
+            # (branch is too far for single instruction, so must use CTR)
+            autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.write 0xFFF40000 0x3C208000 size = 4' # lis     r1,-32768
+            autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.write 0xFFF40004 0x60210040 size = 4' # ori     r1,r1,64
+            autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.write 0xFFF40008 0x7C2903A6 size = 4' # mtctr   r1
+            autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.write 0xFFF4000C 0x4E800420 size = 4' # bctr
+        fi
 
         # Create 16K OCC cache
         echo -e "\n==> Creating 16K OCC cache"
@@ -1126,28 +1143,30 @@ SetupOccImage()
         autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.add-map base = 0x00000000 device = backplane0.'$proc'.occ_cmp.ram_cacheable length = 0x4000 align-size = 8192'
 
         # Load the code binaries into main memory
-        echo -e "\n==> Loading OCC image: ${simics_binaries}/image.bin @ 0x00000000"
-        autosim --simcmd "system_cmp0.memory_image0.load-file ${simics_binaries}/image.bin 0x00000000"
+        if [ $G_bypass_bootloader -ne 1 ]; then
+            echo -e "\n==> Loading OCC image: ${simics_binaries}/image.bin @ 0x00000000"
+            autosim --simcmd "system_cmp0.memory_image0.load-file ${simics_binaries}/image.bin 0x00000000"
+        fi
         echo -e "\n==> Loading fake PPMR header: ${simics_binaries}/ppmr.bin @ 0x300000"
         autosim --simcmd "system_cmp0.memory_image0.load-file ${simics_binaries}/ppmr.bin  0x00300000"
         echo -e "\n==> Loading fake OPPB header: ${simics_binaries}/oppb.bin @ 0x320000"
         autosim --simcmd "system_cmp0.memory_image0.load-file ${simics_binaries}/oppb.bin  0x00320000"
 
-        # SRAM - FFF4000 is start of PPC405 Code + Data area "3C20800060210040 7C2903A64E800420"
-        echo -e "\n==> write 0xFFF4000x"
-        autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.write 0xFFF40000 0x3C208000 size = 4'
-        autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.write 0xFFF40004 0x60210040 size = 4'
-        autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.write 0xFFF40008 0x7C2903A6 size = 4'
-        autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.write 0xFFF4000C 0x4E800420 size = 4'
+        # Dump 405 PC
+        echo -e "\n==> 405 PC"
+        autosim --simcmd 'backplane0.'$proc'.occ_cmp.proc_405.read-reg reg-name = pc'
+
+        echo -e "\n==> Enabling 405"
+        autosim --simcmd 'backplane0.'$proc'.occ_cmp.proc_405.enable'
 
         # HOMER init
-        echo -e "\n==> Initialize OCC Host Config Data in HOMER (0x800C0000)"
-        autosim --simcmd "backplane0.${proc}.occ_cmp.oci_space.write 0x800C0000 0x000000A0 -b" # Version
-        autosim --simcmd "backplane0.${proc}.occ_cmp.oci_space.write 0x800C0004 0x00000964 -b" # Nest Frequency
-        autosim --simcmd "backplane0.${proc}.occ_cmp.oci_space.write 0x800C0008 0x00000000 -b" # Interrupt Type (FSP)
-        autosim --simcmd "backplane0.${proc}.occ_cmp.oci_space.write 0x800C000C 0x00000000 -b" # SMB
-        autosim --simcmd "backplane0.${proc}.occ_cmp.oci_space.read  0x800C0000 8"
-        autosim --simcmd "backplane0.${proc}.occ_cmp.oci_space.read  0x800C0008 8"
+        echo -e "\n==> Initialize OCC Host Config Data in HOMER (0x800F4000)"
+        autosim --simcmd "backplane0.${proc}.occ_cmp.oci_space.write 0x800F4000 0x000000A0 -b" # Version
+        autosim --simcmd "backplane0.${proc}.occ_cmp.oci_space.write 0x800F4004 0x00000964 -b" # Nest Frequency
+        autosim --simcmd "backplane0.${proc}.occ_cmp.oci_space.write 0x800F4008 0x00000000 -b" # Interrupt Type (FSP)
+        autosim --simcmd "backplane0.${proc}.occ_cmp.oci_space.write 0x800F400C 0x00000000 -b" # SMB
+        autosim --simcmd "backplane0.${proc}.occ_cmp.oci_space.read  0x800F4000 8"
+        autosim --simcmd "backplane0.${proc}.occ_cmp.oci_space.read  0x800F4008 8"
 
         echo -e "\n==> Trigger 405 start??? (write barmsk0 to 0x7f00000)"
         autosim --simcmd 'backplane0.'$proc'.bridge_cmp.pba->pba_barmsk0=0x0000000007f00000'
@@ -1176,7 +1195,7 @@ SetupOccImage()
 
     if [ $G_use_pgpe -ne 0 ]; then
         # let pgpe run for a moment to be ahead of 405
-        autosim --simcmd 'run'
+        autosim --simcmd 'run 40 ms'
         autosim --simcmd 'stop'
     fi
 
@@ -1303,7 +1322,7 @@ TestValidationFunction()
     #echo Size of RemoteReturnCodeVar = ${#RemoteReturnCode}
     let remoteRC=$RemoteReturnCode
     echo "RemoteReturnCode = $RemoteReturnCode, remoteRC = $remoteRC"
-    if [ ${#RemoteReturnCode} != 0 ]; then
+    if [ ${#RemoteReturnCode} -ne 0 ]; then
         #if [[ $RemoteReturnCode != *"None"* ]] ; then
         if [ $remoteRC -ne 0 ]; then
             CaptureOccTraces "testValidationFail"
@@ -1339,7 +1358,7 @@ TestValidationObservationReady()
         RemoteObservationReady=$(grep 'Status (1)             :' $tempfile | tail -n 1 )
         RemoteObservationReady=${RemoteObservationReady##* - }
 
-        if [ ${#RemoteObservationReady} != 0 ]; then
+        if [ ${#RemoteObservationReady} -ne 0 ]; then
             if [[ $RemoteObservationReady != *"Observation Ready"* ]] ; then
                 CaptureOccTraces "notInObsReady"
                 echo
@@ -1381,7 +1400,7 @@ TestValidationActiveReady()
             RemoteActiveReady=$(grep 'Status (1)             :' $tempfile | tail -n 1 )
             RemoteActiveReady=${RemoteActiveReady##* - }
 
-            if [ ${#RemoteActiveReady} != 0 ]; then
+            if [ ${#RemoteActiveReady} -ne 0 ]; then
                 if [[ $RemoteActiveReady != *"Active Ready"* ]] ; then
                     echo "OCC is NOT in Active Ready!"
 #                    echo
@@ -1445,7 +1464,7 @@ TestValidationObservationState()
         OccState=$(grep 'Current OCC State (5)  : ' $tempfile | tail -n 1 )
         OccState=${OccState##* : }
 
-        if [ ${#OccState} != 0 ]; then
+        if [ ${#OccState} -ne 0 ]; then
             if [[ $OccState != *"Observation"* ]] ; then
                 CaptureOccTraces "notInObsFail"
                 let testFailure=1
@@ -1483,7 +1502,7 @@ TestValidationActiveState()
         OccState=$(grep 'Current OCC State (5)  : ' $tempfile | tail -n 1 )
         OccState=${OccState##* : }
 
-        if [ ${#OccState} != 0 ]; then
+        if [ ${#OccState} -ne 0 ]; then
             if [[ $OccState != *"Active"* ]] ; then
                 CaptureOccTraces "notInActFail"
                 let testFailure=1
@@ -1577,7 +1596,7 @@ ValidatePollData()
         let OccState=${OccState##*: }   # Strip off beginning text then convert to decimal
         OccStateString=${OccStateString##* : } # Just keep string "Active"
 
-        if [ ${#OccStateString} != 0 ]; then
+        if [ ${#OccStateString} -ne 0 ]; then
             if [ $expectedState -eq $((0x04)) ]; then
                 if [[ $OccStateString == *"Safe"* ]] ; then
                     echo -e "${bold}OCC is in SAFE state as expected${normal}"
@@ -1853,7 +1872,7 @@ TestValidationOCCslave()
         occRole=$(grep 'Status (1)             :' $tempfile | tail -n 1 )
         occRole=${occRole##* - }
 
-        if [ ${#occRole} != 0 ]; then
+        if [ ${#occRole} -ne 0 ]; then
             if [[ $occRole == *"Master"* ]] ; then
                 echo
                 echo "####################################################"
@@ -1886,7 +1905,7 @@ TestValidationOCCmaster()
     if [ $? -eq 0 ]; then
         occRole=$(grep 'Status (1)             :' $tempfile | tail -n 1 )
         occRole=${occRole##* - }
-        if [ ${#occRole} != 0 ]; then
+        if [ ${#occRole} -ne 0 ]; then
             if [[ $occRole != *"Master"* ]] ; then
                 echo
                 echo "####################################################"
@@ -2020,22 +2039,20 @@ printTestResults()
     echo
     echo
 
+    if [ $G_bypass_bootloader -ne 1 ]; then
+        echo "OCC Bootloader was used"
+    else
+        echo "OCC Bootloader was bypassed"
+    fi
     if [ $G_use_pgpe -ne 0 ]; then
         echo "PGPE was enabled"
     else
         echo "PGPE was disabled"
     fi
     # Some timing results:
-    if [ $G_duration_active_ready -gt 0 ]; then
-        echo "POLL - Active Ready bit was set after $G_duration_active_ready seconds"
-    fi
-    if [ $G_duration_set_state -gt 0 ]; then
-        echo "SET_STATE completed after $G_duration_set_state seconds"
-    fi
-    if [ $G_duration_set_mode -gt 0 ]; then
-        echo "SET_MODE completed after $G_duration_set_mode seconds"
-    fi
-
+    echo "POLL - Active Ready bit was set after $G_duration_active_ready seconds"
+    echo "SET_STATE completed after $G_duration_set_state seconds"
+    echo "SET_MODE completed after $G_duration_set_mode seconds"
     echo "Test duration:" `date -u -d "0 $test_end_time seconds - $test_start_time seconds" +"%M minutes %S seconds"`
 }
 

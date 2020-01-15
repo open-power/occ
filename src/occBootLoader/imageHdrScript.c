@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2014,2018                        */
+/* Contributors Listed Below - COPYRIGHT 2014,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -477,6 +477,9 @@ int dumpHdr(char * i_fileStr)
 // Name: calImageChecksum
 //
 // Description: calculate image checksum
+//
+// Linux command to calculate summation checksum:
+//   od -t u1 -An -w1 -v ../obj/occ_gpe0/occ_gpe0.bin | awk '{s+=$1; if(s > 4294967295) s = and(4294967295, s) } END {printf "0x%08X\n", s}'
 //
 // End Function Specification
 unsigned long int calImageChecksum(FILE * i_filePtr, bool i_gpeFile)
@@ -1110,7 +1113,7 @@ int main(int argc, char* argv[])
         {
             printf("Failed to write image checksum in the file: %s, "
                    "rc: %d,IMAGE_SZ_FIELD_LEN: %d, "
-                   "CHECKSUM_GPE0_FIELD_OFFSET: %zd\n",ARG_405_BIN,l_rc,
+                   "CHECKSUM_GPE0_FIELD_OFFSET: %zd\n",ARG_GPE0_BIN,l_rc,
                    CHECKSUM_FIELD_LEN,CHECKSUM_GPE0_FIELD_OFFSET);
             l_rc = FAILURE_RC;
             break;
@@ -1125,7 +1128,7 @@ int main(int argc, char* argv[])
         {
             printf("Failed to write image checksum in the file: %s, "
                    "rc: %d,IMAGE_SZ_FIELD_LEN: %d, "
-                   "CHECKSUM_GPE1_FIELD_OFFSET: %zd\n",ARG_405_BIN,l_rc,
+                   "CHECKSUM_GPE1_FIELD_OFFSET: %zd\n",ARG_GPE1_BIN,l_rc,
                    CHECKSUM_FIELD_LEN,CHECKSUM_GPE1_FIELD_OFFSET);
             l_rc = FAILURE_RC;
             break;

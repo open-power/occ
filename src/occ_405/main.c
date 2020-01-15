@@ -1682,7 +1682,8 @@ int main(int argc, char **argv)
                                             &G_nest_frequency_mhz,
                                             &l_ssxrc2);
 
-        if ((HOMER_SUCCESS == l_homerrc2) || (HOMER_SSX_UNMAP_ERR == l_homerrc2))
+        if (((HOMER_SUCCESS == l_homerrc2) || (HOMER_SSX_UNMAP_ERR == l_homerrc2)) &&
+            (G_nest_frequency_mhz != 0))
         {
             // Data is in Mhz upon return and needs to be converted to Hz and then
             // quartered.
