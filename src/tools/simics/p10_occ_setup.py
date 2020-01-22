@@ -2139,7 +2139,7 @@ def occ_init(code_dir, flg_pgpe, flg_verbose):
     cli.run_command(command)
 
     # Hide error message: [backplane0.dcm0.chip0.pib_cmp.tod_scom error] Mambo cpu system_cmp0.cpu0_0_00_0 is disabled - Failed reading chip TOD value
-    command = "backplane0.dcm0.chip0.pib_cmp.tod_scom.log-type -disable log-type = error"
+    command = "backplane0."+proc+".pib_cmp.tod_scom.log-type -disable log-type = error"
     print("==> " + command);
     cli.run_command(command)
 
@@ -2326,7 +2326,7 @@ def occ_init(code_dir, flg_pgpe, flg_verbose):
     cli.run_command("backplane0."+proc+".occ_cmp.oci_space.read  0x800F4000 8")
     cli.run_command("backplane0."+proc+".occ_cmp.oci_space.read  0x800F4008 8")
 
-    print("==> Trigger 405 start??? (write barmsk0 to 0x7f00000)");
+    print("==> Write PBABARMSK0 to 0x7F00000");
     cli.run_command("backplane0."+proc+".bridge_cmp.pba->pba_barmsk0=0x0000000007f00000")
 
     print("==> INIT APSS CHANNEL VALUES")
@@ -2336,8 +2336,12 @@ def occ_init(code_dir, flg_pgpe, flg_verbose):
 
     cli.run_command("backplane0."+proc+".occ_cmp.proc_405.read-reg reg-name = pc")
 
+    command = "backplane0."+proc+".occ_cmp.ocb_agen->OCB_AGEN_CCSR" # Display CCSR
+    print("==> " + command)
+    cli.run_command(command)
+
     if flg_pgpe:
-        print("==> ENABLING 24 CORES...")
+        print("==> ENABLING 32 CORES...")
         command = "backplane0."+proc+".occ_cmp.ocb_agen->OCB_AGEN_CCSR = 0xffffff0000000000" # Set CCSR
         print("==> " + command)
         cli.run_command(command)
@@ -2514,7 +2518,7 @@ def occ_to_active(flg_pgpe, flg_run, flg_verbose):
     RC = send_occ_cmd(0x21, "1330140A080200FF5FFFFFFF02FF48FFFF1E", flg_verbose);
 
     print("\n#### SET AVSBUS CONFIG ###################################################################################");
-    RC = send_occ_cmd(0x21, "1430FF00000000000000", flg_verbose);
+    RC = send_occ_cmd(0x21, "1430FF0000000000", flg_verbose);
 
     print("\n#### SET PCAP DATA #######################################################################################");
     RC = send_occ_cmd(0x21, "0720011F012C07E907C2", flg_verbose);

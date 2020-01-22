@@ -549,7 +549,7 @@ main()
 
 
         printHeader "SET AVSBUS CONFIG"
-        autosim --simcmd '$SeqNum=(OCCw -C '$OCCCMD_SET_CFG_DATA' -D "1430FF00000000000000" '$G_simics_options')'
+        autosim --simcmd '$SeqNum=(OCCw -C '$OCCCMD_SET_CFG_DATA' -D "1430FF0000000000" '$G_simics_options')'
         WaitForResponse $OCCCMD_SET_CFG_DATA
 
 
