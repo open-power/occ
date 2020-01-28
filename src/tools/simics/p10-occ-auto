@@ -23,17 +23,6 @@
 # permissions and limitations under the License.
 #
 # IBM_PROLOG_END_TAG
-
-# REQUIREMENTS:
-#   occ code:
-#       binaries/occ_405.out
-#       binaries/occ_gpe0.out
-#       binaries/occ_gpe1.out
-#       binaries/pgpe.out
-#       NOT SUPPORTED: binaries/image.bin
-#   dummy headers:
-#       binaries/ppmr.bin
-#       binaries/oppb.bin
 #
 # SETUP:
 #     export OCCREPO=/esw/...     # location of the simics repository to test with
@@ -82,7 +71,7 @@ fi
 
 #proc="proc0"
 # DCM supported added to Simics July 2019
-proc="dcm0.chip0"
+proc="dcm[0].chip[0]"
 
 let G_use_pgpe=0
 let G_use_binary_patches=0
@@ -178,6 +167,13 @@ main()
 {
     test_start_time=`date +%s`
 
+    if [ -z "$START_SIMICS_CMD" ]; then
+        echo -e "${red}ERROR: missing autosimics setup:"
+        echo    "    export START_SIMICS_CMD=\$SIMICS_BASE/runsim"
+        echo -e "    export PATH=\"\$PATH:\$SIMICS_BASE\"${normal}"
+        exit -1
+    fi
+
     if [ ! -d "$simics_binaries" ]; then
         echo -e "${bold}--> Creating $simics_binaries/${normal}"
         mkdir $simics_binaries
@@ -264,7 +260,7 @@ main()
     done
 
     if [ $G_use_pgpe -ne 0 ]; then
-        let numCores=24 # up to 32
+        let numCores=$maxCores
         let G_cmd_delay=4 # time in seconds to wait before checking for response
         let G_rsp_retries=8 # number of retries before timing out on a response
     fi
@@ -776,14 +772,6 @@ WaitForResponse()
         let retry=$retry*2
     fi
 
-    if [ $G_use_pgpe -ne 0 ]; then
-        # Even longer with PGPE running
-        let responseWaitDelay=$responseWaitDelay*2
-        let retry=$G_rsp_retries*5
-        # Minimal output on retries
-        quiet="-q"
-    fi
-
     lastRetry=""
     let duration=0
     let max_retries=$retry
@@ -1000,177 +988,11 @@ SetupOccImage()
 {
     let abort=0
 
-    # TODO: The init from the python script is not working in autotest environment (even though same commands)
-    if [ 0 -eq 1 ]; then
-        # Use init from the python script
-        if [ $G_use_pgpe -ne 0 ]; then
-            autosim --simcmd "occinit -p ${simics_binaries}"
-        else
-            autosim --simcmd "occinit ${simics_binaries}"
-        fi
-
+    # Use init from the python script
+    if [ $G_use_pgpe -ne 0 ]; then
+        autosim --simcmd "occinit -p ${simics_binaries}"
     else
-
-        # Required for p10_standalone
-        autosim --simcmd 'system_cmp0.cpu0_0_00_0.disable'
-
-        # Hide error message: [backplane0.dcm0.chip0.pib_cmp.tod_scom error] Mambo cpu system_cmp0.cpu0_0_00_0 is disabled - Failed reading chip TOD value
-        autosim --simcmd "backplane0.${proc}.pib_cmp.tod_scom.log-type -disable log-type = error"
-
-        autosim --simcmd 'backplane0->system_info = "OCC Complex Model"'
-
-        # Code Images
-        echo -e "\n==> Loading 405 binary: ${simics_binaries}/occ_405.out"
-        autosim --simcmd "backplane0.${proc}.occ_cmp.oci_space.load-binary -v ${simics_binaries}/occ_405.out"
-        autosim --simcmd "new-symtable -n sym_tbl_405 file=${simics_binaries}/occ_405.out"
-        autosim --simcmd 'new-context ctx_405'
-        autosim --simcmd "backplane0.${proc}.occ_cmp.proc_405.set-context context = ctx_405"
-        autosim --simcmd 'ctx_405->symtable = sym_tbl_405'
-
-        echo -e "\n==> Loading GPE0 binary: ${simics_binaries}/occ_gpe0.out"
-        autosim --simcmd "backplane0.${proc}.occ_cmp.oci_space.load-binary -v ${simics_binaries}/occ_gpe0.out"
-        autosim --simcmd "new-symtable -n sym_tbl_gpe0 file=${simics_binaries}/occ_gpe0.out"
-        autosim --simcmd "backplane0.${proc}.occ_cmp.gpe_ctx0.symtable sym_tbl_gpe0"
-
-        echo -e "\n==> Loading GPE1 binary: ${simics_binaries}/occ_gpe1.out"
-        autosim --simcmd "backplane0.${proc}.occ_cmp.oci_space.load-binary -v ${simics_binaries}/occ_gpe1.out"
-        autosim --simcmd "new-symtable -n sym_tbl_gpe1 file=${simics_binaries}/occ_gpe1.out"
-        autosim --simcmd "backplane0.${proc}.occ_cmp.gpe_ctx1.symtable sym_tbl_gpe1"
-
-        if [ $G_use_pgpe -ne 0 ]; then
-            echo -e "\n==> Loading GPE2 (PGPE) binary: ${simics_binaries}/pgpe.out"
-            autosim --simcmd "backplane0.${proc}.occ_cmp.oci_space.load-binary -v ${simics_binaries}/pgpe.out"
-            autosim --simcmd "new-symtable sym_tbl_gpe2 ${simics_binaries}/pgpe.out"
-            autosim --simcmd "backplane0.${proc}.occ_cmp.gpe_ctx2.symtable symtable = sym_tbl_gpe2"
-
-            # Enable PGPE immediate return
-            #echo -e "\n==> Enable PGPE immediate return"
-            #autosim --simcmd "backplane0.${proc}.occ_cmp.oci_space.write 0xfff201a0 0x10300000 -b"
-        fi
-
-        #Enable GPE2
-        #echo -e "\n==> Enable GPE2 (needed?}"
-        #autosim --simcmd "backplane0.${proc}.occ_cmp.gpe_ppe2.enable"
-
-        # GPE Interrupt Vector Prefix Register
-        echo -e "\n==> Initialize IVPR and PIR"
-        autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.write 0xc0000008 0xFFF01000 -b' # TP.TPCHIP.OCC.OCI.GPE0.GPEIVPR
-        autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.write 0xc0010008 0xFFF10000 -b' # TP.TPCHIP.OCC.OCI.GPE1.GPEIVPR
-        autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.write 0xc0020008 0xFFF20000 -b' # TP.TPCHIP.OCC.OCI.GPE2.GPEIVPR
-        autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.write 0xc0030008 0xFFF30000 -b' # TP.TPCHIP.OCC.OCI.GPE3.GPEIVPR
-
-        autosim --simcmd 'backplane0.'$proc'.occ_cmp.gpe_ppe0.write-reg pir value=0x00000000'
-        autosim --simcmd 'backplane0.'$proc'.occ_cmp.gpe_ppe1.write-reg pir value=0x00000001'
-        autosim --simcmd 'backplane0.'$proc'.occ_cmp.gpe_ppe2.write-reg pir value=0x00000002'
-        autosim --simcmd 'backplane0.'$proc'.occ_cmp.gpe_ppe3.write-reg pir value=0x00000003'
-
-        # PPE External Interface XCR - Start each GPE? - Hard Reset, Toggle XSR[TRH], Resume
-
-        # GPE0
-        echo -e "\n==> Start GPE0 (Hard Reset, Toggle XSR, Resume)"
-        autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.write 0xc0000088 0x6000000000000000 8 -b'
-        autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.write 0xc0000088 0x4000000000000000 8 -b'
-        autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.write 0xc0000088 0x2000000000000000 8 -b'
-
-        # GPE1
-        echo -e "\n==> Start GPE1 (Hard Reset, Toggle XSR, Resume)"
-        autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.write 0xc0010088 0x6000000000000000 8 -b'
-        autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.write 0xc0010088 0x4000000000000000 8 -b'
-        autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.write 0xc0010088 0x2000000000000000 8 -b'
-
-        if [ $G_use_pgpe -ne 0 ]; then
-            # GPE2
-            echo -e "\n==> Start GPE2 (Hard Reset, Toggle XSR, Resume)"
-            autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.write 0xc0020088 0x6000000000000000 8 -b'
-            autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.write 0xc0020088 0x4000000000000000 8 -b'
-            autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.write 0xc0020088 0x2000000000000000 8 -b'
-        fi
-
-        ### SRAM LAYOUT (768KB) ###
-        # FFF00000 - IPC Communication Region
-        # FFF01000 - GPE0 Code (60K)
-        # FFF10000 - GPE1 Code (64K)
-        # FFF20000 - PGPE HCode+Data (48K)
-        # FFF2C000 - SGPE HCode (80K)
-        # FFF40000 - 405 Code+Data (512K)
-        # FFFB3C00 -     ERR Trace Buffer (8K)
-        # FFFB5C00 -     INF Trace Buffer (8K)
-        # FFFB7C00 -     IMP Trace Buffer (8K)
-        # FFFB9C00 -     FIR Heap / Parms (16K)
-        # FFFBDC00 -     FSP/BMC Response Buffer (4K)
-        # FFFBEC00 -     FSP/BMC Command Buffer (4K)
-        # FFFBDC00 -     Reserved (Bootloader) (1K)
-
-        # HOMER Layout (relative to base address 0x80000000)
-        # 000C0000 - header? version (4 bytes), nestFreq (4B), interruptType (4B), firMaster (4B), firParms, smfMode (4B)
-        # 000E0000 - HTMGT Command Buffer (4k)
-        # 000E1000 - HTMGT Response Buffer (4k)
-        # 000E2000 - OPAL Shared Memory (32k)
-        # 000E2000 -   OPAL Static space (0x880 bytes)
-        # 000E2B80 -   OPAL Dynamic space (128 bytes)
-        # 000E2C00 -   Inband Command Buffer (4k)
-        # 000E3C00 -   Inband Response Buffer (4k)
-        # 00300000 - PPMR Header (4k)
-
-        # Request a 405 chip level reset and set the 405 pc
-        autosim --simcmd 'backplane0.'$proc'.occ_cmp.proc_405.write-reg reg-name = dbcr0 value = 0x20000000'
-        if [ $G_bypass_bootloader -eq 1 ]; then
-            # Set PC to 405 code (bypass OCC bootloader)
-            echo -e "==> Requesting 405 chip level reset and set pc to __ssx_boot (OCC 405 code - no bootloader)"
-            autosim --simcmd 'backplane0.'$proc'.occ_cmp.proc_405.write-reg reg-name = pc value = (backplane0.'$proc'.occ_cmp.proc_405.sym __ssx_boot)'
-        else
-            # Set PC to default (will start with OCC bootloader)
-            echo -e "==> Requesting 405 chip level reset and set pc to 0xFFFFFFFC (OCC bootloader will run)"
-            autosim --simcmd 'backplane0.'$proc'.occ_cmp.proc_405.write-reg reg-name = pc value = 0xFFFFFFFC'
-
-            echo -e "\n==> Write instruction to branch to start of 405 code (0xFFF40000) at SRAM Boot Vector 3 (0xFFFFFFFC)"
-            autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.write 0xFFFFFFFC 0x4BF40002 size = 4'
-
-            # SRAM - FFF4000 is start of PPC405 Code
-            echo -e "\n==> Write instructions to branch to bootloader (start of HOMER) at start of 405 code (0xFFF40000)"
-            # (branch is too far for single instruction, so must use CTR)
-            autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.write 0xFFF40000 0x3C208000 size = 4' # lis     r1,-32768
-            autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.write 0xFFF40004 0x60210040 size = 4' # ori     r1,r1,64
-            autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.write 0xFFF40008 0x7C2903A6 size = 4' # mtctr   r1
-            autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.write 0xFFF4000C 0x4E800420 size = 4' # bctr
-        fi
-
-        # Create 16K OCC cache
-        echo -e "\n==> Creating 16K OCC cache"
-        autosim --simcmd '@will_cache = SIM_create_object("image", "occ_cache", [["size",0x4000]])'
-        autosim --simcmd 'backplane0.'$proc'.occ_cmp.ram_cacheable->image = occ_cache'
-        autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.del-map base = 0x00000000 device = backplane0.'$proc'.occ_cmp.ram_cacheable'
-        autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.add-map base = 0x00000000 device = backplane0.'$proc'.occ_cmp.ram_cacheable length = 0x4000 align-size = 8192'
-
-        # Load the code binaries into main memory
-        if [ $G_bypass_bootloader -ne 1 ]; then
-            echo -e "\n==> Loading OCC image: ${simics_binaries}/image.bin @ 0x00000000"
-            autosim --simcmd "system_cmp0.memory_image0.load-file ${simics_binaries}/image.bin 0x00000000"
-        fi
-        echo -e "\n==> Loading fake PPMR header: ${simics_binaries}/ppmr.bin @ 0x300000"
-        autosim --simcmd "system_cmp0.memory_image0.load-file ${simics_binaries}/ppmr.bin  0x00300000"
-        echo -e "\n==> Loading fake OPPB header: ${simics_binaries}/oppb.bin @ 0x320000"
-        autosim --simcmd "system_cmp0.memory_image0.load-file ${simics_binaries}/oppb.bin  0x00320000"
-
-        # Dump 405 PC
-        echo -e "\n==> 405 PC"
-        autosim --simcmd 'backplane0.'$proc'.occ_cmp.proc_405.read-reg reg-name = pc'
-
-        echo -e "\n==> Enabling 405"
-        autosim --simcmd 'backplane0.'$proc'.occ_cmp.proc_405.enable'
-
-        # HOMER init
-        echo -e "\n==> Initialize OCC Host Config Data in HOMER (0x800F4000)"
-        autosim --simcmd "backplane0.${proc}.occ_cmp.oci_space.write 0x800F4000 0x000000A0 -b" # Version
-        autosim --simcmd "backplane0.${proc}.occ_cmp.oci_space.write 0x800F4004 0x00000964 -b" # Nest Frequency
-        autosim --simcmd "backplane0.${proc}.occ_cmp.oci_space.write 0x800F4008 0x00000000 -b" # Interrupt Type (FSP)
-        autosim --simcmd "backplane0.${proc}.occ_cmp.oci_space.write 0x800F400C 0x00000000 -b" # SMB
-        autosim --simcmd "backplane0.${proc}.occ_cmp.oci_space.read  0x800F4000 8"
-        autosim --simcmd "backplane0.${proc}.occ_cmp.oci_space.read  0x800F4008 8"
-
-        echo -e "\n==> Trigger 405 start??? (write barmsk0 to 0x7f00000)"
-        autosim --simcmd 'backplane0.'$proc'.bridge_cmp.pba->pba_barmsk0=0x0000000007f00000'
-
+        autosim --simcmd "occinit ${simics_binaries}"
     fi
 
     # Update/enable specified number of cores
@@ -1186,7 +1008,6 @@ SetupOccImage()
         done
         # Configure cores
         echo "Enabling $numCores cores (of $maxCores)..."
-        #autosim --simcmd "backplane0.${proc}.occ_cmp.oci_space.write 0xc0060480 0xff00000000000000 8 -b" #Set CCSR
         autosim --simcmd "backplane0.${proc}.occ_cmp.ocb_agen->OCB_AGEN_CCSR = 0x$(printf "%08X" $ccsr)00000000" #Set CCSR
 
         echo "backplane0.${proc}.occ_cmp.ocb_agen->OCB_AGEN_CCSR: "
