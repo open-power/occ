@@ -38,25 +38,11 @@
 #define PGPE_DEBUG_TRACE_ADDR_OFFSET   0x04
 #define PGPE_DEBUG_TRACE_SIZE_OFFSET   0x08
 
-// Offset addresses of PGPE Header parameters (relative to start address)
-#define PGPE_SHARED_SRAM_ADDR_OFFSET           0x0c
-#define PGPE_SHARED_SRAM_LEN_OFFSET            0x14
-#define PGPE_GLOBAL_PSTATE_PARM_BLOCK_SRAM_ADDR 0x28
-#define PGPE_GLOBAL_PSTATE_PARM_BLOCK_OFFSET   0x30 // offset from beginning of HOMER
-#define PGPE_GLOBAL_PSTATE_PARM_BLOCK_LENGTH   0x34
-#define PGPE_GENERATED_PSTATE_TBL_ADDR_OFFSET  0x38 // generated table address is offset from beginning of HOMER
-#define PGPE_GENERATED_PSTATE_TBL_SZ_OFFSET    0x3C
-#define PGPE_OCC_PSTATE_TBL_ADDR_OFFSET        0x40 // OCC table address is a SRAM address
-#define PGPE_OCC_PSTATE_TBL_SZ_OFFSET          0x44
-#define PGPE_ACTUAL_QUAD_STATUS_ADDR_OFFSET    0x4c
-#define PGPE_WOF_TBLS_ADDR_OFFSET              0x58
-#define PGPE_WOF_TBLS_LEN_OFFSET               0x5C
-
-// P10 OCC-PGPE Shared SRAM offsets
-#define PGPE_BEACON_ADDR_OFFSET                0x04
-#define PGPE_WOF_STATE_ADDR_OFFSET             0x18
-#define PGPE_REQUESTED_ACTIVE_QUAD_ADDR_OFFSET 0x27
-#define PGPE_PRODUCED_WOF_VALUES_ADDR_OFFSET   0x28
+// OCC-PGPE Shared SRAM offsets from G_pgpe_header.shared_sram_addr
+#define OCC_PRODUCED_WOF_VALUES_SRAM_OFFSET    0x18
+#define XGPE_PRODUCED_WOF_VALUES_SRAM_OFFSET   0x20
+#define PGPE_PRODUCED_WOF_VALUES_SRAM_OFFSET   0x28
+#define HCODE_ELOG_TABLE_SRAM_OFFSET           0x48
 
 // This size must be a multiple of 128
 typedef struct __attribute__ ((packed))
@@ -102,8 +88,8 @@ typedef struct __attribute__ ((packed))
     uint32_t shared_sram_length;
     uint32_t build_date;
     uint32_t version;
-    uint16_t pgpe_flags;
-    uint16_t timebase_hz;
+    uint32_t pgpe_flags;
+    uint32_t timebase_hz;
     uint32_t global_pstate_parm_block_sram_addr;
     uint32_t pgpe_hcode_length;
     uint32_t global_pstate_parm_block_homer_offset;

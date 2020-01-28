@@ -522,9 +522,9 @@ void wof_main( void )
     {
         g_wof->vcs_step_from_start =
                              calculate_step_from_start( g_wof->ceff_ratio_vcs,
-                                                        g_wof->wof_header.vcs_step,
-                                                        g_wof->wof_header.vcs_start,
-                                                        g_wof->wof_header.vcs_size );
+                                                        g_amec_sys.static_wof_data.wof_header.vcs_step,
+                                                        g_amec_sys.static_wof_data.wof_header.vcs_start,
+                                                        g_amec_sys.static_wof_data.wof_header.vcs_size );
     }
     else
     {
@@ -536,9 +536,9 @@ void wof_main( void )
     {
         g_wof->vdd_step_from_start =
                              calculate_step_from_start( g_wof->ceff_ratio_vdd,
-                                                        g_wof->wof_header.vdd_step,
-                                                        g_wof->wof_header.vdd_start,
-                                                        g_wof->wof_header.vdd_size );
+                                                        g_amec_sys.static_wof_data.wof_header.vdd_step,
+                                                        g_amec_sys.static_wof_data.wof_header.vdd_start,
+                                                        g_amec_sys.static_wof_data.wof_header.vdd_size );
     }
     else
     {
@@ -550,9 +550,9 @@ void wof_main( void )
     {
         g_wof->io_pwr_step_from_start =
                              calculate_step_from_start( g_wof->io_power,
-                                                        g_wof->wof_header.io_pwr_step,
-                                                        g_wof->wof_header.io_pwr_start,
-                                                        g_wof->wof_header.io_pwr_size );
+                                                        g_amec_sys.static_wof_data.wof_header.io_pwr_step,
+                                                        g_amec_sys.static_wof_data.wof_header.io_pwr_start,
+                                                        g_amec_sys.static_wof_data.wof_header.io_pwr_size );
     }
     else
     {
@@ -564,9 +564,9 @@ void wof_main( void )
     {
         g_wof->ambient_step_from_start =
                              calculate_step_from_start( g_wof->ambient,
-                                                        g_wof->wof_header.ambient_step,
-                                                        g_wof->wof_header.ambient_start,
-                                                        g_wof->wof_header.ambient_size );
+                                                        g_amec_sys.static_wof_data.wof_header.ambient_step,
+                                                        g_amec_sys.static_wof_data.wof_header.ambient_start,
+                                                        g_amec_sys.static_wof_data.wof_header.ambient_size );
     }
     else
     {
@@ -663,20 +663,20 @@ uint32_t calc_vrt_mainstore_addr( void )
        // Calculate the VRT offset in main memory
        // tables are sorted by Vcs, then Vdd, then IO Pwr, then ambient
        // first determine number of VRT tables need to be skipped due to Vcs
-       g_wof->vrt_mm_offset = g_wof->vcs_step_from_start * g_wof->wof_header.vdd_size * g_wof->wof_header.io_pwr_size * g_wof->wof_header.ambient_size;
+       g_wof->vrt_mm_offset = g_wof->vcs_step_from_start * g_amec_sys.static_wof_data.wof_header.vdd_size * g_amec_sys.static_wof_data.wof_header.io_pwr_size * g_amec_sys.static_wof_data.wof_header.ambient_size;
        // next add number of tables skipped within this Vcs based on Vdd
-       g_wof->vrt_mm_offset += (g_wof->vdd_step_from_start * g_wof->wof_header.io_pwr_size * g_wof->wof_header.ambient_size);
+       g_wof->vrt_mm_offset += (g_wof->vdd_step_from_start * g_amec_sys.static_wof_data.wof_header.io_pwr_size * g_amec_sys.static_wof_data.wof_header.ambient_size);
        // now add number of tables skipped within this Vcs/Vdd based on IO power
-       g_wof->vrt_mm_offset += (g_wof->io_pwr_step_from_start * g_wof->wof_header.ambient_size);
+       g_wof->vrt_mm_offset += (g_wof->io_pwr_step_from_start * g_amec_sys.static_wof_data.wof_header.ambient_size);
        // now add number of tables skipped within this Vcs/Vdd/IO power based on ambient
        g_wof->vrt_mm_offset += g_wof->ambient_step_from_start;
 
        // We now have the total number of tables to skip multiply by the sizeof one VRT to get final offset
-       g_wof->vrt_mm_offset *= g_wof->wof_header.vrt_block_size;
+       g_wof->vrt_mm_offset *= g_amec_sys.static_wof_data.wof_header.vrt_block_size;
     }
 
     // Skip over the WOF header to find the base address where the tables actually start
-    uint32_t wof_tables_mm_addr = g_wof->vrt_tbls_main_mem_addr + WOF_HEADER_SIZE + g_wof->vrt_mm_offset;
+    uint32_t wof_tables_mm_addr = g_amec_sys.static_wof_data.vrt_tbls_main_mem_addr + WOF_HEADER_SIZE + g_wof->vrt_mm_offset;
 
     // now we know the final address of the table we want, but need to make sure it is 128B aligned for BCE
     if(wof_tables_mm_addr%128 == 0)
@@ -690,7 +690,7 @@ uint32_t calc_vrt_mainstore_addr( void )
        // by design we have a guarantee that a VRT size is a factor of 128
        uint32_t overage = wof_tables_mm_addr%128;
        wof_tables_mm_addr -= overage;
-       g_wof->vrt_bce_table_offset = overage / g_wof->wof_header.vrt_block_size;
+       g_wof->vrt_bce_table_offset = overage / g_amec_sys.static_wof_data.wof_header.vrt_block_size;
     }
     return wof_tables_mm_addr;
 }
@@ -720,7 +720,7 @@ void copy_vrt_to_sram_callback( void )
     uint8_t * l_buffer_address = G_sram_vrt_ping_buffer;
 
     // offset needed for 128B alignment to the VRT we really want from main memory
-    uint32_t  l_vrt_offset = g_wof->vrt_bce_table_offset * g_wof->wof_header.vrt_block_size;
+    uint32_t  l_vrt_offset = g_wof->vrt_bce_table_offset * g_amec_sys.static_wof_data.wof_header.vrt_block_size;
 
     // If ping buffer is currently in use then use the pong buffer
     if(g_wof->curr_ping_pong_buf == (uint32_t)G_sram_vrt_ping_buffer)
@@ -734,7 +734,7 @@ void copy_vrt_to_sram_callback( void )
     // Copy the vrt data into the buffer
     memcpy( l_buffer_address,
             &G_vrt_temp_buff + l_vrt_offset,
-            g_wof->wof_header.vrt_block_size );
+            g_amec_sys.static_wof_data.wof_header.vrt_block_size );
 
     // Set the parameters for the GpeRequest
     G_wof_vrt_parms.idd_vrt_ptr = (VRT_t*)l_buffer_address;
@@ -796,13 +796,7 @@ void wof_vrt_callback( void )
 
 // TODO - RTC 209558
 #if 0
-    // Confirm the WOF VRT PGPE request has completed with no errors
-    if( G_wof_vrt_parms.msg_cb.rc == PGPE_WOF_RC_VRT_QUAD_MISMATCH )
-    {
-        // Rereading OCC-SRAM to update requested active quads
-        read_req_active_quads();
-    }
-    else if( G_wof_vrt_parms.msg_cb.rc == PGPE_RC_SUCCESS )
+    if( G_wof_vrt_parms.msg_cb.rc == PGPE_RC_SUCCESS )
     {
        // GpeRequest went through successfully. update global ping pong buffer
        g_wof->curr_ping_pong_buf = g_wof->next_ping_pong_buf;
@@ -924,9 +918,6 @@ void read_shared_sram( void )
     // the PGPE produced WOF values were already read in this tick from amec_update_avsbus_sensors()
     // required to read them in every tick regardless of WOF running so voltage and current sensors
     // are updated even when WOF isn't running
-
-    // Get the requested active quad update
-    read_req_active_quads();
 
     // merge the 16-bit active_cores field from quad state 0 and the 16-bit
     // active_cores field from quad state 1 and save it to amec.
@@ -1074,7 +1065,7 @@ void calculate_core_voltage( void )
         else
         {
             // Calculate the address of the pstate for the current quad.
-            uint32_t pstate_addr = g_wof->pstate_tbl_sram_addr +
+            uint32_t pstate_addr = g_amec_sys.static_wof_data.pstate_tbl_sram_addr +
                     (g_wof->quad_x_pstates[l_quad_idx] * sizeof(OCCPstateTable_entry_t));
 
             // Get the Pstate
@@ -1113,11 +1104,6 @@ void calculate_core_leakage( void )
     uint16_t idc_vdd = 0;
     uint16_t temperature = 0;
 
-    // Get the core leakage percent from the OPPB
-    // Note: This value is named inaccurately in the OPPB so we are reassigning
-    // it's value here. We are also making the value visible to amester here.
-    g_wof->core_leakage_percent = G_oppb.nest_leakage_percent;
-
     // Loop through all Quads and their respective Cores to calculate
     // leakage.
     int quad_idx = 0;       // Quad Index (0-5)
@@ -1140,9 +1126,9 @@ void calculate_core_leakage( void )
 
         g_wof->all_cores_off_before = g_wof->all_cores_off_iso;
 
-        //Multiply by core leakage percentage
+        //Multiply by core leakage percentage incorrectly called nest_leakage_percent in OPPB
         g_wof->all_cores_off_iso = ( g_wof->all_cores_off_iso *
-            g_wof->core_leakage_percent ) / 100;
+            G_oppb.nest_leakage_percent ) / 100;
 
         // Calculate ALL_GOOD_CACHES_ON_ISO
         g_wof->all_good_caches_on_iso =
@@ -1686,14 +1672,14 @@ void calculate_temperature_scaling_08V( void )
 
     // estimate full leakage@0.8V by using IQ data all core, cache ON @0.8V * 24/#sort cores
     // 0.8V is the 3rd entry in the IQ data in 5mA unit *5 to convert to mA
-    g_wof->full_leakage_08v_mA = (g_wof->allGoodCoresCachesOn[2] * 5) * 24 / g_wof->good_normal_cores_per_sort;
+    g_amec_sys.static_wof_data.full_leakage_08v_mA = (G_oppb.iddq.iddq_all_good_cores_on_caches_on_5ma[2] * 5) * 24 / G_oppb.iddq.good_normal_cores_per_sort;
 
     // First row of G_wof_mft_full_leakage_08V has the leakage values in mA find the index
-    if( g_wof->full_leakage_08v_mA < G_wof_mft_full_leakage_08V[0][0] )
+    if( g_amec_sys.static_wof_data.full_leakage_08v_mA < G_wof_mft_full_leakage_08V[0][0] )
     {
         leakage_idx = 0;
     }
-    else if( g_wof->full_leakage_08v_mA >= G_wof_mft_full_leakage_08V[0][NUM_FULL_LEAKAGE_08V-1] )
+    else if( g_amec_sys.static_wof_data.full_leakage_08v_mA >= G_wof_mft_full_leakage_08V[0][NUM_FULL_LEAKAGE_08V-1] )
     {
         leakage_idx = NUM_FULL_LEAKAGE_08V-2;
     }
@@ -1701,8 +1687,8 @@ void calculate_temperature_scaling_08V( void )
     {
         for(leakage_idx = 0 ; leakage_idx < NUM_FULL_LEAKAGE_08V-1; leakage_idx++)
         {
-            if( (g_wof->full_leakage_08v_mA >= G_wof_mft_full_leakage_08V[0][leakage_idx]) &&
-                (g_wof->full_leakage_08v_mA <= G_wof_mft_full_leakage_08V[0][leakage_idx+1]) )
+            if( (g_amec_sys.static_wof_data.full_leakage_08v_mA >= G_wof_mft_full_leakage_08V[0][leakage_idx]) &&
+                (g_amec_sys.static_wof_data.full_leakage_08v_mA <= G_wof_mft_full_leakage_08V[0][leakage_idx+1]) )
             {
                 break;
             }
@@ -1711,7 +1697,7 @@ void calculate_temperature_scaling_08V( void )
     // Interpolate the m values in G_wof_mft_full_leakage_08V and write to G_wof_iddq_mult_table
     for(i=0; i < WOF_IDDQ_MULT_TABLE_N; i++)
     {
-        G_wof_iddq_mult_table[i][1] = interpolate_linear( g_wof->full_leakage_08v_mA,
+        G_wof_iddq_mult_table[i][1] = interpolate_linear( g_amec_sys.static_wof_data.full_leakage_08v_mA,
                                                           G_wof_mft_full_leakage_08V[0][leakage_idx],
                                                           G_wof_mft_full_leakage_08V[0][leakage_idx+1],
                                                           G_wof_mft_full_leakage_08V[i+1][leakage_idx],
@@ -2291,10 +2277,10 @@ void task_send_vrt_to_pgpe(task_t* i_task)
 void send_initial_vrt_to_pgpe( void )
 {
     // Set the steps for all VRT parms to the max value
-    g_wof->vcs_step_from_start  = g_wof->wof_header.vcs_size - 1;
-    g_wof->vdd_step_from_start  = g_wof->wof_header.vdd_size - 1;
-    g_wof->io_pwr_step_from_start  = g_wof->wof_header.io_pwr_size - 1;
-    g_wof->ambient_step_from_start  = g_wof->wof_header.ambient_size - 1;
+    g_wof->vcs_step_from_start  = g_amec_sys.static_wof_data.wof_header.vcs_size - 1;
+    g_wof->vdd_step_from_start  = g_amec_sys.static_wof_data.wof_header.vdd_size - 1;
+    g_wof->io_pwr_step_from_start  = g_amec_sys.static_wof_data.wof_header.io_pwr_size - 1;
+    g_wof->ambient_step_from_start  = g_amec_sys.static_wof_data.wof_header.ambient_size - 1;
 
     // Calculate the address of the final vrt
     g_wof->vrt_main_mem_addr = calc_vrt_mainstore_addr();
@@ -2310,33 +2296,6 @@ void send_initial_vrt_to_pgpe( void )
 
 }
 
-/**
- * read_req_active_quads
- *
- * Description: Reads the Requested Active Quads Update field from
- *              shared OCC-PGPE SRAM into global amec struct
- */
-void read_req_active_quads( void )
-{
-    uint64_t l_doubleword = in64(g_wof->req_active_quads_addr);
-
-    g_wof->req_active_quad_update = (uint8_t)(0x00000000000000ff & l_doubleword);
-    // Count the number of on bits in req_active_quad_update
-    int i = 0;
-    uint8_t on_bits = 0;
-    uint8_t bit_mask = 128; // 0b10000000
-    for( i = 0; i < MAXIMUM_QUADS; i++ )
-    {
-        if( bit_mask & g_wof->req_active_quad_update )
-        {
-            on_bits++;
-        }
-        bit_mask >>= 1;
-    }
-
-    // Save number of on bits
-    g_wof->num_active_quads = on_bits;
-}
 
 /**
  * get_voltage_index
@@ -2449,26 +2408,37 @@ uint32_t scale_and_interpolate( uint16_t * i_leak_arr,
 /**
  * print_oppb
  *
- * Description: For internal use only. Traces the contents of G_oppb that
- *              are used in this file.
+ * Description: For internal use only. Traces contents of G_oppb
  */
 void print_oppb( void )
 {
-    CMDH_TRAC_INFO("Printing Contents of OCCPstateParmBlock");
+    CMDH_TRAC_INFO("Printing Contents of OCCPstateParmBlock magic num[0x%08X%08X]",
+                    WORD_HIGH(G_oppb.magic.value), WORD_LOW(G_oppb.magic.value));
+    CMDH_TRAC_INFO("OPPB Attributes: pstates_enabled=0x%02X, wof_enabled=0x%02X, dds_enabled=0x%02X, ocs_enabled=0x%02X",
+                    G_oppb.attr.fields.pstates_enabled, G_oppb.attr.fields.wof_enabled,
+                    G_oppb.attr.fields.dds_enabled, G_oppb.attr.fields.ocs_enabled);
 
-// TODO - RTC 209558
-#if 0
     int i;
     for(i = 0; i < NUM_PV_POINTS; i++)
     {
-        CMDH_TRAC_INFO("operating_points[%d] = Freq[%d] vdd_mv[%d] ",
+        CMDH_TRAC_INFO("operating_points[%d]: Freq[%d] vdd_mv[%d] idd_tdp_ac_10ma[%d] ",
                        i,
                        G_oppb.operating_points[i].frequency_mhz,
-                       G_oppb.operating_points[i].vdd_mv );
+                       G_oppb.operating_points[i].vdd_mv,
+                       G_oppb.operating_points[i].idd_tdp_ac_10ma );
     }
-    CMDH_TRAC_INFO("lac_tdp_vdd_turbo_10ma = %d", G_oppb.lac_tdp_vdd_turbo_10ma);
-    CMDH_TRAC_INFO("lac_tdp_vdd_nominal_10ma = %d", G_oppb.lac_tdp_vdd_nominal_10ma);
-#endif
+
+    CMDH_TRAC_INFO("Vdd_sysparm loadline_uohm[%d] distloss_uohm[%d]",
+                    G_oppb.vdd_sysparm.loadline_uohm,
+                    G_oppb.vdd_sysparm.distloss_uohm);
+
+    CMDH_TRAC_INFO("Vdn_sysparm loadline_uohm[%d] distloss_uohm[%d]",
+                    G_oppb.vdn_sysparm.loadline_uohm,
+                    G_oppb.vdn_sysparm.distloss_uohm);
+
+    CMDH_TRAC_INFO("Vcs_sysparm loadline_uohm[%d] distloss_uohm[%d]",
+                    G_oppb.vcs_sysparm.loadline_uohm,
+                    G_oppb.vcs_sysparm.distloss_uohm);
 }
 
 /**

@@ -101,7 +101,7 @@ extern PWR_READING_TYPE  G_pwr_reading_type;
 IMAGE_HEADER (G_mainAppImageHdr,__ssx_boot,MAIN_APP_ID,ID_NUM_INVALID);
 
 ppmr_header_t G_ppmr_header;       // PPMR Header layout format
-pgpe_header_data_t G_pgpe_header;  // Selected fields from PGPE Header
+pgpe_header_data_t G_pgpe_header;  // PGPE Header layout format
 OCCPstateParmBlock_t G_oppb;       // OCC Pstate Parameters Block Structure
 extern uint16_t G_proc_fmax_mhz;   // max(turbo,uturbo) frequencies
 extern volatile int G_ss_pgpe_rc;
@@ -181,54 +181,6 @@ void check_runtime_environment(void)
     }
 }
 
-
-/*
- * Function Specification
- *
- * Name: externalize_oppb
- *
- * Description: Saves the relevant content from the G_oppb into g_amec
- *              for WOF calculations.
- *
- * End Function Specification
- */
-void externalize_oppb( void )
-{
-    // TODO - RTC 209558
-#if 0
-    g_amec->wof.good_quads_per_sort = G_oppb.iddq.good_quads_per_sort;
-    g_amec->wof.good_normal_cores_per_sort = G_oppb.iddq.good_normal_cores_per_sort;
-    g_amec->wof.good_caches_per_sort = G_oppb.iddq.good_caches_per_sort;
-
-    int i = 0;
-    for( i = 0; i < MAXIMUM_QUADS; i++)
-    {
-        g_amec->wof.good_normal_cores[i] = G_oppb.iddq.good_normal_cores[i];
-        g_amec->wof.good_caches[i] = G_oppb.iddq.good_caches[i];
-        g_amec->wof.allGoodCoresCachesOn[i] = G_oppb.iddq.ivdd_all_good_cores_on_caches_on[i];
-        g_amec->wof.allCoresCachesOff[i] = G_oppb.iddq.ivdd_all_cores_off_caches_off[i];
-        g_amec->wof.coresOffCachesOn[i] = G_oppb.iddq.ivdd_all_good_cores_off_good_caches_on[i];
-        g_amec->wof.quad1CoresCachesOn[i] = G_oppb.iddq.ivdd_quad_good_cores_on_good_caches_on[0][i];
-        g_amec->wof.quad2CoresCachesOn[i] = G_oppb.iddq.ivdd_quad_good_cores_on_good_caches_on[1][i];
-        g_amec->wof.quad3CoresCachesOn[i] = G_oppb.iddq.ivdd_quad_good_cores_on_good_caches_on[2][i];
-        g_amec->wof.quad4CoresCachesOn[i] = G_oppb.iddq.ivdd_quad_good_cores_on_good_caches_on[3][i];
-        g_amec->wof.quad5CoresCachesOn[i] = G_oppb.iddq.ivdd_quad_good_cores_on_good_caches_on[4][i];
-        g_amec->wof.quad6CoresCachesOn[i] = G_oppb.iddq.ivdd_quad_good_cores_on_good_caches_on[5][i];
-        g_amec->wof.ivdn[i] = G_oppb.iddq.ivdn[i];
-        g_amec->wof.allCoresCachesOnT[i] = G_oppb.iddq.avgtemp_all_good_cores_on[i];
-        g_amec->wof.allCoresCachesOffT[i] = G_oppb.iddq.avgtemp_all_cores_off_caches_off[i];
-        g_amec->wof.coresOffCachesOnT[i] = G_oppb.iddq.avgtemp_all_good_cores_off[i];
-        g_amec->wof.quad1CoresCachesOnT[i] = G_oppb.iddq.avgtemp_quad_good_cores_on[0][i];
-        g_amec->wof.quad2CoresCachesOnT[i] = G_oppb.iddq.avgtemp_quad_good_cores_on[1][i];
-        g_amec->wof.quad3CoresCachesOnT[i] = G_oppb.iddq.avgtemp_quad_good_cores_on[2][i];
-        g_amec->wof.quad4CoresCachesOnT[i] = G_oppb.iddq.avgtemp_quad_good_cores_on[3][i];
-        g_amec->wof.quad5CoresCachesOnT[i] = G_oppb.iddq.avgtemp_quad_good_cores_on[4][i];
-        g_amec->wof.quad6CoresCachesOnT[i] = G_oppb.iddq.avgtemp_quad_good_cores_on[5][i];
-        g_amec->wof.avgtemp_vdn[i] = G_oppb.iddq.avgtemp_vdn[i];
-    }
-#endif
-}
-
 /*
  * Function Specification
  *
@@ -244,9 +196,6 @@ void read_wof_header(void)
     int l_ssxrc = SSX_OK;
     bool l_error = false;
 
-    // Get OCCPstateParmBlock out to Amester
-    externalize_oppb();
-
     // Read wof tables address, and wof tables len
     if(G_pgpe_header.wof_tables_addr == 0)
     {
@@ -255,16 +204,16 @@ void read_wof_header(void)
     }
     else
     {
-        g_amec->wof.vrt_tbls_main_mem_addr = HOMER_BASE_ADDRESS + G_pgpe_header.wof_tables_addr;
-        g_amec->wof.vrt_tbls_len           = G_pgpe_header.wof_tables_length;
-        g_amec->wof.pgpe_wof_state_addr    = G_pgpe_header.wof_state_address;
-        g_amec->wof.pstate_tbl_sram_addr   = G_pgpe_header.occ_pstate_table_sram_addr;
+        g_amec->static_wof_data.vrt_tbls_main_mem_addr = HOMER_BASE_ADDRESS + G_pgpe_header.wof_tables_addr;
+        g_amec->static_wof_data.vrt_tbls_len           = G_pgpe_header.wof_tables_length;
 
-       MAIN_TRAC_INFO("read_wof_header() WOF Tables start addr 0x%08X", g_amec->wof.vrt_tbls_main_mem_addr);
+        MAIN_TRAC_INFO("read_wof_header: WOF Tables Main Memory Address[0x%08X], Length[0x%08X] ",
+                       g_amec->static_wof_data.vrt_tbls_main_mem_addr,
+                       g_amec->static_wof_data.vrt_tbls_len);
 
-        if (g_amec->wof.vrt_tbls_main_mem_addr%128 != 0)
+        if (g_amec->static_wof_data.vrt_tbls_main_mem_addr%128 != 0)
         {
-            MAIN_TRAC_ERR("read_wof_header(): WOF tables address is NOT"
+            MAIN_TRAC_ERR("read_wof_header: WOF tables address is NOT"
                     " 128-byte aligned, WOF is disabled");
             l_error = TRUE;
         }
@@ -278,7 +227,7 @@ void read_wof_header(void)
                 // Create request
                 l_ssxrc = bce_request_create(&l_wof_header_req,              // block copy object
                                              &G_pba_bcde_queue,              // main to sram copy engine
-                                             g_amec->wof.vrt_tbls_main_mem_addr,// mainstore address
+                                             g_amec->static_wof_data.vrt_tbls_main_mem_addr, // mainstore address
                                              (uint32_t) &G_temp_bce_buff,    // SRAM start address
                                              MIN_BCE_REQ_SIZE,               // size of copy
                                              SSX_WAIT_FOREVER,               // no timeout
@@ -302,21 +251,35 @@ void read_wof_header(void)
                 }
 
                 // Copy the data into Global WOF header struct
-                memcpy(&g_amec->wof.wof_header,
+                memcpy(&g_amec->static_wof_data.wof_header,
                        G_temp_bce_buff.data,
                        sizeof(wof_header_data_t));
 
                 // verify the validity of the magic number
-                if(WOF_MAGIC_NUMBER != g_amec->wof.wof_header.magic_number)
+                if( (WOF_TABLES_MAGIC_NUMBER != g_amec->static_wof_data.wof_header.magic_number) ||
+                    (WOF_TABLES_VERSION != g_amec->static_wof_data.wof_header.version) )
                 {
-                    MAIN_TRAC_ERR("read_wof_header: Invalid WOF Magic number. Address[0x%08X], Magic Number[0x%08X], WOF disabled",
-                                  g_amec->wof.vrt_tbls_main_mem_addr, g_amec->wof.wof_header.magic_number);
+                    MAIN_TRAC_ERR("read_wof_header: Invalid WOF Magic number[0x%08X] or version[0x%02X]. Address[0x%08X]. WOF disabled",
+                                  g_amec->static_wof_data.wof_header.magic_number,
+                                  g_amec->static_wof_data.wof_header.version,
+                                  g_amec->static_wof_data.vrt_tbls_main_mem_addr);
                     l_error = TRUE;
                     break;
                 }
 
-                MAIN_TRAC_INFO("read_wof_header: valid WOF Magic No: 0x%08X", g_amec->wof.wof_header.magic_number);
-                MAIN_TRAC_INFO("MAIN: VRT block size %d", g_amec->wof.wof_header.vrt_block_size);
+                MAIN_TRAC_INFO("read_wof_header: valid WOF Magic No[0x%08X] and version[0x%02X]",
+                                g_amec->static_wof_data.wof_header.magic_number,
+                                g_amec->static_wof_data.wof_header.version);
+
+                MAIN_TRAC_INFO("read_wof_header: VRT block size[%d] VRT Header size[%d]  VRT Data size[%d]",
+                                g_amec->static_wof_data.wof_header.vrt_block_size,
+                                g_amec->static_wof_data.wof_header.vrt_blck_hdr_sz,
+                                g_amec->static_wof_data.wof_header.vrt_data_size);
+
+                MAIN_TRAC_INFO("read_wof_header: OCS Mode[%d] Core Count[%d]",
+                                g_amec->static_wof_data.wof_header.ocs_mode,
+                                g_amec->static_wof_data.wof_header.core_count);
+
 
                 // one time calculation needed for WOF temperature scaling
                 calculate_temperature_scaling_08V();
@@ -332,12 +295,13 @@ void read_wof_header(void)
                 g_amec->wof.v_ratio_override_index = WOF_VRT_IDX_NO_OVERRIDE;
 
                 // Initialize OCS increase/decrease amounts to one step
-                g_amec->wof.ocs_increase_ceff = g_amec->wof.wof_header.vdd_step;
-                g_amec->wof.ocs_decrease_ceff = g_amec->wof.wof_header.vdd_step;
+                g_amec->wof.ocs_increase_ceff = g_amec->static_wof_data.wof_header.vdd_step;
+                g_amec->wof.ocs_decrease_ceff = g_amec->static_wof_data.wof_header.vdd_step;
 
                 // calculate max ceff ratio from header info
-                G_max_ceff_ratio = ( g_amec->wof.wof_header.vdd_start +
-                                    (g_amec->wof.wof_header.vdd_step * (g_amec->wof.wof_header.vdd_size - 1) ) );
+                G_max_ceff_ratio = ( g_amec->static_wof_data.wof_header.vdd_start +
+                                    ( g_amec->static_wof_data.wof_header.vdd_step *
+                                     (g_amec->static_wof_data.wof_header.vdd_size - 1) ) );
 
             }while( 0 );
 
@@ -375,68 +339,28 @@ bool read_pgpe_header(void)
     uint32_t l_extReasonCode = OCC_NO_EXTENDED_RC;
     uint32_t userdata1 = 0;
     uint32_t userdata2 = 0;
-    uint64_t magic_number = 0;
     uint32_t pgpe_shared_magic_number = 0;
 
     MAIN_TRAC_INFO("read_pgpe_header(0x%08X)", PGPE_HEADER_ADDR);
+    // Copy the header into Global PGPE header struct
+    memcpy(&G_pgpe_header.magic_number,
+           (const void*)PGPE_HEADER_ADDR,
+           sizeof(pgpe_header_data_t));
     do
     {
         // verify the validity of the magic number
-        magic_number = in64(PGPE_HEADER_ADDR);
-        if (0x46414B455F484452 == magic_number) // "FAKE_HDR"
-        {
-            G_pgpe_header.shared_sram_addr = 0xFFF20000;
-            G_pgpe_header.shared_sram_length = 0x1000;
-            G_pgpe_header.pgpe_flags = 0x0000;
-            G_pgpe_header.pgpe_hcode_length = 0xA000;
-            G_pgpe_header.wof_state_address = 0xFFF2D000;
-            G_pgpe_header.wof_tables_addr = 0x003C0000;
-            G_pgpe_header.wof_tables_length = 0x9C80;
-            G_hcode_elog_table_slots = 0;
-            G_hcode_elog_table = 0;
-            MAIN_TRAC_IMP("read_pgpe_header: Using fake PGPE header: shared sram addr[0x%08X]",
-                          G_pgpe_header.shared_sram_addr);
-        }
-        else if (PGPE_MAGIC_NUMBER_10 == magic_number)
-        {
-            G_pgpe_header.shared_sram_addr = in32(PGPE_HEADER_ADDR + PGPE_SHARED_SRAM_ADDR_OFFSET);
-            G_pgpe_header.shared_sram_length = in32(PGPE_HEADER_ADDR + PGPE_SHARED_SRAM_LEN_OFFSET);
-            //G_pgpe_header.pgpe_flags = 0x0000;
-            G_pgpe_header.global_pstate_parm_block_sram_addr = in32(PGPE_HEADER_ADDR + PGPE_GLOBAL_PSTATE_PARM_BLOCK_SRAM_ADDR);
-            //G_pgpe_header.pgpe_hcode_length = 0xA000;
-            G_pgpe_header.global_pstate_parm_block_length = in32(PGPE_HEADER_ADDR + PGPE_GLOBAL_PSTATE_PARM_BLOCK_LENGTH);
-            G_pgpe_header.generated_pstate_table_length = in32(PGPE_HEADER_ADDR + PGPE_GENERATED_PSTATE_TBL_SZ_OFFSET);
-            G_pgpe_header.occ_pstate_table_sram_addr = in32(PGPE_HEADER_ADDR + PGPE_OCC_PSTATE_TBL_ADDR_OFFSET);
-            G_pgpe_header.occ_pstate_table_length = in32(PGPE_HEADER_ADDR + PGPE_OCC_PSTATE_TBL_SZ_OFFSET);
-            G_pgpe_header.beacon_sram_addr = in32(PGPE_HEADER_ADDR + PGPE_BEACON_ADDR_OFFSET);
-            G_pgpe_header.wof_state_address = in32(PGPE_HEADER_ADDR + PGPE_WOF_STATE_ADDR_OFFSET);
-            G_pgpe_header.wof_tables_addr = in32(PGPE_HEADER_ADDR + PGPE_WOF_TBLS_ADDR_OFFSET);
-            G_pgpe_header.wof_tables_length = in32(PGPE_HEADER_ADDR + PGPE_WOF_TBLS_LEN_OFFSET);
+        MAIN_TRAC_IMP("PGPE HEADER magic number[0x%08X%08X]", WORD_HIGH(G_pgpe_header.magic_number), WORD_LOW(G_pgpe_header.magic_number));
 
-            const uint32_t hcode_elog_table_addr = G_pgpe_header.shared_sram_addr + HCODE_ELOG_TABLE_SRAM_OFFSET;
-            hcode_error_table_t hcode_etable;
-            hcode_etable.dw0.value = in64(hcode_elog_table_addr);
-            if (HCODE_ELOG_TABLE_MAGIC_NUMBER == hcode_etable.dw0.fields.magic_word)
-            {
-                G_hcode_elog_table_slots = hcode_etable.dw0.fields.total_log_slots;
-                G_hcode_elog_table = (hcode_elog_entry_t*)(hcode_elog_table_addr + 8);
-            }
-            else
-            {
-                G_hcode_elog_table_slots = 0;
-                G_hcode_elog_table = 0;
-            }
-
-            MAIN_TRAC_IMP("Shared SRAM Address[0x%08x], PGPE Beacon Address[0x%08x], HCODE Elog Table [0x%08X] (%d slots)",
-                          G_pgpe_header.shared_sram_addr, G_pgpe_header.beacon_sram_addr, G_hcode_elog_table, G_hcode_elog_table_slots);
-            MAIN_TRAC_IMP("WOF Tables Main Memory Address[0x%08x], Len[0x%08x], "
-                          "WOF State address[0x%08x]",
-                          G_pgpe_header.wof_tables_addr,
-                          G_pgpe_header.wof_tables_length,
-                          G_pgpe_header.wof_state_address);
+        if( (0x46414B455F484452 == G_pgpe_header.magic_number) || // "FAKE_HDR"
+            (PGPE_MAGIC_NUMBER_10 == G_pgpe_header.magic_number) )
+        {
+            // we can't run without shared SRAM or PGPE beacon address
             if ((G_pgpe_header.beacon_sram_addr == 0) ||
                 (G_pgpe_header.shared_sram_addr == 0))
             {
+                MAIN_TRAC_ERR("read_pgpe_header: Zero Shared SRAM Address[0x%08x] or PGPE Beacon Address[0x%08x]",
+                              G_pgpe_header.shared_sram_addr,
+                              G_pgpe_header.beacon_sram_addr);
                 /*
                  * @errortype
                  * @moduleid    READ_PGPE_HEADER
@@ -453,44 +377,88 @@ bool read_pgpe_header(void)
                 break;
             }
 
-            // verify version of OCC-PGPE shared SRAM
+            MAIN_TRAC_IMP("read_pgpe_header: PGPE Beacon Address[0x%08X]", G_pgpe_header.beacon_sram_addr);
+
+            // we have non-zero shared SRAM address now verify shared SRAM version
+            // OCC-PGPE shared SRAM version is first word of shared SRAM
             pgpe_shared_magic_number = in32(G_pgpe_header.shared_sram_addr);
             if(pgpe_shared_magic_number == OPS_MAGIC_NUMBER_P10)
             {
-#if 0
-                // TODO: RTC 209558
-                if (G_pgpe_header.pgpe_produced_wof_values_addr == 0)
+                MAIN_TRAC_IMP("read_pgpe_header: Valid PGPE Shared SRAM address[0x%08X] and Magic Number[0x%08X]",
+                               G_pgpe_header.shared_sram_addr, pgpe_shared_magic_number);
+
+                // Initialization for handling hcode errors
+                const uint32_t hcode_elog_table_addr = G_pgpe_header.shared_sram_addr + HCODE_ELOG_TABLE_SRAM_OFFSET;
+                hcode_error_table_t hcode_etable;
+                hcode_etable.dw0.value = in64(hcode_elog_table_addr);
+                if (HCODE_ELOG_TABLE_MAGIC_NUMBER == hcode_etable.dw0.fields.magic_word)
                 {
-                    // don't have a valid address
-                    MAIN_TRAC_ERR("read_pgpe_header: PGPE Produced WOF Values Address is 0! 0 Address read from [0x%08X]",
-                                   WORD_LOW(PGPE_HEADER_ADDR + PGPE_PRODUCED_WOF_VALUES_ADDR_OFFSET));
-                    /*
-                     * @errortype
-                     * @moduleid    READ_PGPE_HEADER
-                     * @reasoncode  SSX_GENERIC_FAILURE
-                     * @userdata1   lower word of PGPE Produced WOF values sram address
-                     * @userdata2   lower word of SRAM address PGPE Produced WOF values SRAM addr was read from
-                     * @userdata4   ERC_PGPE_WOF_VALUES_INVALID_ADDRESS
-                     * @devdesc     Invalid sram address for PGPE Produced WOF values from PGPE header
-                     */
-                    l_reasonCode = SSX_GENERIC_FAILURE;
-                    l_extReasonCode = ERC_PGPE_WOF_VALUES_INVALID_ADDRESS;
-                    userdata1 = WORD_LOW(G_pgpe_header.pgpe_produced_wof_values_addr);
-                    userdata2 = WORD_LOW(PGPE_HEADER_ADDR + PGPE_PRODUCED_WOF_VALUES_ADDR_OFFSET);
-                    break;
+                    G_hcode_elog_table_slots = hcode_etable.dw0.fields.total_log_slots;
+                    G_hcode_elog_table = (hcode_elog_entry_t*)(hcode_elog_table_addr + 8);
+                    MAIN_TRAC_IMP("read_pgpe_header: Valid HCODE Elog version[0x%08X], HCODE Elog Table [0x%08X] (%d slots)",
+                                  hcode_etable.dw0.fields.magic_word,
+                                  G_hcode_elog_table,
+                                  G_hcode_elog_table_slots);
                 }
                 else
                 {
-                    MAIN_TRAC_IMP("Valid PGPE produced WOF values SRAM addr[0x%08X] for Magic Number[0x%08X]",
-                               G_pgpe_header.pgpe_produced_wof_values_addr, pgpe_shared_magic_number);
+                    G_hcode_elog_table_slots = 0;
+                    G_hcode_elog_table = 0;
+                    MAIN_TRAC_ERR("read_pgpe_header: HCODE Elog version[0x%08X] NOT valid! No HCODE Elog support!",
+                                  hcode_etable.dw0.fields.magic_word);
                 }
-#endif
+
+                // Initialization for WOF data
+                g_amec->static_wof_data.occ_values_sram_addr = G_pgpe_header.shared_sram_addr + OCC_PRODUCED_WOF_VALUES_SRAM_OFFSET;
+                g_amec->static_wof_data.pgpe_values_sram_addr = G_pgpe_header.shared_sram_addr + PGPE_PRODUCED_WOF_VALUES_SRAM_OFFSET;
+                g_amec->static_wof_data.xgpe_values_sram_addr = G_pgpe_header.shared_sram_addr + XGPE_PRODUCED_WOF_VALUES_SRAM_OFFSET;
+                MAIN_TRAC_IMP("read_pgpe_header: Produced WOF values SRAM address OCC[0x%08X] PGPE[0x%08X] XGPE[0x%08X]",
+                               g_amec->static_wof_data.occ_values_sram_addr,
+                               g_amec->static_wof_data.pgpe_values_sram_addr,
+                               g_amec->static_wof_data.xgpe_values_sram_addr);
+
+                g_amec->static_wof_data.pgpe_wof_state_addr    = G_pgpe_header.wof_state_address;
+                g_amec->static_wof_data.pstate_tbl_sram_addr   = G_pgpe_header.occ_pstate_table_sram_addr;
+
+                MAIN_TRAC_IMP("read_pgpe_header: Pstate table SRAM Address[0x%08X], "
+                              "WOF State address[0x%08X]",
+                              g_amec->static_wof_data.pstate_tbl_sram_addr,
+                              g_amec->static_wof_data.pgpe_wof_state_addr);
+
+                // Read in WOF tables header
+                read_wof_header();
+                CHECKPOINT(WOF_IMAGE_HEADER_READ);
             }
             else
             {
-                // magic number not supported
+                // PGPE Shared SRAM magic number not supported
                 MAIN_TRAC_ERR("read_pgpe_header: Invalid PGPE Shared SRAM Magic number. Addr[0x%08X], Magic Number[0x%08X]",
                                G_pgpe_header.shared_sram_addr, pgpe_shared_magic_number);
+
+                // skip error log if this was a "FAKE_HDR" from PGPE
+                if((0x46414B455F484452 == G_pgpe_header.magic_number))
+                {
+                    MAIN_TRAC_ERR("read_pgpe_header: PGPE FAKE_HDR ignoring invalid shared SRAM");
+                    G_hcode_elog_table_slots = 0;
+                    G_hcode_elog_table = 0;
+
+                    G_pgpe_header.wof_tables_addr = 0x3C0000;
+                    G_pgpe_header.wof_tables_length = 0x20000;
+                    g_amec->static_wof_data.pgpe_wof_state_addr    = G_pgpe_header.wof_state_address;
+                    g_amec->static_wof_data.pstate_tbl_sram_addr   = G_pgpe_header.occ_pstate_table_sram_addr;
+
+                    MAIN_TRAC_IMP("read_pgpe_header: Pstate table SRAM Address[0x%08X], "
+                              "WOF State address[0x%08X]",
+                              g_amec->static_wof_data.pstate_tbl_sram_addr,
+                              g_amec->static_wof_data.pgpe_wof_state_addr);
+
+                    // Read in WOF tables header
+                    read_wof_header();
+                    CHECKPOINT(WOF_IMAGE_HEADER_READ);
+
+                    break;
+                }
+
                 /* @
                  * @errortype
                  * @moduleid    READ_PGPE_HEADER
@@ -506,12 +474,12 @@ bool read_pgpe_header(void)
                 userdata2 = 0;
                 break;
             }
-        }
+        }  // if valid PGPE Header magic number
         else
         {
             // The Magic number is invalid .. Invalid or corrupt PGPE image header
             MAIN_TRAC_ERR("read_pgpe_header: Invalid PGPE Magic number. Address[0x%08X], Magic Number[0x%08X%08X]",
-                          PGPE_HEADER_ADDR, WORD_HIGH(magic_number), WORD_LOW(magic_number));
+                          PGPE_HEADER_ADDR, WORD_HIGH(G_pgpe_header.magic_number), WORD_LOW(G_pgpe_header.magic_number));
             /* @
              * @errortype
              * @moduleid    READ_PGPE_HEADER
@@ -522,8 +490,8 @@ bool read_pgpe_header(void)
              * @devdesc     Invalid magic number in PGPE header
              */
             l_reasonCode = INVALID_MAGIC_NUMBER;
-            userdata1 = WORD_HIGH(magic_number);
-            userdata2 = WORD_LOW(magic_number);
+            userdata1 = WORD_HIGH(G_pgpe_header.magic_number);
+            userdata2 = WORD_LOW(G_pgpe_header.magic_number);
             break;
         }
     } while (0);
@@ -561,6 +529,7 @@ bool read_pgpe_header(void)
  * Name: read_ppmr_header
  *
  * Description: read PPMR image header and validate magic number
+ *              Only magic number and OPPB offset/length are used from PPMR
  *
  * Returns: TRUE if read was successful, else FALSE
  *
@@ -699,7 +668,7 @@ bool read_oppb_params()
     uint32_t userdata2 = 0;
     const uint32_t oppb_address = PPMR_ADDRESS_HOMER + G_ppmr_header.oppb_offset;
 
-    MAIN_TRAC_INFO("read_oppb_params(0x%08X)", oppb_address);
+    MAIN_TRAC_INFO("read_oppb_params address[0x%08X] length[0x%08X]", oppb_address, sizeof(OCCPstateParmBlock_t));
 
     do{
         // use block copy engine to read the OPPB header
@@ -794,7 +763,7 @@ bool read_oppb_params()
             (G_oppb.pstate_min == 0) || (G_oppb.pstate_min > 0xFF) ||
             (G_oppb.frequency_min_khz > G_oppb.frequency_max_khz))
         {
-            // The magic number is invalid .. Invalid or corrupt OPPB image header
+            // Frequency data is invalid
             MAIN_TRAC_ERR("read_oppb_header: Invalid frequency data: min[%d], max[%d], step[%d] kHZ, pmin[0x%02X]",
                           G_oppb.frequency_min_khz, G_oppb.frequency_max_khz,
                           G_oppb.frequency_step_khz, G_oppb.pstate_min);
@@ -910,10 +879,6 @@ void read_hcode_headers()
             // Read PGPE header file, extract OCC/PGPE Shared SRAM address and size,
             if (read_pgpe_header() == FALSE) break;
             CHECKPOINT(PGPE_IMAGE_HEADER_READ);
-
-            // Extract important WOF data into global space
-            read_wof_header();
-            CHECKPOINT(WOF_IMAGE_HEADER_READ);
 
             set_clear_wof_disabled( CLEAR,
                                     WOF_RC_NO_CONFIGURED_CORES,

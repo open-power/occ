@@ -50,7 +50,6 @@ extern uint8_t G_max_vrt_chances;
 extern uint8_t G_max_wof_control_chances;
 extern uint32_t G_max_ceff_ratio;
 
-#define WOF_TABLES_OFFSET           0xC0000 // Relative to PPMR_ADDRESS_HOMER
 #define MAX_CEFF_RATIO              10000   // 1.0 ratio = 10000
                                             // (scaled to avoid floating point)
 // value to indicate VRT dimension does not have an override set by mfg test cmd
@@ -152,7 +151,8 @@ enum wof_disabled_actions
 };
 
 //#define WOF_PGPE_SUPPORT 1
-#define WOF_MAGIC_NUMBER            0x57465448   // "WFTH"
+#define WOF_TABLES_MAGIC_NUMBER            0x57465448   // "WFTH"
+#define WOF_TABLES_VERSION 1
 
 // Structure to hold relevant data from the WOF header in Mainstore
 typedef struct __attribute__ ((packed))
@@ -200,13 +200,11 @@ typedef struct __attribute__ ((packed))
     uint8_t  reserved_5[40];
 } wof_header_data_t;
 
-// Structure used in g_amec
+// Structure used in g_amec to hold WOF data that changes
 typedef struct __attribute__ ((packed))
 {
     // Bit vector where each bit signifies a different failure case
     uint32_t wof_disabled;
-    // Data from wof header
-    wof_header_data_t wof_header;
     // Calculated step from start for VDD
     uint16_t vdd_step_from_start;
     // override sent for Vdd index via mfg test cmd 0xff indicates no override
@@ -315,20 +313,8 @@ typedef struct __attribute__ ((packed))
     // if vrt_main_mem_addr needed to be 128B aligned this is number of tables in the real table is
     // 0 if no adjustement required
     uint32_t vrt_bce_table_offset;
-    // Main Memory address where the WOF VRT tables are located
-    uint32_t vrt_tbls_main_mem_addr;
-    // The length of the WOF VRT data in main memory
-    uint32_t vrt_tbls_len;
     // The state of the wof routine during initialization. states defined above
     uint8_t wof_init_state;
-    // The address in shared OCC-PGPE SRAM of the PGPE WOF state
-    uint32_t pgpe_wof_state_addr;
-    // The address in shared OCC-PGPE SRAM of the Requested Active quads
-    uint32_t req_active_quads_addr;
-    // The core leakage percent portion of VDD
-    uint16_t core_leakage_percent;
-    // The SRAM address of the pstates for the quads.
-    uint32_t pstate_tbl_sram_addr;
     // Return code of IPC request called from callback func
     uint32_t gpe_req_rc;
     // Return code of failed control message
@@ -355,40 +341,17 @@ typedef struct __attribute__ ((packed))
     // Holds the state of various async operations relating to sending a VRT
     uint8_t vrt_state;
     uint32_t all_cores_off_before;
-    //OPPB variables
-    uint8_t good_quads_per_sort;
-    uint8_t good_normal_cores_per_sort;
-    uint8_t good_caches_per_sort;
-    uint8_t good_normal_cores[MAXIMUM_QUADS];
-    uint8_t good_caches[MAXIMUM_QUADS];
-    uint16_t allGoodCoresCachesOn[CORE_IDDQ_MEASUREMENTS];
-    uint16_t allCoresCachesOff[CORE_IDDQ_MEASUREMENTS];
-    uint16_t coresOffCachesOn[CORE_IDDQ_MEASUREMENTS];
-    uint16_t quad1CoresCachesOn[CORE_IDDQ_MEASUREMENTS];
-    uint16_t quad2CoresCachesOn[CORE_IDDQ_MEASUREMENTS];
-    uint16_t quad3CoresCachesOn[CORE_IDDQ_MEASUREMENTS];
-    uint16_t quad4CoresCachesOn[CORE_IDDQ_MEASUREMENTS];
-    uint16_t quad5CoresCachesOn[CORE_IDDQ_MEASUREMENTS];
-    uint16_t quad6CoresCachesOn[CORE_IDDQ_MEASUREMENTS];
-    uint16_t ivdn[CORE_IDDQ_MEASUREMENTS];
-    uint8_t allCoresCachesOnT[CORE_IDDQ_MEASUREMENTS];
-    uint8_t allCoresCachesOffT[CORE_IDDQ_MEASUREMENTS];
-    uint8_t coresOffCachesOnT[CORE_IDDQ_MEASUREMENTS];
-    uint8_t quad1CoresCachesOnT[CORE_IDDQ_MEASUREMENTS];
-    uint8_t quad2CoresCachesOnT[CORE_IDDQ_MEASUREMENTS];
-    uint8_t quad3CoresCachesOnT[CORE_IDDQ_MEASUREMENTS];
-    uint8_t quad4CoresCachesOnT[CORE_IDDQ_MEASUREMENTS];
-    uint8_t quad5CoresCachesOnT[CORE_IDDQ_MEASUREMENTS];
-    uint8_t quad6CoresCachesOnT[CORE_IDDQ_MEASUREMENTS];
-    uint8_t avgtemp_vdn[CORE_IDDQ_MEASUREMENTS];
-    uint32_t full_leakage_08v_mA;
+
     uint64_t pgpe_wof_values_dw0;
     uint64_t pgpe_wof_values_dw1;
     uint64_t pgpe_wof_values_dw2;
     uint64_t pgpe_wof_values_dw3;
     uint8_t  ocs_dirty;  // Set by PGPE read from OCC Flag 0 register
+
+    // the following two vars can be changed via debug command
     uint16_t ocs_increase_ceff; // Fixed CeffRatio increase addr defined in attribute
     uint16_t ocs_decrease_ceff; // Fixed CeffRatio decrease addr defined in attribute
+
     uint16_t vdd_oc_ceff_add;  // OCC calculated CeffRatio Addr
     uint16_t vdd_ceff_ratio_adj_prev;  // Final adjusted CeffRatio from previous tick
     uint32_t vdd_avg_tdp_100uv;
@@ -399,6 +362,28 @@ typedef struct __attribute__ ((packed))
     uint32_t io_power;  // IO power used to determine VRT
     uint32_t ambient;  // Ambient used to determine VRT
 } amec_wof_t;
+
+// Structure used in g_amec to hold static WOF data
+typedef struct __attribute__ ((packed))
+{
+    // Data from wof table header
+    wof_header_data_t wof_header;
+    // Main Memory address where the WOF VRT tables are located
+    uint32_t vrt_tbls_main_mem_addr;
+    // The length of the WOF VRT data in main memory
+    uint32_t vrt_tbls_len;
+    // The address in shared OCC-PGPE SRAM of the PGPE WOF state
+    uint32_t pgpe_wof_state_addr;
+    // The address in shared OCC-PGPE SRAM for OCC produced WOF values
+    uint32_t occ_values_sram_addr;
+    // The address in shared OCC-PGPE SRAM for PGPE produced WOF values
+    uint32_t pgpe_values_sram_addr;
+    // The address in shared OCC-PGPE SRAM for XGPE produced WOF values
+    uint32_t xgpe_values_sram_addr;
+    // The SRAM address of the pstates for the quads.
+    uint32_t pstate_tbl_sram_addr;
+    uint32_t full_leakage_08v_mA;
+} amec_static_wof_t;
 
 // Structure for sensors used in g_amec for AMESTER for additional debug
 typedef struct __attribute__ ((packed))
@@ -489,8 +474,6 @@ bool enable_wof( void );
 void wof_control_callback( void );
 
 void send_initial_vrt_to_pgpe( void );
-
-void read_req_active_quads( void );
 
 int get_voltage_index( uint32_t i_voltage );
 

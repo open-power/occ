@@ -634,7 +634,10 @@ typedef struct
   // save off when pcap is considered valid
   uint8_t               pcap_valid;
 
-  // WOF structure
+  // Static WOF data -- data read in once and doesn't change
+  amec_static_wof_t     static_wof_data;
+
+  // WOF structure -- data that changes
   amec_wof_t            wof;
 
   // WOF sensors

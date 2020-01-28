@@ -661,61 +661,61 @@ uint8_t cmdh_mnfg_select_wof_vrt(const cmdh_fsp_cmd_t * i_cmd_ptr,
         if(l_cmd_ptr->action == MFG_SELECT_WOF_VRT_WRITE)
         {
             if( (l_cmd_ptr->vcs_index != WOF_VRT_IDX_NO_OVERRIDE) &&
-                (l_cmd_ptr->vcs_index >= g_amec_sys.wof.wof_header.vcs_size) )
+                (l_cmd_ptr->vcs_index >= g_amec_sys.static_wof_data.wof_header.vcs_size) )
             {
                 TRAC_INFO("cmdh_mnfg_select_wof_vrt: VCS index[%d] out of range using last index[%d]",
                           l_cmd_ptr->vcs_index,
-                          (g_amec_sys.wof.wof_header.vcs_size - 1));
+                          (g_amec_sys.static_wof_data.wof_header.vcs_size - 1));
 
-                g_amec_sys.wof.vcs_override_index = g_amec_sys.wof.wof_header.vcs_size - 1;
+                g_amec_sys.wof.vcs_override_index = g_amec_sys.static_wof_data.wof_header.vcs_size - 1;
             }
             else
                 g_amec_sys.wof.vcs_override_index = l_cmd_ptr->vcs_index;
 
             if( (l_cmd_ptr->vdd_index != WOF_VRT_IDX_NO_OVERRIDE) &&
-                (l_cmd_ptr->vdd_index >= g_amec_sys.wof.wof_header.vdd_size) )
+                (l_cmd_ptr->vdd_index >= g_amec_sys.static_wof_data.wof_header.vdd_size) )
             {
                 TRAC_INFO("cmdh_mnfg_select_wof_vrt: VDD index[%d] out of range using last index[%d]",
                           l_cmd_ptr->vdd_index,
-                          (g_amec_sys.wof.wof_header.vdd_size - 1));
+                          (g_amec_sys.static_wof_data.wof_header.vdd_size - 1));
 
-                g_amec_sys.wof.vdd_override_index = g_amec_sys.wof.wof_header.vdd_size - 1;
+                g_amec_sys.wof.vdd_override_index = g_amec_sys.static_wof_data.wof_header.vdd_size - 1;
             }
             else
                 g_amec_sys.wof.vdd_override_index = l_cmd_ptr->vdd_index;
 
             if( (l_cmd_ptr->io_pwr_index != WOF_VRT_IDX_NO_OVERRIDE) &&
-                (l_cmd_ptr->io_pwr_index >= g_amec_sys.wof.wof_header.io_pwr_size) )
+                (l_cmd_ptr->io_pwr_index >= g_amec_sys.static_wof_data.wof_header.io_pwr_size) )
             {
                 TRAC_INFO("cmdh_mnfg_select_wof_vrt: IO Power index[%d] out of range using last index[%d]",
                           l_cmd_ptr->io_pwr_index,
-                          (g_amec_sys.wof.wof_header.io_pwr_size - 1));
+                          (g_amec_sys.static_wof_data.wof_header.io_pwr_size - 1));
 
-                g_amec_sys.wof.io_pwr_override_index = g_amec_sys.wof.wof_header.io_pwr_size - 1;
+                g_amec_sys.wof.io_pwr_override_index = g_amec_sys.static_wof_data.wof_header.io_pwr_size - 1;
             }
             else
                 g_amec_sys.wof.io_pwr_override_index = l_cmd_ptr->io_pwr_index;
 
             if( (l_cmd_ptr->ambient_index != WOF_VRT_IDX_NO_OVERRIDE) &&
-                (l_cmd_ptr->ambient_index >= g_amec_sys.wof.wof_header.ambient_size) )
+                (l_cmd_ptr->ambient_index >= g_amec_sys.static_wof_data.wof_header.ambient_size) )
             {
                 TRAC_INFO("cmdh_mnfg_select_wof_vrt: Ambient index[%d] out of range using last index[%d]",
                           l_cmd_ptr->ambient_index,
-                          (g_amec_sys.wof.wof_header.ambient_size - 1));
+                          (g_amec_sys.static_wof_data.wof_header.ambient_size - 1));
 
-                g_amec_sys.wof.ambient_override_index = g_amec_sys.wof.wof_header.ambient_size - 1;
+                g_amec_sys.wof.ambient_override_index = g_amec_sys.static_wof_data.wof_header.ambient_size - 1;
             }
             else
                 g_amec_sys.wof.ambient_override_index = l_cmd_ptr->ambient_index;
 
             if( (l_cmd_ptr->v_ratio_index != WOF_VRT_IDX_NO_OVERRIDE) &&
-                (l_cmd_ptr->v_ratio_index >= g_amec_sys.wof.wof_header.vratio_size) )
+                (l_cmd_ptr->v_ratio_index >= g_amec_sys.static_wof_data.wof_header.vratio_size) )
             {
                 TRAC_INFO("cmdh_mnfg_select_wof_vrt: V Ratio index[%d] out of range using last index[%d]",
                           l_cmd_ptr->v_ratio_index,
-                          (g_amec_sys.wof.wof_header.vratio_size - 1));
+                          (g_amec_sys.static_wof_data.wof_header.vratio_size - 1));
 
-                g_amec_sys.wof.v_ratio_override_index = g_amec_sys.wof.wof_header.vratio_size - 1;
+                g_amec_sys.wof.v_ratio_override_index = g_amec_sys.static_wof_data.wof_header.vratio_size - 1;
             }
             else
                 g_amec_sys.wof.v_ratio_override_index = l_cmd_ptr->v_ratio_index;
@@ -723,33 +723,33 @@ uint8_t cmdh_mnfg_select_wof_vrt(const cmdh_fsp_cmd_t * i_cmd_ptr,
         }  // if write action
 
         // populate return data -- same data for all valid actions
-        l_rsp_ptr->vcs0 = g_amec_sys.wof.wof_header.vcs_start;
-        l_rsp_ptr->vcs_step = g_amec_sys.wof.wof_header.vcs_step;
-        l_rsp_ptr->vcs_max_index = g_amec_sys.wof.wof_header.vcs_size - 1;
+        l_rsp_ptr->vcs0 = g_amec_sys.static_wof_data.wof_header.vcs_start;
+        l_rsp_ptr->vcs_step = g_amec_sys.static_wof_data.wof_header.vcs_step;
+        l_rsp_ptr->vcs_max_index = g_amec_sys.static_wof_data.wof_header.vcs_size - 1;
         l_rsp_ptr->vcs_cur_index = g_amec_sys.wof.vcs_override_index;
         l_rsp_ptr->reserved1 = 0;
 
-        l_rsp_ptr->vdd0 = g_amec_sys.wof.wof_header.vdd_start;
-        l_rsp_ptr->vdd_step = g_amec_sys.wof.wof_header.vdd_step;
-        l_rsp_ptr->vdd_max_index = g_amec_sys.wof.wof_header.vdd_size - 1;
+        l_rsp_ptr->vdd0 = g_amec_sys.static_wof_data.wof_header.vdd_start;
+        l_rsp_ptr->vdd_step = g_amec_sys.static_wof_data.wof_header.vdd_step;
+        l_rsp_ptr->vdd_max_index = g_amec_sys.static_wof_data.wof_header.vdd_size - 1;
         l_rsp_ptr->vdd_cur_index = g_amec_sys.wof.vdd_override_index;
         l_rsp_ptr->reserved2 = 0;
 
-        l_rsp_ptr->io_pwr0 = g_amec_sys.wof.wof_header.io_pwr_start;
-        l_rsp_ptr->io_pwr_step = g_amec_sys.wof.wof_header.io_pwr_step;
-        l_rsp_ptr->io_pwr_max_index = g_amec_sys.wof.wof_header.io_pwr_size - 1;
+        l_rsp_ptr->io_pwr0 = g_amec_sys.static_wof_data.wof_header.io_pwr_start;
+        l_rsp_ptr->io_pwr_step = g_amec_sys.static_wof_data.wof_header.io_pwr_step;
+        l_rsp_ptr->io_pwr_max_index = g_amec_sys.static_wof_data.wof_header.io_pwr_size - 1;
         l_rsp_ptr->io_pwr_cur_index = g_amec_sys.wof.io_pwr_override_index;
         l_rsp_ptr->reserved3 = 0;
 
-        l_rsp_ptr->ambient0 = g_amec_sys.wof.wof_header.ambient_start;
-        l_rsp_ptr->ambient_step = g_amec_sys.wof.wof_header.ambient_step;
-        l_rsp_ptr->ambient_max_index = g_amec_sys.wof.wof_header.ambient_size - 1;
+        l_rsp_ptr->ambient0 = g_amec_sys.static_wof_data.wof_header.ambient_start;
+        l_rsp_ptr->ambient_step = g_amec_sys.static_wof_data.wof_header.ambient_step;
+        l_rsp_ptr->ambient_max_index = g_amec_sys.static_wof_data.wof_header.ambient_size - 1;
         l_rsp_ptr->ambient_cur_index = g_amec_sys.wof.ambient_override_index;
         l_rsp_ptr->reserved4 = 0;
 
-        l_rsp_ptr->v_ratio0 = g_amec_sys.wof.wof_header.vratio_start;
-        l_rsp_ptr->v_ratio_step = g_amec_sys.wof.wof_header.vratio_step;
-        l_rsp_ptr->v_ratio_max_index = g_amec_sys.wof.wof_header.vratio_size - 1;
+        l_rsp_ptr->v_ratio0 = g_amec_sys.static_wof_data.wof_header.vratio_start;
+        l_rsp_ptr->v_ratio_step = g_amec_sys.static_wof_data.wof_header.vratio_step;
+        l_rsp_ptr->v_ratio_max_index = g_amec_sys.static_wof_data.wof_header.vratio_size - 1;
         l_rsp_ptr->v_ratio_cur_index = g_amec_sys.wof.v_ratio_override_index;
         l_rsp_ptr->reserved5 = 0;
 

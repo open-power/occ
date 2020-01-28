@@ -591,6 +591,42 @@ void cmdh_dbug_dump_oppb( const cmdh_fsp_cmd_t * i_cmd_ptr,
 
 // Function Specification
 //
+// Name: cmdh_dbug_dump_static_wof_data
+//
+// Description: Dumps out the contents of g_amec_sys.static_wof_data
+//
+// End Function Specification
+void cmdh_dbug_dump_static_wof_data( const cmdh_fsp_cmd_t * i_cmd_ptr,
+                                     cmdh_fsp_rsp_t * o_rsp_ptr)
+{
+    uint16_t l_datalen = sizeof(amec_static_wof_t);
+
+    // Fill in response data
+    memcpy((void*)&(o_rsp_ptr->data[0]),
+           (void*)&(g_amec->static_wof_data),
+           l_datalen);
+
+    TRAC_INFO("WOF STATIC DATA - vrt_tbls_main_mem_addr[0x%08X] vrt_tbls_len[0x%08X]   pgpe_wof_state_addr[0x%08X]",
+               g_amec->static_wof_data.vrt_tbls_main_mem_addr,
+               g_amec->static_wof_data.vrt_tbls_len,
+               g_amec->static_wof_data.pgpe_wof_state_addr);
+
+    TRAC_INFO("WOF STATIC DATA - occ_values_sram_addr[0x%08X] pgpe_values_sram_addr[0x%08X]   xgpe_values_sram_addr[0x%08X]  pstate_tbl_sram_addr[0x%08X]",
+               g_amec->static_wof_data.occ_values_sram_addr,
+               g_amec->static_wof_data.pgpe_values_sram_addr,
+               g_amec->static_wof_data.xgpe_values_sram_addr,
+               g_amec->static_wof_data.pstate_tbl_sram_addr);
+
+
+    // Fill in response data length
+    o_rsp_ptr->data_length[0] = CONVERT_UINT16_UINT8_HIGH(l_datalen);
+    o_rsp_ptr->data_length[1] = CONVERT_UINT16_UINT8_LOW(l_datalen);
+    G_rsp_status = ERRL_RC_SUCCESS;
+    return;
+}
+
+// Function Specification
+//
 // Name: cmdh_dbug_wof_ocs
 //
 // Description: Writes data related to OCS support
@@ -1157,6 +1193,10 @@ void cmdh_dbug_cmd (const cmdh_fsp_cmd_t * i_cmd_ptr,
 
         case DBUG_PEEK:
             cmdh_dbug_peek(i_cmd_ptr, o_rsp_ptr);
+            break;
+
+        case DBUG_DUMP_STATIC_WOF_DATA:
+             cmdh_dbug_dump_static_wof_data(i_cmd_ptr, o_rsp_ptr);
             break;
 
         case DBUG_DUMP_RAW_AD:
