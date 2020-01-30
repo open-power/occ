@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -94,8 +94,8 @@ homer_rc_t __attribute__((optimize("O1"))) homer_hd_map_read_unmap(const homer_r
                     case HOMER_VERSION:
                         *(uint32_t *)o_host_data = l_hdcfg_data->version;
                         break;
-                    case HOMER_NEST_FREQ:
-                        *(uint32_t *)o_host_data = l_hdcfg_data->nestFrequency;
+                    case HOMER_OCC_FREQ:
+                        *(uint32_t *)o_host_data = l_hdcfg_data->occFrequency;
                         break;
                     case HOMER_INT_TYPE:
                         *(uint32_t *)o_host_data = l_hdcfg_data->occInterruptType;

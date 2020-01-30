@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -58,7 +58,7 @@ typedef struct nop
 
 typedef struct gpe_shared_data
 {
-    uint32_t    nest_freq_div;  // Nest freq / 64
+    uint32_t    occ_freq_div;  // OCC freq / 64
     uint32_t    reserved_2;
     uint32_t    fir_heap_buffer_ptr;
     uint32_t    fir_params_buffer_ptr;

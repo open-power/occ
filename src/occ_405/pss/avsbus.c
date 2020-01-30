@@ -63,7 +63,7 @@ static bool G_trace_scoms = TRUE;
 bool G_avsbus_vdd_monitoring = FALSE;
 
 extern uint16_t G_allow_trace_flags;
-extern uint32_t G_nest_frequency_mhz;
+extern uint32_t G_occ_frequency_mhz;
 #define AVSBUS_FREQUENCY_MHZ 10
 
 extern bool G_vrm_vdd_temp_expired;
@@ -247,8 +247,8 @@ void avsbus_init()
     //  18:63 reserved
     //  1r00DDDD DDDDDDrr r1rrrrrr rrrrrrrrr
     value = 0x90004000;
-    // calculate o2s_clock_divider based on nest freq and target bus freq
-    const uint32_t divider = (G_nest_frequency_mhz / (AVSBUS_FREQUENCY_MHZ * 8)) - 1;
+    // calculate o2s_clock_divider based on OCC freq and target bus freq
+    const uint32_t divider = (G_occ_frequency_mhz / (AVSBUS_FREQUENCY_MHZ * 8)) - 1;
     value |= (divider << 18);
     if (bus0_monitoring)
     {

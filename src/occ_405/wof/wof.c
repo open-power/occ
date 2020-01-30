@@ -47,7 +47,7 @@ extern GPE_BUFFER(ipcmsg_wof_vrt_t G_wof_vrt_parms);
 extern GPE_BUFFER(ipcmsg_wof_control_t G_wof_control_parms);
 extern GpeRequest   G_wof_vrt_req;
 extern GpeRequest   G_wof_control_req;
-extern uint32_t     G_nest_frequency_mhz;
+extern uint32_t     G_occ_frequency_mhz;
 extern volatile pstateStatus G_proc_pstate_status;
 extern uint8_t G_occ_interrupt_type;
 extern uint16_t G_allow_trace_flags;
@@ -1352,8 +1352,8 @@ void calculate_ceff_ratio_vcs( void )
     g_wof->ceff_tdp_vcs = G_oppb.ceff_tdp_vcs;
 
     // Calculate ceff_vcs
-    // iac_vcs/ (VOLTVCS^1.3 * Fnest)
-    g_wof->c_ratio_vcs_freq = G_nest_frequency_mhz;
+    // iac_vcs/ (VOLTVCS^1.3 * Focc)
+    g_wof->c_ratio_vcs_freq = G_occ_frequency_mhz;
     g_wof->ceff_vcs =
                 calculate_effective_capacitance( g_wof->iac_vcs,
                                                  g_wof->voltvcs_sensor,

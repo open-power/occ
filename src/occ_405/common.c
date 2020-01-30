@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -31,7 +31,6 @@
 #include <occ_service_codes.h>
 
 uint8_t G_host_notifications_pending = 0;
-extern bool G_ipl_time;
 extern uint16_t G_allow_trace_flags;
 extern uint8_t G_occ_interrupt_type;
 #define TICKS_TO_DELAY_CHECKSTOP_PROCESSING 4
@@ -72,45 +71,31 @@ void task_misc_405_checks(task_t *i_self)
         // indicates if the system has check-stopped.
         l_oisr1_status.value = in32(OCB_OISR1); // read high order 32 bits of OISR1
 
-        // We're only interested in system checkstop during IPL, so only check
-        // for that if the IPL flag is set (in 405 main.c). If gpe0/1_error is
-        // set before ppc405 checkstop, then we won't get a chance to collect
-        // firdata, so only check for GPE0/1 errors in runtime.
-        if(G_ipl_time)
+        if (l_oisr1_status.fields.check_stop_ppc405 ||   // System Checkstop
+            l_oisr1_status.fields.gpe0_error        ||   // GPE0 Halt
+            l_oisr1_status.fields.gpe1_error)            // GPE1 Halt
         {
             if(l_oisr1_status.fields.check_stop_ppc405)
             {
-                l_create_errl = true;
-            }
-        }
-        else
-        {
-            if (l_oisr1_status.fields.check_stop_ppc405 ||   // System Checkstop
-                l_oisr1_status.fields.gpe0_error        ||   // GPE0 Halt
-                l_oisr1_status.fields.gpe1_error)            // GPE1 Halt
-            {
-                if(l_oisr1_status.fields.check_stop_ppc405)
+                // For FSP systems, delay the system checkstop processing to allow NVDIMM procedure to run
+                if ((G_occ_interrupt_type == FSP_SUPPORTED_OCC) && (L_delay_cstop > 0))
                 {
-                    // For FSP systems, delay the system checkstop processing to allow NVDIMM procedure to run
-                    if ((G_occ_interrupt_type == FSP_SUPPORTED_OCC) && (L_delay_cstop > 0))
+                    if (L_delay_cstop == TICKS_TO_DELAY_CHECKSTOP_PROCESSING)
                     {
-                        if (L_delay_cstop == TICKS_TO_DELAY_CHECKSTOP_PROCESSING)
-                        {
-                            TRAC_IMP("task_misc_405_checks: System checkstop detected by RTL: OISR1[0x%08x] - delaying halt (tick=%d)",
-                                     l_oisr1_status.value, CURRENT_TICK);
-                        }
-                        --L_delay_cstop;
+                        TRAC_IMP("task_misc_405_checks: System checkstop detected by RTL: OISR1[0x%08x] - delaying halt (tick=%d)",
+                                 l_oisr1_status.value, CURRENT_TICK);
                     }
-                    else
-                    {
-                        l_create_errl = true;
-                    }
+                    --L_delay_cstop;
                 }
                 else
                 {
-                    // GPE0/GPE1 Halt
                     l_create_errl = true;
                 }
+            }
+            else
+            {
+                // GPE0/GPE1 Halt
+                l_create_errl = true;
             }
         }
 

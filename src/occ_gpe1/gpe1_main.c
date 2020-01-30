@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -69,7 +69,7 @@ int get_ocmb_sensorcache(MemBufConfiguration_t* i_config,
 int main(int argc, char **argv)
 {
     int rc;
-    uint32_t l_timebase = G_gpe_shared_data->nest_freq_div;
+    uint32_t l_timebase = G_gpe_shared_data->occ_freq_div;
 
     // Don't initialize with a 0
     if (!l_timebase)

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -143,7 +143,7 @@ struct image_header
         uint16_t flags;
         struct OCC_FLAGS flag_bits;
     } occ_flags;                        // bit field for occ flags
-    uint32_t nest_frequency;            // nest frequency
+    uint32_t occ_frequency;             // OCC frequency
     uint8_t reserved[RESERVED_SZ];      // reserved for future use
 } __attribute__ ((__packed__));
 

@@ -2255,7 +2255,7 @@ def occ_init(code_dir, flg_pgpe, flg_verbose):
     # FFFBDC00 -     Reserved (Bootloader) (1K)
 
     # HOMER Layout (relative to base address 0x80000000)
-    # 000C0000 - header? version (4 bytes), nestFreq (4B), interruptType (4B), firMaster (4B), firParms, smfMode (4B)
+    # 000C0000 - header? version (4 bytes), occFreq (4B), interruptType (4B), firMaster (4B), firParms, smfMode (4B)
     # 000E0000 - HTMGT Command Buffer (4k)
     # 000E1000 - HTMGT Response Buffer (4k)
     # 000E2000 - OPAL Shared Memory (32k)
@@ -2321,7 +2321,7 @@ def occ_init(code_dir, flg_pgpe, flg_verbose):
     # HOMER init
     print("==> Initialize OCC Host Config Data in HOMER (0x800F4000)")
     cli.run_command("backplane0."+proc+".occ_cmp.oci_space.write 0x800F4000 0x000000A0 -b") # Version
-    cli.run_command("backplane0."+proc+".occ_cmp.oci_space.write 0x800F4004 0x00000964 -b") # Nest Frequency
+    cli.run_command("backplane0."+proc+".occ_cmp.oci_space.write 0x800F4004 0x00000964 -b") # OCC Frequency
     cli.run_command("backplane0."+proc+".occ_cmp.oci_space.write 0x800F4008 0x00000000 -b") # Interrupt Type (FSP)
     cli.run_command("backplane0."+proc+".occ_cmp.oci_space.write 0x800F400C 0x00000000 -b") # SMB
     cli.run_command("backplane0."+proc+".occ_cmp.oci_space.read  0x800F4000 8")

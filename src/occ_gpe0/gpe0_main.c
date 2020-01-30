@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -57,7 +57,7 @@ IPC_MSGQ_MSG_CREATE(G_test_msg, IPC_ST_TEST_FUNC0, &G_gpe0_test_msgq0);
 int main(int argc, char **argv)
 {
     int rc;
-    uint32_t l_timebase = G_gpe_shared_data->nest_freq_div;
+    uint32_t l_timebase = G_gpe_shared_data->occ_freq_div;
 
     // Don't initialize with a 0
     if (!l_timebase)

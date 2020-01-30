@@ -89,7 +89,7 @@ typedef enum homer_version
 typedef enum homer_read_var
 {
     HOMER_VERSION,
-    HOMER_NEST_FREQ,
+    HOMER_OCC_FREQ,
     HOMER_INT_TYPE,
     HOMER_SMF_MODE,
     HOMER_LAST_VAR
@@ -111,7 +111,7 @@ typedef enum homer_rc
 struct occHostConfigDataArea
 {
     uint32_t version;
-    uint32_t nestFrequency;
+    uint32_t occFrequency;
     uint32_t occInterruptType;
     uint32_t smfMode;
     uint8_t  __reserved2[HOMER_HD_SZ - (4 * sizeof(uint32_t))];

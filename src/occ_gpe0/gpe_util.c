@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -153,8 +153,8 @@ int wait_spi_completion(GpeErrorStruct *error, uint32_t reg, uint32_t i_timeout)
  *
  * Inputs:       i_microseconds: time to sleep in microseconds
  *
- * Note:         i_microseconds must be < (2^16)/nest_freq microseconds
- *                  about 114 seconds for the fastest nest_freq supported.
+ * Note:         i_microseconds must be < (2^16)/occ_freq microseconds
+ *                  about 114 seconds for the fastest occ_freq supported.
  * return:       none
  *
  * End Function Specification
