@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -198,12 +198,12 @@ errlHndl_t querySensorList(const querySensorListArg_t * i_argPtr)
         else
         {
             uint32_t l_cnt = i_startGsid;
-            uint32_t l_num = *io_numOfSensors;
+            const uint32_t l_max_sensors = *io_numOfSensors;
             *io_numOfSensors = 0;
 
             // Traverse through sensor list starting at i_startGsid to find
             // matching sensor. Return it in the output variable
-            for (; (l_cnt < NUMBER_OF_SENSORS_IN_LIST && ((*io_numOfSensors) < l_num)); l_cnt++)
+            for (; ((l_cnt < NUMBER_OF_SENSORS_IN_LIST) && ((*io_numOfSensors) < l_max_sensors)); l_cnt++)
             {
                 // If sample value is not zero then it means sensor is present.
                 // This is currently only used by debug/mfg purpose

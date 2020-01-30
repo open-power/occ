@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -77,6 +77,9 @@ uint32_t G_inject_dimm_trace[MAX_NUM_OCMBS][NUM_DIMMS_PER_OCMB] = {{0}};
 // SSX Block Copy Request for copying data from HOMER to SRAM
 BceRequest G_debug_pba_request;
 DMA_BUFFER(uint8_t G_debug_dma_buffer[CMDH_DEBUG_DMA_READ_SIZE]) = {0};
+
+// list too large for stack, must be defined in memory
+sensorQueryList_t G_sensor_list[CMDH_DBUG_MAX_NUM_SENSORS];
 
 //*************************************************************************/
 // Function Prototypes
@@ -162,7 +165,6 @@ void cmdh_dbug_get_ame_sensor (const cmdh_fsp_cmd_t * i_cmd_ptr,
     uint16_t                     l_num_of_sensors = CMDH_DBUG_MAX_NUM_SENSORS;
     cmdh_dbug_get_sensor_query_t *l_cmd_ptr = (cmdh_dbug_get_sensor_query_t*) i_cmd_ptr;
     cmdh_dbug_get_sensor_resp_t  *l_resp_ptr = (cmdh_dbug_get_sensor_resp_t*) o_rsp_ptr;
-    sensorQueryList_t            l_sensor_list[CMDH_DBUG_MAX_NUM_SENSORS];
     sensor_t                     *l_sensor_ptr = NULL;
     errlHndl_t                   l_err = NULL;
 
@@ -189,7 +191,7 @@ void cmdh_dbug_get_ame_sensor (const cmdh_fsp_cmd_t * i_cmd_ptr,
             l_type,                 // i_type - passed by the caller
             l_location,             // i_loc - passed by the caller
             &l_num_of_sensors,      // io_numOfSensors
-            l_sensor_list,          // o_sensors
+            G_sensor_list,          // o_sensors
             NULL                    // o_sensorInfoPtr
         };
 
@@ -226,23 +228,22 @@ void cmdh_dbug_get_ame_sensor (const cmdh_fsp_cmd_t * i_cmd_ptr,
             l_resp_ptr->num_sensors = l_num_of_sensors;
             for (i=0; i<l_num_of_sensors; i++)
             {
-                l_resp_ptr->sensor[i].gsid = l_sensor_list[i].gsid;
-                l_resp_ptr->sensor[i].sample = l_sensor_list[i].sample;
-                strcpy(l_resp_ptr->sensor[i].name, l_sensor_list[i].name);
+                l_resp_ptr->sensor[i].gsid = G_sensor_list[i].gsid;
+                l_resp_ptr->sensor[i].sample = G_sensor_list[i].sample;
+                strcpy(l_resp_ptr->sensor[i].name, G_sensor_list[i].name);
 
                 // Capture the min and max value for this sensor
-                l_sensor_ptr = getSensorByGsid(l_sensor_list[i].gsid);
+                l_sensor_ptr = getSensorByGsid(G_sensor_list[i].gsid);
                 if (l_sensor_ptr == NULL)
                 {
                     TRAC_INFO("dbug_get_ame_sensor: Didn't find sensor with gsid[0x%.4X]. Min/Max values won't be accurate.",
-                              l_sensor_list[i].gsid);
+                              G_sensor_list[i].gsid);
 
                     // Didn't find this sensor, just continue
                     continue;
                 }
                 l_resp_ptr->sensor[i].sample_min = l_sensor_ptr->sample_min;
                 l_resp_ptr->sensor[i].sample_max = l_sensor_ptr->sample_max;
-                l_resp_ptr->sensor[i].ipmi_sid = l_sensor_ptr->ipmi_sid;
             }
         }
 
@@ -412,12 +413,11 @@ void cmdh_dbug_get_apss_data (const cmdh_fsp_cmd_t * i_cmd_ptr,
             l_resp_ptr->ApssCh[i].raw = G_dcom_slv_inbox_rx.adc[i];
             l_resp_ptr->ApssCh[i].calculated = AMECSENSOR_PTR(PWRAPSSCH0 + i)->sample;
             l_resp_ptr->ApssCh[i].func = G_apss_ch_to_function[i];
-            l_resp_ptr->ApssCh[i].ipmi_sid = AMECSENSOR_PTR(PWRAPSSCH0 + i)->ipmi_sid;
 
             TRAC_IMP("DBG__APSS Ch[%02d]:  Raw[0x%04x], Offset[0x%08x], Gain[0x%08x],",
                       i, l_resp_ptr->ApssCh[i].raw, l_resp_ptr->ApssCh[i].offset, l_resp_ptr->ApssCh[i].gain);
-            TRAC_IMP("                     Pwr[0x%04x], FuncID[0x%02x], IPMI_sensorID[0x%X]",
-                      l_resp_ptr->ApssCh[i].calculated, l_resp_ptr->ApssCh[i].func, l_resp_ptr->ApssCh[i].ipmi_sid);
+            TRAC_IMP("                     Pwr[0x%04x], FuncID[0x%02x]",
+                      l_resp_ptr->ApssCh[i].calculated, l_resp_ptr->ApssCh[i].func);
         }
 
     }while(0);

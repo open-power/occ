@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -168,7 +168,6 @@ typedef struct __attribute__ ((packed))
     uint8_t     func;
     uint16_t    raw;
     uint16_t    calculated;
-    uint32_t    ipmi_sid;
     uint32_t    offset;
     uint32_t    gain;
 }cmdh_dbug_apss_data_t;

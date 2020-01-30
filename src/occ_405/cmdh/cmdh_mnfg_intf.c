@@ -407,7 +407,7 @@ uint8_t cmdh_mnfg_list_sensors(const cmdh_fsp_cmd_t * i_cmd_ptr,
                   l_location);
 
         // Clear out the sensor fields in response buffer
-        memset((void*) &(l_resp_ptr->sensor[0]), 0, (sizeof(cmdh_dbug_sensor_list_t)*MFG_MAX_NUM_SENSORS) );
+        memset((void*) &(l_resp_ptr->sensor[0]), 0, (sizeof(sensorQueryList_t)*MFG_MAX_NUM_SENSORS) );
 
         // Initialize the sensor query arguments
         // To take advantage of full 4K response buffer copy directly to response buffer

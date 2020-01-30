@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2016,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2016,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -123,6 +123,12 @@ void dump_ffdc(ffdc_t * data)
     printf("Exception Code: 0x%02X\n", data->excp);
     printf("Checkpoint: 0x%04X\n", data->ckpt);
     printf("SSX Panic Code: 0x%08X\n", data->ssx_panic);
+    if ((data->ssx_panic != 0) && (repo_directory[0] != '\0'))
+    {
+        char command[511] = "";
+        sprintf(command, "grep 0x%08X %s/occ/src/ssx/ssx/ssx_api.h", data->ssx_panic, repo_directory);
+        int rc = system(command);
+    }
     printf("Panic Address: 0x%08X\n", data->panic_addr);
     printf("LR: ");
     lookup_address(data->lr);

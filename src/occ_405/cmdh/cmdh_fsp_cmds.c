@@ -1535,7 +1535,7 @@ errlHndl_t cmdh_tmgt_get_field_debug_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
             {
                 l_resp_ptr->sensor[i].gsid = l_sensor_list[i].gsid;
                 l_resp_ptr->sensor[i].sample = l_sensor_list[i].sample;
-                strcpy(l_resp_ptr->sensor[i].name, l_sensor_list[i].name);
+                strncpy(l_resp_ptr->sensor[i].name, l_sensor_list[i].name, MAX_SENSOR_NAME_SZ);
 
                 // Capture the min and max value for this sensor
                 l_sensor_ptr = getSensorByGsid(l_sensor_list[i].gsid);

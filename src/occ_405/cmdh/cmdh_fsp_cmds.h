@@ -401,7 +401,6 @@ typedef struct cmdh_dbug_sensor_list
     uint16_t    sample;
     uint16_t    sample_min;
     uint16_t    sample_max;
-    uint32_t    ipmi_sid;
 }cmdh_dbug_sensor_list_t;
 
 // Used by OCC to response "GET_FIELD_DEBUG_DATA" cmd

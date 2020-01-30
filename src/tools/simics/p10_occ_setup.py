@@ -854,12 +854,12 @@ def ValidateCmd(FLG_VRB, SeqNumExpected, FLG_LAST, flg_quiet):
                 #print("THis is the counter loop : " + str(LoopCount))
                 if(i%2==0):
                     #print("even number ->" + str( i ) + " / " + str( i/2 ) + " -2: " + mylist[ i/2 ][:2] )
-                        DataList.append( int(mylist[ i/2 ][:2], 16 ))
-                        CheckSum += int( mylist[ i/2 ][:2], 16 )
+                    DataList.append( int(mylist[ i/2 ][:2], 16 ))
+                    CheckSum += int( mylist[ i/2 ][:2], 16 )
                 else:
                     #print("odd number ->" + str(i) + " / " + str( i/2 ) + " :2 " + mylist[ i/2 ][-2:] )
-                        DataList.append( int(mylist[ i/2 ][-2:], 16 ))
-                        CheckSum += int( mylist[ i/2 ][-2:], 16 )
+                    DataList.append( int(mylist[ i/2 ][-2:], 16 ))
+                    CheckSum += int( mylist[ i/2 ][-2:], 16 )
 
             LoopCount += 1                      #srb01a
             if( (LoopCount)%2==0):              #srb01r LoopCount+1
@@ -1479,10 +1479,10 @@ def occ_trace(directory_arg, flg_verbose, flg_directory, i_directory, flg_prefix
 
     trace_filename = target_trace_directory+"/tracessx.gpebin"
     #TODO: symbolic access fails in hostboot simics due to sym table not being loaded
-    #ssx_addr,junk = cli.quiet_run_command("backplane0."+proc+".occ_cmp.proc_405.sym g_ssx_trace_buf_ptr", output_mode = output_modes.formatted_text)
-    #command = "pipe \"backplane0."+proc+".occ_cmp.oci_space.x (0x"+str('{0:08X}'.format(ssx_addr))+") 512\" \"sed \\\"s/^p:0x........ //g\\\" | sed \\\"s/ ................$//g\\\" | sed \\\"s/ //g\\\" | xxd -r -p > "+trace_filename+" \""
-    #print("==> Collecting SSX traces: " + command)
-    #run_command(command)
+    ssx_addr,junk = cli.quiet_run_command("backplane0."+proc+".occ_cmp.proc_405.sym g_ssx_trace_buf_ptr", output_mode = output_modes.formatted_text)
+    command = "pipe \"backplane0."+proc+".occ_cmp.oci_space.x (0x"+str('{0:08X}'.format(ssx_addr))+") 512\" \"sed \\\"s/^p:0x........ //g\\\" | sed \\\"s/ ................$//g\\\" | sed \\\"s/ //g\\\" | xxd -r -p > "+trace_filename+" \""
+    print("==> Collecting SSX traces: " + command)
+    run_command(command)
 
     # Parse the trace files
     command = "!"+tools_directory+"/parseOccBinTrace " + parse_opts + " " + target_trace_directory
@@ -2334,6 +2334,27 @@ def occ_init(code_dir, flg_pgpe, flg_verbose):
     command = "backplane0.apss->adc_channel_val = [0x0293, 0x9287, 0x2887, 0x3877, 0x4326, 0x52F2, 0x6214, 0x7006, 0x8003, 0x9EB7, 0xA01B, 0xB013, 0xC123, 0xD0FC, 0xE0F2, 0xF008]"
     print("==> " + command)
     cli.run_command(command)
+
+    print("==> INIT CORE/QUAD TEMPERATURE VALUES")
+    core = 0
+    temp = 0x31 # 49C
+    while core < 32:
+        quadAddr=0x10+core
+        coreAddr=0x20+core
+        tempString = "0"+str('{0:02X}'.format(temp))+"50"+str('{0:02X}'.format(temp))+"5"
+        print("Setting core"+str(core)+" -> "+str(temp)+" C ("+tempString+")")
+        command = "backplane0."+proc+".pib_cmp.pib.write address = 0x"+str('{0:02X}'.format(coreAddr))+"0500000 0x00000000"+tempString+" size = 8"
+        print("==> " + command)
+        cli.run_command(command)
+        if core < 8:
+            tempString = "0"+str('{0:02X}'.format(temp+1))+"50"+str('{0:02X}'.format(temp+1))+"5"
+            print("Setting quad"+str(core)+" -> "+str(temp+1)+" C ("+tempString+")")
+            command = "backplane0."+proc+".pib_cmp.pib.write address = 0x"+str('{0:02X}'.format(quadAddr))+"0500000 0x"+tempString+"00000000 size = 8"
+            print("==> " + command)
+            cli.run_command(command)
+        core = core + 1
+        if core % 2 == 1:
+            temp = temp + 2
 
     cli.run_command("backplane0."+proc+".occ_cmp.proc_405.read-reg reg-name = pc")
 

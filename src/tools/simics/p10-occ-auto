@@ -153,6 +153,7 @@ usage()
     echo "                               3 = Active state (DEFAULT)"
     echo "                               4 = error logging"
     echo "                               5 = power capping"
+    echo "                               6 = OCC sensors"
     echo "               -a            : run ALL available OCC tests"
     echo ""
     echo "               -wait         : keep simics running after tests complete"
@@ -690,6 +691,11 @@ main()
         if [ $test_depth -eq 5 ] || [ $test_depth -eq $ALL_TESTS ]; then
             TESTS_pcaps
         fi
+
+        if [ $test_depth -eq 6 ] || [ $test_depth -eq $ALL_TESTS ]; then
+            TESTS_sensors
+        fi
+
     fi
 
 
@@ -2108,6 +2114,71 @@ TESTS_pcaps()
     current_test=""
 
 } # end TESTS_pcaps()
+
+
+TESTS_sensors()
+{
+    current_test="TESTS_sensors-"
+    let start_time=`date +%s`
+
+
+    printHeader "DEBUGPT: GET_AME_SENSOR(type=current)"
+    autosim --simcmd '$SeqNum=(OCCw -C 0x40 -D "070002FFFF")' ### DBUGPT_CMD - GET_AME_SENSORS
+    WaitForResponse 0x40
+
+    printHeader "VALIDATE POLL DATA"
+    ValidatePollData
+
+    printHeader "DEBUGPT: GET_AME_SENSOR(loc=system)"
+    autosim --simcmd '$SeqNum=(OCCw -C 0x40 -D "07FFFF0001")' ### DBUGPT_CMD - GET_AME_SENSORS
+    WaitForResponse 0x40
+
+    printHeader "VALIDATE POLL DATA"
+    ValidatePollData
+
+    printHeader "DEBUGPT: GET_AME_SENSOR(all)"
+    autosim --simcmd '$SeqNum=(OCCw -C 0x40 -D "07FFFFFFFF")' ### DBUGPT_CMD - GET_AME_SENSORS
+    WaitForResponse 0x40
+
+    printHeader "VALIDATE POLL DATA"
+    ValidatePollData
+
+    printHeader "MFGTEST: LIST_SENSORS(guid=0000,ALL)"
+    autosim --simcmd '$SeqNum=(OCCw -C 0x53 -D "0500000000FFFFFFFF")' ### MFGTEST_CMD - LIST_SENSORS
+    WaitForResponse 0x53
+
+    printHeader "VALIDATE POLL DATA"
+    ValidatePollData
+
+    printHeader "MFGTEST: LIST_SENSORS(guid=0000,non-zero,loc=processor)"
+    autosim --simcmd '$SeqNum=(OCCw -C 0x53 -D "05000000010002FFFF")' ### MFGTEST_CMD - LIST_SENSORS
+    WaitForResponse 0x53
+
+    printHeader "VALIDATE POLL DATA"
+    ValidatePollData
+
+    printHeader "MFGTEST: GET_SENSOR(guid=PWRSYS)"
+    autosim --simcmd '$SeqNum=(OCCw -C 0x53 -D "0600000C")' ### MFGTEST_CMD - GET_SENSOR
+    WaitForResponse 0x53
+
+    printHeader "VALIDATE POLL DATA"
+    ValidatePollData
+
+    printHeader "MFGTEST: GET_SENSOR(guid=FREQA)"
+    autosim --simcmd '$SeqNum=(OCCw -C 0x53 -D "06000023")' ### MFGTEST_CMD - GET_SENSOR
+    WaitForResponse 0x53
+
+    printHeader "VALIDATE POLL DATA"
+    ValidatePollData
+
+
+    let end_time=`date +%s`
+    let delta_time=$end_time-$start_time
+    echo -e "\n${bold}==> END OF ${current_test}: test duration $delta_time seconds${normal}"
+
+    current_test=""
+
+} # end TESTS_sensors()
 
 
 main "$@"

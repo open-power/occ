@@ -2,11 +2,11 @@
 # IBM_PROLOG_BEGIN_TAG
 # This is an automatically generated prolog.
 #
-# $Source: src/tools/occtoolp9 $
+# $Source: src/tools/occtoolp10 $
 #
 # OpenPOWER OnChipController Project
 #
-# Contributors Listed Below - COPYRIGHT 2017,2018
+# Contributors Listed Below - COPYRIGHT 2017,2020
 # [+] International Business Machines Corp.
 #
 #
@@ -51,6 +51,8 @@ let in_safe=0
 let toolkit=0
 guidList=()
 guidListCount=0
+bmcRestSystem=""
+let json_output=0
 
 temp_filename="/tmp/${USER}_occtoolp9.tmp";
 
@@ -58,10 +60,10 @@ interface="cronus"
 if [ -z "$BMCIP" ]; then
     if [ -n "$BMC_IP_ADDRESS" ]; then
         BMCIP=$BMC_IP_ADDRESS
-        interface="bmc"
+        interface="ipmi"
     fi
 else
-    interface="bmc"
+    interface="ipmi"
 fi
 
 sudo=""
@@ -130,6 +132,17 @@ function convertToBinary
     fi
 } # end convertToBinary()
 
+function display_sensor_usage
+{
+    echo "              Sensor Types: 0xFFFF=All (default),"
+    echo "                     0x1=Generic, 0x2=Current, 0x4=Voltage, 0x8=Temperature,"
+    echo "                     0x10=Utilization, 0x20=Time, 0x40=Frequency, 0x80=Power,"
+    echo "                     0x200=Performance, 0x400=WOF"
+    echo "              Sensor Locations: 0xFFFF=All (default),"
+    echo "                     0x1=System, 0x2=Processor, 0x4=Partition, 0x8=Memory,"
+    echo "                     0x10=VRM, 0x20=OCC 0x40=Core, 0x80=GPU, 0x100==Quad"
+}
+
 function usage
 {
     echo "Usage: occtoolp9 <options> <command>"
@@ -141,15 +154,14 @@ function usage
     echo "           -X CC DDDDDD... = Send CC command to the OCC with specified cmd data (all data in hex)"
 #    echo "              -X 53 0500000001LLLLTTTT = list first 50 OCC sensors (LLLL=Location,TTTT=Type)"
 #    echo "              -X 53 0600003d = get sensor details for GUID 0x003d"
-    echo "           -S type=0xTT,loc=0xLL = List specified sensors"
-    echo "              Sensor Types: 0xFF=All, 0x1=Generic, 0x2=Current, 0x4=Voltage, 0x8=Temperature,"
-    echo "                     0x10=Utilization, 0x20=Time, 0x40=Frequency, 0x80=Power, 0x200=Performance"
-    echo "              Sensor Locations: 0xFF=All, 0x1=System, 0x2=Processor, 0x4=Partition, 0x8=Memory,"
-    echo "                     0x10=VRM, 0x20=OCC 0x40=Core"
+    echo "           -S type=0xTT,loc=0xLL = List specified sensors (type and/or location are optional)"
+    display_sensor_usage
+    echo "              -j = output sensor data in JSON format"
     echo "           -S guid=0xGGGG = Get sensor details for specified GUID"
     echo "           -SL = List all OCC sensors"
     echo "           -SL0 = List all OCC sensors (including sensors with 0 readings)"
-    echo "           -trace  Collect OCC Trace hex trace data"
+    echo "           -SCLEAR = Clear min/max for all OCC sensors"
+    echo "           -trace  Collect OCC Trace hex data (use -TRACE when using non-binary GPE code)"
     echo "              -s stringFile = specify string file for parsing traces (CRONUS only)"
     echo "           -wof    Display WOF status"
     echo ""
@@ -179,6 +191,7 @@ function usage
     echo ""
 #    echo "       TODO:"
 #    echo "           -OF OCC FFDC"
+    echo " Last update 1/31/2020" # TODO: update on commit
     exit 0
 }
 
@@ -228,6 +241,12 @@ while [ -n "$(echo $1 | grep '-')" ]; do
 
     -h ) usage; exit 0;;
 
+    -j ) let json_output=1
+         let sensor_summary=1
+         let skip_header=1
+         quiet="-quiet"
+         ;;
+
     -p ) occ_cmd="00"
          occ_cmd_data=$poll_version
          ;;
@@ -244,16 +263,29 @@ while [ -n "$(echo $1 | grep '-')" ]; do
 
     -S )
         shift
-        if [[ "$1" =~ "type=" ]] || [[ "$1" =~ "loc=" ]]; then
-            action="SensorList"
+
+        if [[ "$1" =~ "type=" ]] || [[ "$1" =~ "loc=" ]] ||
+            [[ "$1" =~ "TYPE=" ]] || [[ "$1" =~ "LOC=" ]]; then
             if [[ "$1" =~ "type=" ]]; then
                 let sensor_type=${1#*type=};
             fi
             if [[ "$1" =~ "loc=" ]]; then
                 let sensor_loc=${1##*loc=};
             fi
+            if [[ "$1" =~ "TYPE=" ]]; then
+                let sensor_type=${1#*TYPE=};
+                action="SensorList" # display full sensor data (slower)
+            fi
+            if [[ "$1" =~ "LOC=" ]]; then
+                let sensor_loc=${1##*LOC=};
+                action="SensorList" # display full sensor data (slower)
+            fi
             # If user specified type/loc then list all sensors
             let only_non_zero_sensors=0
+            if [ -z "$action" ]; then
+                occ_cmd="40" # DEBUG_PASS_THROUGH
+                occ_cmd_data=$(printf "07%04X%04X" $sensor_type $sensor_loc) # GET_AME_SENSOR
+            fi
         elif [[ "$1" =~ "guid=" ]]; then
             action="SensorDump"
             let sensor_guid=${1#*guid=};
@@ -264,10 +296,7 @@ while [ -n "$(echo $1 | grep '-')" ]; do
             let sensor_guid=${1#*guid=};
         else
             echo "ERROR: -S option requires Type/Location (-S type=0xFF,loc=0xFF)"
-            echo "  Sensor Types: 0xFF=All, 0x1=Generic, 0x2=Current, 0x4=Voltage, 0x8=Temperature,"
-            echo "         0x10=Utilization, 0x20=Time, 0x40=Frequency, 0x80=Power, 0x200=Performance"
-            echo "  Sensor Locations: 0xFF=All, 0x1=System, 0x2=Processor, 0x4=Partition, 0x8=Memory,"
-            echo "         0x10=VRM, 0x20=OCC 0x40=Core"
+            display_sensor_usage
             exit 13
         fi
         ;;
@@ -279,6 +308,10 @@ while [ -n "$(echo $1 | grep '-')" ]; do
     -SL0 )
         action="SensorList"
         let only_non_zero_sensors=0
+        ;;
+
+    -SCLEAR )
+        action="SensorClear"
         ;;
 
     -tk )
@@ -296,7 +329,7 @@ while [ -n "$(echo $1 | grep '-')" ]; do
         ;;
 
     -wof )
-        occ_cmd="40"
+        occ_cmd="40" # DEBUG_PASS_THROUGH
         occ_cmd_data="01" # WOF Data Structure
         ;;
 
@@ -319,15 +352,15 @@ while [ -n "$(echo $1 | grep '-')" ]; do
                         occ_cmd_data="$1"
                     fi
                 else
-                    echo -e "${red}ERROR: OCC command data must be even number of HEX digits${normal}"
+                    echo -e "${red}ERROR: OCC command data must be even number of HEX digits (${#1} specified)${normal}"
                     exit 12
                 fi
             fi
-         else
-             echo -e "${red}ERROR: -X requires 2 byte command (in HEX)${normal}"
-             exit 12
-         fi
-         ;;
+        else
+            echo -e "${red}ERROR: -X requires 2 byte command (in HEX)${normal}"
+            exit 12
+        fi
+        ;;
 
         #### OPAL-PRD ONLY COMMANDS/OPTIONS:
 
@@ -385,20 +418,43 @@ while [ -n "$(echo $1 | grep '-')" ]; do
         if [ -z "$2" ] || [ "`echo $2 | cut -c1`" == "-" ]; then
             if [ "$BMCIP" != "" ]; then
                 bmc=$BMCIP
-                interface="bmc"
+                interface="ipmi"
             else
                 echo -e "${red}ERROR: -b requires BMCIP${normal}"
                 exit 12
             fi
         else
             bmc=$2
-            interface="bmc"
+            interface="ipmi"
             shift
         fi
         if [ $verbose -ne 0 ]; then
             echo "BMC: $bmc";
         fi
         ;;
+
+    -B )
+        if [ -z "$2" ] || [ "`echo $2 | cut -c1`" == "-" ]; then
+            if [ "$BMCIP" != "" ]; then
+                bmc=$BMCIP
+                bmcRestSystem="root:0penBmc@$bmc"
+                interface="rest"
+            else
+                echo -e "${red}ERROR: -B requires system info: uid:pw@systemnameORip${normal}"
+                exit 13
+            fi
+        else
+            bmcRestSystem="$2"
+            bmc="${bmcRestSystem/*@}"
+            interface="rest"
+            shift
+        fi
+        if [ $verbose -ne 0 ]; then
+            echo "BMC: $bmc";
+            echo "BMC Rest Authentication: $bmcRestSystem";
+        fi
+        ;;
+
 
     -f )
         if [ -n "$2" ] && [ -e "$2" ]; then
@@ -457,7 +513,109 @@ done
 # Force Call Home: ipmitool -H 9.3.29.129 -I lanplus -U admin -P admin raw 0x3a 0x0d 0x40 0x24
 # For Error w/Reset (pmc failure): putscom pu 1010842 1000000000180000 -p0
 
-function sendOccCmdBmc
+function sendOccCmdRest
+{
+    let cmd=0x$1
+    data=$2
+    let cmd_data_length=${#data}/2
+    for ((i = 0; i < ${#data}; i+=2)); do
+        let byte=0x${occ_cmd_data:$i:2}
+        if [ $i -eq 0 ]; then
+            cmd_data_string="${byte}"
+        else
+            cmd_data_string="${cmd_data_string},${byte}"
+        fi
+    done
+    outName="/tmp/occ_cmd.txt"
+
+    if [ -z "$inputfile" ]; then
+
+        if [ -e "${outName}" ]; then
+            if [ $verbose -ne 0 ]; then
+                echo "--> removing ${outName}"
+            fi
+            rm ${outName}
+        fi
+        #if [ $verbose -ne 0 ]; then
+        #echo -e "${bold}==> ipmitool -H $bmc -I lanplus -U $bmcId -P $bmcPw raw 0x3a 0x0d ${occInstance} 0x00 0x10${normal}"
+        #fi
+        #ipmitool -H $bmc -I lanplus -U $bmcId -P $bmcPw raw 0x3a 0x0d ${occInstance} 0x00 0x10 > ${outName}
+        # -s = silent (no progress info)
+        # -k = insecure
+        echo -e "${bold}==> curl -k https://${bmcRestSystem}/org/open_power/control/enumerate${normal}"
+        curl -s -k https://${bmcRestSystem}/org/open_power/control/enumerate | grep -e occ -e Active
+        echo -e "${bold}==> curl -k -X POST -d '{\"data\": [[${cmd},$(($cmd_data_length>>8)),$(($cmd_data_length&0xFF)),${cmd_data_string}']]}' https://${bmcRestSystem}/org/open_power/control/occ${occ}/action/Send"
+        curl -s -k -X POST -d '{"data": [['${cmd}','$(($cmd_data_length>>8))','$(($cmd_data_length&0xFF))','${cmd_data_string}']]}' https://${bmcRestSystem}/org/open_power/control/occ${occ}/action/Send > ${outName}
+        #echo "#####2222"
+        #curl -k -X POST -d '{"data": [[0,0,1,32]]}'                      https://${bmcRestSystem}/org/open_power/control/occ0/action/Send
+        let rc=$?
+
+    else
+        outName="$inputfile"
+        echo "grep -q 'opal-prd: HBRT: HTMGT:' $inputfile"
+        grep -q 'opal-prd: HBRT: HTMGT:' $inputfile
+        if [ $? -eq 0 ]; then
+            echo "Converting $inputfile"
+            # Convert opal-prd poll rsp to "XX XX XX XX" format
+            cat $inputfile  | sed 's/.*HBRT: HTMGT:.*\] //' | sed 's/    .*//' | sed 's/ //g' | sed 's/\(..\)/\1 /g' > ${inputfile}.filtered
+        else
+            cat $inputfile | sed 's/ //g' | sed 's/\(..\)/\1 /g' > ${inputfile}.filtered
+        fi
+        if [ -s "${inputfile}.filtered" ]; then
+            outName="${inputfile}.filtered"
+        fi
+        echo -e "${bold}==> Reading data from ${outName}${normal}"
+        let rc=0;
+    fi
+
+    if [ $verbose -ne 0 ]; then
+        echo "--> cat ${outName}"
+        cat ${outName}
+        #let occRspLength=`wc -w ${outName} | awk '{print $1}'`
+        #echo "<-- $occRspLength bytes"
+    fi
+
+    if [ $rc -ne 0 ]; then
+        echo -e "${red}ERROR: failed sending POLL to OCC via IPMI/BMC (rc=$rc)${normal}"
+        exit 8
+    fi
+    if [ -e "${outName}" ]; then
+        options=""
+        if [ $verbose -eq 0 ]; then
+            options="-q"
+        fi
+        # TODO: Convert to BINARY:
+        #{
+        #  "data": [
+        #    1,
+        #    0,
+        #    0,
+        #    2,
+        #    239,
+        #...
+        #    255,
+        #    0,
+        #    0,
+        #    82,
+        #    213
+        #  ],
+        #  "message": "200 OK",
+        #  "status": "ok"
+        #}
+        if [ -e "${outName}.bin" ]; then
+            binfile="${outName}.bin"
+        else
+            echo -e "${red}ERROR: ${outName}.bin not found...${normal}"
+            exit 7
+        fi
+    else
+        echo -e "${red}ERROR: ${outName} not found...${normal}"
+        exit 9
+    fi
+} # end sendOccCmdRest()
+
+
+function sendOccCmdIpmi
 {
     let bmcOccInstance=$occ+1
     outName="/tmp/occ_cmd.txt"
@@ -514,10 +672,8 @@ function sendOccCmdBmc
         options=""
         if [ $verbose -eq 0 ]; then
             options="-q"
-        else
-            echo -e "${bold}==> /afs/rch/usr2/cjcain/bin/asm2bin.new -s:1 $options ${outName}${normal}"
         fi
-        /afs/rch/usr2/cjcain/bin/asm2bin.new -s:1 $options  ${outName}
+        # TODO: Convert to binary
         if [ -e "${outName}.bin" ]; then
             binfile="${outName}.bin"
         else
@@ -528,86 +684,8 @@ function sendOccCmdBmc
         echo -e "${red}ERROR: ${outName} not found...${normal}"
         exit 9
     fi
-} # end sendOccCmdBmc()
+} # end sendOccCmdIpmi()
 
-function sendOccCmd
-{
-    cmd=$1
-    data=$2
-    let dataLength=${#data}/2
-    dataLenStr=$(printf "%04x" $dataLength)
-    # Checksum Calculation
-    let csum=0x"$sequence"+0x"$cmd";
-    let csum="$csum + ( $dataLength >> 8 ) + ( $dataLength & 0xFF )"
-    let index=0
-    while [ $index -lt ${#data} ]; do
-        echo "adding $csum+${data:$index:2}"
-        let csum=$csum+0x${data:$index:2}
-        let index=$index+2
-    done
-    csumStr=$(printf "%04x" $csum)
-
-    # First, store the command in command buffer in SRAM
-    if [ $verbose -ne 0 ]; then
-        echo -e "${bold}==> putsram $cmd_sram_addr ${sequence}${cmd}${dataLenStr}${data}${csumStr} -p${occ} -ch $channel $quiet  (write $cmd command to OCC SRAM)${normal}"
-    fi
-    putsram $cmd_sram_addr ${sequence}${cmd}${dataLenStr}${data}${csumStr} -p${occ} -ch $channel $quiet
-    let rc=$?
-    if [ $rc -ne 0 ]; then
-        echo -e "${red}ERROR: failed writing $cmd command to OCC SRAM (rc=$rc)${normal}"
-        exit 1;
-    fi
-
-    # Second, send a doorbell to OCC
-    if [ $verbose -ne 0 ]; then
-        echo -e "${bold}==> putscom pu $doorbell_addr 0101000000000000 -p${occ} $quiet  (send doorbell to OCC)${normal}"
-    fi
-    putscom pu $doorbell_addr 0101000000000000 -p${occ} $quiet
-    let rc=$?
-    if [ $rc -ne 0 ]; then
-        echo -e "${red}ERROR: failed sendingn doorbell to OCC (rc=$rc)${normal}"
-    fi
-
-    # Third, collect response from response buffer in SRAM
-    if [ $verbose -ne 0 ]; then
-        echo -e "${bold}==> getsram $rsp_sram_addr 4096 -p${occ} -ch $channel $quiet  (read $cmd response from SRAM)${normal}"
-    fi
-    if [ -e "${binfile}" ]; then
-        rm ${binfile}
-    fi
-    getsram $rsp_sram_addr 4096 -p${occ} -ch $channel $quiet -fb ${binfile}
-    let rc=$?
-    if [ $rc -ne 0 ]; then
-        echo -e "${red}ERROR: failed reading $cmd response from SRAM (rc=$rc)${normal}"
-        exit 2;
-    fi
-
-    ### Response Header
-    let offset=0
-    let rspSeq=0x`hexdump -s $offset -n 1 -e '"%02X"' ${binfile}`
-    let expSeq=0x"${sequence}"
-    if [ $rspSeq -eq $expSeq ]; then
-        printf "Rsp Sequence: 0x%02X\n" $rspSeq;
-    else
-        echo -e "${red}"
-        printf "Rsp Sequence: 0x%02X  MISMATCH - expected 0x%02X\n" $rspSeq $sequence;
-        echo -e "${normal}"
-        let seqMismatch=1
-    fi
-    let offset=$offset+1
-    let rspCmd=0x`hexdump -s $offset -n 1 -e '"%02X"' ${binfile}`
-    printf "     Command: 0x%02X\n" $rspCmd;
-    let offset=$offset+1
-    let rspStatus=0x`hexdump -s $offset -n 1 -e '"%02X"' ${binfile}`
-    printf "      Status: 0x%02X\n" $rspStatus;
-    let offset=$offset+1
-    let rspLength=0x`hexdump -s $offset -n 2 -e '2/1 "%02X"' ${binfile}`
-    printf "      Length: 0x%04X\n" $rspLength;
-    let offset=$offset+2
-    echo   "        Data:"
-    hexdump -C -s $offset ${binfile}
-
-} # end sendOccCmd()
 
 
 function send_occ_cmd
@@ -618,11 +696,14 @@ function send_occ_cmd
         rm -f ${binfile}
     fi
 
+    let cmd_data_length=${#occ_cmd_data}/2
+    let csum=0x"$sequence"+0x$occ_cmd+$cmd_data_length; # seq# + cmd + length
+
     if [ "$interface" == "cronus" ]; then
-        echo -e "${blue}Sending 0x$occ_cmd command to OCC${occ} (via cronus)...${normal}"
+        if [ $sensor_summary -eq 0 ]; then
+            echo -e "${blue}Sending 0x$occ_cmd command to OCC${occ} w/$cmd_data_length bytes of data (via cronus)...${normal}"
+        fi
         # First, store the command in command buffer in SRAM
-        let cmd_data_length=${#occ_cmd_data}/2
-        let csum=0x"$sequence"+0x$occ_cmd+$cmd_data_length; # seq# + cmd + length
         #TODO: Checksums for lengths > 255 bytes!!
         if [ $cmd_data_length -gt 0 ]; then
             for ((i = 0; i < ${#occ_cmd_data}; i+=2)); do
@@ -659,7 +740,12 @@ function send_occ_cmd
         if [ $verbose -ne 0 ]; then
             echo -e "${bold}==> getsram $rsp_sram_addr 1024 -p${occ} -ch $channel $quiet  (read POLL response from SRAM)${normal}"
         fi
-        getsram $rsp_sram_addr 1024 -p${occ} -ch $channel $quiet -fb ${binfile}
+        if [ -z "$quiet" ]; then
+            getsram $rsp_sram_addr 1024 -p${occ} -ch $channel -fb ${binfile}
+        else
+            # getsram was still printing the "p9n     k0:n0:s0:p00" when quiet was enabled
+            getsram $rsp_sram_addr 1024 -p${occ} -ch $channel $quiet -fb ${binfile} > /tmp/null
+        fi
         let rc=$?
         if [ $rc -ne 0 ]; then
             echo -e "${red}ERROR: failed reading POLL response from SRAM (rc=$rc)${normal}"
@@ -667,12 +753,9 @@ function send_occ_cmd
         fi
     elif [ "$interface" == "opal" ]; then
         if [ $sensor_summary -eq 0 ]; then
-            echo -e "${blue}Sending 0x$occ_cmd command to OCC${occ} (via opal-prd)...${normal}"
+            echo -e "${blue}Sending 0x$occ_cmd command to OCC${occ} w/$cmd_data_length bytes of data (via opal-prd)...${normal}"
         fi
         # First, store the command in command buffer in SRAM
-        let cmd_data_length=${#occ_cmd_data}/2
-        let csum=0x"$sequence"+0x$occ_cmd+$cmd_data_length; # seq# + cmd + length
-
         opal_occ_cmd_data=`printf "0x%02X 0x%s" $occ $occ_cmd`
         if [ $cmd_data_length -gt 0 ]; then
             for ((i = 0; i < ${#occ_cmd_data}; i+=2)); do
@@ -704,10 +787,13 @@ function send_occ_cmd
             fi
             convertToBinary $rsp_file $binfile
         fi
+    elif [ "$interface" == "rest" ]; then
+            echo -e "${blue}Polling OCC${occ} (via BMC/REST)...${normal}"
+            sendOccCmdRest $occ_cmd $occ_cmd_data
     else
         if [ -z "$inputfile" ]; then
-            echo -e "${blue}Polling OCC${occ} (via BMC)...${normal}"
-            sendOccCmdBmc
+            echo -e "${blue}Polling OCC${occ} (via BMC/IPMI)...${normal}"
+            sendOccCmdIpmi
         fi
     fi
 } # end send_occ_cmd()
@@ -985,9 +1071,7 @@ function parse_rsp_poll
                                 elif [ $sensor_id == "434C4950" ]; then # CLIP
                                     freq_data=`hexdump -s $offset -n $sensorLength -e ' 4/1 "%_p" "   " 1/1 "%02X" " " 1/1 "%02X" " " 6/1 "%02X""\n"' ${binfile}`
                                     let freq_pstate=0x${freq_data:13:2}
-                                    comment=""
                                     if [ $freq_pstate -eq 0 ]; then
-                                        comment=" OCC is NOT clipping the pstate"
                                         hexdump -s $offset -n $sensorLength -e '"           " 4/1 "%_p" "   " 1/1 "%02X" " " 1/1 "%02X" " " 6/1 "%02X""    OCC is NOT clipping the pstate\n"' ${binfile}
                                     else
                                         hexdump -s $offset -n $sensorLength -e '"           " 4/1 "%_p" "   " 1/1 "%02X" " " 1/1 "%02X" " " 6/1 "%02X""\n"' ${binfile}
@@ -1088,6 +1172,12 @@ function get_function_id
           31 ) funcid_name="Proc 1 GPU 0" ;;
           32 ) funcid_name="Proc 1 GPU 1" ;;
           33 ) funcid_name="Proc 1 GPU 2" ;;
+          34 ) funcid_name="Proc 0 GPU 0 (Voltage 2)" ;;
+          35 ) funcid_name="Proc 0 GPU 1 (Voltage 2)" ;;
+          36 ) funcid_name="Proc 1 GPU 0 (Voltage 2)" ;;
+          37 ) funcid_name="Proc 1 GPU 1 (Voltage 2)" ;;
+          38 ) funcid_name="(Voltage 2 sense)" ;;
+          39 ) funcid_name="Total System Power (Voltage 2)" ;;
            * ) funcid_name="" ;;
     esac
     #printf "$funcid => $funcid_name\n";
@@ -1195,6 +1285,8 @@ function parse_rsp_mfg
         units="`hexdump -s $unit_offset -n  4 -v -e '"%_p"' ${binfile} | sed 's/\\.//g'`"
         if [ "$units" == "%" ]; then
             units="%%"
+        elif [ "$units" == " " ]; then
+            units="N/A"
         fi
         let guid="0x`hexdump -s $offset -n 2 -e '4/1 "%02X"' ${binfile}`"
         let offset=$offset+2
@@ -1294,7 +1386,7 @@ function parse_rsp_debugpt
     let subcmd="0x${occ_cmd_data:0:2}"
 
     if [ $subcmd -eq 3 ]; then # Trace Buffer
-        printf "  DEBUG Sub Cmd: 0x%02X  (Trace Buffer)\n" $subcmd
+        printf "  Debug Sub Cmd: 0x%02X  (Trace Buffer)\n" $subcmd
         printf "   Trace Buffer: $ascii  (0x%s)\n" ${occ_cmd_data:6:8}
         echo -e $(echo "${occ_cmd_data:6:6}" | sed -e 's/\(..\)/\\x\1/g')
         #if [ "${occ_cmd_data:6:4}" == "4750" ]; then # "GP"
@@ -1375,6 +1467,62 @@ function parse_rsp_debugpt
         printf "   WOF Status: 0x%08X  ($flags )\n" $wof_status
         # Set verbose flag so full dump of data is done (including repeated lines)
         let verbose=1
+    elif [ $subcmd -eq 7 ]; then # GET AME SENSOR
+        let data="0x${occ_cmd_data:2:4}"
+        if [ $json_output -eq 0 ]; then
+            printf "  Debug Sub Cmd: 0x%02X  (AME PassThru)\n" $subcmd
+            printf "      Type: 0x%s\n" ${occ_cmd_data:2:4}
+            printf "  Location: 0x%s\n\n" ${occ_cmd_data:6:4}
+        fi
+
+        let offset=0
+        if [ "$interface" == "cronus" ]; then
+            let offset=5 # Skip RSP header
+        fi
+        let num_sensors=0x`hexdump -s $offset -n 2 -e '2/1 "%02X"' ${binfile}`
+        let rsp_length=$(stat -c%s "$binfile")
+        if [ $json_output -eq 0 ]; then
+            printf "Number of sensors retrieved: %d\n" $num_sensors
+            printf -- "--------------------------------------\n"
+            printf "Sensor              GSID  Current    Min     Max\n"
+        else
+            datestamp=`date -u +"%FT%T.%3NZ"`
+            system="$ECMD_TARGET"
+            if [ -z "$system" ]; then
+                system=`hostname`
+            fi
+            echo -e "{\n  \"system\": \"$system\", \"occ\": $occ, \"numSensors\": $num_sensors, \"date\": \"$datestamp\",\n  \"sensors\": ["
+        fi
+        let offset=$offset+2
+        for ((i = 0; i < $num_sensors; i+=1)); do
+            # Read name as string
+            name=`hexdump -s $offset -n 16 -e '16/1 "%c"' ${binfile}`
+            let offset=$offset+16
+            # Read data as hex
+            data=`hexdump -s $offset -n 8 -e '8/1 "%02X"' ${binfile}`
+            gsid="0x${data:0:4}"
+            let cur_val=0x${data:4:4}
+            let min_val=0x${data:8:4}
+            let max_val=0x${data:12:4}
+
+            if [ $json_output -eq 0 ]; then
+                printf "%-16s  %s  %6d  %6d  %6d\n" $name $gsid $cur_val $min_val $max_val
+            else
+                if [ $i -gt 0 ]; then
+                    echo ","
+                fi
+                echo -en "    { \"name\": \"$name\", \"gsid\": \"$gsid\", \"current\": $cur_val, \"min\": $min_val, \"max\": $max_val }"
+            fi
+
+            let offset=$offset+8
+            if [ $offset -gt $rsp_length ]; then
+                printf "...data truncated (rsp length=$rsp_length)\n"
+                break;
+            fi
+        done
+        if [ $json_output -ne 0 ]; then
+            echo -e "\n  ]\n}"
+        fi
     fi
 
     if [ $offset -lt $end_of_rsp_data ]; then
@@ -1487,7 +1635,7 @@ function handle_occ_rsp
     fi
 
     if [ $skip_header -eq 0 ] || [ $verbose -ne 0 ]; then
-        printf "  Data Length: 0x%04X\n" $length
+        printf "Rsp Data Length: 0x%04X\n" $length
     fi
 
     # Check for exception
@@ -1506,14 +1654,16 @@ function handle_occ_rsp
             if [ $elogId -ne 0 ] && [ $elogAddr -ne 0 ] ; then
                 process_elog
             fi
-        elif [ "$occ_cmd" == "40" ]; then # DEBUG PASSTHRU COMMAND
+        elif [ "$occ_cmd" == "40" ]; then # DEBUG PASS THROUGH COMMAND
             parse_rsp_debugpt
-        elif [ "$occ_cmd" == "53" ]; then # MFG COMMAND
+        elif [ "$occ_cmd" == "53" ]; then # MFG TEST COMMAND
             parse_rsp_mfg
         else
             # Dump response as hex data
-            echo "Response Data:"
             let remaining_bytes=$end_of_rsp_data-$offset
+            if [ $remaining_bytes -gt 0 ]; then
+                echo "Response Data:"
+            fi
             if [ $verbose -ne 0 ]; then
                 # -v to display all repeated data (like remaining 00s)
                 hexdump -C -v -s $offset -n $remaining_bytes ${binfile}
@@ -1673,8 +1823,8 @@ function tmgt_info
                     fi
                     let targState=0x${line:6:2}
                     let count=0x${line:8:2}
-                    let pstype=0x${line:10:2}
-                    # 1 byte reserved
+                    let cumulativeResetCount=0x${line:10:2}
+                    let version=0x${line:12:2}
                     let safe=0x${line:14:2}
                     safeRc=${line:20:4}
                     let safeInst=0x${line:24:8}
@@ -1708,6 +1858,9 @@ function tmgt_info
                         else
                             echo "HTMGT State: $stateText($(printf "0x%02X" $state)), $numOccs OCC (master:OCC$master), resetCount:$count (last reset due to rc=0x${safeRc}/OCC$safeInst)"
                         fi
+                    fi
+                    if [ $cumulativeResetCount -ne 0 ]; then
+                        echo "           : PM Complex Resets since boot: $cumulativeResetCount"
                     fi
                 else
                     let inst=0x${line:0:2}
@@ -1760,14 +1913,14 @@ function tmgt_info
                         echo "OCC${inst}: $type $stateText($(printf "0x%02X" $state)) resetCount:$count wofResets:$wof_reset_count $flags pollRsp:0x${pollRsp}..."
                     else
                         extflags="";
-                        let bitset="$pollRspExtStatus & 0x10";
-                        if [ $bitset -ne 0 ]; then extflags="$extflags QuickPowerDrop"; fi
                         let bitset="$pollRspExtStatus & 0x80";
                         if [ $bitset -ne 0 ]; then extflags="$extflags Throttle-ProcOverTemp"; fi
                         let bitset="$pollRspExtStatus & 0x40";
                         if [ $bitset -ne 0 ]; then extflags="$extflags Throttle-Power"; fi
                         let bitset="$pollRspExtStatus & 0x20";
                         if [ $bitset -ne 0 ]; then extflags="$extflags MemThrot-OverTemp"; fi
+                        let bitset="$pollRspExtStatus & 0x10";
+                        if [ $bitset -ne 0 ]; then extflags="$extflags QuickPowerDrop"; fi
                         let bitset="$pollRspExtStatus & 0x08";
                         if [ $bitset -ne 0 ]; then extflags="$extflags Throttle-VddOverTemp"; fi
                         echo "OCC${inst}: $type $stateText($(printf "0x%02X" $state)) resetCount:$count wofResets:$wof_reset_count $flags pollRsp:0x${pollRsp}... ($extflags )"
@@ -1837,8 +1990,9 @@ function tmgt_flags
     $sudo opal-prd --expert-mode htmgt-passthru 0x02
     let flagvalue=0x`$sudo opal-prd --expert-mode htmgt-passthru 0x02 | tr -d '\r\n' | sed 's/\s//g1'`
     flags="";
+    let halt_src="$flagvalue >> 24"
     let bitset="$flagvalue & 0x00800000";
-    if [ $bitset -ne 0 ]; then flags="$flags HaltOnSrc"; fi
+    if [ $bitset -ne 0 ]; then flags="$flags HaltOnSrc:$(printf '0x2A%02X' $halt_src)"; fi
     let bitset="$flagvalue & 0x00000800";
     if [ $bitset -ne 0 ]; then flags="$flags DisableMemConfig"; fi
     let bitset="$flagvalue & 0x00000100";
@@ -1897,7 +2051,7 @@ function occ_trace
 
     while [ $numOccs -gt 0 ]; do
         echo "`hostname` OCC$occ Trace:  (`date`)"
-        occ_cmd="40"
+        occ_cmd="40" # DEBUG_PASS_THROUGH
         occ_cmd_data="03010045525200" # ERR traces
         send_occ_cmd
         handle_occ_rsp
@@ -1974,6 +2128,10 @@ function occ_trace_cronus
             #echo "gpe0 $GPE0ADDR $GPE0SIZEHEX $GPE0SIZE"
             #GPE0SIZE=`echo \$((16#$GPE0SIZEHEX))`
             let GPE0SIZE=0x${GPE0SIZEHEX}
+            if [ $GPE0SIZE -gt 2048 ]; then
+                echo -e "${red}WARNING: GPE0 trace size (0x${GPE0SIZEHEX}) looks too large! Using 2048${normal}"
+                let GPE0SIZE=2048
+            fi
             echo "gpe0 $GPE0ADDR $GPE0SIZEHEX $GPE0SIZE"
             let gpe_addr=0x$GPE0ADDR
             if [ $gpe_addr -ne 0 ]; then
@@ -1998,6 +2156,10 @@ function occ_trace_cronus
             GPE1SIZEHEX=`getsram fffb3c1c $min_sram_size -ch $channel | grep 00000000 | awk '{print $2}'`
             #GPE1SIZE=`echo \$((16#$GPE1SIZEHEX))`
             let GPE1SIZE=0x${GPE1SIZEHEX}
+            if [ $GPE0SIZE -gt 2048 ]; then
+                echo -e "${red}WARNING: GPE1 trace size (0x${GPE1SIZEHEX}) looks too large! Using 2048${normal}"
+                let GPE1SIZE=2048
+            fi
             echo "gpe1 $GPE1ADDR $GPE1SIZEHEX $GPE1SIZE"
             if [ $gpe_addr -ne 0 ]; then
                 echo -e "${bold}==> getsram $GPE1ADDR $GPE1SIZE -ch $channel -p$occ -n$node -fb ./occTraceGPE1.ppe ${normal}"
@@ -2050,15 +2212,18 @@ if [ $passThru -eq 1 ] && [ -n "$inputfile" ]; then
     convertToBinary $inputfile $binfile
 fi
 
-#sendOccCmd 00 10
-#exit
 
 if [ -n "$action" ]; then
     if [ "$action" == "SensorDump" ]; then
         # -X 53 0600003d = get sensor details for GUID 0x003d"
-        occ_cmd="53"
+        occ_cmd="53" # MFG TEST COMMAND
         occ_cmd_data=`printf "0600%04X" $sensor_guid`
         #echo "==> $occ_cmd $occ_cmd_data"
+        send_occ_cmd
+        handle_occ_rsp
+    elif [ "$action" == "SensorClear" ]; then
+        occ_cmd="41" # AME PASS THROUGH COMMAND
+        occ_cmd_data="3C0021" # Clear Min/Max for all sensors
         send_occ_cmd
         handle_occ_rsp
     elif [ "$action" == "SensorList" ]; then
@@ -2074,7 +2239,7 @@ if [ -n "$action" ]; then
         let skip_header=1
         while [ $more_sensors -ne 0 ]; do
             # -X 53 0500000001LLLLTTTT = list first 50 OCC sensors (LLLL=Location,TTTT=Type)"
-            occ_cmd="53"
+            occ_cmd="53" # MFG TEST COMMAND
             occ_cmd_data=`printf "0500%04X%02X%04X%04X" $first_sensor $only_non_zero_sensors $sensor_loc $sensor_type`
             send_occ_cmd
             handle_occ_rsp # will update more_sensors and last_sensor
@@ -2088,7 +2253,7 @@ if [ -n "$action" ]; then
             let sensor_summary=1
             while [ $index -lt $guidListCount ]; do
                 # -X 53 0600003d = get sensor details for GUID 0x003d"
-                occ_cmd="53"
+                occ_cmd="53" # MFG TEST COMMAND
                 occ_cmd_data=`printf "0600%04X" ${guidList[$index]}`
                 send_occ_cmd
                 handle_occ_rsp
