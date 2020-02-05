@@ -592,8 +592,6 @@ typedef struct
 
   // Partition Information
   amec_part_config_t    part_config;
-  // Mode frequency table indexed by mode
-  amec_mode_freq_t      part_mode_freq[OCC_INTERNAL_MODE_MAX_NUM];
 
   //---------------------------------------------------------
   //

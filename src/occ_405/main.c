@@ -82,13 +82,7 @@ extern apss_start_args_t    G_gpe_start_pwr_meas_read_args;
 extern apss_continue_args_t G_gpe_continue_pwr_meas_read_args;
 extern apss_complete_args_t G_gpe_complete_pwr_meas_read_args;
 extern uint32_t G_present_cores;
-extern uint32_t G_proc_fmin_khz;
-extern uint32_t G_proc_fmax_khz;
 
-extern uint32_t G_khz_per_pstate;
-
-extern uint8_t G_proc_pmin;
-extern uint8_t G_proc_pmax;
 extern bool G_smf_mode;
 
 extern PWR_READING_TYPE  G_pwr_reading_type;
@@ -98,7 +92,7 @@ IMAGE_HEADER (G_mainAppImageHdr,__ssx_boot,MAIN_APP_ID,ID_NUM_INVALID);
 ppmr_header_t G_ppmr_header;       // PPMR Header layout format
 pgpe_header_data_t G_pgpe_header;  // PGPE Header layout format
 OCCPstateParmBlock_t G_oppb;       // OCC Pstate Parameters Block Structure
-extern uint16_t G_proc_fmax_mhz;   // max(turbo,uturbo) frequencies
+extern uint16_t G_proc_fmax_mhz;
 extern volatile int G_ss_pgpe_rc;
 
 // Buffer to hold the wof header
@@ -175,6 +169,219 @@ void check_runtime_environment(void)
         G_dcom_tx_apss_wait_time = SIMICS_MICS_PER_TICK * 4 / 10;
     }
 }
+
+/*
+ * Function Specification
+ *
+ * Name: populate_sys_mode_freq_table
+ *
+ * Description: Populate table with frequency used for each mode
+ *              Called one time during init after OPPB is read
+ *              Prior to being called it has been verified that
+ *              G_oppb.frequency_min_khz < G_oppb.frequency_max_khz
+ *              and both aren't 0
+ *
+ * End Function Specification
+ */
+void populate_sys_mode_freq_table(void)
+{
+    errlHndl_t  l_err = NULL;
+    int         i = 0;
+    int         l_max_freq_index = 0;
+    uint32_t    l_max_freq = 0;
+
+    // VPD curve fit points
+    for(i = OCC_FREQ_PT_VPD_CF0; i <= OCC_FREQ_PT_VPD_LAST_CF; i++)
+    {
+        // OPPB operating_points has NUM_PV_POINTS make sure we don't blow past the end of OPPB
+        if(i < NUM_PV_POINTS)
+        {
+            G_sysConfigData.sys_mode_freq.table[i] = G_oppb.operating_points[i].frequency_mhz;
+
+            // should be increasing by frequency but just trace if it isn't may need to do something more later
+            if(G_sysConfigData.sys_mode_freq.table[i] > l_max_freq)
+            {
+                l_max_freq = G_sysConfigData.sys_mode_freq.table[i];
+                l_max_freq_index = i;
+            }
+            else
+            {
+                MAIN_TRAC_ERR("populate_sys_mode_freq_table: CF%d freq %dMHz < %dMHz previous pt",
+                               i, G_sysConfigData.sys_mode_freq.table[i], l_max_freq);
+            }
+
+        }
+        else
+        {
+            // this is indication of code mismatch stop copying over curve fit points
+            MAIN_TRAC_ERR("populate_sys_mode_freq_table: mismatch in num CF freq points OCC[%d] OPPB[%d]",
+                          OCC_FREQ_PT_VPD_LAST_CF+1, NUM_PV_POINTS);
+            break;
+        }
+    }
+
+    // Set the maximum frequency for this chip
+    // use the VPD operating point not Pstate 0 (G_oppb.frequency_max_khz) which
+    // represents the highest Fmax across all chips in the system here we want what
+    // this chip is capable of
+    if(l_max_freq_index != VPD_PV_FMAX)
+    {
+        MAIN_TRAC_ERR("populate_sys_mode_freq_table: max freq %d found at VPD index %d",
+                       l_max_freq, l_max_freq_index);
+
+        G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MAX_FREQ] = l_max_freq;
+    }
+    else
+    {
+        G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MAX_FREQ] = G_oppb.operating_points[VPD_PV_FMAX].frequency_mhz;
+    }
+    // sanity check that the chip's Fmax is equal to or lower than Pstate 0 frequency
+    if(G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MAX_FREQ] > (G_oppb.frequency_max_khz / 1000) )
+    {
+        // Impossible to set anything higher than Pstate 0! Clip max to Pstate 0 frequency
+        MAIN_TRAC_ERR("populate_sys_mode_freq_table: chip Fmax[%dMHz] is higher than Pstate0[%dMHz]",
+                       G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MAX_FREQ],
+                       G_oppb.frequency_max_khz / 1000);
+        G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MAX_FREQ] = G_oppb.frequency_max_khz / 1000;
+    }
+
+    // set the minimum frequency allowed.  Don't use VPD as this may be different
+    // than VPD power save point due to uplift calculated by the PGPE
+    G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MIN_FREQ] = G_oppb.frequency_min_khz / 1000;
+    // sanity check if the chip's Fmin is higher need to uplift the min to the chip's min
+    if(G_oppb.operating_points[VPD_PV_PSAV].frequency_mhz > (G_oppb.frequency_min_khz / 1000) )
+    {
+        MAIN_TRAC_ERR("populate_sys_mode_freq_table: chip min[%dMHz] is higher than sys min[%dMHz]",
+                       G_oppb.operating_points[VPD_PV_PSAV].frequency_mhz,
+                       G_oppb.frequency_min_khz / 1000);
+        G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MIN_FREQ] = G_oppb.operating_points[VPD_PV_PSAV].frequency_mhz;
+    }
+
+    // WOF base frequency
+    if(G_oppb.wof_base_frequency_mhz)
+    {
+        G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_WOF_BASE] = G_oppb.wof_base_frequency_mhz;
+        // sanity check that this isn't higher than max
+        if(G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_WOF_BASE] > G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MAX_FREQ])
+        {
+            MAIN_TRAC_ERR("populate_sys_mode_freq_table: WOF Base freq[%dMHz] higher than max[%dMHz]",
+                           G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_WOF_BASE],
+                           G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MAX_FREQ]);
+            G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_WOF_BASE] = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MAX_FREQ];
+        }
+        // sanity check that this isn't lower than min
+        if(G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_WOF_BASE] < G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MIN_FREQ])
+        {
+            MAIN_TRAC_ERR("populate_sys_mode_freq_table: WOF Base freq[%dMHz] lower than min[%dMHz]",
+                           G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_WOF_BASE],
+                           G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MIN_FREQ]);
+            G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_WOF_BASE] = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MIN_FREQ];
+        }
+    }
+    else
+    {
+        // WOF base frequency is 0, use first non-zero operating point +2 above min if none found use the minimum
+        i = VPD_PV_PSAV + 2;
+        do
+        {
+            if(G_oppb.operating_points[i].frequency_mhz)
+            {
+              MAIN_TRAC_ERR("populate_sys_mode_freq_table: WOF Base freq is 0 using CF%d freq %dMHz",
+                                  i, G_oppb.operating_points[i].frequency_mhz);
+                G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_WOF_BASE] = G_oppb.operating_points[i].frequency_mhz;
+                break;
+            }
+            i++;
+        }while(i < NUM_PV_POINTS);
+        if(i == NUM_PV_POINTS)
+        {
+            MAIN_TRAC_ERR("populate_sys_mode_freq_table: WOF Base freq is 0 and failed to find non-zero point using min freq %dMHz",
+                          G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MIN_FREQ]);
+            G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_WOF_BASE] = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MIN_FREQ];
+        }
+    }
+
+    // Power management disabled frequency in VPD this is called "fixed frequency"
+    // and is defined to be the same as P9 legacy turbo this differs from WOF base
+    // in that WOF base may be a higher frequency and is not guaranteed for all environments
+    if(G_oppb.fixed_frequency_mhz)
+    {
+        G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_DISABLED] = G_oppb.fixed_frequency_mhz;
+        // sanity check that this isn't higher than max
+        if(G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_DISABLED] > G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MAX_FREQ])
+        {
+            MAIN_TRAC_ERR("populate_sys_mode_freq_table: Disabled freq[%dMHz] higher than max[%dMHz]",
+                           G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_DISABLED],
+                           G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MAX_FREQ]);
+            G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_DISABLED] = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MAX_FREQ];
+        }
+        // sanity check that this isn't lower than min
+        if(G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_DISABLED] < G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MIN_FREQ])
+        {
+            MAIN_TRAC_ERR("populate_sys_mode_freq_table: Disabled freq[%dMHz] lower than min[%dMHz]",
+                           G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_DISABLED],
+                           G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MIN_FREQ]);
+            G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_DISABLED] = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MIN_FREQ];
+        }
+    }
+    else
+    {
+        // Disabled frequency is 0 just use WOF base
+        MAIN_TRAC_ERR("populate_sys_mode_freq_table: Disabled freq is 0 using WOF base freq %dMHz",
+                          G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_WOF_BASE]);
+
+        G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_DISABLED] = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_WOF_BASE];
+    }
+
+    // Ultra Turbo VPD point
+    G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_VPD_UT] = G_oppb.operating_points[VPD_PV_UT].frequency_mhz;
+
+    if(G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_VPD_UT] == 0)
+    {
+      MAIN_TRAC_ERR("populate_sys_mode_freq_table: UT freq is 0 using WOF base freq %dMHz for UT",
+                       G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_WOF_BASE]);
+        G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_VPD_UT] = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_WOF_BASE];
+    }
+
+    // sanity check that UT isn't higher than max
+    else if(G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_VPD_UT] >
+            G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MAX_FREQ])
+    {
+        MAIN_TRAC_ERR("populate_sys_mode_freq_table: UT freq[%dMHz] higher than max[%dMHz]",
+                       G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_VPD_UT],
+                       G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MAX_FREQ]);
+        G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_VPD_UT] = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MAX_FREQ];
+    }
+    // Copy over UT frequency into G_proc_fmax_mhz
+    // can only go higher than UT if Fmax mode is enabled
+    G_proc_fmax_mhz = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_VPD_UT];
+
+    MAIN_TRAC_IMP("populate_sys_mode_freq_table: freq points min[%dMHz], WOF Base[%dMHz], UT[%dMHz], max[%dMHz]",
+                   G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MIN_FREQ],
+                   G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_WOF_BASE],
+                   G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_VPD_UT],
+                   G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MAX_FREQ]);
+
+    // set frequency for all other power management modes
+    G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_PWR_SAVE] = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MIN_FREQ];
+    G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_DYN_PERF] = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_VPD_UT];
+    G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_MAX_PERF] = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_VPD_UT];
+    G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_FMAX] = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MAX_FREQ];
+
+    MAIN_TRAC_IMP("populate_sys_mode_freq_table: Mode freq disabled[%dMHz], Psav[%dMHz], Perf[%dMHz], Fmax[%dMHz]",
+                   G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_DISABLED],
+                   G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_PWR_SAVE],
+                   G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_MAX_PERF],
+                   G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_FMAX]);
+
+    // Set the frequency range for amec, at this point there is no mode set
+    l_err = amec_set_freq_range(OCC_MODE_NOCHANGE);
+    if(l_err)
+    {
+        // Commit log
+        commitErrl(&l_err);
+    }
+} // end populate_sys_mode_freq_table()
 
 /*
  * Function Specification
@@ -781,6 +988,9 @@ bool read_oppb_params()
                           G_oppb.frequency_min_khz, G_oppb.frequency_max_khz,
                           G_oppb.frequency_step_khz, G_oppb.pstate_min);
 
+        // frequency points are valid, now populate our internal frequency table
+        populate_sys_mode_freq_table();
+
         // Confirm whether we have wof support
         if(!(G_oppb.attr.fields.wof_enabled))
         {
@@ -819,13 +1029,9 @@ bool read_oppb_params()
         return FALSE;
     }
 
-    // Copy over max frequency into G_proc_fmax_mhz
-    G_proc_fmax_mhz   = G_oppb.frequency_max_khz / 1000;
-
-
     // Used by amec for pcap calculation could use G_oppb.frequency_step_khz
-    // in PCAP calculationsinstead, but using a separate varaible speeds
-    // up PCAP relatedcalculations significantly, by eliminating slow
+    // in PCAP calculations instead, but using a separate varaible speeds
+    // up PCAP related calculations significantly, by eliminating slow
     // division operations.
     G_mhz_per_pstate = G_oppb.frequency_step_khz/1000;
 

@@ -283,7 +283,7 @@ void update_nlimits(uint32_t i_membuf)
             l_mba23_mba_maxn = l_state_limits23->pcap_n_per_mba;
             l_mba23_chip_maxn = l_state_limits23->pcap_n_per_chip;
         }
-        else if(CURRENT_MODE() == OCC_MODE_NOMINAL)
+        else if(CURRENT_MODE() == OCC_MODE_DISABLED)
         {
             l_mba01_mba_maxn = l_state_limits01->fmax_n_per_mba;
             l_mba01_chip_maxn = l_state_limits01->fmax_n_per_chip;

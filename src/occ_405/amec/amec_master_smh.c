@@ -681,7 +681,7 @@ void amec_mst_ips_main(void)
                     }
 
                     g_amec->mst_ips_parms.freq_request =
-                        G_sysConfigData.sys_mode_freq.table[OCC_MODE_MIN_FREQUENCY];
+                        G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MIN_FREQ];
 
                     TRAC_INFO("amec_mst_ips_main: We have entered IPS active state! entry_count[%u] freq_request[%u]",
                               G_ips_entry_count, g_amec->mst_ips_parms.freq_request);
@@ -735,7 +735,7 @@ void amec_mst_gen_soft_freq(void)
         }
 
         // Use the frequency delta sent by the customer
-        l_fdelta = (G_sysConfigData.sys_mode_freq.table[OCC_MODE_NOMINAL] *
+        l_fdelta = (G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_DISABLED] *
                     G_mst_tunable_parameter_table_ext[8].adj_value/2) / 100;
 
         // Check if all OCCs are operating inside the soft frequency boundaries
@@ -772,10 +772,9 @@ void amec_mst_gen_soft_freq(void)
         // target frequeny based on the power mode
         if (!l_need_reset)
         {
-            if ((CURRENT_MODE() == OCC_MODE_DYN_POWER_SAVE) ||
-                (CURRENT_MODE() == OCC_MODE_DYN_POWER_SAVE_FP))
+            if(CURRENT_MODE() == OCC_MODE_DYN_PERF)
             {
-                // For DPS and DPS-FP modes, calculate the highest Fwish sent
+                // For DPS modes, calculate the highest Fwish sent
                 // by all slave OCCs
                 l_highest_fwish = 0;
                 for (i=0; i<MAX_OCCS; i++)

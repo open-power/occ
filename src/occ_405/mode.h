@@ -37,31 +37,18 @@
 // Returns the 'OCC Requested' OCC Mode
 #define REQUESTED_MODE()  G_occ_internal_req_mode
 
-// Returns the 'Requested' SMS Mode
-#define VALID_MODE(mode)  ((mode < OCC_MODE_COUNT) ? 1 : 0)
-
-// Typedef of the various modes
+// Typedef of the various modes.
 typedef enum
 {
     OCC_MODE_NOCHANGE          = 0x00,
-    OCC_MODE_NOMINAL           = 0x01,
-    OCC_MODE_OVERSUB           = 0x02,  // not a settable mode, just used to store oversubscription max freq
+    OCC_MODE_DISABLED          = 0x01,  // previously known as "nominal".  ASM/HMC always called this "disabled" and never "nominal" 
     OCC_MODE_STATIC_FREQ_POINT = 0x03,
-    OCC_MODE_SAFE              = 0x04,
+    OCC_MODE_SAFE              = 0x04,  // not user settable
     OCC_MODE_PWRSAVE           = 0x05,
-    OCC_MODE_DYN_POWER_SAVE    = 0x06,
-    OCC_MODE_MIN_FREQUENCY     = 0x07,  // not a settable mode, just used to store system min freq
-    OCC_MODE_NOM_PERFORMANCE   = 0x08,
-    OCC_MODE_MAX_PERFORMANCE   = 0x09,
-    OCC_MODE_DYN_POWER_SAVE_FP = 0x0A,
+    OCC_MODE_FMAX              = 0x09,
+    OCC_MODE_DYN_PERF          = 0x0A,
     OCC_MODE_FFO               = 0x0B,
-    OCC_MODE_FMF               = 0x0C,
-    OCC_MODE_UTURBO            = 0x0D,  // not a settable mode, just used to store UT freq
-    OCC_MODE_VRM_N             = 0x0E,  // not a settable mode, just used to store VRM N mode max freq
-    OCC_MODE_WOF_BASE          = 0x0F,
-
-    // Make sure this is after the last valid mode
-    OCC_MODE_COUNT,
+    OCC_MODE_MAX_PERF          = 0x0C,
 
     // These are used for mode transition table, and are not
     // a valid mode in and of itself.
@@ -69,68 +56,58 @@ typedef enum
     OCC_MODE_INVALID          = 0xFF,
 } OCC_MODE;
 
+// Additional set mode parameter when setting static freq point mode
 typedef enum
 {
-    OCC_MODE_PARM_NONE    = 0x0000,
-    VPD_CURVE_FIT_POINT_0 = 0x1000,
-    VPD_CURVE_FIT_POINT_1 = 0x1001,
-    VPD_CURVE_FIT_POINT_2 = 0x1002,
-    VPD_CURVE_FIT_POINT_3 = 0x1003,
-    VPD_CURVE_FIT_POINT_4 = 0x1004,
-    VPD_CURVE_FIT_POINT_5 = 0x1005,
-    VPD_CURVE_FIT_POINT_6 = 0x1006,
-    VPD_CURVE_FIT_POINT_7 = 0x1007,
-    MIN_FREQ_POINT        = 0x2000,
-    WOF_BASE_POINT        = 0x2001,
-    ULTRA_TURBO_POINT     = 0x2002,
-    FMAX_FREQ_POINT       = 0x2003 
+    OCC_MODE_PARM_NONE             = 0x0000,
+    OCC_MODE_PARM_VPD_CF0_PT       = 0x1000,
+    OCC_MODE_PARM_VPD_CF1_PT       = 0x1001,
+    OCC_MODE_PARM_VPD_CF2_PT       = 0x1002,
+    OCC_MODE_PARM_VPD_CF3_PT       = 0x1003,
+    OCC_MODE_PARM_VPD_CF4_PT       = 0x1004,
+    OCC_MODE_PARM_VPD_CF5_PT       = 0x1005,
+    OCC_MODE_PARM_VPD_CF6_PT       = 0x1006,
+    OCC_MODE_PARM_VPD_CF7_PT       = 0x1007,
+    OCC_MODE_PARM_MIN_FREQ_PT      = 0x2000,
+    OCC_MODE_PARM_WOF_BASE_FREQ_PT = 0x2001,
+    OCC_MODE_PARM_UT_FREQ_PT       = 0x2002,
+    OCC_MODE_PARM_FMAX_FREQ_PT     = 0x2003
 } OCC_MODE_PARM;
 
-// Used to index the frequency point table
+// Used to index G_sysConfigData.sys_mode_freq.table used to store all frequency points
 typedef enum
 {
-    OCC_FREQ_PT_VPD_CFT0 = 0x00,
-    OCC_FREQ_PT_VPD_CFT1 = 0x01,
-    OCC_FREQ_PT_VPD_CFT2 = 0x02,
-    OCC_FREQ_PT_VPD_CFT3 = 0x03,
-    OCC_FREQ_PT_VPD_CFT4 = 0x04,
-    OCC_FREQ_PT_VPD_CFT5 = 0x05,
-    OCC_FREQ_PT_VPD_CFT6 = 0x06,
-    OCC_FREQ_PT_VPD_CFT7 = 0x07,
-    OCC_FREQ_PT_PWR_SAVE = 0x08,
-    OCC_FREQ_PT_WOF_BASE = 0x09,
-    OCC_FREQ_PT_UT       = 0x0A,
-    OCC_FREQ_PT_FMAX     = 0x0B,
+    OCC_FREQ_PT_VPD_CF0 = 0x00,     // Curve Fit points must be first and grouped together
+    OCC_FREQ_PT_VPD_CF1 = 0x01,
+    OCC_FREQ_PT_VPD_CF2 = 0x02,
+    OCC_FREQ_PT_VPD_CF3 = 0x03,
+    OCC_FREQ_PT_VPD_CF4 = 0x04,
+    OCC_FREQ_PT_VPD_CF5 = 0x05,
+    OCC_FREQ_PT_VPD_CF6 = 0x06,
+    OCC_FREQ_PT_VPD_LAST_CF = 0x07,
+    OCC_FREQ_PT_WOF_BASE = 0x08,
+    OCC_FREQ_PT_VPD_UT      = 0x09,
+    OCC_FREQ_PT_MAX_FREQ    = 0x0A,
+    OCC_FREQ_PT_MIN_FREQ    = 0x0B,
+    OCC_FREQ_PT_MODE_DISABLED = 0x0C,
+    OCC_FREQ_PT_MODE_PWR_SAVE = 0x0D,
+    OCC_FREQ_PT_MODE_DYN_PERF = 0x0E,
+    OCC_FREQ_PT_MODE_MAX_PERF = 0x0F,
+    OCC_FREQ_PT_MODE_FMAX = 0x10,
+    OCC_FREQ_PT_MODE_USER = 0x11,   // used for FFO and static freq pt modes
     OCC_FREQ_PT_COUNT,
     OCC_FREQ_PT_INVALID  = 0xFF
 } OCC_FREQ_POINT;
 
 // These are the only modes that TMGT/HTMGT can send
 #define OCC_MODE_IS_VALID(mode) ((mode == OCC_MODE_NOCHANGE) || \
-                                 (mode == OCC_MODE_NOMINAL) || \
+                                 (mode == OCC_MODE_DISABLED) || \
                                  (mode == OCC_MODE_STATIC_FREQ_POINT) || \
                                  (mode == OCC_MODE_PWRSAVE) || \
-                                 (mode == OCC_MODE_DYN_POWER_SAVE) || \
-                                 (mode == OCC_MODE_NOM_PERFORMANCE) || \
-                                 (mode == OCC_MODE_MAX_PERFORMANCE) || \
-                                 (mode == OCC_MODE_DYN_POWER_SAVE_FP) || \
-                                 (mode == OCC_MODE_FFO) || \
-                                 (mode == OCC_MODE_FMF))
-
-// Typedef of the various internal modes that OCC can be in.
-typedef enum
-{
-    OCC_INTERNAL_MODE_NOM          = 0x00,
-    OCC_INTERNAL_MODE_SPS          = 0x01,
-    OCC_INTERNAL_MODE_DPS          = 0x02,
-    OCC_INTERNAL_MODE_DPS_MP       = 0x03,
-    OCC_INTERNAL_MODE_FFO          = 0x04,
-    OCC_INTERNAL_MODE_NOM_PERF     = 0x05,
-    OCC_INTERNAL_MODE_MAX_PERF     = 0x06,
-    OCC_INTERNAL_MODE_FMF          = 0x07,
-    OCC_INTERNAL_MODE_MAX_NUM,
-    OCC_INTERNAL_MODE_UNDEFINED    = 0xFF
-} OCC_INTERNAL_MODE;
+                                 (mode == OCC_MODE_FMAX) || \
+                                 (mode == OCC_MODE_DYN_PERF) || \
+                                 (mode == OCC_MODE_MAX_PERF) || \
+                                 (mode == OCC_MODE_FFO))
 
 extern OCC_MODE           G_occ_internal_mode;
 extern OCC_MODE           G_occ_internal_req_mode;

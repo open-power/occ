@@ -111,7 +111,7 @@ uint8_t cmdh_mnfg_run_stop_slew(const cmdh_fsp_cmd_t * i_cmd_ptr,
         {
             // If bottom mode is Static Power Save, use the min frequency
             // available
-            l_fmin = G_sysConfigData.sys_mode_freq.table[OCC_MODE_MIN_FREQUENCY];
+            l_fmin = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MIN_FREQ];
         }
         else
         {

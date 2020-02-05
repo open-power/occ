@@ -60,12 +60,11 @@ occSysConfigData_t G_sysConfigData =
     // System maximum frequencies (in MHz) for each mode
     // -----------------------------------------------------------
     .sys_mode_freq.table = {
-        [OCC_MODE_NOMINAL]              3500,
-        [OCC_MODE_STATIC_FREQ_POINT]    0,
-        [OCC_MODE_WOF_BASE]             3700,
-        [OCC_MODE_PWRSAVE]              3000,
-        [OCC_MODE_MIN_FREQUENCY]        2575,
-        [OCC_MODE_FFO]                  0,
+        [OCC_FREQ_PT_MODE_DISABLED]  3500,
+        [OCC_FREQ_PT_MODE_USER]      0,
+        [OCC_FREQ_PT_WOF_BASE]       3700,
+        [OCC_FREQ_PT_MODE_PWR_SAVE]  3000,
+        [OCC_FREQ_PT_MIN_FREQ]       2575,
     },
 
     // -----------------------------------------------------------
@@ -288,7 +287,7 @@ void sysConfigFspLess(void)
         // Set Final Mode & State.  OCC will transition through as
         // all requirements for state/mode become available.
         G_occ_external_req_state = OCC_STATE_ACTIVE;
-        G_occ_external_req_mode  = OCC_MODE_NOMINAL;
+        G_occ_external_req_mode  = OCC_MODE_DISABLED;
     }
     else
     {

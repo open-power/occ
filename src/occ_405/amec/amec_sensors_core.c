@@ -664,7 +664,7 @@ void amec_calc_freq_and_util_sensors(CoreData * i_core_data_ptr, uint8_t i_core)
       // Normalized utilization = (Average_utilization)/(Average_frequency) * Fnom
       // Note: The 100000 constant is to increase the precision of our division
       temp32 = (temp32 * 100000) / temp32a;
-      temp32 = (temp32 * G_sysConfigData.sys_mode_freq.table[OCC_MODE_NOMINAL]) / 100000;
+      temp32 = (temp32 * G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_DISABLED]) / 100000;
 
       // Update sensor for this core
       if(l_core_sleep_winkle)

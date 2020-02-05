@@ -64,9 +64,6 @@
 // Functions
 //*************************************************************************
 
-// This is used to change the current Freq data AMEC is using
-errlHndl_t AMEC_data_write_fcurr(const OCC_MODE i_mode);
-
 // This is used to store the thermal thresholds AMEC is using
 errlHndl_t AMEC_data_write_thrm_thresholds(const OCC_MODE i_mode);
 

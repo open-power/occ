@@ -192,7 +192,7 @@ void amec_part_add(uint8_t i_id)
         l_part->dpsalg.type = 0; //No algorithm is selected yet
         l_part->dpsalg.freq_request = UINT16_MAX;
 
-        l_part->es_policy = OCC_INTERNAL_MODE_MAX_NUM;
+        l_part->es_policy = OCC_MODE_DYN_PERF;
         l_part->follow_sysmode = TRUE;
     }
     while (0);
@@ -262,31 +262,6 @@ void amec_part_update_dps_parameters(amec_part_t* io_part)
     io_part->dpsalg.alpha_down = 9800;
     io_part->dpsalg.type = 41;
 
-    // If core group policy is DPS-Favor Performance, then write those settings
-    if (io_part->es_policy == OCC_INTERNAL_MODE_DPS_MP)
-    {
-        io_part->dpsalg.step_up = 1000;
-        io_part->dpsalg.step_down = 8;
-        io_part->dpsalg.tlutil = 1000;
-        io_part->dpsalg.sample_count_util = 1;
-        io_part->dpsalg.epsilon_perc = 0;
-        io_part->dpsalg.alpha_up = 9990;
-        io_part->dpsalg.alpha_down = 9990;
-        io_part->dpsalg.type = 41;
-
-        // Check if this is a multi-node system
-        if (G_sysConfigData.system_type.single == 0)
-        {
-            // These parameter values will result in static turbo frequency
-            io_part->dpsalg.alpha_down = 0;
-            io_part->dpsalg.tlutil = 0;
-
-            TRAC_IMP("Multi-node system found! Updating DPS-FP parameters: single_node_bit[%u] alpha_down[%u] tlutil[%u]",
-                     G_sysConfigData.system_type.single,
-                     io_part->dpsalg.alpha_down,
-                     io_part->dpsalg.tlutil);
-        }
-    }
 }
 
 void amec_part_update_perf_settings(amec_part_t* io_part)
@@ -310,8 +285,7 @@ void amec_part_update_perf_settings(amec_part_t* io_part)
 
     switch (io_part->es_policy)
     {
-        case OCC_INTERNAL_MODE_DPS:
-        case OCC_INTERNAL_MODE_DPS_MP:
+        case OCC_MODE_DYN_PERF:
             // These policies require that we reset the internal performance
             // settings of the cores in the partition
             for (j=0; j<io_part->ncores; j++)
@@ -338,72 +312,6 @@ void amec_part_update_perf_settings(amec_part_t* io_part)
                     .core_perf.dps_freq_request = UINT16_MAX;
             }
             break;
-    }
-}
-
-void AMEC_part_update_sysmode_policy(OCC_MODE i_occ_internal_mode)
-{
-    /*------------------------------------------------------------------------*/
-    /*  Local Variables                                                       */
-    /*------------------------------------------------------------------------*/
-    uint16_t                    i = 0;
-
-    /*------------------------------------------------------------------------*/
-    /*  Code                                                                  */
-    /*------------------------------------------------------------------------*/
-    for (i=0; i<AMEC_PART_MAX_PART; i++)
-    {
-        // If a core group is not valid, skip it
-        if (!g_amec->part_config.part_list[i].valid)
-        {
-            continue;
-        }
-        // If a core group has no cores assigned, skip it
-        if (g_amec->part_config.part_list[i].ncores == 0)
-        {
-            continue;
-        }
-
-        // If a core group is not following the system power mode, skip it
-        if (!g_amec->part_config.part_list[i].follow_sysmode)
-        {
-            continue;
-        }
-
-        // Set power mode for this core group to the system power mode
-        switch (i_occ_internal_mode)
-        {
-            case OCC_MODE_NOMINAL:
-                g_amec->part_config.part_list[i].es_policy = OCC_INTERNAL_MODE_NOM;
-                break;
-
-            case OCC_MODE_DYN_POWER_SAVE:
-                g_amec->part_config.part_list[i].es_policy = OCC_INTERNAL_MODE_DPS;
-                break;
-
-            case OCC_MODE_DYN_POWER_SAVE_FP:
-                g_amec->part_config.part_list[i].es_policy = OCC_INTERNAL_MODE_DPS_MP;
-                break;
-
-            default:
-                g_amec->part_config.part_list[i].es_policy = OCC_INTERNAL_MODE_UNDEFINED;
-                break;
-        }
-
-        // Update the DPS parameters based on the power policy
-        if ((g_amec->part_config.part_list[i].es_policy == OCC_INTERNAL_MODE_DPS) ||
-            (g_amec->part_config.part_list[i].es_policy == OCC_INTERNAL_MODE_DPS_MP))
-        {
-            amec_part_update_dps_parameters(&(g_amec->part_config.part_list[i]));
-        }
-
-        // Update internal performance settings for this partition
-        amec_part_update_perf_settings(&(g_amec->part_config.part_list[i]));
-
-        // Useful trace for debug
-        //TRAC_INFO("AMEC_part_update_sysmode_policy: Core_group[%u] Num_cores[%u] ES_policy[0x%02x]",
-        //          i, g_amec->part_config.part_list[i].ncores,
-        //          g_amec->part_config.part_list[i].es_policy);
     }
 }
 

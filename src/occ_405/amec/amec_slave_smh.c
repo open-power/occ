@@ -289,11 +289,11 @@ void amec_slv_check_apss_fail(void)
             if (L_lower_pmax_rail == FALSE)
             {
                 // Lower the Pmax_rail to nominal
-                l_pmax_rail_freq = G_sysConfigData.sys_mode_freq.table[OCC_MODE_NOMINAL];
+                l_pmax_rail_freq = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_DISABLED];
 
                 // Let the slave voting box handle the clip
                 // to take in account all reasons for clip changes
-                TRAC_INFO("amec_slv_check_apss_fail: Updating apss pmax clip freq to nominal");
+                TRAC_INFO("amec_slv_check_apss_fail: Updating apss pmax clip freq to mode disabled point");
 
                 L_lower_pmax_rail = TRUE;
                 L_raise_pmax_rail = FALSE;

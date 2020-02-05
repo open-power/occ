@@ -393,8 +393,8 @@ errlHndl_t SMGR_characterization_to_observation()
             break;
         }
 
-        // set clips to legacy turbo
-        l_pstate = proc_freq2pstate(G_sysConfigData.sys_mode_freq.table[OCC_MODE_WOF_BASE]);
+        // set clips to modes disabled
+        l_pstate = proc_freq2pstate(G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_DISABLED]);
         rc = pgpe_set_clip_blocking(l_pstate);
         if(rc)
         {
@@ -611,18 +611,14 @@ errlHndl_t SMGR_observation_to_active()
                 if(G_sysConfigData.system_type.kvm)
                 {
                      // OCC controls frequency via clip
-                     // set clip to nominal/turbo until WOF is fully enabled
-                     if(G_sysConfigData.sys_mode_freq.table[OCC_MODE_WOF_BASE] > G_sysConfigData.sys_mode_freq.table[OCC_MODE_NOMINAL])
-                         l_freq = G_sysConfigData.sys_mode_freq.table[OCC_MODE_WOF_BASE];
-                     else
-                         l_freq = G_sysConfigData.sys_mode_freq.table[OCC_MODE_NOMINAL];
-
+                     // set clip to WOF base until WOF is fully enabled
+                     l_freq = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_WOF_BASE];
                      l_pstate = proc_freq2pstate(l_freq);
                 }
                 else
                 {
                     // OCC controls frequency with PMCR so ok to set clips wide open
-                    // the OCC won't actually write UT to PMCR unless WOF is fully enabled
+                    // the OCC won't actually write PMCR with Pstates higher than base unless WOF is fully enabled
                     l_pstate = proc_freq2pstate(G_proc_fmax_mhz);
                 }
                 l_rc = pgpe_set_clip_blocking(l_pstate);
@@ -893,13 +889,13 @@ errlHndl_t SMGR_active_to_observation()
             break;
         }
 
-        // set clips to legacy turbo
-        l_pstate = proc_freq2pstate(G_sysConfigData.sys_mode_freq.table[OCC_MODE_WOF_BASE]);
+        // set clips to modes disabled
+        l_pstate = proc_freq2pstate(G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_DISABLED]);
         rc = pgpe_set_clip_blocking(l_pstate);
         if(rc)
         {
-            TRAC_ERR("SMGR_active_to_observation: failed to set pstate clip to legacy turbo rc[%08X] OCCFLG0[0x%08X]",
-                      rc, in32(OCB_OCCFLG0));
+            TRAC_ERR("SMGR_active_to_observation: failed to set pstate clip[0x%02X] rc[%08X] OCCFLG0[0x%08X]",
+                      l_pstate, rc, in32(OCB_OCCFLG0));
             break;
         }
 

@@ -727,19 +727,19 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
 
     cmdh_poll_extn_sensor_t l_extnSensorList[MAX_EXTN_SENSORS] = {{0}};
     l_extnSensorList[l_sensorHeader.count].name = EXTN_NAME_FMIN;
-    uint16_t freq = G_sysConfigData.sys_mode_freq.table[OCC_MODE_MIN_FREQUENCY];
+    uint16_t freq = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MIN_FREQ];
     l_extnSensorList[l_sensorHeader.count].data[0] = proc_freq2pstate(freq);
     l_extnSensorList[l_sensorHeader.count].data[1] = CONVERT_UINT16_UINT8_HIGH(freq);
     l_extnSensorList[l_sensorHeader.count].data[2] = CONVERT_UINT16_UINT8_LOW(freq);
     l_sensorHeader.count++;
     l_extnSensorList[l_sensorHeader.count].name = EXTN_NAME_FBAS;
-    freq = G_sysConfigData.sys_mode_freq.table[OCC_MODE_WOF_BASE];
+    freq = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_WOF_BASE];
     l_extnSensorList[l_sensorHeader.count].data[0] = proc_freq2pstate(freq);
     l_extnSensorList[l_sensorHeader.count].data[1] = CONVERT_UINT16_UINT8_HIGH(freq);
     l_extnSensorList[l_sensorHeader.count].data[2] = CONVERT_UINT16_UINT8_LOW(freq);
     l_sensorHeader.count++;
     l_extnSensorList[l_sensorHeader.count].name = EXTN_NAME_FUTURBO;
-    freq = G_sysConfigData.sys_mode_freq.table[OCC_MODE_UTURBO];
+    freq = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_VPD_UT];
     if (freq > 0)
     {
         l_extnSensorList[l_sensorHeader.count].data[0] = proc_freq2pstate(freq);
@@ -748,7 +748,7 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
     }
     l_sensorHeader.count++;
     l_extnSensorList[l_sensorHeader.count].name = EXTN_NAME_FMAX;
-    freq = G_sysConfigData.sys_mode_freq.table[OCC_MODE_FMF];
+    freq = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_FMAX];
     if (freq > 0)
     {
         l_extnSensorList[l_sensorHeader.count].data[0] = proc_freq2pstate(freq);
@@ -1208,9 +1208,10 @@ errlHndl_t cmdh_tmgt_setmodestate(const cmdh_fsp_cmd_t * i_cmd_ptr,
         }
 
         // Verify additional mode parameter
-        bool l_vpd_curve_fit_point = ((l_cmd_ptr->mode_parm >= VPD_CURVE_FIT_POINT_0) && (l_cmd_ptr->mode_parm <= VPD_CURVE_FIT_POINT_7)) ? TRUE : FALSE;
-        bool l_other_mode = ((l_cmd_ptr->mode_parm >= MIN_FREQ_POINT) && (l_cmd_ptr->mode_parm <= FMAX_FREQ_POINT)) ? TRUE : FALSE;
-        bool l_valid_freq = ((l_cmd_ptr->mode_parm >= G_oppb.frequency_min_khz) && (l_cmd_ptr->mode_parm <= G_oppb.frequency_max_khz)) ? TRUE : FALSE;
+        bool l_vpd_curve_fit_point = ((l_cmd_ptr->mode_parm >= OCC_MODE_PARM_VPD_CF0_PT) && (l_cmd_ptr->mode_parm <= OCC_MODE_PARM_VPD_CF7_PT)) ? TRUE : FALSE;
+        bool l_other_mode = ((l_cmd_ptr->mode_parm >= OCC_MODE_PARM_MIN_FREQ_PT) && (l_cmd_ptr->mode_parm <= OCC_MODE_PARM_FMAX_FREQ_PT)) ? TRUE : FALSE;
+        bool l_valid_freq = ((l_cmd_ptr->mode_parm >= G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MIN_FREQ]) &&
+                             (l_cmd_ptr->mode_parm <= G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_WOF_BASE])) ? TRUE : FALSE;
 
         if( ((l_cmd_ptr->occ_mode == OCC_MODE_STATIC_FREQ_POINT) && !(l_vpd_curve_fit_point || l_other_mode)) ||
             ((l_cmd_ptr->occ_mode == OCC_MODE_FFO) && !l_valid_freq))

@@ -376,7 +376,7 @@ void amec_pcap_calc(const bool i_oversub_state)
         {
             // un-throttle memory if there is enough available power between
             // current and new throttles
-            if (CURRENT_MODE() == OCC_MODE_NOMINAL)
+            if (CURRENT_MODE() == OCC_MODE_DISABLED)
             {
                 mem_pwr_diff = g_amec->pcap.nominal_mem_pwr;
             }
@@ -450,11 +450,11 @@ void amec_pcap_calc(const bool i_oversub_state)
         //      nominal cores will drop below nominal if ppb_fmax drops below nominal
         if(g_amec->pcap.active_node_pcap < G_sysConfigData.pcap.max_pcap)
         {
-           g_amec->proc[0].pwr_votes.nom_pcap_fmin = G_sysConfigData.sys_mode_freq.table[OCC_MODE_MIN_FREQUENCY];
+           g_amec->proc[0].pwr_votes.nom_pcap_fmin = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MIN_FREQ];
         }
         else
         {
-           g_amec->proc[0].pwr_votes.nom_pcap_fmin = G_sysConfigData.sys_mode_freq.table[OCC_MODE_NOMINAL];
+           g_amec->proc[0].pwr_votes.nom_pcap_fmin = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_DISABLED];
         }
     }
 }
@@ -498,9 +498,9 @@ void amec_pcap_controller(void)
         l_proc_pcap_vote = G_proc_fmax_mhz;
     }
 
-    if(l_proc_pcap_vote < G_sysConfigData.sys_mode_freq.table[OCC_MODE_MIN_FREQUENCY])
+    if(l_proc_pcap_vote < G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MIN_FREQ])
     {
-        l_proc_pcap_vote = G_sysConfigData.sys_mode_freq.table[OCC_MODE_MIN_FREQUENCY];
+        l_proc_pcap_vote = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MIN_FREQ];
     }
 
     //Power capping for nominal cores is not allowed to drop frequency below nom_pcap_fmin
@@ -552,7 +552,7 @@ void amec_ppb_fmax_calc(void)
         //OCC to lower nominal core frequencies, we require the power to be over
         //the pcap for PPB_NOM_DROP_DELAY ticks before lowering PPB Fmax below
         //Fnom.
-        if((g_amec->proc[0].pwr_votes.ppb_fmax == G_sysConfigData.sys_mode_freq.table[OCC_MODE_NOMINAL])
+        if((g_amec->proc[0].pwr_votes.ppb_fmax == G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_DISABLED])
                 && (l_power_avail <=0))
         {
             if(G_over_pcap_count < PPB_NOM_DROP_DELAY)
@@ -584,9 +584,9 @@ void amec_ppb_fmax_calc(void)
                 G_sysConfigData.master_ppb_fmax = G_proc_fmax_mhz;
             }
 
-            if(G_sysConfigData.master_ppb_fmax < G_sysConfigData.sys_mode_freq.table[OCC_MODE_MIN_FREQUENCY])
+            if(G_sysConfigData.master_ppb_fmax < G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MIN_FREQ])
             {
-                G_sysConfigData.master_ppb_fmax = G_sysConfigData.sys_mode_freq.table[OCC_MODE_MIN_FREQUENCY];
+                G_sysConfigData.master_ppb_fmax = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MIN_FREQ];
             }
         }
     }//End of Master code

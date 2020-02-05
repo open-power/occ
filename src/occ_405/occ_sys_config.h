@@ -247,10 +247,10 @@ typedef struct
 } masterCapability_t;
 
 
-// System Frequency
+// Frequency points
 typedef struct
 {
-    uint16_t table[OCC_MODE_COUNT];  // Table w/ freq for each mode
+    uint16_t table[OCC_FREQ_PT_COUNT];  // Table w/ freq for each mode/freq point
 } freqConfig_t;
 
 // Power Cap Structures
@@ -356,6 +356,9 @@ typedef struct
   // Max Frequency for each mode
   // ------------------------------------
   freqConfig_t sys_mode_freq;
+
+  // indicates if Fmax mode has been enabled (0x01) or not (0x00)
+  uint8_t fmax_mode_enable;
 
   // ------------------------------------
   // APSS Configuration Data

@@ -138,6 +138,16 @@ Pstate_t proc_freq2pstate(uint32_t i_freq_mhz)
         // Freq Units need to be in kHz, not Mhz for the following calculations
         l_freq_khz = i_freq_mhz * 1000;
 
+        // first make sure frequency passed in is within this chip's min and max
+        if(i_freq_mhz < G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MIN_FREQ])
+        {
+            l_freq_khz =  G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MIN_FREQ] * 1000;
+        }
+        else if(i_freq_mhz > G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MAX_FREQ])
+        {
+            l_freq_khz = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MAX_FREQ] * 1000;
+        }
+
         // Return Pmin if the frequency is below or equal to the min Freq for the lowest Pstate
         if(l_freq_khz <= G_oppb.frequency_min_khz )
         {
@@ -145,11 +155,8 @@ Pstate_t proc_freq2pstate(uint32_t i_freq_mhz)
             break;
         }
 
-        if(i_freq_mhz < G_sysConfigData.sys_mode_freq.table[OCC_MODE_MIN_FREQUENCY])
-        {
-            l_freq_khz =  G_sysConfigData.sys_mode_freq.table[OCC_MODE_MIN_FREQUENCY] * 1000;
-        }
-
+        // frequency is above min pstate, calculate Pstate from max
+        // G_oppb.frequency_max_khz is the frequency for Pstate 0 (PMAX)
         if(l_freq_khz < G_oppb.frequency_max_khz)
         {
             // First, calculate the delta between passed in freq, and Pmax
@@ -294,8 +301,8 @@ void populate_opal_static_config_data(void)
     G_opal_static_table.config.version  = 0x90;
     G_opal_static_table.config.occ_role = G_occ_role;
     G_opal_static_table.config.pmin     = proc_freq2pstate(g_amec->sys.fmin);
-    G_opal_static_table.config.pnominal = proc_freq2pstate(G_sysConfigData.sys_mode_freq.table[OCC_MODE_NOMINAL]);
-    G_opal_static_table.config.pturbo   = proc_freq2pstate(G_sysConfigData.sys_mode_freq.table[OCC_MODE_WOF_BASE]);
+    G_opal_static_table.config.pnominal = proc_freq2pstate(G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_DISABLED]);
+    G_opal_static_table.config.pturbo   = proc_freq2pstate(G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_WOF_BASE]);
     G_opal_static_table.config.puturbo  = proc_freq2pstate(G_proc_fmax_mhz);
 }
 

@@ -976,9 +976,9 @@ int set_nominal_pstate(void)
    do
    {
        // Make sure we have received the frequency config data to know what nominal is
-       if( (G_sysConfigData.sys_mode_freq.table[OCC_MODE_WOF_BASE] == 0) )
+       if( (G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_DISABLED] == 0) )
        {
-            TRAC_ERR("set_nominal_pstate: WOF_BASE frequency not known!");
+            TRAC_ERR("set_nominal_pstate: frequency not known!");
             l_rc = ERC_FW_ZERO_FREQ_LIMIT;
             break;
        }
@@ -1026,8 +1026,8 @@ int set_nominal_pstate(void)
            }
        }
 
-       // Pstate protocol is now enabled for OCC to set Pstate to nominal
-       l_pstate = proc_freq2pstate(G_sysConfigData.sys_mode_freq.table[OCC_MODE_NOMINAL]);
+       // Pstate protocol is now enabled for OCC to set Pstate to mode off point
+       l_pstate = proc_freq2pstate(G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_DISABLED]);
        // Update pmcr value with nominal pstate and version (Version 1: Fast Request Mode)
        G_pmcr_set_parms.pmcr = ((uint64_t)l_pstate << 48) | 1;
 
@@ -1035,11 +1035,11 @@ int set_nominal_pstate(void)
        l_rc = pgpe_pmcr_set();
        if(l_rc == 0)
        {
-           TRAC_IMP("set_nominal_pstate: Successfully set WOF_BASE pstate[0x%02X]", l_pstate);
+           TRAC_IMP("set_nominal_pstate: Successfully set pstate[0x%02X]", l_pstate);
        }
        else
        {
-           TRAC_ERR("set_nominal_pstate: Set WOF_BASE pstate[0x%02X] failed with rc[0x%04X]", l_pstate, l_rc);
+           TRAC_ERR("set_nominal_pstate: Set pstate[0x%02X] failed with rc[0x%04X]", l_pstate, l_rc);
        }
 
    } while(0);

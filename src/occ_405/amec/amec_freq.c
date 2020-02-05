@@ -111,51 +111,71 @@ errlHndl_t amec_set_freq_range(const OCC_MODE i_mode)
     errlHndl_t                  l_err = NULL;
     uint16_t                    l_freq_min  = 0;
     uint16_t                    l_freq_max  = 0;
-    uint32_t                    l_temp = 0;
-    amec_mode_freq_t            l_ppm_freq[OCC_INTERNAL_MODE_MAX_NUM] = {{0}};
 
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
 
-    // First set to Max Freq Range for this mode
-    // if no mode set yet default to the full range
-    if(i_mode == OCC_MODE_NOCHANGE)
-    {
-        l_freq_min = G_sysConfigData.sys_mode_freq.table[OCC_MODE_MIN_FREQUENCY];
+    // all modes use the same minimum
+    l_freq_min = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MIN_FREQ];
 
-        // Set Max frequency (turbo if wof off, otherwise max possible (ultra turbo)
-        if( g_amec->wof.wof_disabled || (g_amec->wof.wof_init_state != WOF_ENABLED))
+    // Determine Max Freq for this mode
+    // if no mode set yet or running with OPAL set to the full range
+    if( (i_mode == OCC_MODE_NOCHANGE) || (G_sysConfigData.system_type.kvm) )
+    {
+        // Set Max frequency to WOF base if wof and Fmax is off, otherwise max possible
+        if( (g_amec->wof.wof_disabled || (g_amec->wof.wof_init_state != WOF_ENABLED)) &&
+            (!G_sysConfigData.fmax_mode_enable) )
         {
-            l_freq_max = G_sysConfigData.sys_mode_freq.table[OCC_MODE_WOF_BASE];
+            l_freq_max = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_WOF_BASE];
         }
         else
         {
             l_freq_max = G_proc_fmax_mhz;
         }
     }
-    else if( VALID_MODE(i_mode) )  // Set to Max Freq Range for this mode
+    else  // Set max based on specific mode
     {
-      l_freq_min = G_sysConfigData.sys_mode_freq.table[OCC_MODE_MIN_FREQUENCY];
 
-      // Use max frequency for performance modes and FMF
-      if( (i_mode == OCC_MODE_NOM_PERFORMANCE) || (i_mode == OCC_MODE_MAX_PERFORMANCE) ||
-          (i_mode == OCC_MODE_FMF) || (i_mode == OCC_MODE_DYN_POWER_SAVE) ||
-          (i_mode == OCC_MODE_DYN_POWER_SAVE_FP) )
+      switch(i_mode)
       {
-          // clip to turbo if WOF is disabled
-          if( g_amec->wof.wof_disabled || (g_amec->wof.wof_init_state != WOF_ENABLED))
-          {
-              l_freq_max = G_sysConfigData.sys_mode_freq.table[OCC_MODE_WOF_BASE];
-          }
-          else
-          {
-              l_freq_max = G_proc_fmax_mhz;
-          }
-      }
-      else
+          case OCC_MODE_DISABLED:
+              l_freq_max = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_DISABLED];
+              break;
+
+          case OCC_MODE_STATIC_FREQ_POINT:
+          case OCC_MODE_FFO:
+              // frequency was set by user in the mode parameter and verified when mode was set
+              l_freq_max = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_USER];
+              break;
+
+          case OCC_MODE_PWRSAVE:
+              l_freq_max = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_PWR_SAVE];
+              break;
+
+          case OCC_MODE_DYN_PERF:
+              l_freq_max = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_DYN_PERF];
+              break;
+
+          case OCC_MODE_MAX_PERF:
+              l_freq_max = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_MAX_PERF];
+              break;
+
+          case OCC_MODE_FMAX:
+              l_freq_max = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_FMAX];
+              break;
+
+          default: // should never happen
+              TRAC_ERR("amec_set_freq_range unknown mode[%d]", i_mode);
+              break;
+      } // switch i_mode
+
+      // Verify that WOF is running for performance modes
+      if( ( (i_mode == OCC_MODE_DYN_PERF) || (i_mode == OCC_MODE_MAX_PERF) ) &&
+          ( g_amec->wof.wof_disabled || (g_amec->wof.wof_init_state != WOF_ENABLED) ) )
       {
-          l_freq_max = G_sysConfigData.sys_mode_freq.table[i_mode];
+          // clip to WOF base since WOF is disabled
+          l_freq_max = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_WOF_BASE];
       }
     }
 
@@ -210,29 +230,6 @@ errlHndl_t amec_set_freq_range(const OCC_MODE i_mode)
                 proc_freq2pstate(g_amec->sys.fmin),
                 l_freq_max,
                 proc_freq2pstate(g_amec->sys.fmax));
-
-      // Now determine the max frequency for the PPM structure
-      l_ppm_freq[OCC_INTERNAL_MODE_NOM].fmax    = G_sysConfigData.sys_mode_freq.table[OCC_MODE_NOMINAL];
-      l_ppm_freq[OCC_INTERNAL_MODE_DPS].fmax    = G_sysConfigData.sys_mode_freq.table[OCC_MODE_DYN_POWER_SAVE];
-      l_ppm_freq[OCC_INTERNAL_MODE_DPS_MP].fmax = G_sysConfigData.sys_mode_freq.table[OCC_MODE_DYN_POWER_SAVE_FP];
-
-      // Determine the min frequency for the PPM structure. This Fmin should
-      // always be set to the system Fmin
-      l_ppm_freq[OCC_INTERNAL_MODE_NOM].fmin    = G_sysConfigData.sys_mode_freq.table[OCC_MODE_MIN_FREQUENCY];
-      l_ppm_freq[OCC_INTERNAL_MODE_DPS].fmin    = G_sysConfigData.sys_mode_freq.table[OCC_MODE_MIN_FREQUENCY];
-      l_ppm_freq[OCC_INTERNAL_MODE_DPS_MP].fmin = G_sysConfigData.sys_mode_freq.table[OCC_MODE_MIN_FREQUENCY];
-
-      // Determine the min speed allowed for DPS power policies (this is needed
-      // by the DPS algorithms)
-      l_temp = (l_ppm_freq[OCC_INTERNAL_MODE_DPS].fmin * 1000)/l_ppm_freq[OCC_INTERNAL_MODE_DPS].fmax;
-      l_ppm_freq[OCC_INTERNAL_MODE_DPS].min_speed = l_temp;
-
-      l_temp = (l_ppm_freq[OCC_INTERNAL_MODE_DPS_MP].fmin * 1000)/l_ppm_freq[OCC_INTERNAL_MODE_DPS_MP].fmax;
-      l_ppm_freq[OCC_INTERNAL_MODE_DPS_MP].min_speed = l_temp;
-
-      // Copy the PPM frequency information into g_amec
-      memcpy(g_amec->part_mode_freq, l_ppm_freq, sizeof(l_ppm_freq));
-
     }
     return l_err;
 }
@@ -267,7 +264,7 @@ void amec_slv_proc_voting_box(void)
     amec_part_t                     *l_part = NULL;
 
     // frequency threshold for reporting throttling
-    uint16_t l_report_throttle_freq = G_sysConfigData.sys_mode_freq.table[OCC_MODE_WOF_BASE];
+    uint16_t l_report_throttle_freq = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_WOF_BASE];
 
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
@@ -284,19 +281,6 @@ void amec_slv_proc_voting_box(void)
     // Voting Box for CPU speed.
     // This function implements the voting box to decide which input gets the right
     // to actuate the system.
-
-    // check for oversubscription if redundant ps policy (oversubscription) is being enforced
-    if (G_sysConfigData.system_type.non_redund_ps == false)
-    {
-        // If in oversubscription and there is a defined (non 0) OVERSUB frequency less than max then use it
-        if( (AMEC_INTF_GET_OVERSUBSCRIPTION()) &&
-            (G_sysConfigData.sys_mode_freq.table[OCC_MODE_OVERSUB]) &&
-            (G_sysConfigData.sys_mode_freq.table[OCC_MODE_OVERSUB] < l_chip_fmax) )
-        {
-            l_chip_fmax = G_sysConfigData.sys_mode_freq.table[OCC_MODE_OVERSUB];
-            l_chip_reason = AMEC_VOTING_REASON_OVERSUB;
-        }
-    }
 
     // PPB_FMAX
     if(g_amec->proc[0].pwr_votes.ppb_fmax < l_chip_fmax)
@@ -407,7 +391,7 @@ void amec_slv_proc_voting_box(void)
                 }
             }
 
-            if(CURRENT_MODE() == OCC_MODE_NOMINAL)
+            if(CURRENT_MODE() == OCC_MODE_DISABLED)
             {
                 // PROC_PCAP_NOM_VOTE
                 if(g_amec->proc[0].pwr_votes.proc_pcap_nom_vote < l_core_freq)
@@ -501,11 +485,9 @@ void amec_slv_proc_voting_box(void)
 
             //CURRENT_MODE() may be OCC_MODE_NOCHANGE because STATE change is processed
             //before MODE change
-            if ((CURRENT_MODE() != OCC_MODE_DYN_POWER_SAVE)    &&
-                (CURRENT_MODE() != OCC_MODE_DYN_POWER_SAVE_FP) &&
-                (CURRENT_MODE() != OCC_MODE_NOM_PERFORMANCE)   &&
-                (CURRENT_MODE() != OCC_MODE_MAX_PERFORMANCE)   &&
-                (CURRENT_MODE() != OCC_MODE_FMF)               &&
+            if ((CURRENT_MODE() != OCC_MODE_DYN_PERF)   &&
+                (CURRENT_MODE() != OCC_MODE_MAX_PERF)   &&
+                (CURRENT_MODE() != OCC_MODE_FFO)               &&
                 (CURRENT_MODE() != OCC_MODE_NOCHANGE)          &&
                 (l_core_reason & NON_DPS_POWER_LIMITED))
             {

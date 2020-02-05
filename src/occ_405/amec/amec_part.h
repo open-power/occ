@@ -67,7 +67,7 @@ typedef struct amec_part
     ///Flag to indicate if the core group should follow the system power policy
     BOOLEAN                     follow_sysmode;
     ///EnergyScale power savings policy
-    OCC_INTERNAL_MODE           es_policy;
+    OCC_MODE                    es_policy;
     ///Total number of cores in this core group.
     uint8_t                     ncores;
     ///List of cores group. Indices 0 to ncores-1 are valid. Valid values: 0 to
@@ -136,13 +136,6 @@ void amec_part_update_dps_parameter(amec_part_t* io_part);
  *
  */
 void amec_part_update_perf_settings(amec_part_t* io_part);
-
-/**
- * Update the power mode on all core groups that are following 
- * the system mode. 
- *
- */
-void AMEC_part_update_sysmode_policy(OCC_MODE i_occ_internal_mode);
 
 /**
  * Overwrite the tunable parameters used by the DPS algorithms 

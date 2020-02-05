@@ -35,14 +35,12 @@
 #include "amec_data.h"
 #include "amec_sys.h"
 
-errlHndl_t SMGR_mode_transition_to_nominal();
+errlHndl_t SMGR_mode_transition_to_disabled();
 errlHndl_t SMGR_mode_transition_to_powersave();
-errlHndl_t SMGR_mode_transition_to_dynpowersave();
-errlHndl_t SMGR_mode_transition_to_dynpowersave_fp();
 errlHndl_t SMGR_mode_transition_to_static_freq_point();
 errlHndl_t SMGR_mode_transition_to_ffo();
-errlHndl_t SMGR_mode_transition_to_fmf();
-errlHndl_t SMGR_mode_transition_to_nom_perf();
+errlHndl_t SMGR_mode_transition_to_fmax();
+errlHndl_t SMGR_mode_transition_to_dyn_perf();
 errlHndl_t SMGR_mode_transition_to_max_perf();
 
 
@@ -75,15 +73,13 @@ SsxSemaphore        G_smgrModeChangeSem;
 const smgr_state_trans_t G_smgr_mode_trans[] =
 {
     /* Current Mode         New Mode                    Transition Function */
-    {OCC_MODE_ALL,          OCC_MODE_NOMINAL,           &SMGR_mode_transition_to_nominal},
+    {OCC_MODE_ALL,          OCC_MODE_DISABLED,          &SMGR_mode_transition_to_disabled},
     {OCC_MODE_ALL,          OCC_MODE_PWRSAVE,           &SMGR_mode_transition_to_powersave},
-    {OCC_MODE_ALL,          OCC_MODE_DYN_POWER_SAVE,    &SMGR_mode_transition_to_dynpowersave},
-    {OCC_MODE_ALL,          OCC_MODE_DYN_POWER_SAVE_FP, &SMGR_mode_transition_to_dynpowersave_fp},
     {OCC_MODE_ALL,          OCC_MODE_STATIC_FREQ_POINT, &SMGR_mode_transition_to_static_freq_point},
     {OCC_MODE_ALL,          OCC_MODE_FFO,               &SMGR_mode_transition_to_ffo},
-    {OCC_MODE_ALL,          OCC_MODE_FMF,               &SMGR_mode_transition_to_fmf},
-    {OCC_MODE_ALL,          OCC_MODE_NOM_PERFORMANCE,   &SMGR_mode_transition_to_nom_perf},
-    {OCC_MODE_ALL,          OCC_MODE_MAX_PERFORMANCE,   &SMGR_mode_transition_to_max_perf},
+    {OCC_MODE_ALL,          OCC_MODE_FMAX,              &SMGR_mode_transition_to_fmax},
+    {OCC_MODE_ALL,          OCC_MODE_DYN_PERF,          &SMGR_mode_transition_to_dyn_perf},
+    {OCC_MODE_ALL,          OCC_MODE_MAX_PERF,          &SMGR_mode_transition_to_max_perf},
 };
 const uint8_t G_smgr_mode_trans_count = sizeof(G_smgr_mode_trans)/sizeof(smgr_state_trans_t);
 
@@ -163,17 +159,11 @@ errlHndl_t SMGR_set_mode( const OCC_MODE i_mode )
              break;
          }
 
-         // OPAL only accepts DPS-FE mode. In case OCC gets other modes, it should accept the request
-         // and keep reporting back that it is in that mode. However, internally we should not
-         // initiate any mode transition, i.e., OCC should remain internally in DPS-FE mode.
+         // Running with OPAL, just accept whatever mode and keep reporting back that we are
+         // in that mode. However, internally we should not initiate any mode transition
          if(G_sysConfigData.system_type.kvm)
          {
              G_occ_external_req_mode_kvm = l_mode;
-             if (l_mode !=  OCC_MODE_DYN_POWER_SAVE)
-             {
-                 TRAC_ERR("OPAL only accepts DPS-FE mode(6) but requested mode is : %d", l_mode);
-                 l_mode = OCC_MODE_DYN_POWER_SAVE;
-             }
          }
 
          // Change Mode via Transition Function
@@ -234,8 +224,19 @@ errlHndl_t SMGR_set_mode( const OCC_MODE i_mode )
                  break;
              }
 
-             // Update the power mode for all core groups that are following system mode
-             AMEC_part_update_sysmode_policy(CURRENT_MODE());
+             // there is only one core group possible
+             g_amec->part_config.part_list[0].es_policy = CURRENT_MODE();
+/* TODO RTC 246412
+             // Update the DPS parameters based on the power policy
+             if (g_amec->part_config.part_list[0].es_policy == OCC_MODE_DYN_PERF)
+             {
+                amec_part_update_dps_parameters(&(g_amec->part_config.part_list[0]));
+             }
+
+             // Update internal performance settings for this partition
+             amec_part_update_perf_settings(&(g_amec->part_config.part_list[0]));
+*/
+
          }
          while(0);
 
@@ -259,27 +260,27 @@ errlHndl_t SMGR_set_mode( const OCC_MODE i_mode )
 
 // Function Specification
 //
-// Name: SMGR_mode_transition_to_nominal
+// Name: SMGR_mode_transition_to_disabled
 //
 // Description:
 //
 // End Function Specification
-errlHndl_t SMGR_mode_transition_to_nominal()
+errlHndl_t SMGR_mode_transition_to_disabled()
 {
     errlHndl_t              l_errlHndl = NULL;
 
-    TRAC_IMP("SMGR: Mode to Nominal Transition Started");
+    TRAC_IMP("SMGR: Mode to Disabled Transition Started");
 
     // Set Freq Mode for AMEC to use
-    l_errlHndl = amec_set_freq_range(OCC_MODE_NOMINAL);
+    l_errlHndl = amec_set_freq_range(OCC_MODE_DISABLED);
 
-    CURRENT_MODE() = OCC_MODE_NOMINAL;
+    CURRENT_MODE() = OCC_MODE_DISABLED;
 
-    // WOF is disabled in nominal mode
+    // WOF is disabled in disabled mode
     set_clear_wof_disabled( SET,
                             WOF_RC_MODE_NO_SUPPORT_MASK,
                             ERC_WOF_MODE_NO_SUPPORT_MASK );
-    TRAC_IMP("SMGR: Mode to Nominal Transition Completed");
+    TRAC_IMP("SMGR: Mode to Disabled Transition Completed");
 
     return l_errlHndl;
 }
@@ -313,67 +314,9 @@ errlHndl_t SMGR_mode_transition_to_powersave()
     return l_errlHndl;
 }
 
-
 // Function Specification
 //
-// Name: SMGR_mode_transition_to_dynpowersave
-//
-// Description:
-//
-// End Function Specification
-errlHndl_t SMGR_mode_transition_to_dynpowersave()
-{
-    errlHndl_t              l_errlHndl = NULL;
-
-    TRAC_IMP("SMGR: Mode to Dynamic PowerSave-Favor Energy Transition Started");
-
-    // Set Freq Mode for AMEC to use
-    l_errlHndl = amec_set_freq_range(OCC_MODE_DYN_POWER_SAVE);
-
-
-    CURRENT_MODE() = OCC_MODE_DYN_POWER_SAVE;
-
-    // WOF is enabled in DPS, clear the mode bit
-    set_clear_wof_disabled( CLEAR,
-                            WOF_RC_MODE_NO_SUPPORT_MASK,
-                            ERC_WOF_MODE_NO_SUPPORT_MASK );
-
-    TRAC_IMP("SMGR: Mode to Dynamic PowerSave-Favor Energy Transition Completed");
-
-    return l_errlHndl;
-}
-
-// Function Specification
-//
-// Name: SMGR_mode_transition_to_dynpowersave_fp
-//
-// Description:
-//
-// End Function Specification
-errlHndl_t SMGR_mode_transition_to_dynpowersave_fp()
-{
-    errlHndl_t              l_errlHndl = NULL;
-
-    TRAC_IMP("SMGR: Mode to Dynamic PowerSave-Favor Performance Transition Started");
-
-    // Set Freq Mode for AMEC to use
-    l_errlHndl = amec_set_freq_range(OCC_MODE_DYN_POWER_SAVE_FP);
-
-    CURRENT_MODE() = OCC_MODE_DYN_POWER_SAVE_FP;
-    // WOF is enabled in DPS-FP, clear the mode bit
-    set_clear_wof_disabled( CLEAR,
-                            WOF_RC_MODE_NO_SUPPORT_MASK,
-                            ERC_WOF_MODE_NO_SUPPORT_MASK );
-
-    TRAC_IMP("SMGR: Mode to Dynamic PowerSave-Favor Performance Transition Completed");
-
-    return l_errlHndl;
-}
-
-
-// Function Specification
-//
-// Name: SMGR_mode_transition_to_turbo
+// Name: SMGR_mode_transition_to_static_freq_point
 //
 // Description:
 //
@@ -382,19 +325,19 @@ errlHndl_t SMGR_mode_transition_to_static_freq_point()
 {
     errlHndl_t              l_errlHndl = NULL;
 
-    TRAC_IMP("SMGR: Mode to Turbo Transition Started");
+    TRAC_IMP("SMGR: Mode to Static Frequency Point Transition Started");
 
     // Set Freq Mode for AMEC to use
     l_errlHndl = amec_set_freq_range(OCC_MODE_STATIC_FREQ_POINT);
 
     CURRENT_MODE() = OCC_MODE_STATIC_FREQ_POINT;
 
-    // WOF is disabled in turbo mode
+    // WOF is disabled in this mode
     set_clear_wof_disabled( SET,
                             WOF_RC_MODE_NO_SUPPORT_MASK,
                             ERC_WOF_MODE_NO_SUPPORT_MASK );
 
-    TRAC_IMP("SMGR: Mode to Turbo Transition Completed");
+    TRAC_IMP("SMGR: Mode to Static Frequency Point Transition Completed");
 
     return l_errlHndl;
 }
@@ -417,6 +360,7 @@ errlHndl_t SMGR_mode_transition_to_ffo()
     l_errlHndl = amec_set_freq_range(OCC_MODE_FFO);
 
     CURRENT_MODE() = OCC_MODE_FFO;
+
     // WOF is disabled in FFO
     set_clear_wof_disabled( SET,
                             WOF_RC_MODE_NO_SUPPORT_MASK,
@@ -429,53 +373,53 @@ errlHndl_t SMGR_mode_transition_to_ffo()
 
 // Function Specification
 //
-// Name: SMGR_mode_transition_to_fmf
+// Name: SMGR_mode_transition_to_fmax
 //
-// Description: Transition to Fixed Maximum Frequency mode
+// Description: Transition to Maximum Frequency mode
 //
 // End Function Specification
-errlHndl_t SMGR_mode_transition_to_fmf()
+errlHndl_t SMGR_mode_transition_to_fmax()
 {
     errlHndl_t              l_errlHndl = NULL;
 
-    TRAC_IMP("SMGR: Mode to FMF Transition Started");
+    TRAC_IMP("SMGR: Mode to Fmax Transition Started");
 
     // Set Freq Mode for AMEC to use
-    l_errlHndl = amec_set_freq_range(OCC_MODE_FMF);
+    l_errlHndl = amec_set_freq_range(OCC_MODE_FMAX);
 
-    CURRENT_MODE() = OCC_MODE_FMF;
-    // WOF is enabled in FMF, clear the mode bit
-    set_clear_wof_disabled( CLEAR,
+    CURRENT_MODE() = OCC_MODE_FMAX;
+    // WOF is disabled in Fmax
+    set_clear_wof_disabled( SET,
                             WOF_RC_MODE_NO_SUPPORT_MASK,
                             ERC_WOF_MODE_NO_SUPPORT_MASK );
-    TRAC_IMP("SMGR: Mode to FMF Transition Completed");
+    TRAC_IMP("SMGR: Mode to Fmax Transition Completed");
 
     return l_errlHndl;
 }
 
 // Function Specification
 //
-// Name: SMGR_mode_transition_to_nom_perf
+// Name: SMGR_mode_transition_to_dyn_perf
 //
-// Description: Transition to nominal performance mode
+// Description: Transition to dynamic performance mode
 //
 // End Function Specification
-errlHndl_t SMGR_mode_transition_to_nom_perf()
+errlHndl_t SMGR_mode_transition_to_dyn_perf()
 {
     errlHndl_t              l_errlHndl = NULL;
 
-    TRAC_IMP("SMGR: Mode to Nominal Performance Transition Started");
+    TRAC_IMP("SMGR: Mode to Dynamic Performance Transition Started");
 
     // Set Freq Mode for AMEC to use
-    l_errlHndl = amec_set_freq_range(OCC_MODE_NOM_PERFORMANCE);
+    l_errlHndl = amec_set_freq_range(OCC_MODE_DYN_PERF);
 
-    CURRENT_MODE() = OCC_MODE_NOM_PERFORMANCE;
-    // WOF is enabled in nominal performance mode, clear the mode bit
+    CURRENT_MODE() = OCC_MODE_DYN_PERF;
+    // WOF is enabled in dynamic performance mode, clear the mode bit
     set_clear_wof_disabled( CLEAR,
                             WOF_RC_MODE_NO_SUPPORT_MASK,
                             ERC_WOF_MODE_NO_SUPPORT_MASK );
 
-    TRAC_IMP("SMGR: Mode to Nominal Performance Transition Completed");
+    TRAC_IMP("SMGR: Mode to Dynamic Performance Transition Completed");
 
     return l_errlHndl;
 }
@@ -494,9 +438,9 @@ errlHndl_t SMGR_mode_transition_to_max_perf()
     TRAC_IMP("SMGR: Mode to Maximum Performance Transition Started");
 
     // Set Freq Mode for AMEC to use
-    l_errlHndl = amec_set_freq_range(OCC_MODE_MAX_PERFORMANCE);
+    l_errlHndl = amec_set_freq_range(OCC_MODE_MAX_PERF);
 
-    CURRENT_MODE() = OCC_MODE_MAX_PERFORMANCE;
+    CURRENT_MODE() = OCC_MODE_MAX_PERF;
     // WOF is enabled in max performance mode, clear the mode bit
     set_clear_wof_disabled( CLEAR,
                             WOF_RC_MODE_NO_SUPPORT_MASK,

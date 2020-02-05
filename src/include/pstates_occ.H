@@ -160,7 +160,17 @@ typedef struct
     uint32_t            pstate_min;           // Pstate reflecting frequency_min_khz
     uint32_t            occ_complex_frequency_mhz;
 
-    uint8_t reserved[64];
+    // TDP WOF Base frequency from #V
+    uint32_t            wof_base_frequency_mhz;
+
+    uint32_t            fixed_frequency_mhz;
+
+    // Pstate reflecting maximum amount of throttling.  The difference between
+    // pstate_max_throttle and pstate_min is the throttle Pstate space
+    uint32_t            pstate_max_throttle;
+
+
+    uint8_t reserved[52];
 
 } OCCPstateParmBlock_t __attribute__((aligned(128))) ;
 

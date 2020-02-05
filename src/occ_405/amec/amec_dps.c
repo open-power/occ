@@ -216,7 +216,6 @@ void amec_dps_partition_alg(const uint16_t i_part_id)
     uint16_t                    l_tempreg = 0;
     uint16_t                    l_temp16 = 0;
     uint32_t                    l_divide32[2] = {0, 0};
-    OCC_INTERNAL_MODE           l_part_policy = 0xFF;
     static bool                 L_trace = FALSE;
 
     /*------------------------------------------------------------------------*/
@@ -279,16 +278,14 @@ void amec_dps_partition_alg(const uint16_t i_part_id)
         {
             l_temp16 = g_amec->sys.max_speed;
         }
-        // Use the lower boundary based on the power policy of the core group
-        l_part_policy = g_amec->part_config.part_list[i_part_id].es_policy;
-        if (l_temp16 < g_amec->part_mode_freq[l_part_policy].min_speed)
+        if (l_temp16 < g_amec->sys.min_speed)
         {
-            l_temp16 = g_amec->part_mode_freq[l_part_policy].min_speed;
+            l_temp16 = g_amec->sys.min_speed;
         }
 
         // Generate vote for utilization
         g_amec->part_config.part_list[i_part_id].dpsalg.util_speed_request = l_temp16;
-        l_freq = amec_controller_speed2freq(l_temp16, g_amec->part_mode_freq[l_part_policy].fmax);
+        l_freq = amec_controller_speed2freq(l_temp16, G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_DYN_PERF]);
         g_amec->part_config.part_list[i_part_id].dpsalg.freq_request = l_freq;
 
         for (l_idx=0; l_idx<g_amec->part_config.part_list[i_part_id].ncores; l_idx++)
@@ -341,8 +338,7 @@ void amec_dps_main(void)
 
         switch (g_amec->part_config.part_list[l_idx].es_policy)
         {
-            case OCC_INTERNAL_MODE_DPS:
-            case OCC_INTERNAL_MODE_DPS_MP:
+            case OCC_MODE_DYN_PERF:
                 amec_dps_partition_update_sensors(l_idx);
                 amec_dps_partition_alg(l_idx);
                 break;
@@ -356,8 +352,7 @@ void amec_dps_main(void)
     }
 
     // For GA1, we need to send the Fwish to the Master OCC
-    if ((g_amec->part_config.part_list[0].es_policy == OCC_INTERNAL_MODE_DPS) ||
-        (g_amec->part_config.part_list[0].es_policy == OCC_INTERNAL_MODE_DPS_MP))
+    if (g_amec->part_config.part_list[0].es_policy == OCC_MODE_DYN_PERF)
     {
         // If this core group policy is one of the DPS modes, then send the
         // frequency request from the DPS algorithm
@@ -366,9 +361,9 @@ void amec_dps_main(void)
     }
     else
     {
-        // Else, send the nominal frequency of the system
+        // Else, send wof base frequency of the system
         G_dcom_slv_outbox_tx.fwish =
-            g_amec->part_mode_freq[OCC_INTERNAL_MODE_NOM].fmax;
+            G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_WOF_BASE];
     }
     // We also need to send the Factual to the Master OCC
     for (l_idx=0; l_idx<MAX_NUM_CORES; l_idx++)

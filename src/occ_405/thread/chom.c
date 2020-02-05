@@ -42,7 +42,7 @@ extern amec_sys_t g_amec_sys;
 uint32_t g_chom_gen_periodic_log_timer;
 
 // track which power mode has been during the polling period
-uint8_t  g_chom_pwr_modes[OCC_INTERNAL_MODE_MAX_NUM]; // Nominal, SPS, DPS, DPS-MP, FFO
+uint8_t  g_chom_pwr_modes[NUM_CHOM_MODES];
 
 // force immediate chom log flag
 uint8_t  g_chom_force;
@@ -172,8 +172,8 @@ void chom_update_sensors()
 
     static uint32_t L_memBWNumSamples[NUM_CHOM_MODES][MAX_NUM_CHOM_MEM_CTRL] = {{0}};
 
-    // Use FMF as default
-    static uint32_t * L_curNumSamplePtr = L_memBWNumSamples[CHOM_MODE_FMF];
+    // Use FMAX as default
+    static uint32_t * L_curNumSamplePtr = L_memBWNumSamples[CHOM_MODE_FMAX];
 
     if(TRUE == g_chom_reset)
     {
@@ -204,50 +204,45 @@ void chom_update_sensors()
         // update the number of power modes during the polling period
         switch (g_chom->nodeData.curPwrMode)
         {
-            case OCC_MODE_NOMINAL:
-                g_chom_pwr_modes[OCC_INTERNAL_MODE_NOM] = 1;
-                L_curNumSamplePtr = L_memBWNumSamples[CHOM_MODE_NOMINAL];
+            case OCC_MODE_DISABLED:
+                g_chom_pwr_modes[CHOM_MODE_DISABLED] = 1;
+                L_curNumSamplePtr = L_memBWNumSamples[CHOM_MODE_DISABLED];
                 break;
 
             case OCC_MODE_PWRSAVE:
-                g_chom_pwr_modes[OCC_INTERNAL_MODE_SPS] = 1;
+                g_chom_pwr_modes[CHOM_MODE_SPS] = 1;
                 L_curNumSamplePtr = L_memBWNumSamples[CHOM_MODE_SPS];
                 break;
 
-            case OCC_MODE_DYN_POWER_SAVE:
-                g_chom_pwr_modes[OCC_INTERNAL_MODE_DPS] = 1;
-                L_curNumSamplePtr = L_memBWNumSamples[CHOM_MODE_DPS];
-                break;
-
-            case OCC_MODE_DYN_POWER_SAVE_FP:
-                g_chom_pwr_modes[OCC_INTERNAL_MODE_DPS_MP] = 1;
-                L_curNumSamplePtr = L_memBWNumSamples[CHOM_MODE_DPS_MP];
+            case OCC_MODE_STATIC_FREQ_POINT:
+                g_chom_pwr_modes[CHOM_MODE_SFP] = 1;
+                L_curNumSamplePtr = L_memBWNumSamples[CHOM_MODE_SFP];
                 break;
 
             case OCC_MODE_FFO:
-                g_chom_pwr_modes[OCC_INTERNAL_MODE_FFO] = 1;
+                g_chom_pwr_modes[CHOM_MODE_FFO] = 1;
                 L_curNumSamplePtr = L_memBWNumSamples[CHOM_MODE_FFO];
                 break;
 
-            case OCC_MODE_NOM_PERFORMANCE:
-                g_chom_pwr_modes[OCC_INTERNAL_MODE_NOM_PERF] = 1;
-                L_curNumSamplePtr = L_memBWNumSamples[CHOM_MODE_NOM_PERF];
+            case OCC_MODE_DYN_PERF:
+                g_chom_pwr_modes[CHOM_MODE_DYN_PERF] = 1;
+                L_curNumSamplePtr = L_memBWNumSamples[CHOM_MODE_DYN_PERF];
                 break;
 
-            case OCC_MODE_MAX_PERFORMANCE:
-                g_chom_pwr_modes[OCC_INTERNAL_MODE_MAX_PERF] = 1;
+            case OCC_MODE_MAX_PERF:
+                g_chom_pwr_modes[CHOM_MODE_MAX_PERF] = 1;
                 L_curNumSamplePtr = L_memBWNumSamples[CHOM_MODE_MAX_PERF];
                 break;
 
-            case OCC_MODE_FMF:
-                g_chom_pwr_modes[OCC_INTERNAL_MODE_FMF] = 1;
-                L_curNumSamplePtr = L_memBWNumSamples[CHOM_MODE_FMF];
+            case OCC_MODE_FMAX:
+                g_chom_pwr_modes[CHOM_MODE_FMAX] = 1;
+                L_curNumSamplePtr = L_memBWNumSamples[CHOM_MODE_FMAX];
                 break;
 
             default:
                 TRAC_INFO("chom_update_sensors: Cannot record chom data for mode 0x%02X",
                           g_chom->sensorData[0].pwrMode.mode);
-                L_curNumSamplePtr = L_memBWNumSamples[CHOM_MODE_FMF];
+                L_curNumSamplePtr = L_memBWNumSamples[CHOM_MODE_FMAX];
                 break;
         }
     }
@@ -423,7 +418,7 @@ void chom_gen_periodic_log()
     g_chom->nodeData.totalTime = g_chom_gen_periodic_log_timer;
 
     // update the number of different power modes
-    for (i=0 ; i<OCC_INTERNAL_MODE_MAX_NUM ; i++)
+    for (i=0 ; i<NUM_CHOM_MODES ; i++)
     {
         if (g_chom_pwr_modes[i] == 1)
         {

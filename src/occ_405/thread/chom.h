@@ -133,14 +133,13 @@ enum
 
 enum chom_supported_modes
 {
-    CHOM_MODE_NOMINAL,
-    CHOM_MODE_SPS,
-    CHOM_MODE_DPS,
-    CHOM_MODE_DPS_MP,
+    CHOM_MODE_DISABLED,
+    CHOM_MODE_SPS,   // Static Power Save
+    CHOM_MODE_SFP,   // Static Frequency Point
     CHOM_MODE_FFO,
-    CHOM_MODE_NOM_PERF,
+    CHOM_MODE_DYN_PERF,
     CHOM_MODE_MAX_PERF,
-    CHOM_MODE_FMF,
+    CHOM_MODE_FMAX,
     // number of modes required to run Call home
     NUM_CHOM_MODES
 };

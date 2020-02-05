@@ -81,60 +81,6 @@ extern uint16_t G_proc_fmax_mhz;
 
 // Function Specification
 //
-// Name:  AMEC_data_write_fcurr
-//
-// Description:
-//
-// Thread: RealTime Loop
-//
-// Task Flags:
-//
-// End Function Specification
-errlHndl_t AMEC_data_write_fcurr(const OCC_MODE i_mode)
-{
-    /*------------------------------------------------------------------------*/
-    /*  Local Variables                                                       */
-    /*------------------------------------------------------------------------*/
-    errlHndl_t      l_err = NULL;
-
-    /*------------------------------------------------------------------------*/
-    /*  Code                                                                  */
-    /*------------------------------------------------------------------------*/
-
-    // Load new range into DVFS MIN/MAX,
-    // Use i_mode here since this function understands static frequency point
-    l_err = amec_set_freq_range(i_mode);
-
-    if(l_err)
-    {
-        //break;
-    }
-
-    // If we are in OpenPower environment with OPAL, load this new range into DVFS
-    // min/max for AMEC component.  PowerVM on BMC and FSP the min/max is set above
-    // in amec_set_freq_range() based on mode
-    if((G_occ_interrupt_type != FSP_SUPPORTED_OCC) && (G_sysConfigData.system_type.kvm))
-    {
-        if(g_amec->wof.wof_disabled)
-        {
-            g_amec->sys.fmax = G_sysConfigData.sys_mode_freq.table[OCC_MODE_WOF_BASE];
-        }
-        else
-        {
-            g_amec->sys.fmax = G_proc_fmax_mhz;
-        }
-        g_amec->sys.fmin = G_sysConfigData.sys_mode_freq.table[OCC_MODE_MIN_FREQUENCY];
-
-        TRAC_INFO("AMEC_data_write_fcurr: New frequency range Fmin[%u] Fmax[%u]",
-                  g_amec->sys.fmin,
-                  g_amec->sys.fmax);
-    }
-
-    return l_err;
-}
-
-// Function Specification
-//
 // Name:  AMEC_data_write_thrm_thresholds
 //
 // Description: This function loads data from the Thermal Control Threshold
@@ -372,7 +318,6 @@ errlHndl_t AMEC_data_change(const uint32_t i_data_mask)
     //l_cur_state = CURRENT_STATE();
     l_cur_mode = CURRENT_MODE();
 
-    // TODO: Call AMEC_data_write_fcurr() from main() after reading pstates (RTC 245612)
     if(i_data_mask & DATA_MASK_THRM_THRESHOLDS)
     {
         l_err = AMEC_data_write_thrm_thresholds(l_cur_mode);
