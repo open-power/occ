@@ -1148,8 +1148,9 @@ errlHndl_t cmdh_tmgt_setmodestate(const cmdh_fsp_cmd_t * i_cmd_ptr,
     SsxTimebase                     l_start        = ssx_timebase_get();
     OCC_STATE                       l_pre_state    = CURRENT_STATE();
     OCC_MODE                        l_pre_mode     = CURRENT_MODE();
+    OCC_MODE_PARM                   l_mode_parm    = OCC_MODE_PARM_NONE;
 
-    // OPAL only accepts DPS-FE mode. In case OCC gets other modes, it should accept the request
+    // No mode support with OPAL just accept the request
     // and keep reporting back that it is in that mode.
     if(G_sysConfigData.system_type.kvm)
     {
@@ -1207,29 +1208,37 @@ errlHndl_t cmdh_tmgt_setmodestate(const cmdh_fsp_cmd_t * i_cmd_ptr,
             break;
         }
 
-        // Verify additional mode parameter
-        bool l_vpd_curve_fit_point = ((l_cmd_ptr->mode_parm >= OCC_MODE_PARM_VPD_CF0_PT) && (l_cmd_ptr->mode_parm <= OCC_MODE_PARM_VPD_CF7_PT)) ? TRUE : FALSE;
-        bool l_other_mode = ((l_cmd_ptr->mode_parm >= OCC_MODE_PARM_MIN_FREQ_PT) && (l_cmd_ptr->mode_parm <= OCC_MODE_PARM_FMAX_FREQ_PT)) ? TRUE : FALSE;
-        bool l_valid_freq = ((l_cmd_ptr->mode_parm >= G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MIN_FREQ]) &&
-                             (l_cmd_ptr->mode_parm <= G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_WOF_BASE])) ? TRUE : FALSE;
-
-        if( ((l_cmd_ptr->occ_mode == OCC_MODE_STATIC_FREQ_POINT) && !(l_vpd_curve_fit_point || l_other_mode)) ||
-            ((l_cmd_ptr->occ_mode == OCC_MODE_FFO) && !l_valid_freq))
+        // Verify additional mode parameter for FFO and Static Freq Point modes only
+        if( (l_cmd_ptr->occ_mode == OCC_MODE_FFO) ||
+            (l_cmd_ptr->occ_mode == OCC_MODE_STATIC_FREQ_POINT) )
         {
-            CMDH_TRAC_ERR("OCC received an invalid additional mode parameter! Mode[0x%02X] Additional Paramater[0x%04X]",
-                          l_cmd_ptr->occ_mode, l_cmd_ptr->mode_parm);
-            l_rc = ERRL_RC_INVALID_DATA;
-            break;
+            l_mode_parm = l_cmd_ptr->mode_parm;
+            bool l_vpd_curve_fit_point = ((l_mode_parm >= OCC_MODE_PARM_VPD_CF0_PT) && (l_mode_parm <= OCC_MODE_PARM_VPD_CF7_PT)) ? TRUE : FALSE;
+            bool l_other_mode = ((l_mode_parm >= OCC_MODE_PARM_MIN_FREQ_PT) && (l_mode_parm <= OCC_MODE_PARM_MODE_OFF_FREQ_PT)) ? TRUE : FALSE;
+            bool l_valid_freq = ((l_mode_parm >= G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MIN_FREQ]) &&
+                             (l_mode_parm <= G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_WOF_BASE])) ? TRUE : FALSE;
+
+            if( ((l_cmd_ptr->occ_mode == OCC_MODE_STATIC_FREQ_POINT) && !(l_vpd_curve_fit_point || l_other_mode)) ||
+            ((l_cmd_ptr->occ_mode == OCC_MODE_FFO) && !l_valid_freq))
+            {
+                CMDH_TRAC_ERR("OCC received an invalid additional mode parameter! Mode[0x%02X] Additional Paramater[0x%04X]",
+                              l_cmd_ptr->occ_mode, l_mode_parm);
+                l_rc = ERRL_RC_INVALID_DATA;
+                break;
+            }
         }
 
         // -------------------------------------------------
         // Act on State & Mode Changes
         // -------------------------------------------------
-        CMDH_TRAC_INFO("SMS Mode=%d, State=%d",l_cmd_ptr->occ_mode, l_cmd_ptr->occ_state);
+        CMDH_TRAC_INFO("SMS Mode=%d, State=%d, Mode Parm[0x%04X]",
+                        l_cmd_ptr->occ_mode,
+                        l_cmd_ptr->occ_state,
+                        l_mode_parm);
 
         G_occ_external_req_mode  = l_cmd_ptr->occ_mode;
         G_occ_external_req_state = l_cmd_ptr->occ_state;
-        G_occ_external_req_mode_parm = l_cmd_ptr->mode_parm;
+        G_occ_external_req_mode_parm = l_mode_parm;
 
         // We need to wait and see if all Slaves correctly make it to state/mode.
         do
@@ -1246,10 +1255,12 @@ errlHndl_t cmdh_tmgt_setmodestate(const cmdh_fsp_cmd_t * i_cmd_ptr,
                 if( (0x01<<l_slv_idx) & l_occ_bitmap_present )
                 {
                     // Check if occ reaches the requested state/mode
-                    if( ( (G_dcom_slv_outbox_rx[l_slv_idx].occ_fw_mailbox[0] == G_occ_external_req_state)
+                    if( ( (G_dcom_slv_outbox_rx[l_slv_idx].occ_fw_mailbox.state == G_occ_external_req_state)
                           || (G_occ_external_req_state == OCC_STATE_NOCHANGE)                             ) &&
-                        ( (G_dcom_slv_outbox_rx[l_slv_idx].occ_fw_mailbox[1] == G_occ_external_req_mode)
-                          || (G_occ_external_req_mode == OCC_MODE_NOCHANGE)                               )     )
+                        ( (G_dcom_slv_outbox_rx[l_slv_idx].occ_fw_mailbox.mode == G_occ_external_req_mode)
+                          || (G_occ_external_req_mode == OCC_MODE_NOCHANGE)                               ) &&
+                        ( (G_dcom_slv_outbox_rx[l_slv_idx].occ_fw_mailbox.mode_parm == G_occ_external_req_mode_parm)
+                          || (G_occ_external_req_mode_parm == OCC_MODE_PARM_NONE)                         ) )
                     {
                         l_occ_bitmap_succeeded |= (0x01<<l_slv_idx);
                         l_occ_passed_num++;
@@ -1295,6 +1306,12 @@ errlHndl_t cmdh_tmgt_setmodestate(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                      ERRL_CALLOUT_TYPE_COMPONENT_ID,
                                      ERRL_COMPONENT_ID_FIRMWARE,
                                      ERRL_CALLOUT_PRIORITY_HIGH);
+
+                    // at least one OCC is failing the mode change.  Go to safe mode
+                    // else the OCC that is failing will keep trying and flood the logs
+                    // Commit error log and request reset
+                    REQUEST_RESET(l_errlHndl);
+
                     l_rc = ERRL_RC_INTERNAL_FAIL;
                     break;
                 }

@@ -233,6 +233,8 @@ enum occExtReasonCode
 
     ERC_SMGR_NO_VALID_MODE_TRANSITION_CALL      = 0x00E0,
     ERC_SMGR_NO_VALID_STATE_TRANSITION_CALL     = 0x00E1,
+    ERC_SMGR_NO_VALID_FREQ_PT                   = 0x00E2,
+    ERC_SMGR_FREQ_OUT_OF_RANGE                  = 0x00E3,
 
     ERC_GPU_COMPLETE_FAILURE                    = 0x00F0,
     ERC_GPU_SCHEDULE_FAILURE                    = 0x00F1,

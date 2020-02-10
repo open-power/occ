@@ -258,9 +258,9 @@ void populate_sys_mode_freq_table(void)
     }
 
     // WOF base frequency
-    if(G_oppb.wof_base_frequency_mhz)
+    if(G_oppb.tdp_wof_base_frequency_mhz)
     {
-        G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_WOF_BASE] = G_oppb.wof_base_frequency_mhz;
+        G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_WOF_BASE] = G_oppb.tdp_wof_base_frequency_mhz;
         // sanity check that this isn't higher than max
         if(G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_WOF_BASE] > G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MAX_FREQ])
         {
@@ -304,9 +304,9 @@ void populate_sys_mode_freq_table(void)
     // Power management disabled frequency in VPD this is called "fixed frequency"
     // and is defined to be the same as P9 legacy turbo this differs from WOF base
     // in that WOF base may be a higher frequency and is not guaranteed for all environments
-    if(G_oppb.fixed_frequency_mhz)
+    if(G_oppb.fixed_freq_mode_frequency_mhz)
     {
-        G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_DISABLED] = G_oppb.fixed_frequency_mhz;
+        G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_DISABLED] = G_oppb.fixed_freq_mode_frequency_mhz;
         // sanity check that this isn't higher than max
         if(G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_DISABLED] > G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MAX_FREQ])
         {

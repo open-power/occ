@@ -46,23 +46,25 @@ errlHndl_t SMGR_mode_transition_to_max_perf();
 
 // Mode that OCC is currently in
 OCC_MODE           G_occ_internal_mode      = OCC_MODE_NOCHANGE;
+OCC_MODE_PARM      G_occ_internal_mode_parm = OCC_MODE_PARM_NONE;
 
 // Mode that OCC is requesting that TMGT put OCC into
 OCC_MODE           G_occ_internal_req_mode  = OCC_MODE_NOCHANGE;
 
 // Mode that TMGT is requesting OCC go to
-OCC_MODE           G_occ_external_req_mode = OCC_MODE_NOCHANGE;
+OCC_MODE           G_occ_external_req_mode      = OCC_MODE_NOCHANGE;
+// In FFO or Static Frequency Point, this extra parameter is used to define the frequency
+OCC_MODE_PARM      G_occ_external_req_mode_parm = OCC_MODE_PARM_NONE;
 
 // Mode that TMGT is requesting OCC go to in KVM
 OCC_MODE           G_occ_external_req_mode_kvm = OCC_MODE_NOCHANGE;
 
-// In FFO or Static Frequency Point modes, this extra parameter is used to define the frequency
-uint16_t           G_occ_external_req_mode_parm = OCC_MODE_PARM_NONE;
 // Indicates if we are currently in a mode transition
 bool                G_mode_transition_occuring = FALSE;
 
 // Mode that OCC Master is in
-OCC_MODE            G_occ_master_mode  = OCC_MODE_NOCHANGE;
+OCC_MODE            G_occ_master_mode      = OCC_MODE_NOCHANGE;
+OCC_MODE_PARM       G_occ_master_mode_parm = OCC_MODE_PARM_NONE;
 
 // Semaphore to allow mode change to be called from multiple threads
 SsxSemaphore        G_smgrModeChangeSem;
@@ -83,6 +85,25 @@ const smgr_state_trans_t G_smgr_mode_trans[] =
 };
 const uint8_t G_smgr_mode_trans_count = sizeof(G_smgr_mode_trans)/sizeof(smgr_state_trans_t);
 
+// Table that translates the static freq point mode parameter to an actual frequency point
+const smgr_sfp_parm_trans_t G_smgr_sfp_mode_parm_trans[] =
+{
+    // Static Freq Pt Mode Parameter         Freq point
+    {OCC_MODE_PARM_VPD_CF0_PT,          OCC_FREQ_PT_VPD_CF0},
+    {OCC_MODE_PARM_VPD_CF1_PT,          OCC_FREQ_PT_VPD_CF1},
+    {OCC_MODE_PARM_VPD_CF2_PT,          OCC_FREQ_PT_VPD_CF2},
+    {OCC_MODE_PARM_VPD_CF3_PT,          OCC_FREQ_PT_VPD_CF3},
+    {OCC_MODE_PARM_VPD_CF4_PT,          OCC_FREQ_PT_VPD_CF4},
+    {OCC_MODE_PARM_VPD_CF5_PT,          OCC_FREQ_PT_VPD_CF5},
+    {OCC_MODE_PARM_VPD_CF6_PT,          OCC_FREQ_PT_VPD_CF6},
+    {OCC_MODE_PARM_VPD_CF7_PT,          OCC_FREQ_PT_VPD_LAST_CF},
+    {OCC_MODE_PARM_MIN_FREQ_PT,         OCC_FREQ_PT_MIN_FREQ},
+    {OCC_MODE_PARM_WOF_BASE_FREQ_PT,    OCC_FREQ_PT_WOF_BASE},
+    {OCC_MODE_PARM_UT_FREQ_PT,          OCC_FREQ_PT_VPD_UT},
+    {OCC_MODE_PARM_FMAX_FREQ_PT,        OCC_FREQ_PT_MAX_FREQ},
+    {OCC_MODE_PARM_MODE_OFF_FREQ_PT,    OCC_FREQ_PT_MODE_DISABLED}
+};
+const uint8_t G_smgr_sfp_parm_trans_count = sizeof(G_smgr_sfp_mode_parm_trans)/sizeof(smgr_sfp_parm_trans_t);
 
 // Function Specification
 //
@@ -154,7 +175,8 @@ errlHndl_t SMGR_set_mode( const OCC_MODE i_mode )
          }
 
          //Check to see if we need to make a change
-         if(l_mode == OCC_MODE_NOCHANGE)
+         if( (l_mode == OCC_MODE_NOCHANGE) &&
+             (G_occ_master_mode_parm == OCC_MODE_PARM_NONE) )
          {
              break;
          }
@@ -196,7 +218,7 @@ errlHndl_t SMGR_set_mode( const OCC_MODE i_mode )
              // mode transition.  If we did, log an internal error.
              if(G_smgr_mode_trans_count == jj)
              {
-                 TRAC_ERR("No transition (or NULL) found for the mode change\n");
+                 TRAC_ERR("No transition (or NULL) found for mode[0x%2X] change", l_mode);
 
                  /* @
                   * @errortype
@@ -323,22 +345,111 @@ errlHndl_t SMGR_mode_transition_to_powersave()
 // End Function Specification
 errlHndl_t SMGR_mode_transition_to_static_freq_point()
 {
+    OCC_FREQ_POINT          l_freq_pt = 0;
+    uint16_t                l_freq  = 0;
+    bool                    l_fail  = FALSE;
     errlHndl_t              l_errlHndl = NULL;
+    int                     i=0;
 
     TRAC_IMP("SMGR: Mode to Static Frequency Point Transition Started");
 
-    // Set Freq Mode for AMEC to use
-    l_errlHndl = amec_set_freq_range(OCC_MODE_STATIC_FREQ_POINT);
+    // Loop through SFP mode parameter translation table to convert parameter
+    // to an actual frequency
+    for(i=0; i<G_smgr_sfp_parm_trans_count; i++)
+    {
+        if(G_smgr_sfp_mode_parm_trans[i].mode_parm == G_occ_master_mode_parm)
+        {
+            // We found the mode parameter, verify there is a valid frequency
+            l_freq_pt = G_smgr_sfp_mode_parm_trans[i].freq_point;
+            if(l_freq_pt < OCC_FREQ_PT_COUNT)
+            {
+                l_freq = G_sysConfigData.sys_mode_freq.table[l_freq_pt];
+               if(l_freq)
+                {
+                     // Set the user defined frequency to be used by AMEC
+                     if(l_freq < G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MIN_FREQ])
+                     {
+                          TRAC_IMP("SMGR_mode_transition_to_static_freq_point: freq pt freq %dMHz is below min freq %dMHz",
+                                    l_freq,
+                                    G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MIN_FREQ]);
+                          l_freq = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MIN_FREQ];
+                     }
+                     else if(l_freq > G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MAX_FREQ])
+                     {
+                          TRAC_IMP("SMGR_mode_transition_to_static_freq_point: freq pt freq %dMHz is above max freq %dMHz",
+                                    l_freq,
+                                    G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MAX_FREQ]);
+                          l_freq = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MAX_FREQ];
+                     }
+                     G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_USER] = l_freq;
 
-    CURRENT_MODE() = OCC_MODE_STATIC_FREQ_POINT;
+                     // update this OCCs internal mode parm that it now matches what was sent
+                     // from master
+                     G_occ_internal_mode_parm = G_occ_master_mode_parm;
+                }
+                else
+                {
+                    TRAC_ERR("SMGR_mode_transition_to_static_freq_point: Zero frequency found for mode parameter[0x%04X]",
+                             G_occ_master_mode_parm);
+                    l_fail = TRUE;
+                }
+            }
+            else
+            {
+                TRAC_ERR("SMGR_mode_transition_to_static_freq_point: Invalid freq point[0x%02X] found for mode parameter[0x%04X]",
+                          l_freq_pt, G_occ_master_mode_parm);
+                l_fail = TRUE;
+            }
+            break;
+        } // if mode parm matches
+    }  // for loop
 
-    // WOF is disabled in this mode
-    set_clear_wof_disabled( SET,
-                            WOF_RC_MODE_NO_SUPPORT_MASK,
-                            ERC_WOF_MODE_NO_SUPPORT_MASK );
+    // Check if we had a failure or hit the end of the table without finding a valid
+    // frequency.  If we did, log an internal error.
+    if( (G_smgr_sfp_parm_trans_count == i) || (l_fail) )
+    {
+         if(G_smgr_sfp_parm_trans_count == i)
+             TRAC_ERR("SMGR_mode_transition_to_static_freq_point: Mode parameter[0x%04X] not found",
+                       G_occ_master_mode_parm);
 
-    TRAC_IMP("SMGR: Mode to Static Frequency Point Transition Completed");
+         /* @
+          * @errortype
+          * @moduleid    MAIN_MODE_TRANSITION_MID
+          * @reasoncode  INTERNAL_FAILURE
+          * @userdata1   G_occ_master_mode_parm
+          * @userdata2   0
+          * @userdata4   ERC_SMGR_NO_VALID_FREQ_PT
+          * @devdesc     no valid frequency point found
+          */
+          l_errlHndl = createErrl(MAIN_MODE_TRANSITION_MID,    //modId
+                                  INTERNAL_FAILURE,            //reasoncode
+                                  ERC_SMGR_NO_VALID_FREQ_PT,   //Extended reason code
+                                  ERRL_SEV_UNRECOVERABLE,      //Severity
+                                  NULL,                        //Trace Buf
+                                  DEFAULT_TRACE_SIZE,          //Trace Size
+                                  G_occ_master_mode_parm,      //userdata1
+                                  0);                          //userdata2
 
+          addCalloutToErrl(l_errlHndl,
+                           ERRL_CALLOUT_TYPE_COMPONENT_ID,
+                           ERRL_COMPONENT_ID_FIRMWARE,
+                           ERRL_CALLOUT_PRIORITY_HIGH);
+
+    }  // if failure found
+    else // so far so good, finish the mode change
+    {
+        // Set Freq Mode for AMEC to use
+        l_errlHndl = amec_set_freq_range(OCC_MODE_STATIC_FREQ_POINT);
+
+        CURRENT_MODE() = OCC_MODE_STATIC_FREQ_POINT;
+
+        // WOF is disabled in this mode
+        set_clear_wof_disabled( SET,
+                                WOF_RC_MODE_NO_SUPPORT_MASK,
+                                ERC_WOF_MODE_NO_SUPPORT_MASK );
+
+        TRAC_IMP("SMGR: Mode to Static Frequency Point frequency %dMHz Transition Completed", l_freq);
+    }
     return l_errlHndl;
 }
 
@@ -356,18 +467,62 @@ errlHndl_t SMGR_mode_transition_to_ffo()
 
     TRAC_IMP("SMGR: Mode to FFO Transition Started");
 
-    // Set Freq Mode for AMEC to use
-    l_errlHndl = amec_set_freq_range(OCC_MODE_FFO);
+    // for FFO G_occ_master_mode_parm contains the FFO frequency
+    // frequency should have already been verified to be within range by master
+    // in cmdh_tmgt_setmodestate() adding another check here just in case there is ever
+    // a chip that has a different range settable via FFO (FFO does NOT allow Fmax which we
+    // know will be different per chip)
+    if( (G_occ_master_mode_parm >= G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MIN_FREQ]) &&
+        (G_occ_master_mode_parm <= G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_WOF_BASE]) )
+    {
+        // Set the user defined frequency to be used by AMEC
+        G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_USER] = G_occ_master_mode_parm;
 
-    CURRENT_MODE() = OCC_MODE_FFO;
+        // update this OCCs internal mode parm that it now matches what was sent from master
+        G_occ_internal_mode_parm = G_occ_master_mode_parm;
 
-    // WOF is disabled in FFO
-    set_clear_wof_disabled( SET,
-                            WOF_RC_MODE_NO_SUPPORT_MASK,
-                            ERC_WOF_MODE_NO_SUPPORT_MASK );
+        // Set Freq Mode for AMEC to use
+        l_errlHndl = amec_set_freq_range(OCC_MODE_FFO);
 
-    TRAC_IMP("SMGR: Mode to FFO Transition Completed");
+        CURRENT_MODE() = OCC_MODE_FFO;
 
+        // WOF is disabled in FFO
+        set_clear_wof_disabled( SET,
+                                WOF_RC_MODE_NO_SUPPORT_MASK,
+                                ERC_WOF_MODE_NO_SUPPORT_MASK );
+
+        TRAC_IMP("SMGR: Mode to FFO frequency %dMHz Transition Completed", G_occ_master_mode_parm);
+    }
+    else
+    {
+        TRAC_ERR("SMGR_mode_transition_to_ffo: Requested Frequency[%dMHz] out of range[%dMHz - %dMHz]",
+                 G_occ_master_mode_parm,
+                 G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MIN_FREQ],
+                 G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_WOF_BASE]);
+
+         /* @
+          * @errortype
+          * @moduleid    MAIN_MODE_TRANSITION_MID
+          * @reasoncode  INTERNAL_FAILURE
+          * @userdata1   G_occ_master_mode_parm
+          * @userdata2   0
+          * @userdata4   ERC_SMGR_FREQ_OUT_OF_RANGE
+          * @devdesc     Requested FFO frequency not within range
+          */
+          l_errlHndl = createErrl(MAIN_MODE_TRANSITION_MID,    //modId
+                                  INTERNAL_FAILURE,            //reasoncode
+                                  ERC_SMGR_FREQ_OUT_OF_RANGE,  //Extended reason code
+                                  ERRL_SEV_UNRECOVERABLE,      //Severity
+                                  NULL,                        //Trace Buf
+                                  DEFAULT_TRACE_SIZE,          //Trace Size
+                                  G_occ_master_mode_parm,      //userdata1
+                                  0);                          //userdata2
+
+          addCalloutToErrl(l_errlHndl,
+                           ERRL_CALLOUT_TYPE_COMPONENT_ID,
+                           ERRL_COMPONENT_ID_FIRMWARE,
+                           ERRL_CALLOUT_PRIORITY_HIGH);
+    }
     return l_errlHndl;
 }
 

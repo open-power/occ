@@ -100,7 +100,6 @@
 #define TOD_SIZE                 6
 #define NUM_TOD_SENSORS          3
 #define SLV_INBOX_RSV_SIZE       150
-#define SLV_MAILBOX_SIZE         32
 #define SLV_OUTBOX_RSV_SIZE      454
 #define DOORBELL_RSV_SIZE        1
 #define DCOM_MAX_ERRH_ENTRIES    8
@@ -131,6 +130,19 @@ typedef struct
 
 // For now pbax structure is same as pob id structure
 typedef pob_id_t pbax_id_t;
+
+// Used for general OCC-OCC firmware message passing
+typedef struct
+{
+    uint8_t   state;       // previously occ_fw_mailbox[0]
+    uint8_t   mode;        // previously occ_fw_mailbox[1]
+    uint16_t  mode_parm;   // mode parameter only applies when mode is FFO or Static Freq pt
+    uint8_t   master_event_flags;  // previously occ_fw_mailbox[2]
+    uint8_t   slave_event_flags;   // previously occ_fw_mailbox[3]
+    uint8_t   valid_states;        // previously occ_fw_mailbox[4]
+    uint8_t   reserved[25];        // pad for 32 bytes total
+} __attribute__ ((packed)) occ_fw_mailbox_t;
+
 
 // SLAVE INBOX structure
 typedef struct __attribute__ ((packed))
@@ -180,7 +192,7 @@ typedef struct __attribute__ ((packed))
     };
 
     // General Firmware Message Passing
-    uint8_t  occ_fw_mailbox[ SLV_MAILBOX_SIZE ];                    // [224] - 32 bytes
+    occ_fw_mailbox_t  occ_fw_mailbox;                    // [224] - 32 bytes
 
 } dcom_slv_inbox_t __attribute ((aligned (128)));
 
@@ -242,7 +254,7 @@ typedef struct __attribute__ ((packed))
     };
 
     // General Firmware Message Passing
-    uint8_t  occ_fw_mailbox[SLV_MAILBOX_SIZE];                   // [992] - 32 bytes
+    occ_fw_mailbox_t  occ_fw_mailbox;                            // [992] - 32 bytes
 } dcom_slv_outbox_t __attribute__ ((aligned (128)));          // 1024 total bytes
 
 // Slave Inbox Doorbell

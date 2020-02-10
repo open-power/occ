@@ -66,6 +66,7 @@ void Dcom_thread_routine(void *arg)
 {
     OCC_STATE l_newOccState  = 0;
     OCC_MODE  l_newOccMode   = 0;
+    uint16_t  l_newOccModeParm   = 0;
     SsxTimer  l_timeout_timer;
     errlHndl_t l_errlHndl = NULL;
     // --------------------------------------------------
@@ -122,6 +123,17 @@ void Dcom_thread_routine(void *arg)
         else
         {
             l_newOccMode  = (G_occ_master_mode  == CURRENT_MODE() ) ? OCC_MODE_NOCHANGE : G_occ_master_mode;
+            l_newOccModeParm  = (G_occ_master_mode_parm  == G_occ_internal_mode_parm ) ? OCC_MODE_PARM_NONE : G_occ_master_mode_parm;
+            // check if need to override mode due to mode parameter change
+            // only valid for FFO and static freq point modes
+            if( (l_newOccMode == OCC_MODE_NOCHANGE) &&
+                (l_newOccModeParm != OCC_MODE_PARM_NONE) &&
+                ( (G_occ_master_mode == OCC_MODE_FFO) ||
+                  (G_occ_master_mode == OCC_MODE_STATIC_FREQ_POINT) ) )
+            {
+                // Doing a mode change to same mode but with new mode parameter
+                l_newOccMode = G_occ_master_mode;
+            }
         }
 
         // Override State if SAFE state is requested
@@ -134,7 +146,8 @@ void Dcom_thread_routine(void *arg)
         l_newOccState = G_reset_prep ? OCC_STATE_NOCHANGE : l_newOccState;
 
         if( (OCC_STATE_NOCHANGE != l_newOccState)
-            || (OCC_MODE_NOCHANGE != l_newOccMode) )
+            || (OCC_MODE_NOCHANGE != l_newOccMode)
+            || (OCC_MODE_PARM_NONE != l_newOccModeParm) )
         {
             // If we're active, then we should always process the mode change first
             // If we're not active, then we should always process the state change first
@@ -161,11 +174,15 @@ void Dcom_thread_routine(void *arg)
                 {
                     commitErrl(&l_errlHndl);
                 }
-                // Set the new mode
-                l_errlHndl = SMGR_set_mode(l_newOccMode);
-                if(l_errlHndl)
+
+                // Set the new mode if active
+                if(OCC_STATE_ACTIVE == CURRENT_STATE())
                 {
-                    commitErrl(&l_errlHndl);
+                    l_errlHndl = SMGR_set_mode(l_newOccMode);
+                    if(l_errlHndl)
+                    {
+                        commitErrl(&l_errlHndl);
+                    }
                 }
             }
         }

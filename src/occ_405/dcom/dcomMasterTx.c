@@ -122,7 +122,7 @@ uint32_t dcom_build_slv_inbox(void)
                 &G_apss_pwr_meas.tod,
                 sizeof( G_dcom_slv_inbox_tx[l_slv_idx].tod));
 
-        memset( G_dcom_slv_inbox_tx[l_slv_idx].occ_fw_mailbox, 0, sizeof( G_dcom_slv_inbox_tx[l_slv_idx].occ_fw_mailbox ));
+        memset(&G_dcom_slv_inbox_tx[l_slv_idx].occ_fw_mailbox, 0, sizeof(occ_fw_mailbox_t));
 
 
         // Collect mnfg parameters that need to be sent to slaves

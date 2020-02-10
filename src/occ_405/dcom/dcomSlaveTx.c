@@ -76,7 +76,7 @@ uint32_t dcom_build_slv_outbox(void)
     G_dcom_slv_outbox_tx.seq = L_seq;
     G_dcom_slv_outbox_tx.version = 0;
 
-    memset( G_dcom_slv_outbox_tx.occ_fw_mailbox, 0, sizeof( G_dcom_slv_outbox_tx.occ_fw_mailbox ));
+    memset( &G_dcom_slv_outbox_tx.occ_fw_mailbox, 0, sizeof(occ_fw_mailbox_t));
 
     G_dcom_slv_outbox_tx.counter++;
 

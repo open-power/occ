@@ -288,6 +288,7 @@ void sysConfigFspLess(void)
         // all requirements for state/mode become available.
         G_occ_external_req_state = OCC_STATE_ACTIVE;
         G_occ_external_req_mode  = OCC_MODE_DISABLED;
+        G_occ_external_req_mode_parm  = OCC_MODE_PARM_NONE;
     }
     else
     {

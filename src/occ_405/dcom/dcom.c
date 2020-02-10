@@ -402,32 +402,35 @@ void dcom_build_occfw_msg( const dcom_error_type_t i_which_msg )
         // For each occ slave
         for(; l_slv_idx < MAX_OCCS; l_slv_idx++)
         {
-            G_dcom_slv_inbox_tx[l_slv_idx].occ_fw_mailbox[0] = G_occ_external_req_state;
-            G_dcom_slv_inbox_tx[l_slv_idx].occ_fw_mailbox[1] = G_occ_external_req_mode;
+            G_dcom_slv_inbox_tx[l_slv_idx].occ_fw_mailbox.state = G_occ_external_req_state;
+            G_dcom_slv_inbox_tx[l_slv_idx].occ_fw_mailbox.mode = G_occ_external_req_mode;
+            G_dcom_slv_inbox_tx[l_slv_idx].occ_fw_mailbox.mode_parm = G_occ_external_req_mode_parm;
 
-            G_dcom_slv_inbox_tx[l_slv_idx].occ_fw_mailbox[2] = G_master_event_flags;
-            G_dcom_slv_inbox_tx[l_slv_idx].occ_fw_mailbox[3] = G_slave_event_flags_ack[l_slv_idx];
+            G_dcom_slv_inbox_tx[l_slv_idx].occ_fw_mailbox.master_event_flags = G_master_event_flags;
+            G_dcom_slv_inbox_tx[l_slv_idx].occ_fw_mailbox.slave_event_flags = G_slave_event_flags_ack[l_slv_idx];
 
-            G_dcom_slv_inbox_tx[l_slv_idx].occ_fw_mailbox[4] = 0;
+            G_dcom_slv_inbox_tx[l_slv_idx].occ_fw_mailbox.valid_states = 0;
         }
     }
     else if ( i_which_msg == SLAVE_OUTBOX )
     {
-        G_dcom_slv_outbox_tx.occ_fw_mailbox[0] = CURRENT_STATE();
+        G_dcom_slv_outbox_tx.occ_fw_mailbox.state = CURRENT_STATE();
 
         if(G_sysConfigData.system_type.kvm )
         {
-            G_dcom_slv_outbox_tx.occ_fw_mailbox[1] = G_occ_external_req_mode_kvm;
+            G_dcom_slv_outbox_tx.occ_fw_mailbox.mode = G_occ_external_req_mode_kvm;
+            G_dcom_slv_outbox_tx.occ_fw_mailbox.mode_parm = OCC_MODE_PARM_NONE;
         }
         else
         {
-            G_dcom_slv_outbox_tx.occ_fw_mailbox[1] = CURRENT_MODE();
+            G_dcom_slv_outbox_tx.occ_fw_mailbox.mode = CURRENT_MODE();
+            G_dcom_slv_outbox_tx.occ_fw_mailbox.mode_parm = G_occ_internal_mode_parm;
         }
 
-        G_dcom_slv_outbox_tx.occ_fw_mailbox[2] = G_master_event_flags_ack;
-        G_dcom_slv_outbox_tx.occ_fw_mailbox[3] = G_slave_event_flags;
+        G_dcom_slv_outbox_tx.occ_fw_mailbox.master_event_flags = G_master_event_flags_ack;
+        G_dcom_slv_outbox_tx.occ_fw_mailbox.slave_event_flags = G_slave_event_flags;
 
-        G_dcom_slv_outbox_tx.occ_fw_mailbox[4] = SMGR_validate_get_valid_states();
+        G_dcom_slv_outbox_tx.occ_fw_mailbox.valid_states = SMGR_validate_get_valid_states();
     }
 
 }
@@ -452,22 +455,24 @@ void task_dcom_parse_occfwmsg(task_t *i_self)
         for(; l_slv_idx < MAX_OCCS; l_slv_idx++)
         {
             // Verify all slave are in correct state and mode
-            G_dcom_slv_outbox_rx[l_slv_idx].occ_fw_mailbox[0] = CURRENT_STATE();
+            G_dcom_slv_outbox_rx[l_slv_idx].occ_fw_mailbox.state = CURRENT_STATE();
 
             if(G_sysConfigData.system_type.kvm )
             {
-                G_dcom_slv_outbox_rx[l_slv_idx].occ_fw_mailbox[1] = G_occ_external_req_mode_kvm;
+                G_dcom_slv_outbox_rx[l_slv_idx].occ_fw_mailbox.mode = G_occ_external_req_mode_kvm;
+                G_dcom_slv_outbox_tx.occ_fw_mailbox.mode_parm = OCC_MODE_PARM_NONE;
             }
             else
             {
-                G_dcom_slv_outbox_rx[l_slv_idx].occ_fw_mailbox[1] = CURRENT_MODE();
+                G_dcom_slv_outbox_rx[l_slv_idx].occ_fw_mailbox.mode = CURRENT_MODE();
+                G_dcom_slv_outbox_rx[l_slv_idx].occ_fw_mailbox.mode_parm = G_occ_internal_mode_parm;
             }
 
             // Acknowledge all slave event flags
-            G_slave_event_flags_ack[l_slv_idx] = G_dcom_slv_outbox_rx[l_slv_idx].occ_fw_mailbox[3];
+            G_slave_event_flags_ack[l_slv_idx] = G_dcom_slv_outbox_rx[l_slv_idx].occ_fw_mailbox.slave_event_flags;
 
             // Clear master event flags if slave has acknowledged them and the event has cleared
-            G_master_event_flags &= ~G_dcom_slv_outbox_rx[l_slv_idx].occ_fw_mailbox[2];
+            G_master_event_flags &= ~G_dcom_slv_outbox_rx[l_slv_idx].occ_fw_mailbox.master_event_flags;
 
         }
 
@@ -475,13 +480,15 @@ void task_dcom_parse_occfwmsg(task_t *i_self)
 
     // Check if master has changed state and mode and update if changed
     // so that we can handle it in a thread.
-    if( (G_occ_master_state != G_dcom_slv_inbox_rx.occ_fw_mailbox[0])
-        || (G_occ_master_mode != G_dcom_slv_inbox_rx.occ_fw_mailbox[1]) )
+    if( (G_occ_master_state != G_dcom_slv_inbox_rx.occ_fw_mailbox.state)
+        || (G_occ_master_mode != G_dcom_slv_inbox_rx.occ_fw_mailbox.mode)
+        || (G_occ_master_mode_parm != G_dcom_slv_inbox_rx.occ_fw_mailbox.mode_parm) )
     {
         if( ! isSafeStateRequested() )
         {
-            G_occ_master_state = G_dcom_slv_inbox_rx.occ_fw_mailbox[0];
-            G_occ_master_mode  = G_dcom_slv_inbox_rx.occ_fw_mailbox[1];
+            G_occ_master_state = G_dcom_slv_inbox_rx.occ_fw_mailbox.state;
+            G_occ_master_mode  = G_dcom_slv_inbox_rx.occ_fw_mailbox.mode;
+            G_occ_master_mode_parm = G_dcom_slv_inbox_rx.occ_fw_mailbox.mode_parm;
             ssx_semaphore_post(&G_dcomThreadWakeupSem);
         }
     }
@@ -536,10 +543,10 @@ void task_dcom_parse_occfwmsg(task_t *i_self)
     g_amec->part_config.part_list[0].soft_fmax = G_dcom_slv_inbox_rx.soft_fmax;
 
     // acknowledge all masters event flags
-    G_master_event_flags_ack = G_dcom_slv_inbox_rx.occ_fw_mailbox[2];
+    G_master_event_flags_ack = G_dcom_slv_inbox_rx.occ_fw_mailbox.master_event_flags;
 
     // clear slave event flags if master has acknowledged them and the event has cleared
-    G_slave_event_flags = (G_slave_event_flags & (~(G_dcom_slv_inbox_rx.occ_fw_mailbox[3])));
+    G_slave_event_flags = (G_slave_event_flags & (~(G_dcom_slv_inbox_rx.occ_fw_mailbox.slave_event_flags)));
 }
 
 

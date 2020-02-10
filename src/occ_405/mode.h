@@ -71,7 +71,8 @@ typedef enum
     OCC_MODE_PARM_MIN_FREQ_PT      = 0x2000,
     OCC_MODE_PARM_WOF_BASE_FREQ_PT = 0x2001,
     OCC_MODE_PARM_UT_FREQ_PT       = 0x2002,
-    OCC_MODE_PARM_FMAX_FREQ_PT     = 0x2003
+    OCC_MODE_PARM_FMAX_FREQ_PT     = 0x2003,
+    OCC_MODE_PARM_MODE_OFF_FREQ_PT = 0x2004
 } OCC_MODE_PARM;
 
 // Used to index G_sysConfigData.sys_mode_freq.table used to store all frequency points
@@ -99,6 +100,17 @@ typedef enum
     OCC_FREQ_PT_INVALID  = 0xFF
 } OCC_FREQ_POINT;
 
+/**
+ * @struct smgr_sfp_parm_trans_t
+ * @brief Used by the set mode command for static frequency point to translate
+ * mode parameter to freq point
+ */
+typedef struct
+{
+  OCC_MODE_PARM  mode_parm;
+  OCC_FREQ_POINT freq_point;
+} smgr_sfp_parm_trans_t;
+
 // These are the only modes that TMGT/HTMGT can send
 #define OCC_MODE_IS_VALID(mode) ((mode == OCC_MODE_NOCHANGE) || \
                                  (mode == OCC_MODE_DISABLED) || \
@@ -114,7 +126,11 @@ extern OCC_MODE           G_occ_internal_req_mode;
 extern OCC_MODE           G_occ_external_req_mode;
 extern OCC_MODE           G_occ_external_req_mode_kvm;
 extern OCC_MODE           G_occ_master_mode;
-extern uint16_t           G_occ_external_req_mode_parm;
+
+extern OCC_MODE_PARM      G_occ_internal_mode_parm;
+extern OCC_MODE_PARM      G_occ_external_req_mode_parm;
+extern OCC_MODE_PARM      G_occ_master_mode_parm;
+
 // Returns true if we are in the middle of a mode transition
 inline bool SMGR_is_mode_transitioning(void);
 
