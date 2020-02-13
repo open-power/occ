@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -38,11 +38,18 @@ extern bool G_avsbus_vdd_monitoring;
 #define AVSBUS_STATUS_ONGOING 0x80000000 // o2s_ongoing
 #define AVSBUS_STATUS_ERRORS  0x05000000 // write_while_bridge_busy_error | FSM error
 
+// this is only for types that OCC directly reads from AVSBUS currently only VDD (for temperature)
 typedef enum
 {
     AVSBUS_VDD = 0x00,
     AVSBUS_TYPE_MAX = 1 // Number of bus types
 } avsbus_type_e;
+
+// bitmask for types that PGPE is reading via AVSBUS and then OCC reads from OCC-PGPE shared memory
+#define    AVSBUS_PGPE_VDD 0x01
+#define    AVSBUS_PGPE_VCS 0x02
+#define    AVSBUS_PGPE_VIO 0x04
+#define    AVSBUS_PGPE_VDN 0x08
 
 typedef enum
 {
@@ -79,7 +86,7 @@ void initiate_avsbus_read_status();
 void process_avsbus_status();
 
 // Calculate chip voltage and power from AVSbus readings and update sensors
-void update_avsbus_power_sensors(const avsbus_type_e i_type);
+void update_avsbus_power_sensors(const uint8_t i_type);
 
 // Error history counters will be incremented for any over-current condition.
 uint32_t clear_status_errors(const uint8_t i_bus, const uint32_t i_status_mask);

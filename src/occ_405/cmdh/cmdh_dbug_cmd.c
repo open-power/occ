@@ -606,10 +606,9 @@ void cmdh_dbug_dump_static_wof_data( const cmdh_fsp_cmd_t * i_cmd_ptr,
            (void*)&(g_amec->static_wof_data),
            l_datalen);
 
-    TRAC_INFO("WOF STATIC DATA - vrt_tbls_main_mem_addr[0x%08X] vrt_tbls_len[0x%08X]   pgpe_wof_state_addr[0x%08X]",
+    TRAC_INFO("WOF STATIC DATA - vrt_tbls_main_mem_addr[0x%08X] vrt_tbls_len[0x%08X]",
                g_amec->static_wof_data.vrt_tbls_main_mem_addr,
-               g_amec->static_wof_data.vrt_tbls_len,
-               g_amec->static_wof_data.pgpe_wof_state_addr);
+               g_amec->static_wof_data.vrt_tbls_len);
 
     TRAC_INFO("WOF STATIC DATA - occ_values_sram_addr[0x%08X] pgpe_values_sram_addr[0x%08X]   xgpe_values_sram_addr[0x%08X]  pstate_tbl_sram_addr[0x%08X]",
                g_amec->static_wof_data.occ_values_sram_addr,
@@ -1090,6 +1089,58 @@ void dbug_apss_dump(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
 // Function Specification
 //
+// Name: cmdh_dbug_write_sensor
+//
+// Description: Write the given value to the given gsid
+//
+// End Function Specification
+void cmdh_dbug_write_sensor(const cmdh_fsp_cmd_t * i_cmd_ptr,
+                                cmdh_fsp_rsp_t * o_rsp_ptr)
+{
+    const cmdh_dbug_write_sensor_cmd_t *l_cmd_ptr = (cmdh_dbug_write_sensor_cmd_t*) i_cmd_ptr;
+    cmdh_dbug_write_sensor_resp_t      *l_rsp_ptr = (cmdh_dbug_write_sensor_resp_t*) o_rsp_ptr;
+    uint8_t                             l_rc = ERRL_RC_SUCCESS;    // Assume succeeds
+    sensor_t                           *l_sensor_ptr = NULL;
+    uint16_t                            l_rsp_data_length = 0;
+
+    // Make sure command and response pointer are valid
+    if ((l_cmd_ptr == NULL) || (l_rsp_ptr == NULL))
+    {
+        l_rc = ERRL_RC_INTERNAL_FAIL;
+    }
+    else
+    {
+        // Make sure sensor gsid is valid
+        l_sensor_ptr = getSensorByGsid(l_cmd_ptr->gsid);
+        if (l_sensor_ptr == NULL)
+        {
+            TRAC_INFO("dbug_write_sensor: Didn't find sensor with gsid[0x%04X]", l_cmd_ptr->gsid);
+            l_rc = ERRL_RC_INVALID_DATA;
+        }
+        else
+        {
+            // Set the given value to the sensor
+            sensor_update(l_sensor_ptr, l_cmd_ptr->value);
+
+            // update response buffer
+            strcpy(l_rsp_ptr->name, G_sensor_info[l_cmd_ptr->gsid].name);
+            l_rsp_ptr->gsid = l_cmd_ptr->gsid;
+            l_rsp_ptr->value = l_cmd_ptr->value;
+            l_rsp_data_length = sizeof(cmdh_dbug_write_sensor_resp_t) - sizeof(struct cmdh_fsp_rsp_header);
+            TRAC_INFO("dbug_write_sensor: Wrote %d to sensor gsid 0x%04x",
+                      l_cmd_ptr->value,
+                      l_cmd_ptr->gsid);
+        }
+    }
+
+    o_rsp_ptr->data_length[0] = ((uint8_t *)&l_rsp_data_length)[0];
+    o_rsp_ptr->data_length[1] = ((uint8_t *)&l_rsp_data_length)[1];
+    G_rsp_status = l_rc;
+}
+
+
+// Function Specification
+//
 // Name:  dbug_proc_data_dump
 //
 // Description: Dumps the processor core data
@@ -1147,6 +1198,7 @@ void cmdh_dbug_cmd (const cmdh_fsp_cmd_t * i_cmd_ptr,
         // ----------------------------------------------------
         case DBUG_GET_TRACE:
         case DBUG_GET_AME_SENSOR:
+	case DBUG_WRITE_SENSOR:
             // Don't trace that we got these debug commands, they happen too
             // often, or are not destructive when they do occur.
             break;
@@ -1202,6 +1254,10 @@ void cmdh_dbug_cmd (const cmdh_fsp_cmd_t * i_cmd_ptr,
         case DBUG_DUMP_RAW_AD:
              dbug_apss_dump(i_cmd_ptr, o_rsp_ptr);
              break;
+
+        case DBUG_WRITE_SENSOR:
+            cmdh_dbug_write_sensor(i_cmd_ptr, o_rsp_ptr);
+            break;
 
         case DBUG_INJECT_PGPE_ERRL:
             TRAC_ERR("cmdh_dbug_cmd: Creating PGPE Error Log");

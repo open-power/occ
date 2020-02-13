@@ -70,7 +70,7 @@ typedef enum
 //  free = 0x0E,
 //  free = 0x0F,
 //  free = 0x10,
-//  free = 0x11,
+    DBUG_WRITE_SENSOR         = 0x11,
     DBUG_TRIGGER_EPOW         = 0x12,
     DBUG_INJECT_PGPE_ERRL     = 0x13,
     DBUG_INJECT_ERRL          = 0x14,
@@ -297,6 +297,25 @@ typedef struct __attribute__ ((packed))
     uint32_t    flags;
     uint8_t     checksum[CMDH_FSP_CHECKSUM_SIZE];
 }cmdh_dbug_internal_flags_rsp_t;
+
+// DBUG_WRITE_SENSOR command struct
+typedef struct __attribute__ ((packed))
+{
+    struct   cmdh_fsp_cmd_header;  // Standard command header
+    uint8_t  sub_cmd;              // Debug sub-command
+    uint16_t gsid;                 // Global Sensor ID
+    uint16_t value;                // Current value to write to gsid sensor
+} cmdh_dbug_write_sensor_cmd_t;
+
+// DBUG_WRITE_SENSOR response struct
+typedef struct __attribute__ ((packed))
+{
+    struct   cmdh_fsp_rsp_header;
+    uint16_t gsid;
+    uint16_t value;
+    char     name[MAX_SENSOR_NAME_SZ];
+}cmdh_dbug_write_sensor_resp_t;
+
 
 //*************************************************************************
 // Globals

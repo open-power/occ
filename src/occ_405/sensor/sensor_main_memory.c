@@ -168,7 +168,7 @@ main_mem_sensor_t G_main_mem_sensors[] =
     MAIN_MEM_SENSOR              (VOLTVDD,        true,     false),
     MAIN_MEM_SENSOR              (VOLTVDDSENSE,   true,     false),
     MAIN_MEM_SENSOR              (VOLTVDN,        true,     false),
-    MAIN_MEM_SENSOR              (VOLTVDNSENSE,   true,     false),
+    MAIN_MEM_SENSOR              (VOLTVCSSENSE,   true,     false),
     MAIN_MEM_CORE_SENSORS        (VOLTDROOPCNTC,  true,     false),
 
     // AMEC_SENSOR_TYPE_TEMP:     gsid            smf_mode  master_only

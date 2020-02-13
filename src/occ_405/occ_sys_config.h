@@ -45,7 +45,6 @@
 #define MAX_NUM_MEM_CONTROLLERS  16
 #define MAX_NUM_OCMBS            16
 #define MAX_NUM_CHOM_MEM_CTRL    8  // todo allow 16 RTC: 211908
-#define NUM_PROC_VRMS            2
 #define MAX_GPU_PRES_SIGNALS     6
 #define GPU_PRES_SIGN_PER_OCC    3
 

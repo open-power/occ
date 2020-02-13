@@ -449,11 +449,14 @@ bool amec_update_apss_sensors(void)
 
 } // end amec_update_apss_sensors()
 
-
 // Calculate chip voltage and power and update sensors
-void update_avsbus_power_sensors(const avsbus_type_e i_type)
+void update_avsbus_power_sensors(const uint8_t i_types)
 {
     static bool L_throttle_vdd = FALSE;
+    static bool L_throttle_vcs = FALSE;
+    static bool L_throttle_vdn = FALSE;
+    static bool L_throttle_vio = FALSE;
+    static bool L_traced_invalid_type = FALSE;
     bool * L_throttle = &L_throttle_vdd;
     uint32_t l_loadline = G_oppb.vdd_sysparm.loadline_uohm;
     uint32_t l_distloss = G_oppb.vdd_sysparm.distloss_uohm;
@@ -461,76 +464,141 @@ void update_avsbus_power_sensors(const avsbus_type_e i_type)
     uint32_t l_voltageSensor = VOLTVDD;
     uint32_t l_voltageChip = VOLTVDDSENSE;
     uint32_t l_powerSensor = PWRVDD;
-    uint32_t l_powerSensor2 = PWRVDN;
 
-    // Read latest voltage/current sensors
-    uint32_t l_voltage_100uv = 0;
-    uint32_t l_current_10ma = 0;
-    sensor_t *l_sensor = getSensorByGsid(l_voltageSensor);
-    if (l_sensor != NULL)
-    {
-        l_voltage_100uv = l_sensor->sample;
-    }
-    l_sensor = getSensorByGsid(l_currentSensor);
-    if (l_sensor != NULL)
-    {
-        l_current_10ma = l_sensor->sample;
-    }
+    uint16_t l_proc_power = 0;
+    uint8_t l_updated_types = 0;
 
-
-    if ((l_voltage_100uv != 0) && (l_current_10ma != 0))
+    do
     {
-        // Calculate voltage on just processor package (need to take load-line into account)
-        // Voltage value stored in the sensor should be in 100uV (mV scale -1)
-        // (current is in 10mA units, and load-line is in microOhms)
-        // v(V)     = i(10mA)*(1 A/1000 mA) * r(1 uOhm)*(1 Ohm/1,000,000 uOhm)
-        //          = i * (1 A/100) * r * (1 Ohm/1,000,000)
-        //          = i * r / 100,000,000
-        // v(uV)    = v(V) * 1,000,000
-        // v(100uV) = v(uV) / 100
-        //          = (v(V) * 1,000,000) / 100 = v(V) * 10,000
-        //          = (i * r / 100,000,000) * 10,000 = i * r / 10,000
-        // NOTE: distloss is the same as Rpath in the WOF algorithm
-        const uint64_t l_volt_drop_100uv = (l_current_10ma * (l_loadline+l_distloss)) / 10000;
-        // Calculate chip voltage
-        int32_t l_chip_voltage_100uv = l_voltage_100uv - l_volt_drop_100uv;
-        if ((l_chip_voltage_100uv <= 0) || (l_chip_voltage_100uv > 0xFFFF))
+        // find type that needs to be updated
+        if( (i_types & AVSBUS_PGPE_VDD) &&
+            !(l_updated_types & AVSBUS_PGPE_VDD) )
         {
-            // Voltage out of range, do not write sensors
-            if (!*L_throttle)
-            {
-                TRAC_ERR("update_avsbus_power_sensors: chip voltage out of range! %d(100uV) - %d(100uV) = %d(100uV)",
-                         l_voltage_100uv, WORD_LOW(l_volt_drop_100uv), l_chip_voltage_100uv);
-                *L_throttle = TRUE;
-            }
+           // defaults already initialized for Vdd
+           l_updated_types |= AVSBUS_PGPE_VDD;
+        }
+        else if( (i_types & AVSBUS_PGPE_VCS) &&
+            !(l_updated_types & AVSBUS_PGPE_VCS) )
+        {
+           // setup for Vcs
+           L_throttle = &L_throttle_vcs;
+           l_loadline = G_oppb.vcs_sysparm.loadline_uohm;
+           l_distloss = G_oppb.vcs_sysparm.distloss_uohm;
+           l_currentSensor = CURVCS;
+           l_voltageSensor = VOLTVCS;
+           l_voltageChip = VOLTVCSSENSE;
+           l_powerSensor = PWRVCS;
+
+           l_updated_types |= AVSBUS_PGPE_VCS;
+        }
+        else if( (i_types & AVSBUS_PGPE_VIO) &&
+            !(l_updated_types & AVSBUS_PGPE_VIO) )
+        {
+           // setup for Vio. no loadline or distloss defined in OPPB
+           L_throttle = &L_throttle_vio;
+           l_loadline = 0;
+           l_distloss = 0;
+           l_currentSensor = CURVIO;
+           l_voltageSensor = VOLTVIO;
+           l_voltageChip = VOLTVIOSENSE;
+           l_powerSensor = PWRVIO;
+
+           l_updated_types |= AVSBUS_PGPE_VIO;
+        }
+        else if( (i_types & AVSBUS_PGPE_VDN) &&
+            !(l_updated_types & AVSBUS_PGPE_VDN) )
+        {
+           // setup for Vdn
+           L_throttle = &L_throttle_vdn;
+           l_loadline = G_oppb.vdn_sysparm.loadline_uohm;
+           l_distloss = G_oppb.vdn_sysparm.distloss_uohm;
+           l_currentSensor = CURVDN;
+           l_voltageSensor = VOLTVDN;
+           l_voltageChip = VOLTVDNSENSE;
+           l_powerSensor = PWRVDN;
+
+           l_updated_types |= AVSBUS_PGPE_VDN;
         }
         else
         {
-            *L_throttle = FALSE;
-
-            // Update chip voltage (remote sense adjusted for loadline) (100uV units)
-            sensor_update(AMECSENSOR_PTR(l_voltageChip), (uint16_t)l_chip_voltage_100uv);
-
-            // Power value stored in the sensor should be in W (scale 0)
-            // p(W) = v(V) * i(A) = v(100uV)*100/1,000,000 * i(10mA)*10/1000
-            //                    = v(100uV)/10,000        * i(10mA)/100
-            //                    = v(100uV) * i(10mA) / 1,000,000
-            const uint32_t l_power = l_chip_voltage_100uv * l_current_10ma / 1000000;
-            sensor_update(AMECSENSOR_PTR(l_powerSensor), (uint16_t)l_power);
-
-            // check if there is an APSS with processor channel that would be providing the processor power sensor
-            if( ( G_pwr_reading_type != PWR_READING_TYPE_APSS ) ||
-                ( (G_sysConfigData.apss_adc_map.vdd[G_pbax_id.chip_id] == SYSCFG_INVALID_ADC_CHAN) &&
-                  (G_sysConfigData.apss_adc_map.vcs_vio_vpcie[G_pbax_id.chip_id] == SYSCFG_INVALID_ADC_CHAN) ) )
-            {
-               // no proc pwr from APSS, update the processor power sensor with AVS bus total processor power
-               // Vdd + Vdn
-               sensor_t *l_sensor2 = getSensorByGsid(l_powerSensor2);
-               const uint16_t l_proc_power = (uint16_t)l_power + l_sensor2->sample;
-               sensor_update(AMECSENSOR_PTR(PWRPROC), l_proc_power);
-            }
+           // invalid type
+           if(!L_traced_invalid_type)
+           {
+               TRAC_ERR("update_avsbus_power_sensors: invalid type[0x%02X]  updated[0x%02X]",
+                         i_types, l_updated_types);
+               L_traced_invalid_type = TRUE;
+           }
+           break;
         }
 
+        // Read latest voltage/current sensors
+        uint32_t l_voltage_100uv = 0;
+        uint32_t l_current_10ma = 0;
+        sensor_t *l_sensor = getSensorByGsid(l_voltageSensor);
+        if (l_sensor != NULL)
+        {
+            l_voltage_100uv = l_sensor->sample;
+        }
+        l_sensor = getSensorByGsid(l_currentSensor);
+        if (l_sensor != NULL)
+        {
+            l_current_10ma = l_sensor->sample;
+        }
+
+        if ((l_voltage_100uv != 0) && (l_current_10ma != 0))
+        {
+            // Calculate voltage on just processor package (need to take load-line into account)
+            // Voltage value stored in the sensor should be in 100uV (mV scale -1)
+            // (current is in 10mA units, and load-line is in microOhms)
+            // v(V)     = i(10mA)*(1 A/1000 mA) * r(1 uOhm)*(1 Ohm/1,000,000 uOhm)
+            //          = i * (1 A/100) * r * (1 Ohm/1,000,000)
+            //          = i * r / 100,000,000
+            // v(uV)    = v(V) * 1,000,000
+            // v(100uV) = v(uV) / 100
+            //          = (v(V) * 1,000,000) / 100 = v(V) * 10,000
+            //          = (i * r / 100,000,000) * 10,000 = i * r / 10,000
+            // NOTE: distloss is the same as Rpath in the WOF algorithm
+            const uint64_t l_volt_drop_100uv = (l_current_10ma * (l_loadline+l_distloss)) / 10000;
+            // Calculate chip voltage
+            int32_t l_chip_voltage_100uv = l_voltage_100uv - l_volt_drop_100uv;
+            if ((l_chip_voltage_100uv <= 0) || (l_chip_voltage_100uv > 0xFFFF))
+            {
+                // Voltage out of range, do not write sensors
+                if (!*L_throttle)
+                {
+                    TRAC_ERR("update_avsbus_power_sensors: chip voltage out of range! %d(100uV) - %d(100uV) = %d(100uV)",
+                             l_voltage_100uv, WORD_LOW(l_volt_drop_100uv), l_chip_voltage_100uv);
+                    *L_throttle = TRUE;
+                }
+            }
+            else
+            {
+                *L_throttle = FALSE;
+
+                // Update chip voltage (remote sense adjusted for loadline) (100uV units)
+                sensor_update(AMECSENSOR_PTR(l_voltageChip), (uint16_t)l_chip_voltage_100uv);
+
+                // Power value stored in the sensor should be in W (scale 0)
+                // p(W) = v(V) * i(A) = v(100uV)*100/1,000,000 * i(10mA)*10/1000
+                //                    = v(100uV)/10,000        * i(10mA)/100
+                //                    = v(100uV) * i(10mA) / 1,000,000
+                const uint32_t l_power = l_chip_voltage_100uv * l_current_10ma / 1000000;
+                sensor_update(AMECSENSOR_PTR(l_powerSensor), (uint16_t)l_power);
+                l_proc_power += l_power;
+            }
+        }
+    }while(l_updated_types != i_types);
+
+    if(l_proc_power)
+    {
+         // check if there is an APSS with processor channel that would be providing the processor power sensor
+         if( ( G_pwr_reading_type != PWR_READING_TYPE_APSS ) ||
+             ( (G_sysConfigData.apss_adc_map.vdd[G_pbax_id.chip_id] == SYSCFG_INVALID_ADC_CHAN) &&
+               (G_sysConfigData.apss_adc_map.vcs_vio_vpcie[G_pbax_id.chip_id] == SYSCFG_INVALID_ADC_CHAN) ) )
+         {
+            // no proc pwr from APSS, update the processor power sensor with AVS bus total processor power
+            sensor_update(AMECSENSOR_PTR(PWRPROC), l_proc_power);
+         }
     }
 
 } // end update_avsbus_power_sensors()

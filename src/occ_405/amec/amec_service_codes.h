@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -52,6 +52,7 @@ enum occAmecModuleId
     AMEC_UPDATE_FW_SENSORS            =    AMEC_COMP_ID | 0x01,
     AMEC_VECTORIZE_FW_SENSORS         =    AMEC_COMP_ID | 0x02,
     AMEC_AMESTER_INTERFACE            =    AMEC_COMP_ID | 0x03,
+    AMEC_VECTORIZE_QUAD_SENSORS       =    AMEC_COMP_ID | 0x04,
     AMEC_MST_CHECK_PCAPS_MATCH        =    AMEC_COMP_ID | 0x05,
     AMEC_MST_CHECK_UNDER_PCAP         =    AMEC_COMP_ID | 0x06,
     AMEC_SLAVE_CHECK_PERFORMANCE      =    AMEC_COMP_ID | 0x07,

@@ -796,8 +796,8 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
         // WOF is enabled return WOF information from PGPE
         // These are read from PGPE shared SRAM every WOF cycle
         l_extnSensorList[l_sensorHeader.count].data[0] = g_amec->wof.f_clip_ps;
-        l_extnSensorList[l_sensorHeader.count].data[1] = CONVERT_UINT16_UINT8_HIGH(g_amec->wof.v_clip);
-        l_extnSensorList[l_sensorHeader.count].data[2] = CONVERT_UINT16_UINT8_LOW(g_amec->wof.v_clip);
+        l_extnSensorList[l_sensorHeader.count].data[1] = 0;
+        l_extnSensorList[l_sensorHeader.count].data[2] = 0;
         l_extnSensorList[l_sensorHeader.count].data[3] = CONVERT_UINT16_UINT8_HIGH(g_amec->wof.v_ratio);
         l_extnSensorList[l_sensorHeader.count].data[4] = CONVERT_UINT16_UINT8_LOW(g_amec->wof.v_ratio);
     }

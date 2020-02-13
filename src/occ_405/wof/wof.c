@@ -64,14 +64,6 @@ BceRequest G_vrt_req;
 // Buffer to hold vrt from main memory
 DMA_BUFFER(temp_bce_request_buffer_t G_vrt_temp_buff) = {{0}};
 
-// TODO - RTC 209558
-#if 0
-// Quad state structs to temporarily hold the data from the doublewords to
-// then populate in amec structure
-quad_state0_t G_quad_state_0 = {0};
-quad_state1_t G_quad_state_1 = {0};
-#endif
-
 // Create a pointer to amec WOF structure
 amec_wof_t * g_wof = &(g_amec_sys.wof);
 
@@ -493,21 +485,20 @@ void call_wof_main( void )
  */
 void wof_main( void )
 {
-    // Some sensors may be updated from PGPE data so we must read PGPE data before reading sensors
-    // Read out PGPE data from shared SRAM
-    read_shared_sram();
+    // used to trace only once getting an invalid IO power index from XGPE
+    static bool L_trace_io_index_invalid = TRUE;
+
+    // maximum valid IO Power index
+    uint16_t l_max_io_index = g_amec_sys.static_wof_data.wof_header.io_pwr_size - 1;
 
     // Read out the sensor data needed for calculations
     read_sensor_data();
 
-    // Calculate the core voltage per quad
-    calculate_core_voltage();
-
     // Calculate the core leakage across the entire Proc
     calculate_core_leakage();
 
-    // Calculate the nest leakage for the entire system
-    calculate_nest_leakage();
+    // Calculate the cache leakage for the entire system
+    calculate_cache_leakage();
 
     // Calculate the AC currents
     calculate_AC_currents();
@@ -548,11 +539,23 @@ void wof_main( void )
 
     if(g_wof->io_pwr_override_index == WOF_VRT_IDX_NO_OVERRIDE)
     {
-        g_wof->io_pwr_step_from_start =
-                             calculate_step_from_start( g_wof->io_power,
-                                                        g_amec_sys.static_wof_data.wof_header.io_pwr_step,
-                                                        g_amec_sys.static_wof_data.wof_header.io_pwr_start,
-                                                        g_amec_sys.static_wof_data.wof_header.io_pwr_size );
+        // IO Power index is in XGPE Produced WOF values
+        xgpe_wof_values_t l_XgpeWofValues;
+        l_XgpeWofValues.value = in64(g_amec->static_wof_data.xgpe_values_sram_addr);
+        g_wof->io_pwr_step_from_start = (uint16_t)l_XgpeWofValues.fields.io_index;
+
+        // make sure we didn't get something out of range
+        if(g_wof->io_pwr_step_from_start > l_max_io_index)
+        {
+             if(L_trace_io_index_invalid)
+             {
+                 L_trace_io_index_invalid = FALSE;
+                 TRAC_ERR("Invalid IO power index[%d] > max index[%d]",
+                           g_wof->io_pwr_step_from_start,
+                           l_max_io_index);
+             }
+             g_wof->io_pwr_step_from_start = l_max_io_index;
+        }
     }
     else
     {
@@ -563,7 +566,7 @@ void wof_main( void )
     if(g_wof->ambient_override_index == WOF_VRT_IDX_NO_OVERRIDE)
     {
         g_wof->ambient_step_from_start =
-                             calculate_step_from_start( g_wof->ambient,
+                             calculate_step_from_start( g_wof->ambient_condition,
                                                         g_amec_sys.static_wof_data.wof_header.ambient_step,
                                                         g_amec_sys.static_wof_data.wof_header.ambient_start,
                                                         g_amec_sys.static_wof_data.wof_header.ambient_size );
@@ -801,9 +804,6 @@ void wof_vrt_callback( void )
        // GpeRequest went through successfully. update global ping pong buffer
        g_wof->curr_ping_pong_buf = g_wof->next_ping_pong_buf;
 
-       // Update previous active quads
-       g_wof->prev_req_active_quads = g_wof->req_active_quad_update;
-
        // Update the wof_init_state based off the current state
        if( g_wof->wof_init_state == INITIAL_VRT_SENT_WAITING )
        {
@@ -894,65 +894,17 @@ void copy_vrt_to_sram( uint32_t i_vrt_main_mem_addr )
 }
 
 /**
- * read_shared_sram
- *
- * Description: Read out data from OCC-PGPE shared SRAM and saves the
- *              data for the current iteration of the WOF algorithm
- */
-void read_shared_sram( void )
-{
-// TODO - RTC 209558
-#if 0
-    // Read f_clip, v_clip, f_ratio, and v_ratio
-    pgpe_wof_state_t l_wofstate;
-    l_wofstate.value = in64(g_wof->pgpe_wof_state_addr);
-
-    g_wof->f_clip_ps  = l_wofstate.fields.fclip_ps;
-
-    g_wof->v_clip  = l_wofstate.fields.vclip_mv;
-
-   // Fclip Freq and Vratio are updated in read_pgpe_produced_wof_values()
-
-    g_wof->f_ratio = 1;
-
-    // the PGPE produced WOF values were already read in this tick from amec_update_avsbus_sensors()
-    // required to read them in every tick regardless of WOF running so voltage and current sensors
-    // are updated even when WOF isn't running
-
-    // merge the 16-bit active_cores field from quad state 0 and the 16-bit
-    // active_cores field from quad state 1 and save it to amec.
-    g_wof->core_pwr_on =
-                   (((uint32_t)G_quad_state_0.fields.active_cores) << 16)
-                  | ((uint32_t)G_quad_state_1.fields.active_cores);
-
-    // Clear out current quad pstates
-    memset(g_wof->quad_x_pstates, 0 , MAXIMUM_QUADS);
-
-    // Add the quad states to the global quad state array for easy looping.
-    g_wof->quad_x_pstates[0] = (uint8_t)G_quad_state_0.fields.quad0_pstate;
-    g_wof->quad_x_pstates[1] = (uint8_t)G_quad_state_0.fields.quad1_pstate;
-    g_wof->quad_x_pstates[2] = (uint8_t)G_quad_state_0.fields.quad2_pstate;
-    g_wof->quad_x_pstates[3] = (uint8_t)G_quad_state_0.fields.quad3_pstate;
-    g_wof->quad_x_pstates[4] = (uint8_t)G_quad_state_1.fields.quad4_pstate;
-    g_wof->quad_x_pstates[5] = (uint8_t)G_quad_state_1.fields.quad5_pstate;
-
-    // Save IVRM bit vector states to amec
-    // NOTE: the ivrm_state field in both quad state 0 and quad state 1
-    //       double words should contain the same data.
-    g_wof->quad_ivrm_states =
-           (((uint8_t)G_quad_state_0.fields.ivrm_state) << 4)
-          | ((uint8_t)G_quad_state_1.fields.ivrm_state);
-#endif
-}
-
-/**
  * read_pgpe_produced_wof_values
  *
  * Description: Read the PGPE Produced WOF values from OCC-PGPE shared SRAM and
  *              update sensors
+ *              This is called every tick from amec_update_avsbus_sensors()
+ *              regardless of WOF being enabled or not
  */
 void read_pgpe_produced_wof_values( void )
 {
+    uint8_t  l_update_pwr_sensors = 0;
+
     // Read in OCS bits from OCC Flag 0 register
     uint32_t occ_flags0 = 0;
     occ_flags0 = in32(OCB_OCCFLG0);
@@ -976,13 +928,10 @@ void read_pgpe_produced_wof_values( void )
     uint32_t l_freq = 0;
 
     pgpe_wof_values_t l_PgpeWofValues;
-    // TODO - RTC 209558
-#if 0
-    l_PgpeWofValues.dw0.value = in64(G_pgpe_header.pgpe_produced_wof_values_addr);
-    l_PgpeWofValues.dw1.value = in64(G_pgpe_header.pgpe_produced_wof_values_addr + 0x08);
-    l_PgpeWofValues.dw2.value = in64(G_pgpe_header.pgpe_produced_wof_values_addr + 0x10);
-    l_PgpeWofValues.dw3.value = in64(G_pgpe_header.pgpe_produced_wof_values_addr + 0x18);
-#endif
+    l_PgpeWofValues.dw0.value = in64(g_amec->static_wof_data.pgpe_values_sram_addr);
+    l_PgpeWofValues.dw1.value = in64(g_amec->static_wof_data.pgpe_values_sram_addr + 0x08);
+    l_PgpeWofValues.dw2.value = in64(g_amec->static_wof_data.pgpe_values_sram_addr + 0x10);
+    l_PgpeWofValues.dw3.value = in64(g_amec->static_wof_data.pgpe_values_sram_addr + 0x18);
 
     // save Vdd voltage to sensor
     l_voltage = (uint16_t)l_PgpeWofValues.dw2.fields.vdd_avg_mv;
@@ -1002,6 +951,24 @@ void read_pgpe_produced_wof_values( void )
         sensor_update(AMECSENSOR_PTR(VOLTVDN), l_voltage);
     }
 
+    // save Vcs voltage to sensor
+    l_voltage = (uint16_t)l_PgpeWofValues.dw2.fields.vcs_avg_mv;
+    if (l_voltage != 0)
+    {
+        // Voltage value stored in the sensor should be in 100uV (mV scale -1)
+        l_voltage *= 10;
+        sensor_update(AMECSENSOR_PTR(VOLTVCS), l_voltage);
+    }
+
+    // save Vio voltage to sensor
+    l_voltage = (uint16_t)l_PgpeWofValues.dw2.fields.vio_avg_mv;
+    if (l_voltage != 0)
+    {
+        // Voltage value stored in the sensor should be in 100uV (mV scale -1)
+        l_voltage *= 10;
+        sensor_update(AMECSENSOR_PTR(VOLTVIO), l_voltage);
+    }
+
     // Save Vdd current to sensor
     l_current = (uint16_t)l_PgpeWofValues.dw1.fields.idd_avg_ma;
     if (l_current != 0)
@@ -1009,6 +976,7 @@ void read_pgpe_produced_wof_values( void )
         // Current value stored in the sensor should be in 10mA (A scale -2)
         // Reading from SRAM is already in 10mA
         sensor_update(AMECSENSOR_PTR(CURVDD), l_current);
+        l_update_pwr_sensors |= AVSBUS_PGPE_VDD;
     }
 
     // Save Vdn current to sensor
@@ -1018,10 +986,31 @@ void read_pgpe_produced_wof_values( void )
         // Current value stored in the sensor should be in 10mA (A scale -2)
         // Reading from SRAM is already in 10mA
         sensor_update(AMECSENSOR_PTR(CURVDN), l_current);
+        l_update_pwr_sensors |= AVSBUS_PGPE_VDN;
+    }
+
+    // Save Vcs current to sensor
+    l_current = (uint16_t)l_PgpeWofValues.dw1.fields.ics_avg_ma;
+    if (l_current != 0)
+    {
+        // Current value stored in the sensor should be in 10mA (A scale -2)
+        // Reading from SRAM is already in 10mA
+        sensor_update(AMECSENSOR_PTR(CURVCS), l_current);
+        l_update_pwr_sensors |= AVSBUS_PGPE_VCS;
+    }
+
+    // Save Vio current to sensor
+    l_current = (uint16_t)l_PgpeWofValues.dw1.fields.iio_avg_ma;
+    if (l_current != 0)
+    {
+        // Current value stored in the sensor should be in 10mA (A scale -2)
+        // Reading from SRAM is already in 10mA
+        sensor_update(AMECSENSOR_PTR(CURVIO), l_current);
+        l_update_pwr_sensors |= AVSBUS_PGPE_VIO;
     }
 
     // Update the chip voltage and power sensors
-    update_avsbus_power_sensors(AVSBUS_VDD);
+    update_avsbus_power_sensors(l_update_pwr_sensors);
 
     // populate values used by WOF alg
 
@@ -1033,60 +1022,14 @@ void read_pgpe_produced_wof_values( void )
     g_wof->v_ratio = l_PgpeWofValues.dw0.fields.vratio_avg;
     sensor_update(AMECSENSOR_PTR(VRATIO), (uint16_t)g_wof->v_ratio);
 
+    // clip Pstate is the last value read from VRT and used for debug only
+    g_wof->f_clip_ps = l_PgpeWofValues.dw0.fields.clip_pstate;
+
     // save the full PGPE WOF values for debug
     g_wof->pgpe_wof_values_dw0 = l_PgpeWofValues.dw0.value;
     g_wof->pgpe_wof_values_dw1 = l_PgpeWofValues.dw1.value;
     g_wof->pgpe_wof_values_dw2 = l_PgpeWofValues.dw2.value;
     g_wof->pgpe_wof_values_dw3 = l_PgpeWofValues.dw3.value;
-}
-/**
- * calculate_core_voltage
- *
- * Description: Calculate the core voltage based on Pstate and IVRM state.
- *              Same for all cores in the quad so only need to calculate
- *              once per quad.
- */
-void calculate_core_voltage( void )
-{
-    uint32_t l_voltage;
-    uint8_t l_quad_mask;
-    int l_quad_idx;
-    for(l_quad_idx = 0; l_quad_idx < MAXIMUM_QUADS; l_quad_idx++)
-    {
-        // Adjust current mask. (IVRM_STATE_QUAD_MASK = 0x80)
-        l_quad_mask = IVRM_STATE_QUAD_MASK >> l_quad_idx;
-
-        // Check IVRM state of quad 0.
-        // 0 = BYPASS, 1 = REGULATION
-        if( (g_wof->quad_ivrm_states & l_quad_mask ) == 0 )
-        {
-            l_voltage = g_wof->voltvddsense_sensor;
-        }
-        else
-        {
-            // Calculate the address of the pstate for the current quad.
-            uint32_t pstate_addr = g_amec_sys.static_wof_data.pstate_tbl_sram_addr +
-                    (g_wof->quad_x_pstates[l_quad_idx] * sizeof(OCCPstateTable_entry_t));
-
-            // Get the Pstate
-            OCCPstateTable_entry_t * pstate_entry_ptr;
-            uint32_t current_pstate = in32(pstate_addr);
-            pstate_entry_ptr = (OCCPstateTable_entry_t *)(&current_pstate);
-
-            // Get the internal vid (ivid) from the pstate table
-            uint8_t current_vid = pstate_entry_ptr->internal_vdd_vid;
-
-            // Convert the vid to voltage and then convert units to 100uV
-            // Vid-to-voltage = 512mV + ivid*4mV
-            // mV to 100uV = mV*10
-            l_voltage = (512 + (current_vid*4))*10;
-        }
-        // Save the voltage to amec_wof_t global struct
-        g_wof->v_core_100uV[l_quad_idx] = l_voltage;
-
-        // Save off the voltage index for later use
-        g_wof->quad_v_idx[l_quad_idx] = get_voltage_index(l_voltage);
-    }
 }
 
 /**
@@ -1100,161 +1043,7 @@ void calculate_core_leakage( void )
 {
 // TODO - RTC 209558
 #if 0
-    uint16_t l_quad_cache;
-    uint16_t idc_vdd = 0;
-    uint16_t temperature = 0;
 
-    // Loop through all Quads and their respective Cores to calculate
-    // leakage.
-    int quad_idx = 0;       // Quad Index (0-5)
-    uint8_t core_idx = 0;   // Actual core index (0-23)
-    int core_loop_idx = 0;  // On a per quad basis (0-3)
-
-    for(quad_idx = 0; quad_idx < MAXIMUM_QUADS; quad_idx++)
-    {
-        // Get the voltage for the current core.
-        // (Same for all cores within a single quad)
-        uint8_t quad_v_idx = g_wof->quad_v_idx[quad_idx];
-
-        // ALL_CORES_OFF_ISO
-        g_wof->all_cores_off_iso =
-        scale_and_interpolate( G_oppb.iddq.ivdd_all_cores_off_caches_off,
-                               G_oppb.iddq.avgtemp_all_cores_off_caches_off,
-                               quad_v_idx,
-                               g_wof->tempnest_sensor,
-                               g_wof->v_core_100uV[quad_idx] );
-
-        g_wof->all_cores_off_before = g_wof->all_cores_off_iso;
-
-        //Multiply by core leakage percentage incorrectly called nest_leakage_percent in OPPB
-        g_wof->all_cores_off_iso = ( g_wof->all_cores_off_iso *
-            G_oppb.nest_leakage_percent ) / 100;
-
-        // Calculate ALL_GOOD_CACHES_ON_ISO
-        g_wof->all_good_caches_on_iso =
-        scale_and_interpolate( G_oppb.iddq.ivdd_all_good_cores_off_good_caches_on,
-                               G_oppb.iddq.avgtemp_all_good_cores_off,
-                               quad_v_idx,
-                               g_wof->tempnest_sensor,
-                               g_wof->v_core_100uV[quad_idx] ) -
-                               g_wof->all_cores_off_iso;
-
-
-        // Calculate ALL_CACHES_OFF_ISO
-        g_wof->all_caches_off_iso =
-        scale_and_interpolate( G_oppb.iddq.ivdd_all_cores_off_caches_off,
-                               G_oppb.iddq.avgtemp_all_cores_off_caches_off,
-                               quad_v_idx,
-                               g_wof->tempnest_sensor,
-                               g_wof->v_core_100uV[quad_idx] ) -
-                               g_wof->all_cores_off_iso;
-
-        // idc Quad uses same variables as all_cores_off_iso so just use that and
-        // divide by 6 to get just one quad
-        g_wof->idc_quad = g_wof->all_caches_off_iso / MAXIMUM_QUADS;
-
-        // Calculate quad_cache for all quads
-        l_quad_cache = ( g_wof->all_good_caches_on_iso - g_wof->all_caches_off_iso *
-                     ( MAXIMUM_QUADS - G_oppb.iddq.good_quads_per_sort) /
-                      MAXIMUM_QUADS) / G_oppb.iddq.good_quads_per_sort;
-
-        if(g_wof->quad_x_pstates[quad_idx] == QUAD_POWERED_OFF)
-        {
-            // Incorporate quad off into leakage
-            idc_vdd += g_wof->idc_quad;
-
-            // Add in 4 cores worth of off leakage
-            idc_vdd += g_wof->all_cores_off_iso * NUM_CORES_PER_QUAD /24;
-        }
-        else // Quad i is on
-        {
-            // Calculate the index of the first core in the quad.
-            // so we reference the correct one in the inner core loop
-            core_idx = quad_idx * NUM_CORES_PER_QUAD;
-
-            // Calculate the number of cores on within the current quad.
-            g_wof->cores_on_per_quad[quad_idx] =
-                                        num_cores_on_in_quad(quad_idx);
-
-            // Take a snap shot of the quad temperature for later calculations
-            g_wof->tempq[quad_idx] = AMECSENSOR_ARRAY_PTR(TEMPQ0,
-                                                           quad_idx)->sample;
-            // If 0, use nest temperature.
-            if( g_wof->tempq[quad_idx] == 0 )
-            {
-                g_wof->tempq[quad_idx] = g_wof->tempnest_sensor;
-            }
-
-            // Reset num_cores_off_in_quad before processing current quads cores
-            uint8_t num_cores_off_in_quad = 0;
-
-            // Loop all cores within current quad
-            for(core_loop_idx = 0; core_loop_idx < NUM_CORES_PER_QUAD; core_loop_idx++)
-            {
-                if(core_powered_on(core_idx))
-                {
-                    // Get the core temperature from TEMPPROCTHRMC sensor
-                    temperature = AMECSENSOR_ARRAY_PTR(TEMPPROCTHRMC0,
-                                                       core_idx)->sample;
-
-                    // If TEMPPROCTHRMCy is 0, use TEMPQx
-                    if(temperature == 0)
-                    {
-                        // Quad temp guaranteed to be non-zero. Check was made
-                        // when assigning to tempq array.
-                        temperature = g_wof->tempq[quad_idx];
-                    }
-
-                    // Save selected temperature
-                    g_wof->tempprocthrmc[core_idx] = temperature;
-
-                    // Calculate QUAD_GOOD_CORES_ONLY
-                    g_wof->quad_good_cores_only[quad_idx] =
-                    scale_and_interpolate
-                    (G_oppb.iddq.ivdd_quad_good_cores_on_good_caches_on[quad_idx],
-                    G_oppb.iddq.avgtemp_quad_good_cores_on[quad_idx],
-                    quad_v_idx,
-                    g_wof->tempprocthrmc[core_idx],
-                    g_wof->v_core_100uV[quad_idx] )
-                    -
-                    scale_and_interpolate
-                    (G_oppb.iddq.ivdd_all_good_cores_off_good_caches_on,
-                    G_oppb.iddq.avgtemp_all_good_cores_off,
-                    quad_v_idx,
-                    g_wof->tempprocthrmc[core_idx],
-                    g_wof->v_core_100uV[quad_idx])
-                    +
-                    (g_wof->all_cores_off_iso * G_oppb.iddq.good_normal_cores[quad_idx])
-                     / 24;
-
-                    // Calculate quad_on_cores[quad]
-                    g_wof->quad_on_cores[quad_idx] =
-                        g_wof->quad_good_cores_only[quad_idx] /
-                        G_oppb.iddq.good_normal_cores[quad_idx];
-
-                    // Add to overall leakage
-                    idc_vdd += g_wof->quad_on_cores[quad_idx];
-                }
-                else // Core is powered off
-                {
-                    // Increment the number of cores found to be off
-                    num_cores_off_in_quad++;
-                }
-                // Increment the Core Index for the next iteration
-                core_idx++;
-            } // core loop
-
-            // After all cores within the current quad have been processed,
-            // incorporate calculations for cores that were off into leakage
-            idc_vdd += g_wof->all_cores_off_iso * num_cores_off_in_quad /24;
-
-            // Incorporate the cache into leakage calculation.
-            // scale from nest to quad
-            idc_vdd += scale( l_quad_cache,
-                        ( g_wof->tempq[quad_idx] - g_wof->tempnest_sensor) );
-
-        } // quad on/off conditional
-    } // quad loop
 
     // Finally, save the calculated leakage to amec
     g_wof->idc_vdd = idc_vdd;
@@ -1262,27 +1051,13 @@ void calculate_core_leakage( void )
 }
 
 /**
- * calculate_nest_leakage
+ * calculate_cache_leakage
  *
- * Description: Function to calculate the nest leakage using VPD leakage data,
+ * Description: Function to calculate the cache leakage using VPD leakage data,
  *              temperature, and voltage
  */
-void calculate_nest_leakage( void )
+void calculate_cache_leakage( void )
 {
-// TODO - RTC 209558
-#if 0
-    // Get the VOLTVDN sensor to choose the appropriate nest voltage
-    // index
-    int l_nest_v_idx = get_voltage_index( g_wof->voltvdn_sensor );
-
-    // Assign to nest leakage.
-    g_wof->idc_vdn =
-        scale_and_interpolate(G_oppb.iddq.ivdn,
-                              G_oppb.iddq.avgtemp_vdn,
-                              l_nest_v_idx,
-                              g_wof->tempnest_sensor,
-                              g_wof->voltvdn_sensor );
-#endif
 }
 
 /**
@@ -1356,7 +1131,7 @@ void calculate_ceff_ratio_vcs( void )
     g_wof->c_ratio_vcs_freq = G_occ_frequency_mhz;
     g_wof->ceff_vcs =
                 calculate_effective_capacitance( g_wof->iac_vcs,
-                                                 g_wof->voltvcs_sensor,
+                                                 g_wof->voltvcssense_sensor,
                                                  g_wof->c_ratio_vcs_freq );
 
     // Prevent divide by zero
@@ -1465,10 +1240,8 @@ void calculate_ceff_ratio_vdd( void )
             INTR_TRAC_ERR("WOF Disabled! Ceff VDD divide by 0");
             INTR_TRAC_ERR("iac_tdp_vdd = %d", g_wof->iac_tdp_vdd );
             INTR_TRAC_ERR("v_ratio     = %d", g_wof->v_ratio );
-            INTR_TRAC_ERR("f_ratio     = %d", g_wof->f_ratio );
             INTR_TRAC_ERR("c ratio vdd V = %d", g_wof->c_ratio_vdd_volt);
             INTR_TRAC_ERR("c ratio vdd F    = %d", g_wof->c_ratio_vdd_freq);
-            INTR_TRAC_ERR("v_clip_mv   = %d", g_wof->v_clip);
             INTR_TRAC_ERR("f_clip_freq   = 0x%x", g_wof->f_clip_freq);
 
             print_oppb();
@@ -1513,13 +1286,13 @@ void calculate_AC_currents( void )
        g_wof->iac_vdd = 0;
     }
 
-    if(g_wof->curvdn_sensor > g_wof->idc_vdn)
+    if(g_wof->curvcs_sensor > g_wof->idc_vcs)
     {
-       g_wof->iac_vdn = g_wof->curvdn_sensor - g_wof->idc_vdn;
+       g_wof->iac_vcs = g_wof->curvcs_sensor - g_wof->idc_vcs;
     }
     else
     {
-       g_wof->iac_vdn = 0;
+       g_wof->iac_vcs = 0;
     }
 }
 
@@ -1771,10 +1544,10 @@ void read_sensor_data( void )
 {
     // Read out necessary Sensor data for WOF calculation
     g_wof->curvdd_sensor        = getSensorByGsid(CURVDD)->sample;
-    g_wof->curvdn_sensor        = getSensorByGsid(CURVDN)->sample;
+    g_wof->curvcs_sensor        = getSensorByGsid(CURVCS)->sample;
     g_wof->voltvddsense_sensor  = getSensorByGsid(VOLTVDDSENSE)->sample;
-    g_wof->tempnest_sensor      = getSensorByGsid(TEMPNEST)->sample;
-    g_wof->voltvdn_sensor       = getSensorByGsid(VOLTVDN)->sample;
+    g_wof->voltvcssense_sensor  = getSensorByGsid(VOLTVCSSENSE)->sample;
+    g_wof->tempRT_sensor        = getSensorByGsid(TEMPRTAVG)->sample;
 }
 
 /**

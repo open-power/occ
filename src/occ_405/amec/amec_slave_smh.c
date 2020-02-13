@@ -497,6 +497,7 @@ void amec_slv_state_0(void)
   //-------------------------------------------------------
   sensor_vector_update(AMECSENSOR_PTR(TEMPPROCAVG),  1);
   sensor_vector_update(AMECSENSOR_PTR(TEMPPROCTHRM), 1);
+  sensor_vector_update(AMECSENSOR_PTR(TEMPRTAVG), 1);
   sensor_vector_update(AMECSENSOR_PTR(FREQA),        1);
   sensor_vector_update(AMECSENSOR_PTR(IPS),     1);
   sensor_vector_update(AMECSENSOR_PTR(UTIL),         1);

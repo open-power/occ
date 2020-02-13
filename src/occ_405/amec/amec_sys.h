@@ -77,6 +77,8 @@ typedef struct
   sensor_t prcdupdatedur;
   sensor_t voltvddsense;
   sensor_t voltvdnsense;
+  sensor_t voltvcssense;
+  sensor_t voltviosense;
 
   // DPS update flag
   // 8 bit flag: =1, no updating allowed; =0, updating is allowed
@@ -87,14 +89,6 @@ typedef struct
 //-------------------------------------------------------------
 // Proc Sub-structure
 //-------------------------------------------------------------
-
-typedef struct
-{
-  // Sensors
-  sensor_t volt250us;
-
-} amec_vrm_t;
-
 
 typedef struct
 {
@@ -421,7 +415,6 @@ typedef struct
   // Sub-structures under Proc
   amec_core_t    core[MAX_NUM_CORES];
   amec_memctl_t  memctl[MAX_NUM_MEM_CONTROLLERS];
-  amec_vrm_t     vrm[NUM_PROC_VRMS];
   amec_proc_pwr_votes_t pwr_votes;
   amec_quad_t    quad[MAXIMUM_QUADS];
 
@@ -431,17 +424,30 @@ typedef struct
   sensor_t ips4ms;
   vectorSensor_t ips4ms_vector;
   sensor_t pwrproc;
-  sensor_t pwr250usvdd;
-  sensor_t curvdd;
-  sensor_t pwrvcsviovdn;
   sensor_t pwr250usmem;
   sensor_t tempprocavg;
   vectorSensor_t temp4ms_vector;
+  sensor_t temprtavg;
+  vectorSensor_t temprt_vector;
   sensor_t tempprocthermal;
   vectorSensor_t tempprocthermal_vector;
   sensor_t util;
   sensor_t tempnest;
   vectorSensor_t util_vector;
+  sensor_t curvdd;
+  sensor_t curvdn;
+  sensor_t curvcs;
+  sensor_t curvio;
+  sensor_t voltvdd;
+  sensor_t voltvdn;
+  sensor_t voltvcs;
+  sensor_t voltvio;
+  sensor_t pwrvdd;
+  sensor_t pwrvdn;
+  sensor_t pwrvcs;
+  sensor_t pwrvio;
+  sensor_t procpwrthrot;
+  sensor_t procotthrot;
 
   // Memory Summary Sensors
   sensor_t tempmembufthrm;
@@ -451,12 +457,6 @@ typedef struct
   sensor_t tempmcextthrm;  // hottest of all DATA_FRU_MEMCTRL_EXT monitored by this OCC
   sensor_t mempwrthrot;
   sensor_t memotthrot;
-
-  sensor_t curvdn;
-  sensor_t pwrvdd;
-  sensor_t pwrvdn;
-  sensor_t procpwrthrot;
-  sensor_t procotthrot;
 
   // Calculations & Interim Data
   uint16_t core_max_freq;               // Maximum requested freq for all cores on chip.

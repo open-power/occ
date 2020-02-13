@@ -619,13 +619,10 @@ bool read_pgpe_header(void)
                                g_amec->static_wof_data.pgpe_values_sram_addr,
                                g_amec->static_wof_data.xgpe_values_sram_addr);
 
-                g_amec->static_wof_data.pgpe_wof_state_addr    = G_pgpe_header.wof_state_address;
                 g_amec->static_wof_data.pstate_tbl_sram_addr   = G_pgpe_header.occ_pstate_table_sram_addr;
 
-                MAIN_TRAC_IMP("read_pgpe_header: Pstate table SRAM Address[0x%08X], "
-                              "WOF State address[0x%08X]",
-                              g_amec->static_wof_data.pstate_tbl_sram_addr,
-                              g_amec->static_wof_data.pgpe_wof_state_addr);
+                MAIN_TRAC_IMP("read_pgpe_header: Pstate table SRAM Address[0x%08X]",
+                              g_amec->static_wof_data.pstate_tbl_sram_addr);
 
                 // Read in WOF tables header
                 read_wof_header();
@@ -646,13 +643,19 @@ bool read_pgpe_header(void)
 
                     G_pgpe_header.wof_tables_addr = 0x3C0000;
                     G_pgpe_header.wof_tables_length = 0x20000;
-                    g_amec->static_wof_data.pgpe_wof_state_addr    = G_pgpe_header.wof_state_address;
+
+                    g_amec->static_wof_data.occ_values_sram_addr = G_pgpe_header.shared_sram_addr + OCC_PRODUCED_WOF_VALUES_SRAM_OFFSET;
+                    g_amec->static_wof_data.pgpe_values_sram_addr = G_pgpe_header.shared_sram_addr + PGPE_PRODUCED_WOF_VALUES_SRAM_OFFSET;
+                    g_amec->static_wof_data.xgpe_values_sram_addr = G_pgpe_header.shared_sram_addr + XGPE_PRODUCED_WOF_VALUES_SRAM_OFFSET;
+                    MAIN_TRAC_IMP("read_pgpe_header: Produced WOF values SRAM address OCC[0x%08X] PGPE[0x%08X] XGPE[0x%08X]",
+                                   g_amec->static_wof_data.occ_values_sram_addr,
+                                   g_amec->static_wof_data.pgpe_values_sram_addr,
+                                   g_amec->static_wof_data.xgpe_values_sram_addr);
+
                     g_amec->static_wof_data.pstate_tbl_sram_addr   = G_pgpe_header.occ_pstate_table_sram_addr;
 
-                    MAIN_TRAC_IMP("read_pgpe_header: Pstate table SRAM Address[0x%08X], "
-                              "WOF State address[0x%08X]",
-                              g_amec->static_wof_data.pstate_tbl_sram_addr,
-                              g_amec->static_wof_data.pgpe_wof_state_addr);
+                    MAIN_TRAC_IMP("read_pgpe_header: Pstate table SRAM Address[0x%08X]",
+                                   g_amec->static_wof_data.pstate_tbl_sram_addr);
 
                     // Read in WOF tables header
                     read_wof_header();

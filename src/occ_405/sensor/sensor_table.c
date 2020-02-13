@@ -312,11 +312,16 @@ const sensor_ptr_t G_amec_sensor_list[] =
   SENSOR_PTR( TEMPPROCAVG,          &g_amec_sys.proc[0].tempprocavg),
   SENSOR_PTR( TEMPPROCTHRM,         &g_amec_sys.proc[0].tempprocthermal),
   SENSOR_PTR( UTIL,                 &g_amec_sys.proc[0].util),
+  SENSOR_PTR( TEMPRTAVG,            &g_amec_sys.proc[0].temprtavg),
   SENSOR_PTR( TEMPNEST,             &g_amec_sys.proc[0].tempnest),
   SENSOR_PTR( VOLTVDDSENSE,         &g_amec_sys.fw.voltvddsense),
   SENSOR_PTR( VOLTVDNSENSE,         &g_amec_sys.fw.voltvdnsense),
+  SENSOR_PTR( VOLTVCSSENSE,         &g_amec_sys.fw.voltvcssense),
+  SENSOR_PTR( VOLTVIOSENSE,         &g_amec_sys.fw.voltviosense),
   SENSOR_PTR( PWRVDD,               &g_amec_sys.proc[0].pwrvdd),
   SENSOR_PTR( PWRVDN,               &g_amec_sys.proc[0].pwrvdn),
+  SENSOR_PTR( PWRVCS,               &g_amec_sys.proc[0].pwrvcs),
+  SENSOR_PTR( PWRVIO,               &g_amec_sys.proc[0].pwrvio),
   SENSOR_PTR( PROCPWRTHROT,         &g_amec_sys.proc[0].procpwrthrot),
   SENSOR_PTR( PROCOTTHROT,          &g_amec_sys.proc[0].procotthrot),
 
@@ -328,10 +333,14 @@ const sensor_ptr_t G_amec_sensor_list[] =
   // ------------------------------------------------------
   // Regulator Sensors
   // ------------------------------------------------------
-  SENSOR_PTR( VOLTVDD,              &g_amec_sys.proc[0].vrm[0].volt250us),
-  SENSOR_PTR( VOLTVDN,              &g_amec_sys.proc[0].vrm[1].volt250us),
+  SENSOR_PTR( VOLTVDD,              &g_amec_sys.proc[0].voltvdd),
+  SENSOR_PTR( VOLTVDN,              &g_amec_sys.proc[0].voltvdn),
+  SENSOR_PTR( VOLTVCS,              &g_amec_sys.proc[0].voltvcs),
+  SENSOR_PTR( VOLTVIO,              &g_amec_sys.proc[0].voltvio),
   SENSOR_PTR( CURVDD,               &g_amec_sys.proc[0].curvdd),
   SENSOR_PTR( CURVDN,               &g_amec_sys.proc[0].curvdn),
+  SENSOR_PTR( CURVCS,               &g_amec_sys.proc[0].curvcs),
+  SENSOR_PTR( CURVIO,               &g_amec_sys.proc[0].curvio),
   SENSOR_PTR( TEMPVDD,              &g_amec_sys.sys.tempvdd),
 
 
@@ -468,11 +477,16 @@ const minisensor_ptr_t G_amec_mini_sensor_list[] INIT_SECTION =
   MINI_SENSOR_PTR(    TEMPPROCAVG,  &G_dcom_slv_outbox_tx.tempprocavg),
   MINI_SENSOR_PTR(   TEMPPROCTHRM,  &G_dcom_slv_outbox_tx.tempprocthermal),
   MINI_SENSOR_PTR(           UTIL,  &G_dcom_slv_outbox_tx.util),
+  MINI_SENSOR_PTR(       TEMPRTAVG, NULL),
   MINI_SENSOR_PTR(       TEMPNEST,  NULL),
   MINI_SENSOR_PTR(   VOLTVDDSENSE,  NULL),
   MINI_SENSOR_PTR(   VOLTVDNSENSE,  NULL),
+  MINI_SENSOR_PTR(   VOLTVCSSENSE,  NULL),
+  MINI_SENSOR_PTR(   VOLTVIOSENSE,  NULL),
   MINI_SENSOR_PTR(         PWRVDD,  NULL),
   MINI_SENSOR_PTR(         PWRVDN,  NULL),
+  MINI_SENSOR_PTR(         PWRVCS,  NULL),
+  MINI_SENSOR_PTR(         PWRVIO,  NULL),
   MINI_SENSOR_PTR(   PROCPWRTHROT,  NULL),
   MINI_SENSOR_PTR(    PROCOTTHROT,  NULL),
 
@@ -486,8 +500,12 @@ const minisensor_ptr_t G_amec_mini_sensor_list[] INIT_SECTION =
   // ------------------------------------------------------
   MINI_SENSOR_PTR( VOLTVDD,         NULL),
   MINI_SENSOR_PTR( VOLTVDN,         NULL),
+  MINI_SENSOR_PTR( VOLTVCS,         NULL),
+  MINI_SENSOR_PTR( VOLTVIO,         NULL),
   MINI_SENSOR_PTR( CURVDD,          NULL),
   MINI_SENSOR_PTR( CURVDN,          NULL),
+  MINI_SENSOR_PTR( CURVCS,          NULL),
+  MINI_SENSOR_PTR( CURVIO,          NULL),
   MINI_SENSOR_PTR( TEMPVDD,         &G_dcom_slv_outbox_tx.tempvdd),
 
   // ------------------------------------------------------
