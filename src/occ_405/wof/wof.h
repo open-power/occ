@@ -33,14 +33,9 @@
 #define CORE_IDDQ_MEASUREMENTS      6
 #define PGPE_WOF_OFF                0
 #define PGPE_WOF_ON                 1
-#define NUM_CORES_PER_QUAD          4
 
-// default number of chances for WOF running every 8th tick, actual timeout
-// used will be adjusted if WOF runs every tick
-#define MAX_VRT_CHANCES_EVERY_8TH_TICK  2  // 8ms = 4ms * 2
 #define MAX_VRT_CHANCES_EVERY_TICK  16  // 8ms = 500us * 16
 #define MAX_VRT_CHANCES G_max_vrt_chances
-#define MAX_WOF_CONTROL_CHANCES_EVERY_8TH_TICK  2  // 8ms = 4ms * 2
 #define MAX_WOF_CONTROL_CHANCES_EVERY_TICK  16  // 8ms = 500us * 16
 #define MAX_WOF_CONTROL_CHANCES G_max_wof_control_chances
 extern uint8_t G_max_vrt_chances;
@@ -89,7 +84,8 @@ extern uint32_t G_max_ceff_ratio;
 #define WOF_RC_IPC_FAILURE                         0x00800000
 #define WOF_RC_USER_DISABLED_WOF                   0x01000000
 #define WOF_RC_RESET_DEBUG_CMD                     0x02000000
-#define WOF_RC_DIVIDE_BY_ZERO_VDN                  0x04000000
+#define WOF_RC_DIVIDE_BY_ZERO_VCS                 0x04000000
+#define WOF_RC_INVALID_IDDQ_SAMPLE_DEPTH           0x08000000
 
 //***************************************************************************
 // Temp space used to save hard coded addresses
@@ -216,137 +212,199 @@ typedef struct __attribute__ ((packed))
     uint8_t ambient_override_index;
     // [16] override sent for Vratio index via mfg test cmd 0xff indicates no override
     uint8_t v_ratio_override_index;
-    // [17] Bit vector to hold the power on status of all 32 cores
-    uint32_t core_pwr_on;
-    // [21] The most recently read value in the sensor VOLTVDDSENSE
-    uint32_t voltvddsense_sensor;
-    // [25] The most recently read value in the sensor VOLTVCSSENSE
-    uint32_t voltvcssense_sensor;
+    // [17] The most recently read value in the sensor CURVDD
+    uint16_t curvdd_sensor;
+    // [19] The most recently read value in the sensor CURVCS
+    uint16_t curvcs_sensor;
+    // [21] The most recently read value in sensor VOLTVDDSENSE 0.1mv (100uV) unit
+    uint32_t Vdd_chip_p1mv;
+    // [25] The most recently read value in the sensor VOLTVCSSENSE 0.1mv (100uV) unit
+    uint32_t Vcs_chip_p1mv;
     // [29] The most recently read value in the sensor TEMPPROCTHRMCy where y is core num
     uint16_t tempprocthrmc[MAX_NUM_CORES];
     // [93] The most recently read value in the sensor TEMPRTAVG
-    uint16_t tempRT_sensor;
-    // [95] The most recently read value in the sensor TEMPQx where x is the quad num
-    uint16_t tempq[MAXIMUM_QUADS];
-    // [111]The most recently read value in the sensor CURVDD
-    uint16_t curvdd_sensor;
-    // [113] The most recently read value in the sensor CURVCS
-    uint16_t curvcs_sensor;
-    // [115] Contains the estimated core leakage based on temp, voltage, and vpd-leak
-    uint32_t idc_vdd;
-    // [119] Contains the estimated cache leakage based on temp, voltage and vpd-leak
-    uint32_t idc_vcs;
-    // [123] Contains the leakage current for quads
-    uint32_t idc_quad;
-    // [127] Contains the AC component of the workload for the core
+    uint16_t T_racetrack;
+    // [95] calculated from XGPE IDDQ activity values (minus off & vmin) in 0.1% unit
+    uint16_t p1pct_on[MAX_NUM_CORES];
+    // [159] read from IDDQ activity values converted to 0.1% unit
+    uint16_t p1pct_off[MAX_NUM_CORES];
+    // [223] read from XGPE IDDQ activity values converted to 0.1% unit
+    uint16_t p1pct_vmin[MAX_NUM_CORES];
+    // [287] read from XGPE IDDQ activity values converted to 0.1% unit
+    uint16_t p1pct_mma_off[MAX_NUM_CORES];
+    // [351] Contains the estimated core leakage based on temp, voltage, and vpd-leak
+    uint32_t iddq_ua;
+    // [355] Contains the estimated cache leakage based on temp, voltage and vpd-leak
+    uint32_t icsq_ua;
+    // [359] Contains the AC component of the workload for the core
     uint32_t iac_vdd;
-    // [131] Contains the AC component of the workload for the cache
+    // [363] Contains the AC component of the workload for the cache
     uint32_t iac_vcs;
-    // [135] Contains iac_tdp_vdd(@turbo) read from the pstate parameter block
+    // [367] Contains iac_tdp_vdd(@turbo) read from the pstate parameter block
     uint32_t iac_tdp_vdd;
-    // [139] Contains Vratio, read from OCC-PGPE shared SRAM
+    // [371] Contains Vratio, read from OCC-PGPE shared SRAM
     uint16_t v_ratio;
-    // [141] Contains clip_state value last read from VRT, read from OCC-PGPE shared SRAM
+    // [373] Contains clip_state value last read from VRT, read from OCC-PGPE shared SRAM
     uint8_t f_clip_ps;
-    // [142] Contains the frequency for average frequency pState read from PGPE shared SRAM;
+    // [374] Contains the frequency for average frequency pState read from PGPE shared SRAM;
     uint32_t f_clip_freq;
-    // [146] Contains the calculated effective capacitance for tdp_vdd
+    // [378] Contains the calculated effective capacitance for tdp_vdd
     uint32_t ceff_tdp_vdd;
-    // [150] Contains the calculated effective capacitance for vdd
+    // [382] Contains the calculated effective capacitance for vdd
     uint32_t ceff_vdd;
-    // [154] Contains the calculated effective capacitance ratio for vdd
+    // [386] Contains the calculated effective capacitance ratio for vdd
     uint32_t ceff_ratio_vdd;
-    // [158] Contains the calculated effective capacitance for tdp_vcs
+    // [390] Contains the calculated effective capacitance for tdp_vcs
     uint32_t ceff_tdp_vcs;
-    // [162] Contains the calculated effective capacitance for vcs
+    // [394] Contains the calculated effective capacitance for vcs
     uint32_t ceff_vcs;
-    // [166] Contains the calculated effective capacitance ratio for vcs
+    // [398] Contains the calculated effective capacitance ratio for vcs
     uint32_t ceff_ratio_vcs;
-    // [170] Contains the index used for interpolation in the ALL_CORES_OFF_ISO calc
-    uint8_t chip_volt_idx;
-    // [171] Contains the final calculated value of ALL_CORES_OFF_ISO
-    uint32_t all_cores_off_iso;
-    // [175] Contains the final calculated value of ALL_GOOD_CACHES_ON_ISO
-    uint32_t all_good_caches_on_iso;
-    // [179] Contains the final calculated value of ALL_CACHES_OFF_ISO
-    uint32_t all_caches_off_iso;
-    // [183] Contains good_cores_only (per_quad)
-    uint32_t quad_good_cores_only[MAXIMUM_QUADS];
-    // [215] Contains on_cores
-    uint16_t quad_on_cores[MAXIMUM_QUADS];
-    // [231] Contains BAD_OFF_cores
-    uint16_t quad_bad_off_cores[MAXIMUM_QUADS];
-    // [247] The current ping pong buffer SRAM address being used by PGPE
+    // [402]
+    uint8_t Vdd_chip_index;
+    // [403]
+    uint8_t Vdd_vmin_index;
+    // [404]
+    uint8_t Vcs_chip_index;
+    // [405]
+    uint32_t scaled_all_off_off_vdd_chip_ua_nc;
+    // [409]
+    uint32_t scaled_all_off_off_vcs_chip_ua_nc;
+    // [413]
+    uint32_t racetrack_only_vcs_chip_ua;
+    // [417]
+    uint32_t scaled_all_off_off_vdd_chip_ua_c;
+    // [421]
+    uint32_t scaled_all_off_off_vdd_vmin_ua_c;
+    // [425]
+    uint32_t racetrack_only_vdd_chip_ua;
+    // [429]
+    uint32_t scaled_all_off_on_vdd_chip_ua_c;
+    // [433]
+    uint32_t scaled_all_off_on_vdd_vmin_ua_c;
+    // [437]
+    uint32_t single_core_off_vdd_chip_ua_c;
+    // [441]
+    uint32_t single_cache_off_vdd_chip_ua_c;
+    // [445]
+    uint32_t single_core_off_vdd_vmin_ua_c;
+    // [449]
+    uint32_t single_cache_on_vdd_chip_ua_c;
+    // [453]
+    uint32_t scaled_all_off_off_vdd_vmin_ua_nc;
+    // [457]
+    uint32_t scaled_all_off_on_vdd_chip_ua_nc;
+    // [461]
+    uint32_t scaled_all_off_on_vdd_vmin_ua_nc;
+    // [465]
+    uint32_t single_core_off_vdd_chip_ua_nc;
+    // [469]
+    uint32_t single_cache_off_vdd_chip_ua_nc;
+    // [473]
+    uint32_t single_core_off_vdd_vmin_ua_nc;
+    // [477]
+    uint32_t single_cache_on_vdd_chip_ua_nc;
+    // [481]
+    uint32_t scaled_all_off_off_vcs_chip_ua_c;
+    // [485]
+    uint32_t scaled_all_off_on_vcs_chip_ua_c;
+    // [489]
+    uint32_t single_core_off_vcs_chip_ua_c;
+    // [493]
+    uint32_t single_cache_off_vcs_chip_ua_c;
+    // [497]
+    uint32_t single_cache_on_vcs_chip_ua_c;
+    // [501]
+    uint32_t scaled_all_off_on_vcs_chip_ua_nc;
+    // [505]
+    uint32_t single_core_off_vcs_chip_ua_nc;
+    // [509]
+    uint32_t single_cache_off_vcs_chip_ua_nc;
+    // [513]
+    uint32_t single_cache_on_vcs_chip_ua_nc;
+    // [517]
+    uint32_t scaled_good_eqs_on_on_vdd_chip_ua;
+    // [521]
+    uint32_t single_core_on_vdd_chip_eqs_ua;
+    // [525]
+    uint32_t scaled_good_eqs_on_on_vdd_vmin_ua;
+    // [529]
+    uint32_t single_core_on_vdd_vmin_eqs_ua;
+    // [533]
+    uint32_t scaled_good_eqs_on_on_vcs_chip_ua;
+    // [537]
+    uint32_t single_core_on_vcs_chip_eqs_ua;
+    // [541] The current ping pong buffer SRAM address being used by PGPE
     uint32_t curr_ping_pong_buf;
-    // [251] The next ping pong buffer SRAM address to be used by PGPE if IPC request succeeds
+    // [545] The next ping pong buffer SRAM address to be used by PGPE if IPC request succeeds
     uint32_t next_ping_pong_buf;
-    // [255] Most recently calculated vrt Main Memory address
+    // [549] Most recently calculated vrt Main Memory address
     uint32_t vrt_main_mem_addr;
-    // [259] if vrt_main_mem_addr needed to be 128B aligned this is number of tables in the real table is
+    // [553] if vrt_main_mem_addr needed to be 128B aligned this is number of tables in the real table is
     // 0 if no adjustement required
     uint32_t vrt_bce_table_offset;
-    // [263] The state of the wof routine during initialization. states defined above
+    // [557] The state of the wof routine during initialization. states defined above
     uint8_t wof_init_state;
-    // [264] Return code of IPC request called from callback func
+    // [558] Return code of IPC request called from callback func
     uint32_t gpe_req_rc;
-    // [268] Return code of failed control message
+    // [562] Return code of failed control message
     uint32_t control_ipc_rc;
-    // [272] Keeps track of whether we got an error in wof_vrt_callback to be
+    // [566] Keeps track of whether we got an error in wof_vrt_callback to be
     // logged later
     uint8_t vrt_callback_error;
-    // [273] Keeps track of whether the 405 was the one who disabled WOF on the PGPE
+    // [567] Keeps track of whether the 405 was the one who disabled WOF on the PGPE
     uint8_t pgpe_wof_off;
-    // [274] Keeps track of whether or not the PGPE can enable WOF
+    // [568] Keeps track of whether or not the PGPE can enable WOF
     uint8_t pgpe_wof_disabled;
-    // [275] Offset into main memory with the beginning of the wof vrt data as base
+    // [569] Offset into main memory with the beginning of the wof vrt data as base
     uint32_t vrt_mm_offset;
-    // [279] Return code returned from a bad VRT request
+    // [573] Return code returned from a bad VRT request
     uint8_t wof_vrt_req_rc;
-    // [280] Voltage used in ceff_ratio_vdd calc
+    // [574] Voltage used in ceff_ratio_vdd calc
     uint32_t c_ratio_vdd_volt;
-    // [284] Frequency used in ceff_ratio_vdd calc
+    // [578] Frequency used in ceff_ratio_vdd calc
     uint32_t c_ratio_vdd_freq;
-    // [288] Voltage used in ceff_ratio_vcs calc
+    // [582] Voltage used in ceff_ratio_vcs calc
     uint32_t c_ratio_vcs_volt;
-    // [292] Frequency used in ceff_ratio_vcs calc
+    // [586] Frequency used in ceff_ratio_vcs calc
     uint32_t c_ratio_vcs_freq;
-    // [296] Holds the state of various async operations relating to sending a VRT
+    // [590] Holds the state of various async operations relating to sending a VRT
     uint8_t vrt_state;
 
-    // [297] PGPE Produced WOF Values
+    // [591] PGPE Produced WOF Values
     uint64_t pgpe_wof_values_dw0;
-    // [305] PGPE Produced WOF Values
+    // [599] PGPE Produced WOF Values
     uint64_t pgpe_wof_values_dw1;
-    // [313] PGPE Produced WOF Values
+    // [607] PGPE Produced WOF Values
     uint64_t pgpe_wof_values_dw2;
-    // [321] PGPE Produced WOF Values
+    // [615] PGPE Produced WOF Values
     uint64_t pgpe_wof_values_dw3;
-    // [329] OVercurrent status dirty bits. Set by PGPE read from OCC Flag 0 register
+    // [623] OVercurrent status dirty bits. Set by PGPE read from OCC Flag 0 register
     uint8_t  ocs_dirty;
 
     // the following two vars can be changed via debug command
-    // [330] Fixed CeffRatio increase addr defined in attribute
+    // [624] Fixed CeffRatio increase addr defined in attribute
     uint16_t ocs_increase_ceff;
-    // [332] Fixed CeffRatio decrease addr defined in attribute
+    // [626] Fixed CeffRatio decrease addr defined in attribute
     uint16_t ocs_decrease_ceff;
 
-    // [334] OCC calculated CeffRatio Addr
+    // [628] OCC calculated CeffRatio Addr
     uint16_t vdd_oc_ceff_add;
-    // [336] Final adjusted CeffRatio from previous tick
+    // [630] Final adjusted CeffRatio from previous tick
     uint16_t vdd_ceff_ratio_adj_prev;
-    // [338]
+    // [632]
     uint32_t vdd_avg_tdp_100uv;
-    // [342] count of number of times not dirty (type 0)
+    // [636] count of number of times not dirty (type 0)
     uint32_t ocs_not_dirty_count;
-    // [346] count of not dirty (type 1) this counter should be 0
+    // [640] count of not dirty (type 1) this counter should be 0
     uint32_t ocs_not_dirty_type1_count;
-    // [350] count of number of times dirty with type hold (0)
+    // [644] count of number of times dirty with type hold (0)
     uint32_t ocs_dirty_type0_count;
-    // [354] count of number of times dirty with type act (1)
+    // [648] count of number of times dirty with type act (1)
     uint32_t ocs_dirty_type1_count;
-    // [358] Ambient condition used to determine VRT
+    // [652] Ambient condition used to determine VRT
     uint32_t ambient_condition;
-} amec_wof_t;  // 362 bytes total
+} amec_wof_t;  // 656 bytes total
 
 // Structure used in g_amec to hold static WOF data
 typedef struct __attribute__ ((packed))
@@ -363,16 +421,25 @@ typedef struct __attribute__ ((packed))
     uint32_t pgpe_values_sram_addr;
     // The address in shared OCC-PGPE SRAM for XGPE produced WOF values
     uint32_t xgpe_values_sram_addr;
+    // SRAM address in shared OCC-PGPE SRAM for XGPE IDDQ Acitvity values
+    uint32_t xgpe_iddq_activity_sram_addr;
     // The SRAM address of the pstates for the quads.
     uint32_t pstate_tbl_sram_addr;
-    uint32_t full_leakage_08v_mA;
+    // Vmin in 0.1mv (100uV) unit read from OPPB
+    uint32_t Vdd_vmin_p1mv;
+    // voltage index for Vdd_vmin_p1mv
+    uint8_t Vdd_vmin_index;
+    // Number of XGPE sample ticks for IDDQ activity counters
+    uint8_t iddq_activity_sample_depth;
+    // Number of bits to shift right to divide by IDDQ activity sample depth to calculate percentage
+    uint8_t iddq_activity_divide_bit_shift;
 } amec_static_wof_t;
 
 // Structure for sensors used in g_amec for AMESTER for additional debug
 typedef struct __attribute__ ((packed))
 {
     sensor_t ceff_ratio_vdd_sensor;  // raw ceff ratio Vdd
-    sensor_t ceff_ratio_vdn_sensor;
+    sensor_t ceff_ratio_vcs_sensor;
     sensor_t v_ratio_sensor;
     sensor_t ocs_addr_sensor;
     sensor_t ceff_ratio_vdd_adj_sensor; // final adjusted ratio should reflect amec_wof_t ceff_ratio_vdd
@@ -410,17 +477,11 @@ void read_pgpe_produced_wof_values( void );
 
 void calculate_core_leakage( void );
 
-void calculate_cache_leakage( void );
-
 void calculate_ceff_ratio_vcs( void );
 
 void calculate_ceff_ratio_vdd( void );
 
 void calculate_AC_currents( void );
-
-uint32_t  core_powered_on( uint8_t i_core_num );
-
-uint8_t num_cores_on_in_quad( uint8_t i_quad_num );
 
 int32_t interpolate_linear( int32_t i_X,
                             int32_t i_x1,
@@ -432,15 +493,17 @@ void get_poundV_points( uint32_t i_freq_mhz,
                         uint8_t* o_point1_index,
                         uint8_t* o_point2_index);
 
-void calculate_temperature_scaling_08V( void );
-
-uint32_t calculate_multiplier( int32_t i_temp );
-
 uint32_t calculate_effective_capacitance( uint32_t i_iAC,
                                           uint32_t i_voltage,
                                           uint32_t i_frequency );
 
 void read_sensor_data( void );
+
+void setup_vdd( void );
+
+void setup_vcs( void );
+
+void setup_racetrack( void );
 
 void set_clear_wof_disabled( uint8_t  i_action,
                              uint32_t i_bit_mask,
@@ -456,14 +519,16 @@ void send_initial_vrt_to_pgpe( void );
 
 int get_voltage_index( uint32_t i_voltage );
 
-uint32_t scale( uint16_t i_current,
-                int16_t i_delta_temp );
+uint32_t scale( uint16_t i_temp1,
+                uint16_t i_temp2,
+                bool i_non_core_scaling_line );
 
 uint32_t scale_and_interpolate( uint16_t * i_leak_arr,
                                 uint8_t * i_avgtemp_arr,
                                 int i_idx,
                                 uint16_t i_base_temp,
-                                uint16_t i_voltage );
+                                uint16_t i_voltage,
+                                bool i_non_core_scaling_line );
 
 void print_data( void );
 

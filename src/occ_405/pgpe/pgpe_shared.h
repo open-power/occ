@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -39,10 +39,13 @@
 #define PGPE_DEBUG_TRACE_SIZE_OFFSET   0x08
 
 // OCC-PGPE Shared SRAM offsets from G_pgpe_header.shared_sram_addr
+#define IDDQ_ACTIVITY_SAMPLE_DEPTH_SRAM_OFFSET 0x17
+// TODO RTC 249985 remove these hard codes and read offsets from OCC-PGPE shared SRAM when PGPE supports
 #define OCC_PRODUCED_WOF_VALUES_SRAM_OFFSET    0x18
 #define XGPE_PRODUCED_WOF_VALUES_SRAM_OFFSET   0x20
 #define PGPE_PRODUCED_WOF_VALUES_SRAM_OFFSET   0x28
 #define HCODE_ELOG_TABLE_SRAM_OFFSET           0x48
+#define XGPE_IDDQ_ACTIVITY_SRAM_OFFSET         0xF0
 
 // This size must be a multiple of 128
 typedef struct __attribute__ ((packed))

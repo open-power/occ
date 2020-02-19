@@ -397,8 +397,8 @@ void amec_init_gamec_struct(void)
   // update memory control registers only if new ips/default memory power control is different
   g_amec->sys.current_mem_pwr_ctl = MEM_PWR_CTL_NO_SUPPORT;
 
-  // Initialize wof_disabled
-  g_amec->wof.wof_disabled = WOF_RC_OCC_WOF_DISABLED;
+  // Initialize wof_disabled until we get a mode change that supports WOF
+  g_amec->wof.wof_disabled = WOF_RC_MODE_NO_SUPPORT_MASK;
 
 }
 

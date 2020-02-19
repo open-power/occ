@@ -624,7 +624,7 @@ enum e_gsid
     // WOF Sensors
     // ------------------------------------------------------
     CEFFVDDRATIO,
-    CEFFVDNRATIO,
+    CEFFVCSRATIO,
     VRATIO,
     OCS_ADDR,
     CEFFVDDRATIOADJ,

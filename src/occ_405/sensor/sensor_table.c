@@ -397,7 +397,7 @@ const sensor_ptr_t G_amec_sensor_list[] =
   // WOF Sensors
   // ------------------------------------------------------
   SENSOR_PTR( CEFFVDDRATIO,         &g_amec_sys.wof_sensors.ceff_ratio_vdd_sensor),
-  SENSOR_PTR( CEFFVDNRATIO,         &g_amec_sys.wof_sensors.ceff_ratio_vdn_sensor),
+  SENSOR_PTR( CEFFVCSRATIO,         &g_amec_sys.wof_sensors.ceff_ratio_vcs_sensor),
   SENSOR_PTR( VRATIO,               &g_amec_sys.wof_sensors.v_ratio_sensor),
   SENSOR_PTR( OCS_ADDR,             &g_amec_sys.wof_sensors.ocs_addr_sensor),
   SENSOR_PTR( CEFFVDDRATIOADJ,      &g_amec_sys.wof_sensors.ceff_ratio_vdd_adj_sensor),
@@ -561,7 +561,7 @@ const minisensor_ptr_t G_amec_mini_sensor_list[] INIT_SECTION =
   // WOF Sensors
   // ------------------------------------------------------
   MINI_SENSOR_PTR( CEFFVDDRATIO,   NULL),
-  MINI_SENSOR_PTR( CEFFVDNRATIO,   NULL),
+  MINI_SENSOR_PTR( CEFFVCSRATIO,   NULL),
   MINI_SENSOR_PTR( VRATIO,         NULL),
   MINI_SENSOR_PTR( OCS_ADDR,       NULL),
   MINI_SENSOR_PTR( CEFFVDDRATIOADJ, NULL),

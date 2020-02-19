@@ -51,7 +51,6 @@ extern uint32_t     G_occ_frequency_mhz;
 extern volatile pstateStatus G_proc_pstate_status;
 extern uint8_t G_occ_interrupt_type;
 extern uint16_t G_allow_trace_flags;
-
 //******************************************************************************
 // Globals
 //******************************************************************************
@@ -70,79 +69,12 @@ amec_wof_t * g_wof = &(g_amec_sys.wof);
 // Core IDDQ voltages array (voltages in 100uV)
 uint16_t G_iddq_voltages[CORE_IDDQ_MEASUREMENTS] =
 {
+     5000,
      6000,
      7000,
      8000,
      9000,
-    10000,
-    11000
-};
-
-// Approximate y = full_leakage_08V^(-((T-tvpd_leak)/257.731))*1.45^((T-tvpd_leak)/10)
-// full_leakage_08V is not data we have, it is a ALL core,cache,quad ON leakage measure they do at MFT.
-// We can estimate by using the IQ data at 0.8v * 24/#sort cores
-
-// Interpolate (T-tvpd_leak) for full leakage 0.8V in the table below to find m.
-// y ~= (T*m) >> 10     (shift out 10 bits)
-// Error in estimation is no more than 0.9%
-// The first column represents the result of T-tvpd_leak where T is the
-// associated temperature sensor.
-// The second column represents the associated m(slope) with the delta temp (first column)
-#define NUM_FULL_LEAKAGE_08V 10
-#define WOF_IDDQ_MULT_TABLE_N 21
-uint32_t G_wof_mft_full_leakage_08V[WOF_IDDQ_MULT_TABLE_N + 1][NUM_FULL_LEAKAGE_08V] = {
-    // First row is header of voltage values in mA remaining rows are m values
-    // for the full leakage @0.8V for each temperature in first column of G_wof_iddq_mult_table
-    // this table is used for one time interpolation to create the final m values in
-    // G_wof_iddq_mult_table (the temperatures are not repeated in this table)
-    {20000, 30000, 40000, 50000, 60000, 70000, 80000, 90000, 100000, 110000}, // header in mA
-    {  171,   191,   207,   220,   231,   241,   250,   258,    265,    272}, // -70 temp delta
-    {  195,   216,   232,   245,   257,   267,   276,   285,    292,    299}, // -65 temp delta
-    {  221,   243,   260,   274,   286,   296,   306,   314,    322,    329}, // -60 temp delta
-    {  251,   274,   292,   306,   318,   328,   338,   347,    354,    362}, // -55 temp delta
-    {  286,   309,   327,   341,   354,   364,   374,   382,    390,    398}, // -50 temp delta
-    {  325,   348,   366,   381,   393,   404,   413,   422,    430,    437}, // -45 temp delta
-    {  369,   393,   411,   425,   437,   448,   457,   466,    473,    480}, // -40 temp delta
-    {  419,   443,   460,   474,   486,   497,   506,   514,    521,    528}, // -35 temp delta
-    {  476,   499,   516,   530,   541,   551,   559,   567,    574,    581}, // -30 temp delta
-    {  541,   563,   578,   591,   602,   611,   619,   626,    632,    638}, // -25 temp delta
-    {  615,   634,   648,   660,   669,   677,   684,   691,    696,    701}, // -20 temp delta
-    {  698,   715,   727,   736,   744,   751,   757,   762,    767,    771}, // -15 temp delta
-    {  793,   806,   815,   822,   828,   833,   837,   841,    844,    847}, // -10 temp delta
-    {  901,   908,   913,   917,   921,   923,   926,   928,    930,    932}, // -5 temp delta
-    { 1024,  1024,  1024,  1024,  1024,  1024,  1024,  1024,   1024,   1024}, //  0 temp delta
-    { 1163,  1154,  1148,  1143,  1139,  1136,  1133,  1130,   1128,   1126}, //  5 temp delta
-    { 1322,  1301,  1287,  1276,  1267,  1259,  1253,  1247,   1242,   1237}, //  10 temp delta
-    { 1502,  1467,  1442,  1424,  1409,  1396,  1385,  1376,   1368,   1360}, //  15 temp delta
-    { 1706,  1654,  1617,  1589,  1567,  1548,  1532,  1518,   1506,   1495}, //  20 temp delta
-    { 1939,  1864,  1813,  1774,  1743,  1717,  1695,  1676,   1659,   1643}, //  25 temp delta
-    { 2203,  2101,  2032,  1980,  1938,  1904,  1874,  1849,   1826,   1806}  //  30 temp delta
-};
-
-// P9':  The 2nd column (m values) are just initial values and will be updated based on
-// full leakage @0.8V (a one time calculation).  P9 will keep the same values.
-int16_t G_wof_iddq_mult_table[WOF_IDDQ_MULT_TABLE_N][2] = {
-    {-70, 163},
-    {-65, 186},
-    {-60, 212},
-    {-55, 242},
-    {-50, 276},
-    {-45, 314},
-    {-40, 359},
-    {-35, 409},
-    {-30, 466},
-    {-25, 531},
-    {-20, 606},
-    {-15, 691},
-    {-10, 788},
-    {-5,  898},
-    {0,   1024},
-    {5,   1168},
-    {10,  1331},
-    {15,  1518},
-    {20,  1731},
-    {25,  1973},
-    {30,  2250}
+    10000
 };
 
 //******************************************************************************
@@ -195,6 +127,12 @@ void call_wof_main( void )
         {
             INTR_TRAC_ERR("Got a bad RC in wof_vrt_callback: 0x%x",
                     g_wof->wof_vrt_req_rc);
+            if(G_allow_trace_flags & ALLOW_VRT_TRACE)
+            {
+                INTR_TRAC_INFO("call WOF Main VRT failed. OTBR[0x%08X]",
+                                in32(OCB_OTBR));
+            }
+
             set_clear_wof_disabled( SET,
                                     WOF_RC_VRT_REQ_FAILURE,
                                     ERC_WOF_VRT_REQ_FAILURE );
@@ -426,6 +364,11 @@ void call_wof_main( void )
                             set_clear_wof_disabled(SET,
                                                    WOF_RC_VRT_REQ_TIMEOUT,
                                                    ERC_WOF_VRT_REQ_TIMEOUT);
+                            if(G_allow_trace_flags & ALLOW_VRT_TRACE)
+                            {
+                                INTR_TRAC_INFO("VRT TIMEOUT OTBR[0x%08X]",
+                                in32(OCB_OTBR));
+                            }
                         }
                         else
                         {
@@ -451,6 +394,11 @@ void call_wof_main( void )
                 else
                 {
                     L_current_timeout_recorded = FALSE;
+                    if(G_allow_trace_flags & ALLOW_VRT_TRACE)
+                    {
+                        INTR_TRAC_INFO("wof main VRT IDLE OTBR[0x%08X]",
+                                        in32(OCB_OTBR));
+                    }
 
                     // Request is idle. Run wof algorithm
                     wof_main();
@@ -485,20 +433,11 @@ void call_wof_main( void )
  */
 void wof_main( void )
 {
-    // used to trace only once getting an invalid IO power index from XGPE
-    static bool L_trace_io_index_invalid = TRUE;
-
-    // maximum valid IO Power index
-    uint16_t l_max_io_index = g_amec_sys.static_wof_data.wof_header.io_pwr_size - 1;
-
     // Read out the sensor data needed for calculations
     read_sensor_data();
 
     // Calculate the core leakage across the entire Proc
     calculate_core_leakage();
-
-    // Calculate the cache leakage for the entire system
-    calculate_cache_leakage();
 
     // Calculate the AC currents
     calculate_AC_currents();
@@ -537,27 +476,8 @@ void wof_main( void )
         g_wof->vdd_step_from_start = g_wof->vdd_override_index;
     }
 
-    if(g_wof->io_pwr_override_index == WOF_VRT_IDX_NO_OVERRIDE)
-    {
-        // IO Power index is in XGPE Produced WOF values
-        xgpe_wof_values_t l_XgpeWofValues;
-        l_XgpeWofValues.value = in64(g_amec->static_wof_data.xgpe_values_sram_addr);
-        g_wof->io_pwr_step_from_start = (uint16_t)l_XgpeWofValues.fields.io_index;
-
-        // make sure we didn't get something out of range
-        if(g_wof->io_pwr_step_from_start > l_max_io_index)
-        {
-             if(L_trace_io_index_invalid)
-             {
-                 L_trace_io_index_invalid = FALSE;
-                 TRAC_ERR("Invalid IO power index[%d] > max index[%d]",
-                           g_wof->io_pwr_step_from_start,
-                           l_max_io_index);
-             }
-             g_wof->io_pwr_step_from_start = l_max_io_index;
-        }
-    }
-    else
+    // IO Power index was set in read_xgpe_values() only need to check for override here
+    if(g_wof->io_pwr_override_index != WOF_VRT_IDX_NO_OVERRIDE)
     {
         // Use override value for IO Power
         g_wof->io_pwr_step_from_start = g_wof->io_pwr_override_index;
@@ -719,6 +639,7 @@ void copy_vrt_to_sram_callback( void )
  * save current vrt address to global
  * setup VRT IPC command parameters to be sent to pgpe
  */
+
     // default use ping buffer
     uint8_t * l_buffer_address = G_sram_vrt_ping_buffer;
 
@@ -797,8 +718,6 @@ void wof_vrt_callback( void )
     // scheduled regardless of the RC of the previous one.
     g_wof->vrt_state = STANDBY;
 
-// TODO - RTC 209558
-#if 0
     if( G_wof_vrt_parms.msg_cb.rc == PGPE_RC_SUCCESS )
     {
        // GpeRequest went through successfully. update global ping pong buffer
@@ -816,7 +735,6 @@ void wof_vrt_callback( void )
         g_wof->vrt_callback_error = 1;
         g_wof->wof_vrt_req_rc = G_wof_vrt_parms.msg_cb.rc;
     }
-#endif
 }
 
 /**
@@ -928,10 +846,10 @@ void read_pgpe_produced_wof_values( void )
     uint32_t l_freq = 0;
 
     pgpe_wof_values_t l_PgpeWofValues;
-    l_PgpeWofValues.dw0.value = in64(g_amec->static_wof_data.pgpe_values_sram_addr);
-    l_PgpeWofValues.dw1.value = in64(g_amec->static_wof_data.pgpe_values_sram_addr + 0x08);
-    l_PgpeWofValues.dw2.value = in64(g_amec->static_wof_data.pgpe_values_sram_addr + 0x10);
-    l_PgpeWofValues.dw3.value = in64(g_amec->static_wof_data.pgpe_values_sram_addr + 0x18);
+    l_PgpeWofValues.dw0.value = in64(g_amec_sys.static_wof_data.pgpe_values_sram_addr);
+    l_PgpeWofValues.dw1.value = in64(g_amec_sys.static_wof_data.pgpe_values_sram_addr + 0x08);
+    l_PgpeWofValues.dw2.value = in64(g_amec_sys.static_wof_data.pgpe_values_sram_addr + 0x10);
+    l_PgpeWofValues.dw3.value = in64(g_amec_sys.static_wof_data.pgpe_values_sram_addr + 0x18);
 
     // save Vdd voltage to sensor
     l_voltage = (uint16_t)l_PgpeWofValues.dw2.fields.vdd_avg_mv;
@@ -1033,6 +951,90 @@ void read_pgpe_produced_wof_values( void )
 }
 
 /**
+ * read_xgpe_values
+ *
+ * Description: Read XGPE Produced WOF and IDDQ activity values from shared SRAM
+ *              and update g_wof parms needed for WOF calculations
+ *              This is only called when WOF is running
+ */
+void read_xgpe_values( void )
+{
+    xgpe_wof_values_t l_XgpeWofValues;
+    iddq_activity_t l_IDDQActivityValues;
+    // maximum valid IO Power index
+    uint16_t l_max_io_index = g_amec_sys.static_wof_data.wof_header.io_pwr_size - 1;
+    int l_core = 0;
+    // sum of vmin and off samples
+    uint32_t l_core_vmin_off_samples = 0;
+    // number of samples on
+    uint32_t l_core_samples_on = 0;
+    // used to trace only once getting an invalid IO power index from XGPE
+    static bool L_trace_io_index_invalid = TRUE;
+    // used to trace only once getting invalid IDDQ activity from XGPE
+    static bool L_trace_iddq_activity_invalid = TRUE;
+
+    // Read and process XGPE Produced WOF values
+    l_XgpeWofValues.value = in64(g_amec_sys.static_wof_data.xgpe_values_sram_addr);
+
+    // Set IO Power index
+    g_wof->io_pwr_step_from_start = (uint16_t)l_XgpeWofValues.fields.io_index;
+
+    // make sure we didn't get something out of range
+    if(g_wof->io_pwr_step_from_start > l_max_io_index)
+    {
+         if(L_trace_io_index_invalid)
+         {
+             L_trace_io_index_invalid = FALSE;
+             TRAC_ERR("Invalid IO power index[%d] > max index[%d]",
+                       g_wof->io_pwr_step_from_start,
+                       l_max_io_index);
+         }
+         g_wof->io_pwr_step_from_start = l_max_io_index;
+    }
+
+    // Read and process XGPE Produced WOF IDDQ Activity values
+    memcpy(&l_IDDQActivityValues,  // uint32_t array of 32 cores
+           (const void*)g_amec_sys.static_wof_data.xgpe_iddq_activity_sram_addr,
+           sizeof(iddq_activity_t));
+    for(l_core = 0; l_core < MAX_NUM_CORES; l_core++)
+    {
+       // convert values to percentage and store into g_wof
+       l_core_vmin_off_samples = l_IDDQActivityValues.core_off[l_core] + l_IDDQActivityValues.core_vmin[l_core];
+       // sanity check -- this should never happen (XGPE code bug)
+       if(l_core_vmin_off_samples > g_amec_sys.static_wof_data.iddq_activity_sample_depth)
+       {
+           if(L_trace_iddq_activity_invalid)
+           {
+               L_trace_iddq_activity_invalid = FALSE;
+               TRAC_ERR("read_xgpe_values: Core[%d] has invalid IDDQ activity samples off[%d] + vmin[%d] > depth[%d]",
+                         l_core,
+                         l_IDDQActivityValues.core_off[l_core],
+                         l_IDDQActivityValues.core_vmin[l_core],
+                         g_amec_sys.static_wof_data.iddq_activity_sample_depth);
+           }
+
+           l_core_samples_on = 0;
+           // To get activity total equal to depth split depth between vmin and off
+           l_IDDQActivityValues.core_off[l_core] = g_amec_sys.static_wof_data.iddq_activity_sample_depth >> 1;
+           l_IDDQActivityValues.core_vmin[l_core] = g_amec_sys.static_wof_data.iddq_activity_sample_depth - l_IDDQActivityValues.core_off[l_core];
+       }
+       else
+       {
+           l_core_samples_on = g_amec_sys.static_wof_data.iddq_activity_sample_depth - l_core_vmin_off_samples;
+       }
+       // store in 0.1% unit
+       g_wof->p1pct_on[l_core] = (uint16_t)( (l_core_samples_on * 1000) >>
+                                            g_amec_sys.static_wof_data.iddq_activity_divide_bit_shift );
+       g_wof->p1pct_off[l_core] = (uint16_t)( (l_IDDQActivityValues.core_off[l_core] * 1000) >>
+                                             g_amec_sys.static_wof_data.iddq_activity_divide_bit_shift );
+       g_wof->p1pct_vmin[l_core] = (uint16_t)( (l_IDDQActivityValues.core_vmin[l_core] * 1000) >>
+                                             g_amec_sys.static_wof_data.iddq_activity_divide_bit_shift );
+       g_wof->p1pct_mma_off[l_core] = (uint16_t)( (l_IDDQActivityValues.core_mma_off[l_core] * 1000) >>
+                                                g_amec_sys.static_wof_data.iddq_activity_divide_bit_shift );
+    } // for each core
+}
+
+/**
  * calculate_core_leakage
  *
  * Description: Calculate core-level leakage
@@ -1041,23 +1043,138 @@ void read_pgpe_produced_wof_values( void )
  */
 void calculate_core_leakage( void )
 {
-// TODO - RTC 209558
-#if 0
+    // Initialize leakage to racetrack component (Vcs racetrack component is 0)
+    // Calculations are done in unit of 0.000001ua : 1000 to account for 0.1% IDDQ activity * 1000 for l_t_p001_scale_
+    // Final divide by 1000000 will happen at very end
+    uint64_t  l_iddq_p000001ua = g_wof->racetrack_only_vdd_chip_ua * 1000000;
+    uint64_t  l_icsq_p000001ua = g_wof->racetrack_only_vcs_chip_ua * 1000000;
 
+    uint64_t  l_t_p001_scale_c = 0;  // unit 0.001
+    uint64_t  l_t_p001_scale_nc = 0; // unit 0.001
+    uint16_t  l_temperature = 0;
+    uint64_t  l_temp64 = 0;
+    int l_oct_idx = 0;  // octant index
+    int l_core_idx = 0; // core index
+    bool l_non_core_scaling_line = FALSE;  // default to core scaling line
 
-    // Finally, save the calculated leakage to amec
-    g_wof->idc_vdd = idc_vdd;
-#endif
-}
+    // Start leakage summation loop for each octant (EQ01, EQ23, EQ45, EQ67)
+    for (l_oct_idx=0; l_oct_idx<MAXIMUM_EQ_SETS; l_oct_idx++)
+    {
+        g_wof->scaled_good_eqs_on_on_vdd_chip_ua = scale_and_interpolate(G_oppb.iddq.iddq_eqs_good_cores_on_good_caches_on_5ma[l_oct_idx],
+                                                                         G_oppb.iddq.avgtemp_all_cores_on_good_caches_on_p5c,
+                                                                         g_wof->Vdd_chip_index,
+                                                                         g_wof->T_racetrack,
+                                                                         g_wof->Vdd_chip_p1mv,
+                                                                         l_non_core_scaling_line);
 
-/**
- * calculate_cache_leakage
- *
- * Description: Function to calculate the cache leakage using VPD leakage data,
- *              temperature, and voltage
- */
-void calculate_cache_leakage( void )
-{
+        g_wof->single_core_on_vdd_chip_eqs_ua = ( (g_wof->scaled_good_eqs_on_on_vdd_chip_ua - g_wof->scaled_all_off_on_vdd_chip_ua_c)
+                                                 / G_oppb.iddq.good_normal_cores_per_EQs[l_oct_idx] ) + g_wof->single_core_off_vdd_chip_ua_c;
+
+// TODO RTC 209558 # What about MMA leakage for Vmin?  It should be OFF.
+// #    - Need to take out the MMA ON component and add in the MMA OFF component.
+// #    - How do we get the MMA ON component?  Is it the same as the MMA OFF leakage percentage?
+
+        g_wof->scaled_good_eqs_on_on_vdd_vmin_ua = scale_and_interpolate(G_oppb.iddq.iddq_eqs_good_cores_on_good_caches_on_5ma[l_oct_idx],
+                                                                         G_oppb.iddq.avgtemp_all_cores_on_good_caches_on_p5c,
+                                                                         g_amec_sys.static_wof_data.Vdd_vmin_index,
+                                                                         g_wof->T_racetrack,
+                                                                         g_amec_sys.static_wof_data.Vdd_vmin_p1mv,
+                                                                         l_non_core_scaling_line);
+
+        g_wof->single_core_on_vdd_vmin_eqs_ua = ( (g_wof->scaled_good_eqs_on_on_vdd_vmin_ua - g_wof->scaled_all_off_on_vdd_vmin_ua_c)
+                                                 / G_oppb.iddq.good_normal_cores_per_EQs[l_oct_idx] ) + g_wof->single_core_off_vdd_vmin_ua_c;
+
+        g_wof->scaled_good_eqs_on_on_vcs_chip_ua = scale_and_interpolate(G_oppb.iddq.icsq_eqs_good_cores_on_good_caches_on_5ma[l_oct_idx],
+                                                                         G_oppb.iddq.avgtemp_all_cores_on_good_caches_on_p5c,
+                                                                         g_wof->Vcs_chip_index,
+                                                                         g_wof->T_racetrack,
+                                                                         g_wof->Vcs_chip_p1mv,
+                                                                         l_non_core_scaling_line);
+
+        g_wof->single_core_on_vcs_chip_eqs_ua = ( (g_wof->scaled_good_eqs_on_on_vcs_chip_ua - g_wof->scaled_all_off_on_vcs_chip_ua_c)
+                                                 / G_oppb.iddq.good_normal_cores_per_EQs[l_oct_idx] ) + g_wof->single_core_off_vcs_chip_ua_c;
+
+        // Begin Loop over ALL cores per octant (l_oct_idx)
+        for (l_core_idx = (l_oct_idx * 8); l_core_idx < ((l_oct_idx*8) + 8); l_core_idx++)
+        {
+            // Get the core temperature from TEMPPROCTHRMC sensor
+            l_temperature = AMECSENSOR_ARRAY_PTR(TEMPPROCTHRMC0, l_core_idx)->sample;
+
+            // If core temperature is 0 use quad i.e. one racetrack DTS
+            if(l_temperature == 0)
+            {
+                 l_temperature = AMECSENSOR_ARRAY_PTR(TEMPQ0, l_core_idx/4)->sample;
+
+                 if(l_temperature == 0)
+                 {
+                     // this core's racetrack DTS is 0 so use average Racetrack which is guaranteed to be non-0
+                     l_temperature = g_wof->T_racetrack;
+                 }
+            }
+
+            // Save core temperature used
+            g_wof->tempprocthrmc[l_core_idx] = l_temperature;
+
+            // core scaling line scale() returns unit of 0.001
+            l_t_p001_scale_c = scale(g_wof->tempprocthrmc[l_core_idx], g_wof->T_racetrack, FALSE);
+            // non-core scaling line scale() returns unit of 0.001
+            l_t_p001_scale_nc = scale(g_wof->tempprocthrmc[l_core_idx], g_wof->T_racetrack, TRUE);
+
+            // each core adds leakage of being ON, OFF, and/or @VddMIN  (no MIN for Vcs)
+            l_iddq_p000001ua += g_wof->single_core_on_vdd_chip_eqs_ua * l_t_p001_scale_c * g_wof->p1pct_on[l_core_idx];
+
+            l_iddq_p000001ua += g_wof->single_core_off_vdd_chip_ua_nc * g_wof->p1pct_off[l_core_idx] * l_t_p001_scale_nc;
+
+            // if MMA was on subtract off MMA leakage
+            if(G_oppb.iddq.mma_not_active == 0)  // MMA on
+            {
+                l_temp64 = g_wof->single_core_on_vdd_chip_eqs_ua *
+                           G_oppb.iddq.mma_off_leakage_pct *
+                           g_wof->p1pct_mma_off[l_core_idx] *
+                           l_t_p001_scale_c;
+                // divide by 100 to account for iddq.mma_off_leakage_pct to get unit of 0.000001ua
+                l_temp64 = (uint32_t)(l_temp64 / 100);
+
+                // prevent going negative
+                if(l_temp64 > l_iddq_p000001ua)
+                    l_iddq_p000001ua -= l_temp64;
+            }
+
+            l_iddq_p000001ua += g_wof->single_core_on_vdd_vmin_eqs_ua *
+                                g_wof->p1pct_vmin[l_core_idx] *
+                                l_t_p001_scale_c;
+
+            l_icsq_p000001ua += g_wof->single_core_on_vcs_chip_eqs_ua *
+                               (g_wof->p1pct_on[l_core_idx] + g_wof->p1pct_vmin[l_core_idx]) *
+                                l_t_p001_scale_c;
+
+            l_icsq_p000001ua += g_wof->single_core_off_vcs_chip_ua_nc *
+                                g_wof->p1pct_off[l_core_idx] *
+                                l_t_p001_scale_nc;
+
+            // each cache adds leakage of being ON, and/or OFF
+            l_iddq_p000001ua += g_wof->single_cache_on_vdd_chip_ua_nc *
+                               (g_wof->p1pct_on[l_core_idx] + g_wof->p1pct_vmin[l_core_idx]) *
+                                l_t_p001_scale_nc;
+
+            l_iddq_p000001ua += g_wof->single_cache_off_vdd_chip_ua_nc *
+                                g_wof->p1pct_off[l_core_idx] *
+                                l_t_p001_scale_nc;
+
+            l_icsq_p000001ua += g_wof->single_cache_on_vcs_chip_ua_nc *
+                               (g_wof->p1pct_on[l_core_idx] + g_wof->p1pct_vmin[l_core_idx]) *
+                                l_t_p001_scale_nc;
+
+            l_icsq_p000001ua += g_wof->single_cache_off_vcs_chip_ua_nc *
+                                g_wof->p1pct_off[l_core_idx] *
+                                l_t_p001_scale_nc;
+        }  // for each core
+    } // for each octant
+
+    // Finally, save the calculated leakage to amec in ua
+    // divide by 1000000 = 1000 to account for 0.1% IDDQ activity * 1000 for l_t_p001_scale_ leaving unit of ua
+    g_wof->iddq_ua = (uint32_t) (l_iddq_p000001ua / 1000000);
+    g_wof->icsq_ua = (uint32_t) (l_icsq_p000001ua / 1000000);
 }
 
 /**
@@ -1121,8 +1238,7 @@ uint32_t calculate_effective_capacitance( uint32_t i_iAC_10ma,
  */
 void calculate_ceff_ratio_vcs( void )
 {
-    // Get ceff_tdp_vcs from OCCPPB
-// TODO - RTC 209558
+// TODO - RTC 209558 Get ceff_tdp_vcs from OCCPPB or calculate? where's the freq?
 #if 0
     g_wof->ceff_tdp_vcs = G_oppb.ceff_tdp_vcs;
 
@@ -1131,7 +1247,7 @@ void calculate_ceff_ratio_vcs( void )
     g_wof->c_ratio_vcs_freq = G_occ_frequency_mhz;
     g_wof->ceff_vcs =
                 calculate_effective_capacitance( g_wof->iac_vcs,
-                                                 g_wof->voltvcssense_sensor,
+                                                 g_wof->Vcs_chip_p1mv,
                                                  g_wof->c_ratio_vcs_freq );
 
     // Prevent divide by zero
@@ -1163,8 +1279,6 @@ void calculate_ceff_ratio_vcs( void )
  */
 void calculate_ceff_ratio_vdd( void )
 {
-// TODO - RTC 209558
-#if 0
     uint32_t l_raw_ceff_ratio = 0;
     uint8_t l_point1_index = 0;
     uint8_t l_point2_index = 0;
@@ -1230,7 +1344,7 @@ void calculate_ceff_ratio_vdd( void )
         // iac_vdd / (V^1.3 * Freq)
         g_wof->ceff_vdd =
                     calculate_effective_capacitance( g_wof->iac_vdd,
-                                                     g_wof->voltvddsense_sensor,
+                                                     g_wof->Vdd_chip_p1mv,
                                                      g_wof->f_clip_freq );
 
         // Prevent divide by zero
@@ -1266,7 +1380,6 @@ void calculate_ceff_ratio_vdd( void )
             sensor_update(AMECSENSOR_PTR(CEFFVDDRATIOADJ), (uint16_t)g_wof->ceff_ratio_vdd);
         }
     }  // else v_ratio != 0
-#endif
 }
 
 /**
@@ -1277,39 +1390,23 @@ void calculate_ceff_ratio_vdd( void )
 void calculate_AC_currents( void )
 {
     // avoid negative AC currents
-    if(g_wof->curvdd_sensor > g_wof->idc_vdd)
+    if(g_wof->curvdd_sensor > g_wof->iddq_ua)
     {
-       g_wof->iac_vdd = g_wof->curvdd_sensor - g_wof->idc_vdd;
+       g_wof->iac_vdd = g_wof->curvdd_sensor - g_wof->iddq_ua;
     }
     else
     {
        g_wof->iac_vdd = 0;
     }
 
-    if(g_wof->curvcs_sensor > g_wof->idc_vcs)
+    if(g_wof->curvcs_sensor > g_wof->icsq_ua)
     {
-       g_wof->iac_vcs = g_wof->curvcs_sensor - g_wof->idc_vcs;
+       g_wof->iac_vcs = g_wof->curvcs_sensor - g_wof->icsq_ua;
     }
     else
     {
        g_wof->iac_vcs = 0;
     }
-}
-
-/**
- * core_powered_on
- *
- * Description: Helper function to determine whether the given core
- *              is on based off the most recently read data from
- *              OCC-PGPE Shared SRAM
- *
- * Param: The desired core number
- *
- * Return: Returns a non-zero value if the core is powered on, 0 otherwise
- */
-uint32_t core_powered_on(uint8_t i_core_num)
-{
-    return ( g_wof->core_pwr_on & (0x80000000 >> i_core_num));
 }
 
 /** multiply_ratio
@@ -1329,32 +1426,6 @@ uint32_t multiply_ratio( uint32_t i_operating_point,
     // These hex values conceptually translate from 0.0 to 1.0
     // Extra math is used to convert units to avoid floating point math.
     return ((((i_ratio*10000)/0xFFFF) * i_operating_point) / 10000);
-}
-
-/**
- *  num_cores_on_in_quad
- *
- *  Description: Helper function that returns the number of cores
- *               currently powered on in the given quad based off
- *               the most recently read data from OCC-PGPE Shared SRAM
- *
- *  Param: The Quad number
- *
- *  Return: Returns the number of cores powered on within the given quad.
- */
-uint8_t num_cores_on_in_quad( uint8_t i_quad_num )
-{
-    int start_index = i_quad_num * NUM_CORES_PER_QUAD;
-    int i;
-    uint8_t num_powered_on_cores = 0;
-    for(i = start_index; i < (start_index + NUM_CORES_PER_QUAD); i++)
-    {
-        if( core_powered_on(i) > 0 )
-        {
-            num_powered_on_cores++;
-        }
-    }
-    return num_powered_on_cores;
 }
 
 /**
@@ -1432,109 +1503,6 @@ void get_poundV_points( uint32_t i_freq_mhz,
 }
 
 /**
- * calculate_temperature_scaling_08V
- *
- * Description: This function calculates the full leakage @0.8V and does interpolation
- *               to determine the m for G_wof_iddq_mult_table
- *               This is a one time calculation.
- */
-void calculate_temperature_scaling_08V( void )
-{
-    int leakage_idx;
-    int i;
-
-    // estimate full leakage@0.8V by using IQ data all core, cache ON @0.8V * 24/#sort cores
-    // 0.8V is the 3rd entry in the IQ data in 5mA unit *5 to convert to mA
-    g_amec_sys.static_wof_data.full_leakage_08v_mA = (G_oppb.iddq.iddq_all_good_cores_on_caches_on_5ma[2] * 5) * 24 / G_oppb.iddq.good_normal_cores_per_sort;
-
-    // First row of G_wof_mft_full_leakage_08V has the leakage values in mA find the index
-    if( g_amec_sys.static_wof_data.full_leakage_08v_mA < G_wof_mft_full_leakage_08V[0][0] )
-    {
-        leakage_idx = 0;
-    }
-    else if( g_amec_sys.static_wof_data.full_leakage_08v_mA >= G_wof_mft_full_leakage_08V[0][NUM_FULL_LEAKAGE_08V-1] )
-    {
-        leakage_idx = NUM_FULL_LEAKAGE_08V-2;
-    }
-    else
-    {
-        for(leakage_idx = 0 ; leakage_idx < NUM_FULL_LEAKAGE_08V-1; leakage_idx++)
-        {
-            if( (g_amec_sys.static_wof_data.full_leakage_08v_mA >= G_wof_mft_full_leakage_08V[0][leakage_idx]) &&
-                (g_amec_sys.static_wof_data.full_leakage_08v_mA <= G_wof_mft_full_leakage_08V[0][leakage_idx+1]) )
-            {
-                break;
-            }
-        }
-    }
-    // Interpolate the m values in G_wof_mft_full_leakage_08V and write to G_wof_iddq_mult_table
-    for(i=0; i < WOF_IDDQ_MULT_TABLE_N; i++)
-    {
-        G_wof_iddq_mult_table[i][1] = interpolate_linear( g_amec_sys.static_wof_data.full_leakage_08v_mA,
-                                                          G_wof_mft_full_leakage_08V[0][leakage_idx],
-                                                          G_wof_mft_full_leakage_08V[0][leakage_idx+1],
-                                                          G_wof_mft_full_leakage_08V[i+1][leakage_idx],
-                                                          G_wof_mft_full_leakage_08V[i+1][leakage_idx+1]);
-        // only trace first and last entries of table
-        if( (i == 0) ||
-            (i == (WOF_IDDQ_MULT_TABLE_N - 1) ) )
-        {
-           TRAC_IMP("calculate_temperature_scaling_08V: G_wof_iddq_mult_table[%d] = %d , %d ",
-                     i,
-                     G_wof_iddq_mult_table[i][0],
-                     G_wof_iddq_mult_table[i][1]);
-        }
-    }
-}
-
-/**
- * calculate_multiplier
- *
- * Description: This function calculates the 'm' in the formula
- * y ~= (T*m) >> 10 by choosing the appropriate row in
- * G_wof_iddq_mult_table based on the passed in temp, and interpolates
- * the values of the 'm' column in order to find the appropriate multiplier
- *
- * Param: the delta temp between tvpd_leak and a temperature sensor. Used
- *        to find the appropriate row/column index into G_wof_iddq_mult_table.
- *
- * Return: The multiplier representing the temperature factor
- */
-uint32_t calculate_multiplier( int32_t i_temp )
-{
-    int mult_idx;  // row index (temperature delta) into G_wof_iddq_mult_table[][]
-
-    // find the row based on the delta temperature (i_temp)
-    if( i_temp < G_wof_iddq_mult_table[0][0] )
-    {
-        mult_idx = 0;
-    }
-    else if( i_temp >= G_wof_iddq_mult_table[WOF_IDDQ_MULT_TABLE_N-1][0] )
-    {
-        mult_idx = WOF_IDDQ_MULT_TABLE_N - 2;
-    }
-    else
-    {
-        for(mult_idx = 0 ; mult_idx < WOF_IDDQ_MULT_TABLE_N-1; mult_idx++)
-        {
-            if( (G_wof_iddq_mult_table[mult_idx][0] <= i_temp) &&
-                (G_wof_iddq_mult_table[mult_idx+1][0] >= i_temp) )
-            {
-                break;
-            }
-        }
-    }
-
-    // mult index now has the row index into G_wof_iddq_mult_table.
-    // use it to calculate the final multiplier
-    return interpolate_linear( i_temp,
-                      (int32_t)G_wof_iddq_mult_table[mult_idx][0],
-                      (int32_t)G_wof_iddq_mult_table[mult_idx+1][0],
-                      (int32_t)G_wof_iddq_mult_table[mult_idx][1],
-                      (int32_t)G_wof_iddq_mult_table[mult_idx+1][1]);
-}
-
-/**
  * read_sensor_data
  *
  * Description: One time place to read out all the sensors needed
@@ -1543,11 +1511,194 @@ uint32_t calculate_multiplier( int32_t i_temp )
 void read_sensor_data( void )
 {
     // Read out necessary Sensor data for WOF calculation
-    g_wof->curvdd_sensor        = getSensorByGsid(CURVDD)->sample;
-    g_wof->curvcs_sensor        = getSensorByGsid(CURVCS)->sample;
-    g_wof->voltvddsense_sensor  = getSensorByGsid(VOLTVDDSENSE)->sample;
-    g_wof->voltvcssense_sensor  = getSensorByGsid(VOLTVCSSENSE)->sample;
-    g_wof->tempRT_sensor        = getSensorByGsid(TEMPRTAVG)->sample;
+    g_wof->curvdd_sensor  = getSensorByGsid(CURVDD)->sample;
+    g_wof->curvcs_sensor  = getSensorByGsid(CURVCS)->sample;
+
+    g_wof->Vdd_chip_p1mv  = getSensorByGsid(VOLTVDDSENSE)->sample;
+    g_wof->Vdd_chip_index = get_voltage_index(g_wof->Vdd_chip_p1mv);
+
+    g_wof->Vcs_chip_p1mv  = getSensorByGsid(VOLTVCSSENSE)->sample;
+    g_wof->Vcs_chip_index = get_voltage_index(g_wof->Vcs_chip_p1mv);
+
+    g_wof->T_racetrack    = getSensorByGsid(TEMPRTAVG)->sample;
+
+    read_xgpe_values();
+
+    setup_vdd();
+    setup_vcs();
+    setup_racetrack();
+}
+
+/**
+ * setup_vdd
+ *
+ * Description: One time place to get Vdd data setup for wof calculations
+ */
+void setup_vdd( void )
+{
+    // Scaled by "core" temperature scaling line
+    bool l_non_core_scaling_line = FALSE;
+
+    g_wof->scaled_all_off_off_vdd_chip_ua_c = scale_and_interpolate(G_oppb.iddq.iddq_all_good_cores_off_good_caches_off_5ma,
+                                                                    G_oppb.iddq.avgtemp_all_cores_off_caches_off_p5c,
+                                                                    g_wof->Vdd_chip_index,
+                                                                    g_wof->T_racetrack,
+                                                                    g_wof->Vdd_chip_p1mv,
+                                                                    l_non_core_scaling_line);
+
+    g_wof->scaled_all_off_off_vdd_vmin_ua_c = scale_and_interpolate(G_oppb.iddq.iddq_all_good_cores_off_good_caches_off_5ma,
+                                                                    G_oppb.iddq.avgtemp_all_cores_off_caches_off_p5c,
+                                                                    g_amec_sys.static_wof_data.Vdd_vmin_index,
+                                                                    g_wof->T_racetrack,
+                                                                    g_amec_sys.static_wof_data.Vdd_vmin_p1mv,
+                                                                    l_non_core_scaling_line);
+
+    g_wof->scaled_all_off_on_vdd_chip_ua_c = scale_and_interpolate(G_oppb.iddq.iddq_all_good_cores_off_good_caches_on_5ma,
+                                                                   G_oppb.iddq.avgtemp_all_good_cores_off_good_caches_on_p5c,
+                                                                   g_wof->Vdd_chip_index,
+                                                                   g_wof->T_racetrack,
+                                                                   g_wof->Vdd_chip_p1mv,
+                                                                   l_non_core_scaling_line);
+
+    g_wof->scaled_all_off_on_vdd_vmin_ua_c = scale_and_interpolate(G_oppb.iddq.iddq_all_good_cores_off_good_caches_on_5ma,
+                                                                   G_oppb.iddq.avgtemp_all_good_cores_off_good_caches_on_p5c,
+                                                                   g_amec_sys.static_wof_data.Vdd_vmin_index,
+                                                                   g_wof->T_racetrack,
+                                                                   g_amec_sys.static_wof_data.Vdd_vmin_p1mv,
+                                                                   l_non_core_scaling_line);
+
+    // divide by 32 to get single core
+    g_wof->single_core_off_vdd_chip_ua_c = ( (g_wof->scaled_all_off_off_vdd_chip_ua_c *
+                                              G_oppb.iddq.iddq_all_cores_off_all_caches_off_core_pct) >> 5) / 100;
+
+    g_wof->single_cache_off_vdd_chip_ua_c = ( (g_wof->scaled_all_off_off_vdd_chip_ua_c *
+                                               G_oppb.iddq.iddq_all_cores_off_all_caches_off_cache_pct) >> 5) / 100;
+
+    g_wof->single_core_off_vdd_vmin_ua_c = ( (g_wof->scaled_all_off_off_vdd_vmin_ua_c *
+                                              G_oppb.iddq.iddq_all_cores_off_all_caches_off_core_pct) >> 5) / 100;
+
+    g_wof->single_cache_on_vdd_chip_ua_c = ( (g_wof->scaled_all_off_on_vdd_chip_ua_c - g_wof->scaled_all_off_off_vdd_chip_ua_c) /
+                                               G_oppb.iddq.good_normal_cores_per_sort ) + g_wof->single_cache_off_vdd_chip_ua_c;
+
+    // Scaled by "non-core" temperature scaling line
+    l_non_core_scaling_line = TRUE;
+
+    g_wof->scaled_all_off_off_vdd_chip_ua_nc = scale_and_interpolate(G_oppb.iddq.iddq_all_good_cores_off_good_caches_off_5ma,
+                                                                     G_oppb.iddq.avgtemp_all_cores_off_caches_off_p5c,
+                                                                     g_wof->Vdd_chip_index,
+                                                                     g_wof->T_racetrack,
+                                                                     g_wof->Vdd_chip_p1mv,
+                                                                     l_non_core_scaling_line);
+
+    g_wof->scaled_all_off_off_vdd_vmin_ua_nc = scale_and_interpolate(G_oppb.iddq.iddq_all_good_cores_off_good_caches_off_5ma,
+                                                                     G_oppb.iddq.avgtemp_all_cores_off_caches_off_p5c,
+                                                                     g_amec_sys.static_wof_data.Vdd_vmin_index,
+                                                                     g_wof->T_racetrack,
+                                                                     g_amec_sys.static_wof_data.Vdd_vmin_p1mv,
+                                                                     l_non_core_scaling_line);
+
+    g_wof->scaled_all_off_on_vdd_chip_ua_nc = scale_and_interpolate(G_oppb.iddq.iddq_all_good_cores_off_good_caches_on_5ma,
+                                                                    G_oppb.iddq.avgtemp_all_good_cores_off_good_caches_on_p5c,
+                                                                    g_wof->Vdd_chip_index,
+                                                                    g_wof->T_racetrack,
+                                                                    g_wof->Vdd_chip_p1mv,
+                                                                    l_non_core_scaling_line);
+
+    g_wof->scaled_all_off_on_vdd_vmin_ua_nc = scale_and_interpolate(G_oppb.iddq.iddq_all_good_cores_off_good_caches_on_5ma,
+                                                                    G_oppb.iddq.avgtemp_all_good_cores_off_good_caches_on_p5c,
+                                                                    g_amec_sys.static_wof_data.Vdd_vmin_index,
+                                                                    g_wof->T_racetrack,
+                                                                    g_amec_sys.static_wof_data.Vdd_vmin_p1mv,
+                                                                    l_non_core_scaling_line);
+
+    g_wof->single_core_off_vdd_chip_ua_nc = ( (g_wof->scaled_all_off_off_vdd_chip_ua_nc *
+                                               G_oppb.iddq.iddq_all_cores_off_all_caches_off_core_pct) >> 5) / 100;
+
+    g_wof->single_cache_off_vdd_chip_ua_nc = ( (g_wof->scaled_all_off_off_vdd_chip_ua_nc *
+                                                G_oppb.iddq.iddq_all_cores_off_all_caches_off_cache_pct) >> 5) / 100;
+
+    g_wof->single_core_off_vdd_vmin_ua_nc = ( (g_wof->scaled_all_off_off_vdd_vmin_ua_nc *
+                                               G_oppb.iddq.iddq_all_cores_off_all_caches_off_core_pct) >> 5) / 100;
+
+    g_wof->single_cache_on_vdd_chip_ua_nc = ( (g_wof->scaled_all_off_on_vdd_chip_ua_nc - g_wof->scaled_all_off_off_vdd_chip_ua_nc) /
+                                               G_oppb.iddq.good_normal_cores_per_sort ) + g_wof->single_cache_off_vdd_chip_ua_nc;
+}
+
+/**
+ * setup_vcs
+ *
+ * Description: One time place to get Vcs data setup for wof calculations
+ */
+void setup_vcs( void )
+{
+    // Scaled by "core" temperature scaling line
+    bool l_non_core_scaling_line = FALSE;
+
+    g_wof->scaled_all_off_off_vcs_chip_ua_c = scale_and_interpolate(G_oppb.iddq.icsq_all_good_cores_off_good_caches_off_5ma,
+                                                                    G_oppb.iddq.avgtemp_all_cores_off_caches_off_p5c,
+                                                                    g_wof->Vcs_chip_index,
+                                                                    g_wof->T_racetrack,
+                                                                    g_wof->Vcs_chip_p1mv,
+                                                                    l_non_core_scaling_line);
+
+    g_wof->scaled_all_off_on_vcs_chip_ua_c = scale_and_interpolate(G_oppb.iddq.icsq_all_good_cores_off_good_caches_on_5ma,
+                                                                   G_oppb.iddq.avgtemp_all_good_cores_off_good_caches_on_p5c,
+                                                                   g_wof->Vcs_chip_index,
+                                                                   g_wof->T_racetrack,
+                                                                   g_wof->Vcs_chip_p1mv,
+                                                                   l_non_core_scaling_line);
+
+    // divide by 32 to get single core
+    g_wof->single_core_off_vcs_chip_ua_c = ( (g_wof->scaled_all_off_off_vcs_chip_ua_c *
+                                              G_oppb.iddq.icsq_all_cores_off_all_caches_off_core_pct) >> 5) / 100;
+
+    g_wof->single_cache_off_vcs_chip_ua_c = ( (g_wof->scaled_all_off_off_vcs_chip_ua_c *
+                                               G_oppb.iddq.icsq_all_cores_off_all_caches_off_cache_pct) >> 5) / 100;
+
+    g_wof->single_cache_on_vcs_chip_ua_c = ( (g_wof->scaled_all_off_on_vcs_chip_ua_c - g_wof->scaled_all_off_off_vcs_chip_ua_c) /
+                                               G_oppb.iddq.good_normal_cores_per_sort ) + g_wof->single_cache_off_vcs_chip_ua_c;
+
+    // Scaled by "non-core" temperature scaling line
+    l_non_core_scaling_line = TRUE;
+
+    g_wof->scaled_all_off_off_vcs_chip_ua_nc = scale_and_interpolate(G_oppb.iddq.icsq_all_good_cores_off_good_caches_off_5ma,
+                                                                     G_oppb.iddq.avgtemp_all_cores_off_caches_off_p5c,
+                                                                     g_wof->Vcs_chip_index,
+                                                                     g_wof->T_racetrack,
+                                                                     g_wof->Vcs_chip_p1mv,
+                                                                     l_non_core_scaling_line);
+
+    g_wof->scaled_all_off_on_vcs_chip_ua_nc = scale_and_interpolate(G_oppb.iddq.icsq_all_good_cores_off_good_caches_on_5ma,
+                                                                    G_oppb.iddq.avgtemp_all_cores_off_caches_off_p5c,
+                                                                    g_wof->Vcs_chip_index,
+                                                                    g_wof->T_racetrack,
+                                                                    g_wof->Vcs_chip_p1mv,
+                                                                    l_non_core_scaling_line);
+
+    g_wof->single_core_off_vcs_chip_ua_nc = ( (g_wof->scaled_all_off_off_vcs_chip_ua_nc *
+                                               G_oppb.iddq.icsq_all_cores_off_all_caches_off_core_pct) >> 5) / 100;
+
+    g_wof->single_cache_off_vcs_chip_ua_nc = ( (g_wof->scaled_all_off_off_vcs_chip_ua_nc *
+                                                G_oppb.iddq.icsq_all_cores_off_all_caches_off_cache_pct) >> 5) / 100;
+
+    g_wof->single_cache_on_vcs_chip_ua_nc = ( (g_wof->scaled_all_off_on_vcs_chip_ua_nc - g_wof->scaled_all_off_off_vcs_chip_ua_nc) /
+                                               G_oppb.iddq.good_normal_cores_per_sort ) + g_wof->single_cache_off_vcs_chip_ua_nc;
+}
+
+/**
+ * setup_racetrack
+ *
+ * Description: One time place to get racetrack data setup for wof calculations
+ */
+void setup_racetrack( void )
+{
+    // Racetrack values use "non-core" temperature scaling line
+
+    g_wof->racetrack_only_vdd_chip_ua = (g_wof->scaled_all_off_off_vdd_chip_ua_nc *
+                                         G_oppb.iddq.iddq_all_cores_off_all_caches_off_racetrack_pct) / 100;
+
+    g_wof->racetrack_only_vcs_chip_ua = (g_wof->scaled_all_off_off_vcs_chip_ua_nc *
+                                         G_oppb.iddq.icsq_all_cores_off_all_caches_off_racetrack_pct) / 100;
 }
 
 /**
@@ -2008,11 +2159,21 @@ void task_send_vrt_to_pgpe(task_t* i_task)
     if( (g_wof->vrt_state == NEED_TO_SCHEDULE ) &&
         (async_request_is_idle(&G_wof_vrt_req.request)) )
     {
+        if(G_allow_trace_flags & ALLOW_VRT_TRACE)
+        {
+            INTR_TRAC_INFO("scheduling VRT OTBR[0x%08X]", in32(OCB_OTBR));
+        }
+        // must set vrt state prior to calling schedule to prevent re-setting
+        // it to scheduled after VRT callback function processed
+        g_wof->vrt_state = SCHEDULED;
+
         g_wof->gpe_req_rc = pgpe_request_schedule(&G_wof_vrt_req);
 
         // Check to make sure IPC request was scheduled correctly
         if( g_wof->gpe_req_rc != 0 )
         {
+            // failed set VRT state to standby
+            g_wof->vrt_state = STANDBY;
             // If we were attempting to send the initial VRT request,
             // reset the state machine so we can start the process
             // over
@@ -2030,12 +2191,7 @@ void task_send_vrt_to_pgpe(task_t* i_task)
             // Reset the global return code after logging the error
             g_wof->gpe_req_rc = 0;
         }
-        else
-        {
-            // Success.  Update vrt state
-            g_wof->vrt_state = SCHEDULED;
-        }
-    }
+    } // if VRT request idle and need to scheudle
 }
 
 
@@ -2113,22 +2269,59 @@ int get_voltage_index( uint32_t i_voltage )
 /**
  * scale
  *
- * Description: Performs i_current*full_leakage_08V^(-((T-tvpd_leak)/257.731))*1.45^((T-tvpd_leak)/10)
- *              Note: The calculation is performed by doing a lookup
- *              in G_wof_iddq_mult_table based on the passed in delta temp.
- *
- * Param[in]: i_current - The current to scale
- * Param[in]: i_delta_temp - The measured temperature - the temperature at which
- *                           the input current was measured.
- * Return: The scaled current
+ * Description: Performs full_leakage_08V^(-((T1 - T2) / 257.731)) * 1.45^((T1 - T2)/10)
+ *              using a 3rd degree polynomial for either core or non-core temperature scaling line
+ *              result is returned in 0.001 unit
+ * Param[in]: i_target_temp
+ * Param[in]: i_reference_temp
+ * Param[in]: i_non_core_scaling_line - TRUE use non-core temperature scaling line,
+ *                                      FALSE use core temperature scaling line
  */
-uint32_t scale( uint16_t i_current,
-                int16_t i_delta_temp )
+uint32_t scale( uint16_t i_target_temp,
+                uint16_t i_reference_temp,
+                bool i_non_core_scaling_line )
 {
-    // Calculate the multipliers for the leakage current using the delta temp
-    uint32_t leak_multiplier = calculate_multiplier( i_delta_temp );
-    // Scale the current and return
-    return (i_current * leak_multiplier) >> 10;
+    int32_t  l_iddqt1 = 0;
+    int32_t  l_iddqt2 = 0;
+    uint32_t l_result = 0;
+
+    // Temperature scaling lines are 3rd degree polynomials: aT^3 + bT^2 + cT + d
+    // default coefficients a, b, c, d for core scaling line
+    // coefficients are in 0.00001 unit
+    int32_t l_coeff_a = 9;
+    int32_t l_coeff_b = -450;
+    int32_t l_coeff_c = 46170;
+    int32_t l_coeff_d = -63370;
+
+    if(i_non_core_scaling_line)
+    {
+       // change coefficients for non-core temperature scaling line
+       l_coeff_a = 2;
+       l_coeff_b = -70;
+       l_coeff_c = 6340;
+       l_coeff_d = 16080;
+    }
+
+    l_iddqt1 = (l_coeff_a * (i_target_temp * i_target_temp * i_target_temp));
+    l_iddqt1 += (l_coeff_b * (i_target_temp * i_target_temp));
+    l_iddqt1 += (l_coeff_c * i_target_temp);
+    l_iddqt1 += l_coeff_d;
+
+    l_iddqt2 = l_coeff_a * (i_reference_temp * i_reference_temp * i_reference_temp);
+    l_iddqt2 += l_coeff_b * (i_reference_temp * i_reference_temp);
+    l_iddqt2 += l_coeff_c * i_reference_temp;
+    l_iddqt2 += l_coeff_d;
+
+    // is there a guarantee that l_iddqt1 > l_iddqt2?
+    l_result = (l_iddqt1 - l_iddqt2) / l_iddqt2;
+
+    // divide by 100 to account for coefficients in 0.00001 unit and leave result in .001 unit
+    l_result /= 100;
+
+    // add one
+    l_result += 1000;
+
+    return l_result;
 }
 
 /**
@@ -2143,38 +2336,40 @@ uint32_t scale( uint16_t i_current,
  * Param[in]: i_avgtemp_arr - Array of temperatures in which the currents
  *                            in i_leak_arr were measured. Also taken from vpd.
  * Param[in]: i_idx - The index into the two arrays calculated from voltage
- * Param[in]: i_base_temp - The base temperature used to scale the current
+ * Param[in]: i_target_temp - The target temperature used to scale the current
  * Param[in]: i_voltage - The associated voltage.
+ * Param[in]: i_non_core_scaling_line - TRUE use non-core temperature scaling line,
+ *                                      FALSE use core temperature scaling line
  *
- * Return: The approximated scaled current in 10mA.
+ * Return: The approximated scaled current in uA.
  */
 uint32_t scale_and_interpolate( uint16_t * i_leak_arr,
-                       uint8_t * i_avgtemp_arr,
-                       int i_idx,
-                       uint16_t i_base_temp,
-                       uint16_t i_voltage )
+                                uint8_t * i_avgtemp_arr,
+                                int i_idx,
+                                uint16_t i_target_temp,
+                                uint16_t i_voltage,
+                                bool i_non_core_scaling_line )
 {
-    // Calculate the Delta temps for the upper and lower bounds
-    // Note: avgtemp arrays are in 0.5C. Divide by 2 to convert
-    //       to 1C
-    int16_t lower_delta = i_base_temp - (i_avgtemp_arr[i_idx] >> 1);
-    int16_t upper_delta = i_base_temp - (i_avgtemp_arr[i_idx+1] >> 1);
-
-    // Scale the currents based on the delta temperature
     // Note: leakage arrays are in 5mA. Multiply by 5 to convert to mA
-    uint32_t scaled_lower_leak = scale( i_leak_arr[i_idx],
-                                        lower_delta )*5;
-    uint32_t scaled_upper_leak = scale( i_leak_arr[i_idx+1],
-                                        upper_delta )*5;
+    uint32_t scaled_lower_leak = i_leak_arr[i_idx] * 5;
+    uint32_t scaled_upper_leak = i_leak_arr[i_idx+1] * 5;
+
+    // Note: avgtemp arrays are in 0.5C. Divide by 2 to convert to 1C
+    // scale() returns value in 0.001 unit meaning mA just got converted to uA
+    scaled_lower_leak *= scale( i_target_temp,
+                                i_avgtemp_arr[i_idx] >> 1,
+                                i_non_core_scaling_line );
+    scaled_upper_leak *= scale( i_target_temp,
+                                i_avgtemp_arr[i_idx+1] >> 1,
+                                i_non_core_scaling_line );
 
     // Approximate current between the scaled currents using linear
     // interpolation and return the result
-    // Divide by 10 to get 10mA units
     return interpolate_linear( (int32_t) i_voltage,
                                (int32_t) G_iddq_voltages[i_idx],
                                (int32_t) G_iddq_voltages[i_idx+1],
                                (int32_t) scaled_lower_leak,
-                               (int32_t) scaled_upper_leak ) / 10;
+                               (int32_t) scaled_upper_leak );
 
 }
 

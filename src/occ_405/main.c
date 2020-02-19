@@ -142,7 +142,6 @@ extern uint8_t g_trac_inf_buffer[];
 extern uint8_t g_trac_imp_buffer[];
 extern uint8_t g_trac_err_buffer[];
 
-
 /*
  * Function Specification
  *
@@ -341,6 +340,11 @@ void populate_sys_mode_freq_table(void)
       MAIN_TRAC_ERR("populate_sys_mode_freq_table: UT freq is 0 using WOF base freq %dMHz for UT",
                        G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_WOF_BASE]);
         G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_VPD_UT] = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_WOF_BASE];
+        MAIN_TRAC_INFO("WOF Disabled due to 0 UT value.");
+        set_clear_wof_disabled( SET,
+                                WOF_RC_UTURBO_IS_ZERO,
+                                ERC_WOF_UTURBO_IS_ZERO );
+
     }
 
     // sanity check that UT isn't higher than max
@@ -482,10 +486,6 @@ void read_wof_header(void)
                                 g_amec->static_wof_data.wof_header.ocs_mode,
                                 g_amec->static_wof_data.wof_header.core_count);
 
-
-                // one time calculation needed for WOF temperature scaling
-                calculate_temperature_scaling_08V();
-
                 // Initialize wof init state to zero
                 g_amec->wof.wof_init_state  = WOF_DISABLED;
 
@@ -528,8 +528,7 @@ void read_wof_header(void)
  *
  * Description: Initialize PGPE image header entry in DTLB,
  *              Read PGPE image header, lookup shared SRAM address and size,
- *              Initialize OCC/PGPE shared SRAM entry in the DTLB,
- *              Populate global variables, including G_pgpe_peacon_address.
+ *              Populate global variables, including G_pgpe_beacon_address.
  *
  * Returns: TRUE if read was successful, else FALSE
  *
@@ -542,6 +541,8 @@ bool read_pgpe_header(void)
     uint32_t userdata1 = 0;
     uint32_t userdata2 = 0;
     uint32_t pgpe_shared_magic_number = 0;
+    uint8_t  l_bit_mask = 0;
+    int      i = 0;
 
     MAIN_TRAC_INFO("read_pgpe_header(0x%08X)", PGPE_HEADER_ADDR);
     // Copy the header into Global PGPE header struct
@@ -619,6 +620,45 @@ bool read_pgpe_header(void)
                                g_amec->static_wof_data.pgpe_values_sram_addr,
                                g_amec->static_wof_data.xgpe_values_sram_addr);
 
+                g_amec->static_wof_data.xgpe_iddq_activity_sram_addr = G_pgpe_header.shared_sram_addr + XGPE_IDDQ_ACTIVITY_SRAM_OFFSET;
+                g_amec->static_wof_data.iddq_activity_sample_depth = in8(G_pgpe_header.shared_sram_addr + IDDQ_ACTIVITY_SAMPLE_DEPTH_SRAM_OFFSET);
+                // sanity check sample depth must be non-zero and a power of 2 (exactly 1 bit set)
+                if(__builtin_popcount(g_amec->static_wof_data.iddq_activity_sample_depth) == 1)
+                {
+                    l_bit_mask = 0x01;
+                    for(i=0; i<8; i++)
+                    {
+                        if( g_amec->static_wof_data.iddq_activity_sample_depth & (l_bit_mask << i) )
+                        {
+                            // set the number of bits to shift in order to do a divide by activity depth to calcualte
+                            // percentages in the WOF calculations
+                            g_amec->static_wof_data.iddq_activity_divide_bit_shift = i;
+                            break;
+                        }
+                    }
+                }
+                else
+                {
+                    // Invalid IDDQ activity sample depth can't run WOF
+                    MAIN_TRAC_ERR("read_pgpe_header: IDDQ Activity Sample Depth[0x%02X] NOT valid! No WOF support!",
+                                  g_amec->static_wof_data.iddq_activity_sample_depth);
+                    if(!G_simics_environment)
+                    set_clear_wof_disabled( SET,
+                                            WOF_RC_INVALID_IDDQ_SAMPLE_DEPTH,
+                                            ERC_WOF_INVALID_IDDQ_SAMPLE_DEPTH );
+                    else
+                    {
+                        g_amec->static_wof_data.iddq_activity_sample_depth = 8;  // hard code due to simics
+                        g_amec->static_wof_data.iddq_activity_divide_bit_shift = 3;
+                        MAIN_TRAC_IMP("read_pgpe_header: In SIMICS setting IDDQ Activity Sample Depth to 8 and allowing WOF");
+                    }
+                }
+
+                MAIN_TRAC_IMP("read_pgpe_header: IDDQ Activity SRAM addr[0x%08X] depth[0x%02X] bit shift[%d]",
+                              g_amec->static_wof_data.xgpe_iddq_activity_sram_addr,
+                              g_amec->static_wof_data.iddq_activity_sample_depth,
+                              g_amec->static_wof_data.iddq_activity_divide_bit_shift);
+
                 g_amec->static_wof_data.pstate_tbl_sram_addr   = G_pgpe_header.occ_pstate_table_sram_addr;
 
                 MAIN_TRAC_IMP("read_pgpe_header: Pstate table SRAM Address[0x%08X]",
@@ -634,10 +674,10 @@ bool read_pgpe_header(void)
                 MAIN_TRAC_ERR("read_pgpe_header: Invalid PGPE Shared SRAM Magic number. Addr[0x%08X], Magic Number[0x%08X]",
                                G_pgpe_header.shared_sram_addr, pgpe_shared_magic_number);
 
-                // skip error log if this was a "FAKE_HDR" from PGPE
-                if((0x46414B455F484452 == G_pgpe_header.magic_number))
+                // skip error log if this was a "FAKE_HDR" from PGPE or in SIMICS
+                if( (0x46414B455F484452 == G_pgpe_header.magic_number) || (G_simics_environment) )
                 {
-                    MAIN_TRAC_ERR("read_pgpe_header: PGPE FAKE_HDR ignoring invalid shared SRAM");
+                    MAIN_TRAC_ERR("read_pgpe_header: PGPE FAKE_HDR or in SIMICS ignoring invalid shared SRAM");
                     G_hcode_elog_table_slots = 0;
                     G_hcode_elog_table = 0;
 
@@ -652,10 +692,48 @@ bool read_pgpe_header(void)
                                    g_amec->static_wof_data.pgpe_values_sram_addr,
                                    g_amec->static_wof_data.xgpe_values_sram_addr);
 
+                    g_amec->static_wof_data.xgpe_iddq_activity_sram_addr = G_pgpe_header.shared_sram_addr + XGPE_IDDQ_ACTIVITY_SRAM_OFFSET;
+                    g_amec->static_wof_data.iddq_activity_sample_depth = 8;  // hard code due to fake header
+                    // sanity check sample depth must be non-zero and a power of 2 (exactly 1 bit set)
+                    if(__builtin_popcount(g_amec->static_wof_data.iddq_activity_sample_depth) == 1)
+                    {
+                        l_bit_mask = 0x01;
+                        for(i=0; i<8; i++)
+                        {
+                            if( g_amec->static_wof_data.iddq_activity_sample_depth & (l_bit_mask << i) )
+                            {
+                                // set the number of bits to shift in order to do a divide by activity depth to calcualte
+                                // percentages in the WOF calculations
+                                g_amec->static_wof_data.iddq_activity_divide_bit_shift = i;
+                                break;
+                            }
+                        }
+                    }
+                    else if(!G_simics_environment)
+                    {
+                        // Invalid IDDQ activity sample depth can't run WOF
+                        MAIN_TRAC_ERR("read_pgpe_header: IDDQ Activity Sample Depth[0x%02X] NOT valid! No WOF support!",
+                                      g_amec->static_wof_data.iddq_activity_sample_depth);
+                        set_clear_wof_disabled( SET,
+                                                WOF_RC_INVALID_IDDQ_SAMPLE_DEPTH,
+                                                ERC_WOF_INVALID_IDDQ_SAMPLE_DEPTH );
+                    }
+                    else
+                    {
+                        g_amec->static_wof_data.iddq_activity_sample_depth = 8;  // hard code due to simics
+                        g_amec->static_wof_data.iddq_activity_divide_bit_shift = 3;
+                        MAIN_TRAC_INFO("read_pgpe_header: In SIMICS setting IDDQ Activity Sample Depth to 8 and allowing WOF");
+                    }
+
+                    MAIN_TRAC_IMP("read_pgpe_header: IDDQ Activity SRAM addr[0x%08X] depth[0x%02X] bit shift[%d]",
+                                   g_amec->static_wof_data.xgpe_iddq_activity_sram_addr,
+                                   g_amec->static_wof_data.iddq_activity_sample_depth,
+                                   g_amec->static_wof_data.iddq_activity_divide_bit_shift);
+
                     g_amec->static_wof_data.pstate_tbl_sram_addr   = G_pgpe_header.occ_pstate_table_sram_addr;
 
                     MAIN_TRAC_IMP("read_pgpe_header: Pstate table SRAM Address[0x%08X]",
-                                   g_amec->static_wof_data.pstate_tbl_sram_addr);
+                                  g_amec->static_wof_data.pstate_tbl_sram_addr);
 
                     // Read in WOF tables header
                     read_wof_header();
@@ -993,7 +1071,7 @@ bool read_oppb_params()
 
         // frequency points are valid, now populate our internal frequency table
         populate_sys_mode_freq_table();
-
+/* @mb temp RTC 209558
         // Confirm whether we have wof support
         if(!(G_oppb.attr.fields.wof_enabled))
         {
@@ -1003,10 +1081,15 @@ bool read_oppb_params()
                                     ERC_WOF_OPPB_WOF_DISABLED );
         }
         else
-        {
-            MAIN_TRAC_INFO("OPPB has WOF enabled(%d)",
-                           G_oppb.attr.fields.wof_enabled);
-        }
+        {   // TODO RTC 209558 need added to OPPB */
+            g_amec->static_wof_data.Vdd_vmin_p1mv  = 6000;
+//            g_amec->static_wof_data.Vdd_vmin_p1mv  = G_oppb.Vdd_vmin_mv * 10;
+            g_amec->static_wof_data.Vdd_vmin_index = get_voltage_index(g_amec->static_wof_data.Vdd_vmin_p1mv);
+            MAIN_TRAC_INFO("OPPB has WOF enabled(%d) Vdd Vmin[%d]100uv  Vdd Vmin index[%d]",
+                           G_oppb.attr.fields.wof_enabled,
+                           g_amec->static_wof_data.Vdd_vmin_p1mv,
+                           g_amec->static_wof_data.Vdd_vmin_index);
+// @mb temp        }
 
     } while (0);
 

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -280,7 +280,8 @@ enum occExtReasonCode
     ERC_WOF_IPC_FAILURE                         = 0x0217,
     ERC_WOF_USER_DISABLED_WOF                   = 0x0218,
     ERC_WOF_RESET_DEBUG_CMD                     = 0x0219,
-    ERC_WOF_DIVIDE_BY_ZERO_VDN                  = 0x021A,
+    ERC_WOF_DIVIDE_BY_ZERO_VCS                  = 0x021A,
+    ERC_WOF_INVALID_IDDQ_SAMPLE_DEPTH           = 0x021B,
 };
 
 // Error log Module Ids
