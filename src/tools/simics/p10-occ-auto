@@ -362,14 +362,6 @@ main()
     SetupOccImage
 
 
-    printHeader "INIT APSS CHANNEL VALUES"
-    SetupAPSSChannel
-
-
-    printHeader "INIT TEMPERATURE SENSORS"
-    SetupDimmInitTemps
-    SetupCoreInitTemps
-
     # Run
     autosim --simcmd 'run'
 
@@ -605,6 +597,8 @@ main()
         WaitForResponse 0x20
 
 
+        # Delay 5 sec to ensure core temps have been read
+        sleep 5
         printHeader "VALIDATE POLL DATA"
         ValidatePollData
 
@@ -1021,11 +1015,16 @@ SetupOccImage()
     fi
 
     if [ $G_use_pgpe -ne 0 ]; then
-        # let pgpe run for a moment to be ahead of 405
-        autosim --simcmd 'run 40 ms'
+        # let simulator run for a short time
+        autosim --simcmd 'run 100 ms'
         autosim --simcmd 'stop'
     fi
 
+    #printHeader "INIT APSS CHANNEL VALUES"
+    #SetupAPSSChannel
+
+    #printHeader "INIT TEMPERATURE SENSORS"
+    #SetupDimmInitTemps
 }
 
 
@@ -1050,6 +1049,7 @@ SetupAPSSChannel()
 
 }
 
+
 SetupDimmInitTemps()
 {
     # Init and dump each DIMM temperature
@@ -1064,52 +1064,6 @@ SetupDimmInitTemps()
         autosim --simcmd "OccStandalone0.i2c_tempsensor_$(printf %02d ${dimm}).i2c_tempsensor_$(printf %02d ${dimm})_dev->temp_local=0x0$(printf %02X $temp)0"
         # autosim --simcmd "OccStandalone0.i2c_tempsensor_${dimm}.i2c_tempsensor_${dimm}_dev->temp_local"
         let dimm=$dimm+1
-    done
-}
-
-SetupCoreInitTemps()
-{
-    # Reported core temp = (Cwt*(Cdts1+Cdts2) + (Qwt*Qdts)) / (2*Cwt + Qwt)
-    # Where core weight (Cwt) and quad weight (Qwt) are from MRW/def file
-    # Init will set Cdts1==Cdts2==Qdts so that reported temp matches (core0 == core1 == quad0, core2 == core3 == quad2, ...)
-
-    # Quad Quad/Cache 0x10-0x15
-    let quad=0
-    while [ $quad -lt 6 ]; do
-        let quadAddr=0x10+$quad
-        let temp=$(($startingCoreTemp+($quad*4)))
-        let temp2=$(($startingCoreTemp+($quad*4)+2))
-        echo "Setting quad${quad} -> $temp/$temp2 C ("$(printf "0x%02X/0x%02X" $temp $temp2)")"
-        tempString=$(printf "0%02X50%02X5" $temp $temp2)
-        if [ $verbose -ne 0 ]; then
-            echo "==> backplane0.${proc}.pib_cmp.pib.write address = 0x$(printf %02X $quadAddr)0500000 0x${tempString}00000000 size = 8"
-        fi
-        ### NOTE: p10 simics - need to add an additional '0' to end of address for anything put on PIB (read & writes)
-        #autosim --simcmd "OccStandalone0.PowmanOccSlot.pib_space.write 0x$(printf %02X $quadAddr)050000  0x${tempString}00000000 8"
-        autosim --simcmd "backplane0.${proc}.pib_cmp.pib.write address = 0x$(printf %02X $quadAddr)0500000 0x${tempString}00000000 size = 8"
-        ## autosim --simcmd "OccStandalone0.PowmanOccSlot.pib_space.read  0x$(printf "%02X" $quadAddr)050000 8"
-        autosim --simcmd "backplane0.${proc}.pib_cmp.pib.read address = 0x$(printf %02X $quadAddr)0500000 size = 8"
-        let quad=$quad+1
-    done
-
-    # Cores 0x20-0x40
-    let core=0
-    let temp=$startingCoreTemp
-    while [ $core -lt $numCores ]; do
-        let coreAddr=0x20+$core
-        let temp2=$temp
-        echo "Setting core${core} -> $temp/$temp2 C ("$(printf "0x%02X/0x%02X" $temp $temp2)")"
-        tempString=$(printf "0%02X50%02X5" $temp $temp2)
-        if [ $verbose -ne 0 ]; then
-            echo "==> backplane0.${proc}.pib_cmp.pib.write address = 0x$(printf %02X $coreAddr)0500000 0x00000000${tempString}00000000 size = 8"
-        fi
-        autosim --simcmd "backplane0.${proc}.pib_cmp.pib.write address = 0x$(printf %02X $coreAddr)0500000 0x00000000${tempString}00000000 size = 8"
-        # autosim --simcmd "OccStandalone0.PowmanOccSlot.pib_space.read  0x"$(printf "%02X" $coreAddr)"050000 8"
-        autosim --simcmd "backplane0.${proc}.pib_cmp.pib.read address = 0x"$(printf "%02X" $coreAddr)"0500000 size = 8"
-        if [ $(($core % 2)) -eq 1 ]; then
-            let temp=$temp+2
-        fi
-        let core=$core+1
     done
 }
 
@@ -1464,13 +1418,14 @@ ValidatePollData()
                 if [ $? -ne 0 ]; then
                     rcvdValue=`grep -i "$sensor" $tempfile | awk '{print $7 $8}'`
                     echo -e "${red}ERROR: core$core temp is not correct (received 0x$rcvdValue C, expected 0x$sensorValue for $sensor)${normal}"
-                    # TEMP ALLOW                let fail=1
+                    let fail=1
                 else
                     echo "core$core temp is correct ($sensorValue C)"
                 fi
             fi
-            if [ $(($core % 2)) -eq 1 ]; then
-                let temp=$temp+2
+            let temp=$temp+1
+            if [ $(($core % 4)) -eq 3 ]; then
+                let temp=$temp+1
             fi
             let core=$core+1
         done
