@@ -87,6 +87,7 @@ enum e_gsid
     PWRAPSSCH15,
     CUR12VSTBY,        // 12V Standby Current
     VRHOTMEMPRCCNT,
+    TEMPAMBIENT,
 
     // ------------------------------------------------------
     // Chip Sensors

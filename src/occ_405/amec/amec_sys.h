@@ -311,8 +311,8 @@ typedef struct
   // Current Memory Power Control values (applied last through GPE1)
   uint8_t current_mem_pwr_ctl;
 
-  // Current system ambient temperature (deg C)
-  uint8_t ambient;
+  // ambient temperature (deg C)
+  sensor_t ambient;
 } amec_systemwide_t;
 
 

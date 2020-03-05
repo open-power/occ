@@ -1511,6 +1511,15 @@ void get_poundV_points( uint32_t i_freq_mhz,
 void read_sensor_data( void )
 {
     // Read out necessary Sensor data for WOF calculation
+
+    g_wof->ambient_condition = getSensorByGsid(TEMPAMBIENT)->sample;
+    if(g_wof->ambient_condition == 0)
+    {
+       // have not received ambient temperature
+       // set condition to ff so highest ambient table is used
+       g_wof->ambient_condition = 0xFF;
+    }
+
     g_wof->curvdd_sensor  = getSensorByGsid(CURVDD)->sample;
     g_wof->curvcs_sensor  = getSensorByGsid(CURVCS)->sample;
 

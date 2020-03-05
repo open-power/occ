@@ -1941,7 +1941,7 @@ errlHndl_t cmdh_send_ambient_temp(const cmdh_fsp_cmd_t * i_cmd_ptr,
 {
     errlHndl_t                  l_err   = NULL;
     cmdh_send_ambient_temp_t*   l_cmd   = (cmdh_send_ambient_temp_t *) i_cmd_ptr;
-    ERRL_RC                     l_rc    = ERRL_RC_INTERNAL_FAIL;
+    ERRL_RC                     l_rc    = ERRL_RC_SUCCESS;
 
     static bool L_trace_fail = FALSE, L_trace_success = FALSE;
     do
@@ -1949,6 +1949,7 @@ errlHndl_t cmdh_send_ambient_temp(const cmdh_fsp_cmd_t * i_cmd_ptr,
         // Verify we got the correct packet version
         if(SEND_AMBIENT_VERSION_0 != l_cmd->version)
         {
+            TRAC_ERR("cmdh_send_ambient_temp: invalid version[0x%02X]", l_cmd->version);
             l_rc = ERRL_RC_INVALID_DATA;
             break;
         }
@@ -1958,30 +1959,31 @@ errlHndl_t cmdh_send_ambient_temp(const cmdh_fsp_cmd_t * i_cmd_ptr,
         {
             if(!L_trace_fail)
             {
-                TRAC_ERR("cmdh_send_ambient_temp: first time getting an ambient temperature read failure!");
+                TRAC_ERR("cmdh_send_ambient_temp: ambient read failure status!");
                 L_trace_fail = TRUE;
+                L_trace_success = FALSE;
             }
         }
         else if(0x00 == l_cmd->status)
         {
             if(!L_trace_success)
             {
-                TRAC_INFO("cmdh_send_ambient_temp: first time getting the ambient temperature successfully");
+                TRAC_INFO("cmdh_send_ambient_temp: successfully received ambient temp[%d]",
+                           l_cmd->reading);
                 L_trace_success = TRUE;
+                L_trace_fail = FALSE;
             }
 
             // Store off the current ambient temperature
-            g_amec->sys.ambient = l_cmd->reading; // Deg Celsius
+            sensor_update(AMECSENSOR_PTR(TEMPAMBIENT), (uint16_t)l_cmd->reading);
         }
         else
         {
-            TRAC_ERR("cmdh_send_ambient_temp: invalid ambient temp read status! status[0x%02X]", l_cmd->status);
+            TRAC_ERR("cmdh_send_ambient_temp: invalid ambient temp read status[0x%02X]",
+                      l_cmd->status);
             l_rc = ERRL_RC_INVALID_DATA;
             break;
         }
-
-        // Got command successfully
-        l_rc = ERRL_RC_SUCCESS;
     }
     while(0);
 

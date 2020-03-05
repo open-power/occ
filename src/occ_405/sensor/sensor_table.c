@@ -294,6 +294,7 @@ const sensor_ptr_t G_amec_sensor_list[] =
   SENSOR_PTR( PWRAPSSCH15,          &g_amec_sys.sys.pwrapssch[15]),
   SENSOR_PTR( CUR12VSTBY,           &g_amec_sys.sys.cur12Vstby),
   SENSOR_PTR( VRHOTMEMPRCCNT,       &g_amec_sys.sys.vrhot_mem_proc),
+  SENSOR_PTR( TEMPAMBIENT,          &g_amec_sys.sys.ambient),
 
   // ------------------------------------------------------
   // Chip Sensors
@@ -459,6 +460,7 @@ const minisensor_ptr_t G_amec_mini_sensor_list[] INIT_SECTION =
   MINI_SENSOR_PTR(    PWRAPSSCH15,  NULL),
   MINI_SENSOR_PTR(     CUR12VSTBY,  NULL),
   MINI_SENSOR_PTR( VRHOTMEMPRCCNT,  NULL),
+  MINI_SENSOR_PTR(    TEMPAMBIENT,  NULL),
 
   // ------------------------------------------------------
   // Chip Sensors
