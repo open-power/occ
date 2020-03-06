@@ -40,7 +40,7 @@ script_directory = os.path.dirname(os.path.realpath(__file__))
 tools_directory = "/gsa/ausgsa/projects/o/occfw/simics_p10/bin"
 
 
-CONST_VERSION = 'P10.3.0'
+CONST_VERSION = 'P10.4.0'
 LastCmd_SeqNum = 00
 L_pgpe_enabled = 0
 
@@ -502,32 +502,22 @@ def ReadPrint_POLL(FLG_VRB, SeqNum):
             print("\tSafe")
         #######################################################################################################
         print("\tCurrent Power Mode (6) : " + mylist[5][:2])
-        if(mylist[5][:2] == "00"):
-            print("\t\t\t\t\tReserved")
-        elif(mylist[5][:2] == "01"):
-            print("\t\t\t\t\tNominal")
-        elif(mylist[5][:2] == "02"):
-            print("\t\t\t\t\tReserved")
+        if(mylist[5][:2] == "01"):
+            print("\t\t\t\t\tDisabled/Nominal")
         elif(mylist[5][:2] == "03"):
-            print("\t\t\t\t\tTurbo (Static Turbo)")
+            print("\t\t\t\t\tStatic Frequency Point")
         elif(mylist[5][:2] == "04"):
             print("\t\t\t\t\tSafe")
         elif(mylist[5][:2] == "05"):
             print("\t\t\t\t\tStatic Power Save")
-        elif(mylist[5][:2] == "06"):
-            print("\t\t\t\t\tDynamic Power Save (Favor Energy)")
-        elif(mylist[5][:2] == "07"):
-            print("\t\t\t\t\tMinimum Frequency")
-        elif(mylist[5][:2] == "08"):
-            print("\t\t\t\t\tCPM Turbo Frequency (NOT SUPPORTED)")
-        elif(mylist[5][:2] == "09"):
-            print("\t\t\t\t\tReserved")
         elif(mylist[5][:2] == "0A"):
-            print("\t\t\t\t\tDynamic Power Save (FP)")
+            print("\t\t\t\t\tDynamic Performance")
         elif(mylist[5][:2] == "0B"):
             print("\t\t\t\t\tFixed Requency Override (FFO)")
         elif(mylist[5][:2] == "0C"):
-            print("\t\t\t\t\tFixed Maimum Frequency")
+            print("\t\t\t\t\tMaximum Performance")
+        else:
+            print("\t\t\t\t\tUnknown")
         #######################################################################################################
         print("\tCurrent Idle PWR SVR(7): " + mylist[5][-2:] + " : " + "{0:08b}".format( int(mylist[5][-2:], 16))   )
         print("\t\t\t\t\tBit(7:2): Reserved")
@@ -985,8 +975,8 @@ def ValidateCmd(FLG_VRB, SeqNumExpected, FLG_LAST, flg_quiet):
                 #######################################################################################################
                 print("\tCurrent Power Mode (6) : " + "0x%02X" % DataList[5] + " : " ,end="")
                 if(DataList[5] == "00"):   print("(O/S Frequency Control)")
-                elif(DataList[5] == 0x01): print("Nominal")
-                elif(DataList[5] == 0x03): print("Turbo")
+                elif(DataList[5] == 0x01): print("Disabled/Nominal")
+                elif(DataList[5] == 0x03): print("Static Frequency Point")
                 elif(DataList[5] == 0x04): print("Safe")
                 elif(DataList[5] == 0x05): print("Static Power Save")
                 elif(DataList[5] == 0x0A): print("Dynamic Performance")
@@ -2347,46 +2337,46 @@ def occ_init(code_dir, flg_pgpe, flg_verbose):
 
     print("==> INIT CORE/RACETRACK TEMPERATURE VALUES")
     core = 0
-    rt = 0
+    quad = 0
     temp = 0x31 # 49C
-    while rt < 8:
-        coreAddr=0x20+rt
+    while quad < 8:
+        quadAddr=0x20+quad
         # Set core DTS0/DTS1/L3 to same temperature
         tempString = "0"+str('{0:02X}'.format(temp))+"50"+str('{0:02X}'.format(temp))+"50"+str('{0:02X}'.format(temp))+"50000"
         print("Setting core"+str(core)+" -> "+str(temp)+" C ("+tempString+")")
-        command = bp+"."+proc+".pib_cmp.pib.write address = 0x"+str('{0:02X}'.format(coreAddr))+"0500000 0x"+tempString+" size = 8"
+        command = bp+"."+proc+".pib_cmp.pib.write address = 0x"+str('{0:02X}'.format(quadAddr))+"0500000 0x"+tempString+" size = 8"
         print("==> " + command)
         cli.run_command(command)
         temp = temp + 1
         # Set core+1 DTS0/DTS1/L3 to same temperature
         tempString = "0"+str('{0:02X}'.format(temp))+"50"+str('{0:02X}'.format(temp))+"50"+str('{0:02X}'.format(temp))+"50000"
         print("Setting core"+str(core+1)+" -> "+str(temp)+" C ("+tempString+")")
-        command = bp+"."+proc+".pib_cmp.pib.write address = 0x"+str('{0:02X}'.format(coreAddr))+"0500010 0x"+tempString+" size = 8"
+        command = bp+"."+proc+".pib_cmp.pib.write address = 0x"+str('{0:02X}'.format(quadAddr))+"0500010 0x"+tempString+" size = 8"
         print("==> " + command)
         cli.run_command(command)
         temp = temp + 2
         # Set core+2 DTS0/DTS1/L3 to same temperature
         tempString = "0"+str('{0:02X}'.format(temp))+"50"+str('{0:02X}'.format(temp))+"50"+str('{0:02X}'.format(temp))+"50000"
         print("Setting core"+str(core+2)+" -> "+str(temp)+" C ("+tempString+")")
-        command = bp+"."+proc+".pib_cmp.pib.write address = 0x"+str('{0:02X}'.format(coreAddr))+"0500200 0x"+tempString+" size = 8"
+        command = bp+"."+proc+".pib_cmp.pib.write address = 0x"+str('{0:02X}'.format(quadAddr))+"0500200 0x"+tempString+" size = 8"
         print("==> " + command)
         cli.run_command(command)
         temp = temp + 1
         # Set core+3 DTS0/DTS1/L3 to same temperature
         tempString = "0"+str('{0:02X}'.format(temp))+"50"+str('{0:02X}'.format(temp))+"50"+str('{0:02X}'.format(temp))+"50000"
         print("Setting core"+str(core+3)+" -> "+str(temp)+" C ("+tempString+")")
-        command = bp+"."+proc+".pib_cmp.pib.write address = 0x"+str('{0:02X}'.format(coreAddr))+"0500210 0x"+tempString+" size = 8"
+        command = bp+"."+proc+".pib_cmp.pib.write address = 0x"+str('{0:02X}'.format(quadAddr))+"0500210 0x"+tempString+" size = 8"
         print("==> " + command)
         cli.run_command(command)
         temp = temp - 2
         # Set racetrack DTS
         tempString = "0"+str('{0:02X}'.format(temp))+"5000000000000"
-        print("Setting rt"+str(rt)+" -> "+str(temp)+" C ("+tempString+")")
-        command = bp+"."+proc+".pib_cmp.pib.write address = 0x"+str('{0:02X}'.format(coreAddr))+"0500020 0x"+tempString+" size = 8"
+        print("Setting rt"+str(quad)+" -> "+str(temp)+" C ("+tempString+")")
+        command = bp+"."+proc+".pib_cmp.pib.write address = 0x"+str('{0:02X}'.format(quadAddr))+"0500020 0x"+tempString+" size = 8"
         print("==> " + command)
         cli.run_command(command)
         temp = temp + 3
-        rt = rt + 1
+        quad = quad + 1
         core = core + 4
 
     cli.run_command(bp+"."+proc+".occ_cmp.proc_405.read-reg reg-name = pc")
@@ -2567,7 +2557,8 @@ def occ_to_active(flg_pgpe, flg_run, flg_verbose):
     RC = send_occ_cmd(0x21, "0521000000", flg_verbose);
 
     print("\n#### SET THERMAL THRESHOLDS (TCT) ########################################################################");
-    RC = send_occ_cmd(0x21, "1330140A080200FF5FFFFFFF02FF48FFFF1E", flg_verbose);
+    # FRU 0x00 = Processor, 0x03 = MC+DIMM  (DVFS temp, ERROR temp, max read timeout, reserved x 2)
+    RC = send_occ_cmd(0x21, "1330140A0802"+"0060700A0000"+"038090140000", flg_verbose);
 
     print("\n#### SET AVSBUS CONFIG ###################################################################################");
     RC = send_occ_cmd(0x21, "1430FF0000000000", flg_verbose);

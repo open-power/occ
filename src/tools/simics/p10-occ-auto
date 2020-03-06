@@ -53,6 +53,8 @@ let ALL_TESTS=0xFF
 current_test=""
 
 simics_machine="p10_standalone"
+bp="backplane0"   # Standalone
+#bp="Nisqually"    # Rainier
 
 G_simics_options=""
 
@@ -125,6 +127,9 @@ let hugePowerWithRollover=0 # Force one sensor to roll over 32 bit accululator (
 let allHugePowerValues=0    # Force all sensors to return large power value (to test bounds)
 let expectedOccSrc=0
 let expectedState=0x03
+let expectedThrottleStatus=0xFFFF # ignore throttle status validation
+quadTempOverride=(0 0 0 0 0 0 0 0) # processor temp if changed from default
+let expectedMode=0x00
 
 # Set working directory to current directory
 #   --workdir xxx : (or $AUTOSIM_WORKDIR) specifies the directory in which to store log files and other
@@ -154,6 +159,8 @@ usage()
     echo "                               4 = error logging"
     echo "                               5 = power capping"
     echo "                               6 = OCC sensors"
+    echo "                               7 = thermal limits"
+    echo "                               8 = mode changes"
     echo "               -a            : run ALL available OCC tests"
     echo ""
     echo "               -wait         : keep simics running after tests complete"
@@ -365,7 +372,7 @@ main()
     # Run
     autosim --simcmd 'run'
 
-    autosim --simcmd 'backplane0.'$proc'.occ_cmp.proc_405.read-reg reg-name = pc'
+    autosim --simcmd $bp'.'$proc'.occ_cmp.proc_405.read-reg reg-name = pc'
 
 
     touch $tempfile
@@ -496,7 +503,7 @@ main()
             echo -e "${red}ERROR DETECTED: ROLE COMMAND FAILED!${normal}"
             let testFailure=1
             let failureCount=$failureCount+1
-            testFailDesc="${testFailDesc} : ${current_test}ROLE CHANGE FAILED"
+            testFailDesc="${testFailDesc} : ${current_test}-ROLE CHANGE FAILED"
             printTestResults
             abortTest
         fi
@@ -529,7 +536,8 @@ main()
 
 
         printHeader "SET THERMAL THRESHOLDS (TCT)"
-        autosim --simcmd '$SeqNum=(OCCw -C '$OCCCMD_SET_CFG_DATA' -D "1330140A080200FF5FFFFFFF02FF48FFFF1E" '$G_simics_options')'
+        # FRU 0x00 = Processor, 0x03 = MC+DIMM  (DVFS temp, ERROR temp, max read timeout, reserved x 2)
+        autosim --simcmd '$SeqNum=(OCCw -C '$OCCCMD_SET_CFG_DATA' -D "1330140A08020060700A0000038090140000" '$G_simics_options')'
         WaitForResponse $OCCCMD_SET_CFG_DATA
 
 
@@ -604,8 +612,7 @@ main()
 
 
         printHeader "SET NOMINAL MODE"
-        autosim --simcmd '$SeqNum=(OCCw -C 0x20 -D "300001000000" '$G_simics_options')'
-        WaitForResponse 0x20
+        SetPowerMode 0x01 0
 
 
         printHeader "VALIDATE POLL DATA"
@@ -690,6 +697,14 @@ main()
             TESTS_sensors
         fi
 
+        if [ $test_depth -eq 7 ] || [ $test_depth -eq $ALL_TESTS ]; then
+            TESTS_thermal_limits
+        fi
+
+        if [ $test_depth -eq 8 ] || [ $test_depth -eq $ALL_TESTS ]; then
+            TESTS_power_modes
+        fi
+
     fi
 
 
@@ -730,12 +745,12 @@ abortTest()
 dumpOccMachineState()
 {
     echo "405 Regs:"
-    autosim --simcmd 'backplane0.'$proc'.occ_cmp.proc_405.pregs -all'
+    autosim --simcmd "$bp.$proc.occ_cmp.proc_405.pregs -all"
     echo "GPE0 Regs:"
-    autosim --simcmd 'backplane0.'$proc'.occ_cmp.gpe_ppe0.pregs'
+    autosim --simcmd "$bp.$proc.occ_cmp.gpe_ppe0.pregs"
     echo "GPE1 Regs:"
-    autosim --simcmd 'backplane0.'$proc'.occ_cmp.gpe_ppe1.pregs'
-    #autosim --simcmd 'backplane0.'$proc'.occ_cmp.gpe_ppe2.pregs'
+    autosim --simcmd "$bp.$proc.occ_cmp.gpe_ppe1.pregs"
+    #autosim --simcmd "$bp.$proc.occ_cmp.gpe_ppe2.pregs"
 }
 
 printHeader()
@@ -795,7 +810,7 @@ WaitForResponse()
             if [ $RemoteReturnCode -ge $((0xE0)) ] && [ $RemoteReturnCode -le $((0xEF)) ] ; then
                 echo -e "${red}OCC EXCEPTION DETECTED!${normal}"
                 let failure=1
-                testFailDesc="${testFailDesc} : ${current_test}OCC EXCEPTION - $RemoteReturnCode"
+                testFailDesc="${testFailDesc} : ${current_test}-OCC EXCEPTION - $RemoteReturnCode"
                 CaptureOccTraces "OccException"
                 let testFailure=1
                 abortTest
@@ -828,7 +843,7 @@ WaitForResponse()
                 if [ $(($expectedRc)) -ne $(($occRc)) ] ; then
                     echo -e "${red}ERROR: Unexpected response status from OCC (exp $expectedRc, rcv $occRc)${normal}"
                     let failure=1
-                    testFailDesc="${testFailDesc} : ${current_test}UNEXPECTED RESPONSE STATUS"
+                    testFailDesc="${testFailDesc} : ${current_test}-UNEXPECTED RESPONSE STATUS"
                 fi
                 let complete=1
                 break
@@ -838,7 +853,7 @@ WaitForResponse()
         else
             echo -e "${red}ERROR DETECTED: no data analysis available with buffer of 0${normal}"
             let failure=1
-            testFailDesc="${testFailDesc} : ${current_test}UNABLE TO VALIDATE FUNCTION"
+            testFailDesc="${testFailDesc} : ${current_test}-UNABLE TO VALIDATE FUNCTION"
             CaptureOccTraces "UnableToValidateFunction"
             break
         fi
@@ -865,11 +880,11 @@ WaitForResponse()
         let failureCount=$failureCount+1
         if [ $cmd == "0x20" ]; then
             # Timeout during state/mode change is bad...
-            testFailDesc="${testFailDesc} : ${current_test}TIMEOUT WAITING FOR STATE/MODE CHANGE"
+            testFailDesc="${testFailDesc} : ${current_test}-TIMEOUT WAITING FOR STATE/MODE CHANGE"
             let testFailure=1
             abortTest
         else
-            testFailDesc="${testFailDesc} : ${current_test}TIMEOUT ON $cmd CMD"
+            testFailDesc="${testFailDesc} : ${current_test}-TIMEOUT ON $cmd CMD"
         fi
     else
         if [ $duration -gt 0 ]; then
@@ -1008,16 +1023,10 @@ SetupOccImage()
         done
         # Configure cores
         echo "Enabling $numCores cores (of $maxCores)..."
-        autosim --simcmd "backplane0.${proc}.occ_cmp.ocb_agen->OCB_AGEN_CCSR = 0x$(printf "%08X" $ccsr)00000000" #Set CCSR
+        autosim --simcmd "$bp.$proc.occ_cmp.ocb_agen->OCB_AGEN_CCSR = 0x$(printf "%08X" $ccsr)00000000" #Set CCSR
 
-        echo "backplane0.${proc}.occ_cmp.ocb_agen->OCB_AGEN_CCSR: "
-        autosim --simcmd "backplane0.${proc}.occ_cmp.ocb_agen->OCB_AGEN_CCSR"
-    fi
-
-    if [ $G_use_pgpe -ne 0 ]; then
-        # let simulator run for a short time
-        autosim --simcmd 'run 100 ms'
-        autosim --simcmd 'stop'
+        echo "$bp.$proc.occ_cmp.ocb_agen->OCB_AGEN_CCSR: "
+        autosim --simcmd "$bp.$proc.occ_cmp.ocb_agen->OCB_AGEN_CCSR"
     fi
 
     #printHeader "INIT APSS CHANNEL VALUES"
@@ -1039,12 +1048,12 @@ SetupAPSSChannel()
         defaultChannelData="[0x0EEE, 0x1EEE, 0x2EEE, 0x3EEE, 0x4EEE, 0x5EEE, 0x6EEE, 0xEEE7, 0x8003, 0x9EB7, 0xAEEE, 0xBEEE, 0xEEEC, 0xEEED, 0xEEEE, 0xFEEE]"
     fi
     if [ $verbose -ne 0 ]; then
-        echo "==> autosim --simcmd 'backplane0.apss->adc_channel_val = $defaultChannelData'"
+        echo "==> autosim --simcmd $bp.apss->adc_channel_val = $defaultChannelData"
     fi
-    autosim --simcmd "backplane0.apss->adc_channel_val = $defaultChannelData"
+    autosim --simcmd "$bp.apss->adc_channel_val = $defaultChannelData"
     if [ $verbose -ne 0 ]; then
-        echo "backplane0.apss->adc_channel_val: "
-        autosim --simcmd "backplane0.apss->adc_channel_val"
+        echo "$bp.apss->adc_channel_val: "
+        autosim --simcmd "$bp.apss->adc_channel_val"
     fi
 
 }
@@ -1065,6 +1074,41 @@ SetupDimmInitTemps()
         # autosim --simcmd "OccStandalone0.i2c_tempsensor_${dimm}.i2c_tempsensor_${dimm}_dev->temp_local"
         let dimm=$dimm+1
     done
+}
+
+
+# Set the processor temperatures for the specified quad (4 cores/cache & racetrack)
+SetQuadTemp()
+{
+    let quad=$1
+    let temp=$2
+
+    printHeader "SETTING QUAD $quad TEMPERATURE TO $temp C"
+    let quadAddr=0x20+$quad
+    # Set core0/1 DTS0/DTS1/L3
+    tempString="0x0$(printf %02X $temp)50$(printf %02X $temp)50$(printf %02X $temp)50000"
+    autosim --simcmd "$bp.$proc.pib_cmp.pib.write address = 0x$(printf %02X $quadAddr)0500000 $tempString"
+    autosim --simcmd "$bp.$proc.pib_cmp.pib.write address = 0x$(printf %02X $quadAddr)0500010 $tempString"
+    # Set core2/3 DTS0/DTS1/L3
+    autosim --simcmd "$bp.$proc.pib_cmp.pib.write address = 0x$(printf %02X $quadAddr)0500200 $tempString"
+    autosim --simcmd "$bp.$proc.pib_cmp.pib.write address = 0x$(printf %02X $quadAddr)0500210 $tempString"
+    # Set racetrack
+    autosim --simcmd "$bp.$proc.pib_cmp.pib.write address = 0x$(printf %02X $quadAddr)0500020 $tempString"
+
+    let quadTempOverride[$quad]=$temp
+}
+
+
+# Send mode change request to the OCC
+SetPowerMode()
+{
+    let expectedMode=$1
+    let value=$2
+
+    printHeader "SET POWER MODE: $(printf %02X $expectedMode) - $(printf %04X $value)"
+    cmdData="3000$(printf %02X $expectedMode)$(printf %04X $value)00"
+    autosim --simcmd '$SeqNum=(OCCw -C 0x20 -D "'$cmdData'" '$G_simics_options')'
+    WaitForResponse 0x20
 }
 
 
@@ -1114,14 +1158,14 @@ TestValidationFunction()
             echo
             let testFailure=1
             let failureCount=$failureCount+1
-            testFailDesc="${testFailDesc} : ${current_test}FUNCTIONAL VALIDATION FAILED"
+            testFailDesc="${testFailDesc} : ${current_test}-FUNCTIONAL VALIDATION FAILED"
             let status=1
         fi
     else
         echo -e "${red}ERROR DETECTED: no data analysis available with buffer of 0${normal}"
         let testFailure=1
         let failureCount=$failureCount+1
-        testFailDesc="${testFailDesc} : ${current_test}UNABLE TO VALIDATE FUNCTION"
+        testFailDesc="${testFailDesc} : ${current_test}-UNABLE TO VALIDATE FUNCTION"
         CaptureOccTraces "unableToValidateFunction"
         let status=2 # no data to parse
     fi
@@ -1339,7 +1383,7 @@ checkAndHandleOccElog()
             CaptureOccTraces "UnexpectedOccSrc_${occSrc}"
             let testFailure=1
             let failureCount=$failureCount+1
-            testFailDesc="${testFailDesc} : ${current_test}UNEXPECTED SRC ${occSrc}"
+            testFailDesc="${testFailDesc} : ${current_test}-UNEXPECTED SRC ${occSrc}"
         fi
         echo "==> Read log $elogId @($elogAddr,$elogLen)"
         ReadAndClearElog $elogId $elogAddr $elogLen $occSrc
@@ -1353,7 +1397,7 @@ checkAndHandleOccElog()
             CaptureOccTraces "MissingExpectedOccSrc_$(printf "%0X" $expectedOccSrc)"
             let testFailure=1
             let failureCount=$failureCount+1
-            testFailDesc="${testFailDesc} : ${current_test}MISSING SRC $(printf "%0X" $expectedOccSrc)"
+            testFailDesc="${testFailDesc} : ${current_test}-MISSING SRC $(printf "%0X" $expectedOccSrc)"
         fi
     fi
 
@@ -1400,6 +1444,28 @@ ValidatePollData()
             let fail=1
         fi
 
+        if [ $expectedThrottleStatus -ne $((0xFFFF)) ]; then
+            #Validate throttle status
+            let rcvThrotStatus=$(grep 'Ext Status (2)' $tempfile | awk '{print $5}' )
+            if [ $rcvThrotStatus -eq $expectedThrottleStatus ]; then
+                printf "${bold}Throttle Status is as expected (0x%02X)${normal}\n" $expectedThrottleStatus
+            else
+                printf "${red}ERROR: Throttle Status NOT as expected (rcv=0x%02X, exp=0x%02X)${normal}\n" $rcvThrotStatus $expectedThrottleStatus
+                let fail=1
+            fi
+        fi
+
+        if [ $expectedMode -ne 0 ]; then
+            #Validate power mode
+            let rcvMode=$(grep 'Current Power Mode (6)' $tempfile | awk '{print $6}' )
+            if [ $rcvMode -eq $expectedMode ]; then
+                printf "${bold}Power Mode is as expected (0x%02X)${normal}\n" $expectedMode
+            else
+                printf "${red}ERROR: Power Mode is NOT as expected (rcv=0x%02X, exp=0x%02X)${normal}\n" $rcvMode $expectedMode
+                let fail=1
+            fi
+        fi
+
         #Verify Core Temperatures
         let core=0
         let temp=$startingCoreTemp
@@ -1414,6 +1480,11 @@ ValidatePollData()
             else
                 # Verify temp is correct
                 sensorValue=$(printf "00 %02X" $temp) # Core FRU + Temperature
+                let quad=$core/4
+                if [ ${quadTempOverride[$quad]} -ne 0 ]; then
+                    # temperature of this quad has been overridden
+                    sensorValue=$(printf "00 %02X" ${quadTempOverride[$quad]})
+                fi
                 grep -iq "$sensor $sensorValue" $tempfile
                 if [ $? -ne 0 ]; then
                     rcvdValue=`grep -i "$sensor" $tempfile | awk '{print $7 $8}'`
@@ -1457,7 +1528,8 @@ ValidatePollData()
             # First verify core is present
             grep -iq "$sensor " $tempfile
             if [ $? -ne 0 ]; then
-                echo -e "${red}ERROR: core$core frequency was not found in poll response${normal}"
+                echo "ERROR: core$core frequency was not found in poll response"
+                #echo -e "${red}ERROR: core$core frequency was not found in poll response${normal}"
                 # TEMP ALLOW                let fail=1
             else
                 #sensorValue=$(printf "00 %02X" $freq)
@@ -1588,7 +1660,7 @@ ValidatePollData()
             CaptureOccTraces "PollValidateFail"
             let testFailure=1
             let failureCount=$failureCount+1
-            testFailDesc="${testFailDesc} : ${current_test}POLL VALIDATION FAILED"
+            testFailDesc="${testFailDesc} : ${current_test}-POLL VALIDATION FAILED"
         fi
 
         checkAndHandleOccElog
@@ -1722,7 +1794,7 @@ ReadAndClearElog()
     echo -e "${bold}ReadAndClearElog($elogId,$elogAddr,$elogLen,$occSrc)${normal}" # DEBUG
     if [ -n "$elogId" ] && [ -n "$elogAddr" ] && [ -n "$elogLen" ]; then
         echo "Dumping Elog $elogId:"
-        autosim --simcmd 'backplane0.'$proc'.occ_cmp.oci_space.x '$elogAddr' '$elogLen''
+        autosim --simcmd "$bp.$proc.occ_cmp.oci_space.x $elogAddr $elogLen"
 
         # Clear the 405 elog
         autosim --simcmd '$SeqNum=(OCCw -C 0x12 -D "01'${elogId:2:2}'0000" '$G_simics_options')'
@@ -1731,7 +1803,7 @@ ReadAndClearElog()
             echo "Clear of OCC elog $elogId completed successfully"
 
             if [ $expectedOccSrc -eq 0 ] || [ $expectedOccSrc -ne $(($occSrc)) ]; then
-                testFailDesc="${testFailDesc} : ${current_test}OCC ELOG $elogId $occSrc"
+                testFailDesc="${testFailDesc} : ${current_test}-OCC ELOG $elogId $occSrc"
                 echo
                 echo "####################################################"
                 echo -e "${red}OCC ERROR LOG $occSrc FOUND IN POLL RESPONSE!${normal}"
@@ -1739,7 +1811,7 @@ ReadAndClearElog()
                 echo
                 let testFailure=1
                 let failureCount=$failureCount+1
-                testFailDesc="${testFailDesc} : ${current_test}${occSrc} ELOG IN POLL RESPONSE"
+                testFailDesc="${testFailDesc} : ${current_test}-${occSrc} ELOG IN POLL RESPONSE"
 
                 CaptureOccTraces "OccSrcReturned_$occSrc"
             else
@@ -1751,7 +1823,7 @@ ReadAndClearElog()
             echo -e "${red}ERROR DETECTED: no data analysis available with buffer of 0${normal}"
             let testFailure=1
             let failureCount=$failureCount+1
-            testFailDesc="${testFailDesc} : ${current_test}UNABLE TO CLEAR ELOG $elogId"
+            testFailDesc="${testFailDesc} : ${current_test}-UNABLE TO CLEAR ELOG $elogId"
             CaptureOccTraces "unableToClearElog"
         fi
     else
@@ -1842,7 +1914,9 @@ printTestResults()
 
 TESTS_elogs()
 {
-    current_test="TESTS_elogs-"
+    current_test="TESTS_elogs"
+
+    printHeader "START OF ${current_test}"
     let start_time=`date +%s`
 
     let MAX_SLOTS=6
@@ -1918,14 +1992,14 @@ TESTS_elogs()
                 echo "ERROR: Missing logs!"
                 let testFailure=1
                 let failureCount=$failureCount+1
-                testFailDesc="${testFailDesc} : ${current_test}MISSING LOGS"
+                testFailDesc="${testFailDesc} : ${current_test}-MISSING LOGS"
                 break
             fi
         else
             echo "ERROR: response failed $?"
             let testFailure=1
             let failureCount=$failureCount+1
-            testFailDesc="${testFailDesc} : ${current_test}LOG COLLECTION FAILED"
+            testFailDesc="${testFailDesc} : ${current_test}-LOG COLLECTION FAILED"
             break;
         fi
     done
@@ -1984,14 +2058,14 @@ TESTS_elogs()
                 echo "ERROR: Missing logs!"
                 let testFailure=1
                 let failureCount=$failureCount+1
-                testFailDesc="${testFailDesc} : ${current_test}MISSING LOGS 2"
+                testFailDesc="${testFailDesc} : ${current_test}-MISSING LOGS 2"
                 break
             fi
         else
             echo "ERROR: response failed $?"
             let testFailure=1
             let failureCount=$failureCount+1
-            testFailDesc="${testFailDesc} : ${current_test}LOG COLLECTION 2 FAILED"
+            testFailDesc="${testFailDesc} : ${current_test}-LOG COLLECTION 2 FAILED"
             break
         fi
         let expectedOccSrc=0x2AD3 # Remaining logs should be 2AD3
@@ -2009,7 +2083,9 @@ TESTS_elogs()
 
 TESTS_pcaps()
 {
-    current_test="TESTS_pcaps-"
+    current_test="TESTS_pcaps"
+
+    printHeader "START OF ${current_test}"
     let start_time=`date +%s`
 
     printHeader "SET USER POWER CAP"
@@ -2073,7 +2149,9 @@ TESTS_pcaps()
 
 TESTS_sensors()
 {
-    current_test="TESTS_sensors-"
+    current_test="TESTS_sensors"
+
+    printHeader "START OF ${current_test}"
     let start_time=`date +%s`
 
 
@@ -2134,6 +2212,164 @@ TESTS_sensors()
     current_test=""
 
 } # end TESTS_sensors()
+
+
+
+TESTS_thermal_limits()
+{
+    current_test="TESTS_thermal_limits"
+
+    printHeader "START OF ${current_test}"
+    let start_time=`date +%s`
+
+    if [ $G_use_pgpe -ne 0 ]; then
+
+        ### Verify throttling when processor temperatures go over limits
+
+        SetQuadTemp 0 0x61
+        echo WAIT : 10 seconds for OCC to throttle
+        sleep 10
+        # Ensure throttle due to processor over temperature bit is set
+        let expectedThrottleStatus=0x80
+        ValidatePollData
+
+        SetQuadTemp 0 0x71
+        let expectedOccSrc=0x2A10 # and report 2A10 elog (Processor reached error temperature)
+        echo WAIT : 10 seconds for OCC to generate elog
+        sleep 10
+        ValidatePollData
+
+        SetQuadTemp 0 0x31
+        echo WAIT : 60 seconds for the throttle to be cleared
+        sleep 60
+        # Ensure throttle due to processor over temperature bit is clear
+        let expectedThrottleStatus=0x00
+        ValidatePollData
+
+        ### Verify throttling when limits are updated (temps not changing)
+
+        printHeader "SET PROCESSOR DVFS_TEMP TO FORCE THROTTLING (via TCT CONFIG) - 68C (0x44)"
+        # FRU 0x00 = Processor, 0x03 = MC+DIMM  (DVFS temp, ERROR temp, max read timeout, reserved x 2)
+        autosim --simcmd '$SeqNum=(OCCw -C '$OCCCMD_SET_CFG_DATA' -D "1330140A08020044700A0000038090140000" '$G_simics_options')'
+        WaitForResponse 0x21
+        echo WAIT : 10 seconds for OCC to throttle
+        sleep 10
+        # Ensure throttle due to processor over temperature bit is set
+        let expectedThrottleStatus=0x80
+        ValidatePollData
+
+        printHeader "SET PROCESSOR ERROR_TEMP (NO ERROR, SINCE ALREADY LOGGED) (via TCT CONFIG) - 80C (0x50)"
+        autosim --simcmd '$SeqNum=(OCCw -C '$OCCCMD_SET_CFG_DATA' -D "1330140A08020044500A0000038090140000" '$G_simics_options')'
+        WaitForResponse 0x21
+        #let expectedOccSrc=0x2A10 # and report 2A10 elog (Already logged, so will not log again)
+        echo WAIT : 10 seconds for OCC to generate elog
+        sleep 10
+        ValidatePollData
+
+        printHeader "SET PROCESSOR LIMITS BACK TO NORMAL (via TCT CONFIG)"
+        autosim --simcmd '$SeqNum=(OCCw -C '$OCCCMD_SET_CFG_DATA' -D "1330140A08020060700A0000038090140000" '$G_simics_options')'
+        WaitForResponse 0x21
+        echo WAIT : 60 seconds for the throttle to be cleared
+        sleep 60
+        # Ensure throttle due to processor over temperature bit is now clear
+        let expectedThrottleStatus=0x00
+        ValidatePollData
+
+        let expectedThrottleStatus=0xFFFF # ignore throttle status validation
+    else
+        echo -e "\nWARNING: unable to test processor thermal limits if PGPE is not enabled\n"
+    fi
+
+    let end_time=`date +%s`
+    let delta_time=$end_time-$start_time
+    echo -e "\n${bold}==> END OF ${current_test}: test duration $delta_time seconds${normal}"
+
+    current_test=""
+
+} # end TESTS_thermal_limits()
+
+
+
+TESTS_power_modes()
+{
+    current_test="TESTS_power_modes"
+
+    printHeader "START OF ${current_test}"
+    let start_time=`date +%s`
+
+    printHeader "MODE: STATIC POWER SAVE"
+    SetPowerMode 0x05 0
+
+    ValidatePollData
+
+    printHeader "MODE: MAXIMUM PERFORMANCE"
+    if [ $G_use_pgpe -ne 0 ]; then
+        let expectedOccSrc=0x2ADF # WOF_RE_ENABLED
+    fi
+    SetPowerMode 0x0C 0
+
+    ValidatePollData
+
+    printHeader "MODE: DYNAMIC PERFORMANCE"
+    SetPowerMode 0x0A 0
+
+    ValidatePollData
+
+    if [ 0 -eq 1 ]; then
+        printHeader "MODE: FFO - 3072"
+        SetPowerMode 0x0B 3072
+
+        ValidatePollData
+    fi
+
+    printHeader "MODE: STATIC FREQUENCY - Power Save"
+    SetPowerMode 0x03 0x2000
+
+    ValidatePollData
+
+    printHeader "MODE: STATIC FREQUENCY - WOF Base"
+    SetPowerMode 0x03 0x2001
+
+    ValidatePollData
+
+    if [ $G_use_pgpe -ne 0 ]; then
+        printHeader "MODE: STATIC FREQUENCY - Ultra Turbo"
+        SetPowerMode 0x03 0x2002
+
+        ValidatePollData
+
+        printHeader "MODE: STATIC FREQUENCY - Fmax"
+        SetPowerMode 0x03 0x2003
+
+        ValidatePollData
+
+        printHeader "MODE: STATIC FREQUENCY - VPD Curve Fit Point 0"
+        SetPowerMode 0x03 0x1000
+
+        ValidatePollData
+
+        printHeader "MODE: STATIC FREQUENCY - VPD Curve Fit Point 2"
+        SetPowerMode 0x03 0x1002
+
+        ValidatePollData
+    fi
+
+    printHeader "MODE: NOMINAL"
+    SetPowerMode 0x01 0
+
+    ValidatePollData
+
+    let end_time=`date +%s`
+    let delta_time=$end_time-$start_time
+    echo -e "\n${bold}==> END OF ${current_test}: test duration $delta_time seconds${normal}"
+
+    current_test=""
+
+} # end TESTS_power_modes()
+
+
+
+################################################################################
 
 
 main "$@"
