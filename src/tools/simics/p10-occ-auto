@@ -75,11 +75,12 @@ fi
 # DCM supported added to Simics July 2019
 proc="dcm[0].chip[0]"
 
-let G_use_pgpe=0
+let G_use_pgpe=1
 let G_use_binary_patches=0
 let G_cmd_delay=2 # time in seconds to wait before checking for response
 let G_rsp_retries=4 # number of retries before timing out on a response
 let G_trace_index=1
+let G_trace_calls=0
 
 let G_duration_active_ready=0
 let G_duration_set_state=0
@@ -106,7 +107,7 @@ if [ ! -d "$simics_traces" ]; then
     mkdir ${simics_traces}
 fi
 
-tempfile="tmpOCCbuffer.txt"
+lastRspBuffer="/tmp/p10-occ-auto-tmpRspBuffer.txt"
 let testFailure=0
 let failureCount=0
 testFailDesc=""
@@ -146,7 +147,7 @@ usage()
     echo ""
     echo "           options:"
     echo "               -g gitRepoDir : use OCC binaries/string file from specified repo"
-    echo "               -p            : enable PGPE"
+    echo "               -nopgpe       : do NOT enable PGPE"
     #echo "               -p10sa        : use p10_standalone model (instead of powman)"
     echo "               -b            : copy/update any binary patches available from:"
     echo "                                 $patch_dir"
@@ -230,7 +231,13 @@ main()
                 exit 0
                 ;;
 
-            -p )
+            -nopgpe )
+                let G_use_pgpe=0
+                ;;
+
+            -p ) # deprecated
+                echo -e "\n${blue}NOTE: PGPE is now enabled by default (-p no longer needed)${normal}\n"
+                sleep 1
                 let G_use_pgpe=1
                 ;;
 
@@ -254,6 +261,7 @@ main()
 
             -v )
                 G_simics_options="-v"
+                let G_trace_calls=1
                 ;;
 
             -wait )
@@ -375,7 +383,7 @@ main()
     autosim --simcmd $bp'.'$proc'.occ_cmp.proc_405.read-reg reg-name = pc'
 
 
-    touch $tempfile
+    touch $lastRspBuffer
 
 
     printHeader "WAIT FOR OCC CHECKPOINT"
@@ -611,7 +619,7 @@ main()
         ValidatePollData
 
 
-        printHeader "SET NOMINAL MODE"
+        printHeader "SET DISABLED/NOMINAL MODE"
         SetPowerMode 0x01 0
 
 
@@ -775,6 +783,9 @@ WaitForResponse()
     else
         expectedRc="0x00"
     fi
+    if [ $G_trace_calls -ne 0 ]; then
+        echo ">>WaitForResponse"
+    fi
     seq='$SeqNum'
     let complete=0
     let retry=$G_rsp_retries
@@ -796,13 +807,13 @@ WaitForResponse()
             lastRetry="-L"
         fi
         #echo "WaitForResponse: OCCrv -C $cmd -D $seq $lastRetry"
-        autosim --simcmd "OCCrv -C $cmd -D $seq $lastRetry $quiet" | tee $tempfile
+        autosim --simcmd "OCCrv -C $cmd -D $seq $lastRetry $quiet" | tee $lastRspBuffer
         #echo "WaitForResponse: OCCrv done"
 
-        #echo "FILE: $tempfile"
-        #cat $tempfile
+        #echo "FILE: $lastRspBuffer"
+        #cat $lastRspBuffer
         #echo "END FILE"
-        RemoteReturnCode=$(egrep '^RemoteReturnCode = ' $tempfile | tail -n 1 | tr -d '\r')
+        RemoteReturnCode=$(egrep '^RemoteReturnCode = ' $lastRspBuffer | tail -n 1 | tr -d '\r')
         #echo "...RC=$RemoteReturnCode"
         if [ ${#RemoteReturnCode} -ne 0 ]; then
             let RemoteReturnCode=${RemoteReturnCode##* = }
@@ -816,10 +827,10 @@ WaitForResponse()
                 abortTest
             elif [ $RemoteReturnCode -ne $((0xFD)) ] ; then
                 #echo "RC != 253 ($RemoteReturnCode), so finished waiting"
-                #occWord0=$(egrep '^0x0000:' $tempfile | tail -n 1 | tr -d '\r' | awk '{print $2}')
+                #occWord0=$(egrep '^0x0000:' $lastRspBuffer | tail -n 1 | tr -d '\r' | awk '{print $2}')
                 #occRc=0x${occWord0:4:2};
                 if [ $cmd == "0x00" ]; then
-                    OccElogReturnCode=$(egrep '^OCC SRC: 0x' $tempfile | tail -n 1 | tr -d '\r')
+                    OccElogReturnCode=$(egrep '^OCC SRC: 0x' $lastRspBuffer | tail -n 1 | tr -d '\r')
                     if [ -n "$OccElogReturnCode" ]; then
                         let OccElogRC=`echo ${OccElogReturnCode} | awk '{print $3}'`
                     else
@@ -831,12 +842,12 @@ WaitForResponse()
                     fi
                 fi
                 # Check OCC response status (was command successful?)
-                occRc=$(egrep 'Return Status          :' $tempfile | tail -n 1 | tr -d '\r' | awk '{print $4}')
+                occRc=$(egrep 'Return Status          :' $lastRspBuffer | tail -n 1 | tr -d '\r' | awk '{print $4}')
                 if [ -z "$occRc" ]; then
-                    occRc=$(egrep 'ERROR: OCC returned status' $tempfile | tr -d '\r' | awk '{print $5}')
+                    occRc=$(egrep 'ERROR: OCC returned status' $lastRspBuffer | tr -d '\r' | awk '{print $5}')
                     if [ -z "$occRc" ]; then
                         echo "NOTE: Did not find expected status, dumping file:"
-                        cat $tempfile
+                        cat $lastRspBuffer
                     fi
                 fi
                 echo "OCC RC: $occRc, expected $expectedRc"
@@ -911,6 +922,10 @@ WaitForResponse()
         let failureCount=$failureCount+1
     fi
 
+    if [ $G_trace_calls -ne 0 ]; then
+        echo "<<WaitForResponse"
+    fi
+
     return $rc
 
 } # end WaitForResponse
@@ -932,18 +947,18 @@ WaitForCheckpoint()
         if [ $retry -eq 1 ]; then
             lastRetry="-L"
         fi
-        autosim --simcmd "OCCrv -C 0x00 -D 0x00 $lastRetry" > $tempfile
+        autosim --simcmd "OCCrv -C 0x00 -D 0x00 $lastRetry" > $lastRspBuffer
 
-        RemoteReturnCode=$(egrep '^RemoteReturnCode = ' $tempfile | tail -n 1 | tr -d '\r')
+        RemoteReturnCode=$(egrep '^RemoteReturnCode = ' $lastRspBuffer | tail -n 1 | tr -d '\r')
         #echo "...RC=$RemoteReturnCode"
         if [ ${#RemoteReturnCode} -ne 0 ]; then
             let RemoteReturnCode=${RemoteReturnCode##* = }
             #echo "......RC=$RemoteReturnCode"
             if [ $RemoteReturnCode -eq $((0xE1)) ]; then
-                #echo "FILE: $tempfile"
-                #cat $tempfile
+                #echo "FILE: $lastRspBuffer"
+                #cat $lastRspBuffer
                 #echo "END FILE"
-                CheckpointString=$(egrep '^0x0000:' $tempfile | tail -n 1 | tr -d '\r' | awk '{print $3$4$5}')
+                CheckpointString=$(egrep '^0x0000:' $lastRspBuffer | tail -n 1 | tr -d '\r' | awk '{print $3$4$5}')
                 if [ "$lastCp" != "$CheckpointString" ]; then
                     # Log any changes in value
                     echo "  OCC Checkpoint: $CheckpointString"
@@ -978,7 +993,7 @@ WaitForCheckpoint()
     done
 
     if [ $complete -ne 1 ]; then
-        cat $tempfile
+        cat $lastRspBuffer
         CaptureOccTraces "CheckpointFailure"
         autosim --simcmd "PGPEtrace ${simics_binaries}"
         echo
@@ -1005,9 +1020,9 @@ SetupOccImage()
 
     # Use init from the python script
     if [ $G_use_pgpe -ne 0 ]; then
-        autosim --simcmd "occinit -p ${simics_binaries}"
-    else
         autosim --simcmd "occinit ${simics_binaries}"
+    else
+        autosim --simcmd "occinit -nopgpe ${simics_binaries}"
     fi
 
     # Update/enable specified number of cores
@@ -1102,20 +1117,31 @@ SetQuadTemp()
 # Send mode change request to the OCC
 SetPowerMode()
 {
-    let expectedMode=$1
+    let requestedMode=$1
     let value=$2
 
-    printHeader "SET POWER MODE: $(printf %02X $expectedMode) - $(printf %04X $value)"
-    cmdData="3000$(printf %02X $expectedMode)$(printf %04X $value)00"
+    printHeader "SET POWER MODE: $(printf %02X $requestedMode) - $(printf %04X $value)"
+    cmdData="3000$(printf %02X $requestedMode)$(printf %04X $value)00"
     autosim --simcmd '$SeqNum=(OCCw -C 0x20 -D "'$cmdData'" '$G_simics_options')'
-    WaitForResponse 0x20
+    if [ $expectedOccSrc -eq $((0x2A03)) ]; then # INVALID_DATA
+        # Invalid Data
+        WaitForResponse 0x20 0x13
+    else
+        let expectedMode=$requestedMode
+        WaitForResponse 0x20
+    fi
+    if [ $G_trace_calls -ne 0 ]; then
+        echo "<<SetPowerMode"
+    fi
 }
 
 
 # Capture 405/GPE traces
 CaptureOccTraces()
 {
-    echo ">>CaptureOccTraces"
+    if [ $G_trace_calls -ne 0 ]; then
+        echo ">>CaptureOccTraces"
+    fi
     fnamePrefix=""
     if [ -n "$1" ]; then
         fnamePrefix="$(printf "%02d_%s" $G_trace_index $1)"
@@ -1141,7 +1167,7 @@ CaptureOccTraces()
 TestValidationFunction()
 {
     let status=0
-    RemoteReturnCode=$(egrep '^RemoteReturnCode = ' $tempfile | tail -n 1 | awk '{print $3}' | tr -d '\r\n')
+    RemoteReturnCode=$(egrep '^RemoteReturnCode = ' $lastRspBuffer | tail -n 1 | awk '{print $3}' | tr -d '\r\n')
     #RemoteReturnCode=${RemoteReturnCode##* = }
     #echo "RemoteReturnCode = \"$RemoteReturnCode\""
     #echo Size of RemoteReturnCodeVar = ${#RemoteReturnCode}
@@ -1180,7 +1206,7 @@ TestValidationObservationReady()
     WaitForResponse $OCCCMD_POLL
     if [ $? -eq 0 ]; then
 
-        RemoteObservationReady=$(grep 'Status (1)             :' $tempfile | tail -n 1 )
+        RemoteObservationReady=$(grep 'Status (1)             :' $lastRspBuffer | tail -n 1 )
         RemoteObservationReady=${RemoteObservationReady##* - }
 
         if [ ${#RemoteObservationReady} -ne 0 ]; then
@@ -1222,7 +1248,7 @@ TestValidationActiveReady()
         WaitForResponse $OCCCMD_POLL
         if [ $? -eq 0 ]; then
 
-            RemoteActiveReady=$(grep 'Status (1)             :' $tempfile | tail -n 1 )
+            RemoteActiveReady=$(grep 'Status (1)             :' $lastRspBuffer | tail -n 1 )
             RemoteActiveReady=${RemoteActiveReady##* - }
 
             if [ ${#RemoteActiveReady} -ne 0 ]; then
@@ -1286,7 +1312,7 @@ TestValidationObservationState()
     WaitForResponse $OCCCMD_POLL
     if [ $? -eq 0 ]; then
 
-        OccState=$(grep 'Current OCC State (5)  : ' $tempfile | tail -n 1 )
+        OccState=$(grep 'Current OCC State (5)  : ' $lastRspBuffer | tail -n 1 )
         OccState=${OccState##* : }
 
         if [ ${#OccState} -ne 0 ]; then
@@ -1324,7 +1350,7 @@ TestValidationActiveState()
     WaitForResponse $OCCCMD_POLL
     if [ $? -eq 0 ]; then
 
-        OccState=$(grep 'Current OCC State (5)  : ' $tempfile | tail -n 1 )
+        OccState=$(grep 'Current OCC State (5)  : ' $lastRspBuffer | tail -n 1 )
         OccState=${OccState##* : }
 
         if [ ${#OccState} -ne 0 ]; then
@@ -1357,20 +1383,20 @@ TestValidationActiveState()
 
 
 # Check for OCC Error log in last response
-# Must have sent poll command and received response into $tempfile
+# Must have sent poll command and received response into $lastRspBuffer
 checkAndHandleOccElog()
 {
     elog=""
     let found_elog=0
-    grep -q 'OCC ERROR LOG WAS RETURNED' $tempfile
+    grep -q 'OCC ERROR LOG WAS RETURNED' $lastRspBuffer
     if [ $? -eq 0 ]; then
         let found_elog=1
-        elog=`grep -e 'OCC ERROR LOG' -e 'OCC SRC:' $tempfile`
-        occSrc=`grep 'OCC SRC:' $tempfile | awk '{print $3}'`
-        elogId=`grep "Error Log ID" $tempfile | awk '{print $6}' | tr -d '\r\n'`
-        elogAddr=`grep "Error Log Addr" $tempfile | awk '{print $6}' | tr -d '\r\n'`
-        elogLen=`grep "Error Log Length" $tempfile | awk '{print $4}' | tr -d '\r\n'`
-        elogSource=`grep "Error Log Source" $tempfile | awk '{print $6}'`
+        elog=`grep -e 'OCC ERROR LOG' -e 'OCC SRC:' $lastRspBuffer`
+        occSrc=`grep 'OCC SRC:' $lastRspBuffer | awk '{print $3}'`
+        elogId=`grep "Error Log ID" $lastRspBuffer | awk '{print $6}' | tr -d '\r\n'`
+        elogAddr=`grep "Error Log Addr" $lastRspBuffer | awk '{print $6}' | tr -d '\r\n'`
+        elogLen=`grep "Error Log Length" $lastRspBuffer | awk '{print $4}' | tr -d '\r\n'`
+        elogSource=`grep "Error Log Source" $lastRspBuffer | awk '{print $6}'`
         if [ $expectedOccSrc -eq $(($occSrc)) ]; then
             echo -e "${bold}$elog${normal}"
         else # unexpected
@@ -1411,12 +1437,16 @@ checkAndHandleOccElog()
 
 ValidatePollData()
 {
+    if [ $G_trace_calls -ne 0 ]; then
+        echo ">>ValidatePollData"
+    fi
+
     let fail=0
     autosim --simcmd '$SeqNum=(OCCw -C '$OCCCMD_POLL' -D "20" '$G_simics_options')'
     WaitForResponse $OCCCMD_POLL
     if [ $? -eq 0 ]; then
 
-        OccStateString=$(grep 'Current OCC State (5)  : ' $tempfile | tail -n 1 )
+        OccStateString=$(grep 'Current OCC State (5)  : ' $lastRspBuffer | tail -n 1 )
         OccState=${OccStateString%:*}   # Remove end string: ": Active"
         let OccState=${OccState##*: }   # Strip off beginning text then convert to decimal
         OccStateString=${OccStateString##* : } # Just keep string "Active"
@@ -1446,7 +1476,7 @@ ValidatePollData()
 
         if [ $expectedThrottleStatus -ne $((0xFFFF)) ]; then
             #Validate throttle status
-            let rcvThrotStatus=$(grep 'Ext Status (2)' $tempfile | awk '{print $5}' )
+            let rcvThrotStatus=$(grep 'Ext Status (2)' $lastRspBuffer | awk '{print $5}' )
             if [ $rcvThrotStatus -eq $expectedThrottleStatus ]; then
                 printf "${bold}Throttle Status is as expected (0x%02X)${normal}\n" $expectedThrottleStatus
             else
@@ -1457,7 +1487,7 @@ ValidatePollData()
 
         if [ $expectedMode -ne 0 ]; then
             #Validate power mode
-            let rcvMode=$(grep 'Current Power Mode (6)' $tempfile | awk '{print $6}' )
+            let rcvMode=$(grep 'Current Power Mode (6)' $lastRspBuffer | awk '{print $6}' )
             if [ $rcvMode -eq $expectedMode ]; then
                 printf "${bold}Power Mode is as expected (0x%02X)${normal}\n" $expectedMode
             else
@@ -1473,7 +1503,7 @@ ValidatePollData()
             let coreSensor=$core
             sensor='SensorData     :  01 00 '$(printf "%02d" $coreSensor)' 01'
             # First verify core is present
-            grep -iq "$sensor " $tempfile
+            grep -iq "$sensor " $lastRspBuffer
             if [ $? -ne 0 ]; then
                 echo -e "${red}ERROR: core$core temp was not found in poll response${normal}"
                 let fail=1
@@ -1485,9 +1515,9 @@ ValidatePollData()
                     # temperature of this quad has been overridden
                     sensorValue=$(printf "00 %02X" ${quadTempOverride[$quad]})
                 fi
-                grep -iq "$sensor $sensorValue" $tempfile
+                grep -iq "$sensor $sensorValue" $lastRspBuffer
                 if [ $? -ne 0 ]; then
-                    rcvdValue=`grep -i "$sensor" $tempfile | awk '{print $7 $8}'`
+                    rcvdValue=`grep -i "$sensor" $lastRspBuffer | awk '{print $7 $8}'`
                     echo -e "${red}ERROR: core$core temp is not correct (received 0x$rcvdValue C, expected 0x$sensorValue for $sensor)${normal}"
                     let fail=1
                 else
@@ -1508,10 +1538,10 @@ ValidatePollData()
             let dimmSensor=0xd1+$dimm
             sensor='SensorData     :  00 00 00 '$(printf "%02x" $dimmSensor)
             sensorValue=$(printf "02 %02X" $temp) # DIMM FRU + Temperature
-            grep -iq "$sensor $sensorValue" $tempfile
+            grep -iq "$sensor $sensorValue" $lastRspBuffer
             if [ $? -ne 0 ]; then
                 echo -e "${red}ERROR: DIMM$dimm temp not correct (expect $sensorValue)${normal}"
-                grep -i "$sensor" $tempfile
+                grep -i "$sensor" $lastRspBuffer
                 let fail=1
             else
                 echo "DIMM$dimm temp is correct ($sensorValue C)"
@@ -1526,17 +1556,17 @@ ValidatePollData()
             let coreSensor=$core
             sensor='SensorData     :  01 00 '$(printf "%02d" $coreSensor)' 02'
             # First verify core is present
-            grep -iq "$sensor " $tempfile
+            grep -iq "$sensor " $lastRspBuffer
             if [ $? -ne 0 ]; then
                 echo "ERROR: core$core frequency was not found in poll response"
                 #echo -e "${red}ERROR: core$core frequency was not found in poll response${normal}"
                 # TEMP ALLOW                let fail=1
             else
                 #sensorValue=$(printf "00 %02X" $freq)
-                #grep -iq "$sensor $sensorValue" $tempfile
+                #grep -iq "$sensor $sensorValue" $lastRspBuffer
                 #if [ $? -ne 0 ]; then
                 #    #echo -e "${red}ERROR: core$core freq not correct (expect $sensorValue for $sensor)${normal}"
-                #    grep -i "$sensor" $tempfile
+                #    grep -i "$sensor" $lastRspBuffer
                 #    #let fail=1
                 #else
                     echo "core$core frequency was present ($sensor)"
@@ -1546,9 +1576,9 @@ ValidatePollData()
         done
 
         let powrFormat=1
-        grep -q "Sensor Name (0-3)      : TEMP" $tempfile
+        grep -q "Sensor Name (0-3)      : TEMP" $lastRspBuffer
         if [ $? -eq 0 ]; then
-            let powrFormat=`egrep -A4 'Sensor Name \(0-3\)      : TEMP' $tempfile | grep 'Sensor format' | awk '{print $5}' | sed 's/\s//'`
+            let powrFormat=`egrep -A4 'Sensor Name \(0-3\)      : TEMP' $lastRspBuffer | grep 'Sensor format' | awk '{print $5}' | sed 's/\s//'`
             if [ $powrFormat -ne 2 ]; then
                 echo -e "${red}ERROR: POWR format/version was not 2! (received $powrFormat)${normal}"
                 let fail=1
@@ -1571,23 +1601,23 @@ ValidatePollData()
         for sensor in 0x01 0x02 0x03 0x04 0x05 0x06 0x07 0x08 0x0B 0x0C 0x0D 0x0E 0x0F; do
             sensorId="aa aa aa "$(printf "%02x" $sensor)
             sensorString="SensorData     :  $sensorId"
-            grep -qi "$sensorString" $tempfile
+            grep -qi "$sensorString" $lastRspBuffer
             if [ $? -ne 0 ]; then
                 echo -e "${red}ERROR: Unable to find power sensor: $sensorId${normal}"
                 let fail=1
             else
                 expectedData=$(printf "$sensorString %02x %02x 00 00" ${apssFuncIds[ii]} ${apssChannel[ii]})
-                grep -qi "$expectedData" $tempfile
+                grep -qi "$expectedData" $lastRspBuffer
                 if [ $? -ne 0 ]; then
                     echo -e "${red}ERROR: Channel data not what was expected ($expectedData)${normal}"
-                    grep -i "$sensorString" $tempfile
+                    grep -i "$sensorString" $lastRspBuffer
                     let fail=1
                 fi
-                let function=0x`grep -i "$sensorString" $tempfile | awk '{print $7}'`
-                let channel=0x`grep -i "$sensorString" $tempfile | awk '{print $8}'`
-                let updateTag=0x`grep -i "$sensorString" $tempfile | awk '{print $11 $12 $13 $14}'`
-                accum=`grep -i "$sensorString" $tempfile | awk '{print $15 $16 $17 $18" "$19 $20 $21 $22}'`
-                let powerValue=0x`grep -i "$sensorString" $tempfile | awk '{print $23 $24}'`
+                let function=0x`grep -i "$sensorString" $lastRspBuffer | awk '{print $7}'`
+                let channel=0x`grep -i "$sensorString" $lastRspBuffer | awk '{print $8}'`
+                let updateTag=0x`grep -i "$sensorString" $lastRspBuffer | awk '{print $11 $12 $13 $14}'`
+                accum=`grep -i "$sensorString" $lastRspBuffer | awk '{print $15 $16 $17 $18" "$19 $20 $21 $22}'`
+                let powerValue=0x`grep -i "$sensorString" $lastRspBuffer | awk '{print $23 $24}'`
                 echo "power sensor $sensorId channel $(printf '%2d' $channel), function $(printf '%2d' $function) ${apssFuncName[$function]} (UpdateTag: $updateTag, Accum: $accum, $powerValue W)"
                 if [ $updateTag -ne 0 ] || [ "$accum" != "00000000 00000000" ] || [ $powerValue -ne 0 ]; then
                     if [ $updateTag -eq 0 ] || [ "$accum" == "00000000 00000000" ] || [ $powerValue -eq 0 ]; then
@@ -1609,7 +1639,7 @@ ValidatePollData()
         fi
 
         #Verify Power Caps
-        capData=`egrep -A5 'Sensor Name \(0-3\)      : CAPS' $tempfile | tail -1 | sed 's/\s//'`
+        capData=`egrep -A5 'Sensor Name \(0-3\)      : CAPS' $lastRspBuffer | tail -1 | sed 's/\s//'`
         # current cap, current reading, n power cap, sys cap, min cap, user cap, power limit source (0 not set, 0x01 from BMC/HTMGT, 0x02 from OPAL)
         let currentCap=0x`echo $capData | awk '{print $3 $4}'`
         let currentPower=0x`echo $capData | awk '{print $5 $6}'`
@@ -1666,12 +1696,20 @@ ValidatePollData()
         checkAndHandleOccElog
 
     fi
+
+    if [ $G_trace_calls -ne 0 ]; then
+        echo "<<ValidatePollData"
+    fi
+
 } # end ValidatePollData
 
 
 # Send POLL command(s) and verify not in safe mode and no elogs being reported
 PollToVerifyElogs()
 {
+    if [ $G_trace_calls -ne 0 ]; then
+        echo ">>PollToVerifyElogs"
+    fi
     let check_more=1
     let poll_fail=0
     while [ $check_more -eq 1 ];
@@ -1683,7 +1721,7 @@ PollToVerifyElogs()
         if [ $pollrc -eq 0 ]; then
             echo -e "${bold}PollToVerifyElogs - WaitForResponse(POLL) returned $pollrc${normal}"
             let poll_fail=0
-            OccState=$(grep 'Current OCC State (5)  : ' $tempfile | tail -n 1 )
+            OccState=$(grep 'Current OCC State (5)  : ' $lastRspBuffer | tail -n 1 )
             OccState=${OccState%:*}         # Strip off end (text state)
             let OccState=${OccState##*: }   # Convert state to decimal
             #echo -e "${bold}PollToVerifyElogs - poll success, state=$OccState${normal}"
@@ -1714,6 +1752,9 @@ PollToVerifyElogs()
     if [ $poll_fail -lt 2 ]; then
         echo "...no additional elogs"
     fi
+    if [ $G_trace_calls -ne 0 ]; then
+        echo "<<PollToVerifyElogs"
+    fi
 
 } # end PollToVerifyElogs
 
@@ -1723,7 +1764,7 @@ TestValidationOCCslave()
     autosim --simcmd '$SeqNum=(OCCw -C '$OCCCMD_POLL' -D "20" '$G_simics_options')'
     WaitForResponse $OCCCMD_POLL
     if [ $? -eq 0 ]; then
-        occRole=$(grep 'Status (1)             :' $tempfile | tail -n 1 )
+        occRole=$(grep 'Status (1)             :' $lastRspBuffer | tail -n 1 )
         occRole=${occRole##* - }
 
         if [ ${#occRole} -ne 0 ]; then
@@ -1757,7 +1798,7 @@ TestValidationOCCmaster()
     autosim --simcmd '$SeqNum=(OCCw -C '$OCCCMD_POLL' -D "20" '$G_simics_options')'
     WaitForResponse $OCCCMD_POLL
     if [ $? -eq 0 ]; then
-        occRole=$(grep 'Status (1)             :' $tempfile | tail -n 1 )
+        occRole=$(grep 'Status (1)             :' $lastRspBuffer | tail -n 1 )
         occRole=${occRole##* - }
         if [ ${#occRole} -ne 0 ]; then
             if [[ $occRole != *"Master"* ]] ; then
@@ -1793,8 +1834,8 @@ ReadAndClearElog()
     occSrc="$4"
     echo -e "${bold}ReadAndClearElog($elogId,$elogAddr,$elogLen,$occSrc)${normal}" # DEBUG
     if [ -n "$elogId" ] && [ -n "$elogAddr" ] && [ -n "$elogLen" ]; then
-        echo "Dumping Elog $elogId:"
-        autosim --simcmd "$bp.$proc.occ_cmp.oci_space.x $elogAddr $elogLen"
+        #echo "Dumping Elog $elogId:"
+        #autosim --simcmd "$bp.$proc.occ_cmp.oci_space.x $elogAddr $elogLen"
 
         # Clear the 405 elog
         autosim --simcmd '$SeqNum=(OCCw -C 0x12 -D "01'${elogId:2:2}'0000" '$G_simics_options')'
@@ -1828,6 +1869,9 @@ ReadAndClearElog()
         fi
     else
         echo -e "${red}ERROR: Invalid parms to ReadAndClearElog($elogId,$elogAddr,$elogLen,$occSrc)${normal}"
+    fi
+    if [ $G_trace_calls -ne 0 ]; then
+        echo "<<ReadAndClearElog"
     fi
 }
 
@@ -2226,6 +2270,11 @@ TESTS_thermal_limits()
 
         ### Verify throttling when processor temperatures go over limits
 
+    printHeader "MODE: STATIC POWER SAVE"
+    SetPowerMode 0x05 0
+
+    ValidatePollData
+
         SetQuadTemp 0 0x61
         echo WAIT : 10 seconds for OCC to throttle
         sleep 10
@@ -2233,11 +2282,15 @@ TESTS_thermal_limits()
         let expectedThrottleStatus=0x80
         ValidatePollData
 
+    CaptureOccTraces "ThrottleInSPS"
+
+if [ 0 -eq 1 ]; then
         SetQuadTemp 0 0x71
         let expectedOccSrc=0x2A10 # and report 2A10 elog (Processor reached error temperature)
         echo WAIT : 10 seconds for OCC to generate elog
         sleep 10
         ValidatePollData
+fi
 
         SetQuadTemp 0 0x31
         echo WAIT : 60 seconds for the throttle to be cleared
@@ -2246,6 +2299,7 @@ TESTS_thermal_limits()
         let expectedThrottleStatus=0x00
         ValidatePollData
 
+if [ 0 -eq 1 ]; then
         ### Verify throttling when limits are updated (temps not changing)
 
         printHeader "SET PROCESSOR DVFS_TEMP TO FORCE THROTTLING (via TCT CONFIG) - 68C (0x44)"
@@ -2279,6 +2333,7 @@ TESTS_thermal_limits()
     else
         echo -e "\nWARNING: unable to test processor thermal limits if PGPE is not enabled\n"
     fi
+fi
 
     let end_time=`date +%s`
     let delta_time=$end_time-$start_time
@@ -2299,7 +2354,6 @@ TESTS_power_modes()
 
     printHeader "MODE: STATIC POWER SAVE"
     SetPowerMode 0x05 0
-
     ValidatePollData
 
     printHeader "MODE: MAXIMUM PERFORMANCE"
@@ -2307,56 +2361,55 @@ TESTS_power_modes()
         let expectedOccSrc=0x2ADF # WOF_RE_ENABLED
     fi
     SetPowerMode 0x0C 0
-
     ValidatePollData
 
     printHeader "MODE: DYNAMIC PERFORMANCE"
     SetPowerMode 0x0A 0
-
     ValidatePollData
 
-    if [ 0 -eq 1 ]; then
-        printHeader "MODE: FFO - 3072"
-        SetPowerMode 0x0B 3072
+    printHeader "MODE: FFO - 2300 (< fmin) - INVALID_DATA"
+    let expectedOccSrc=0x2A03 # INVALID_DATA
+    SetPowerMode 0x0B 2300
+    ValidatePollData
 
+    printHeader "MODE: FFO - 2800 (< WOF Base)"
+    SetPowerMode 0x0B 2800
+    ValidatePollData
+
+    if [ 1 -eq 0 ]; then
+        printHeader "MODE: FFO - 3200" # TODO: OCC Currently does not allow frequencies above WOF Base
+        SetPowerMode 0x0B 3200
         ValidatePollData
     fi
 
     printHeader "MODE: STATIC FREQUENCY - Power Save"
     SetPowerMode 0x03 0x2000
-
     ValidatePollData
 
     printHeader "MODE: STATIC FREQUENCY - WOF Base"
     SetPowerMode 0x03 0x2001
-
     ValidatePollData
 
     if [ $G_use_pgpe -ne 0 ]; then
         printHeader "MODE: STATIC FREQUENCY - Ultra Turbo"
         SetPowerMode 0x03 0x2002
-
         ValidatePollData
 
         printHeader "MODE: STATIC FREQUENCY - Fmax"
         SetPowerMode 0x03 0x2003
-
         ValidatePollData
 
         printHeader "MODE: STATIC FREQUENCY - VPD Curve Fit Point 0"
         SetPowerMode 0x03 0x1000
-
         ValidatePollData
 
         printHeader "MODE: STATIC FREQUENCY - VPD Curve Fit Point 2"
         SetPowerMode 0x03 0x1002
-
         ValidatePollData
     fi
 
-    printHeader "MODE: NOMINAL"
+    printHeader "MODE: DISABLED/NOMINAL"
     SetPowerMode 0x01 0
-
     ValidatePollData
 
     let end_time=`date +%s`

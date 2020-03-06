@@ -40,9 +40,9 @@ script_directory = os.path.dirname(os.path.realpath(__file__))
 tools_directory = "/gsa/ausgsa/projects/o/occfw/simics_p10/bin"
 
 
-CONST_VERSION = 'P10.4.0'
+CONST_VERSION = 'P10.5.0'
 LastCmd_SeqNum = 00
-L_pgpe_enabled = 0
+L_pgpe_enabled = 1
 
 # Simics is not actively running (issue manual run commands between operations)
 G_run_time = 1
@@ -69,59 +69,54 @@ G_occ_rsp_buffer_size = 4096
 
 
 def helper(callStr):
-    print("\n\n##################################################################")
+    print("\n##################################################################")
     print("OCCw Verion : " + CONST_VERSION )
-    print("Support : Chris Cain / Sheldon Bailey")
+    print("Support : Chris Cain")
     print("Location: " + script_directory)
     print("##################################################################")
-    print('OCCwrite -C 0x<CMD> -D "<data>" ')
-    print('OCCw     -C 0x<CMD> -D "<data>" ')
-    print("            0x<CMD>                  must be in hex and have the 0x in front of it.")
-    print('                       "<data>"      must be in hex without the 0x and have quotes around it.')
     print("")
-    print("OCCread  -C 0x<CMD> ")
-    print("OCCr     -C 0x<CMD> ")
-    print("            0x<CMD>                  must be in hex and have the 0x in front of it.")
+    print("  occinit      Init simics to run OCC")
+    print("  occ2act      Send config and attempt to bring OCC to Active state")
+    print("  occcmd       Send a command to OCC and display response");
+    print("  occerr       Send POLL to OCC and display/clear one elog")
+    print("  sensorlist   Display OCC sensor list");
+    print("  occ2ckpt     Wait for OCC to complete its initialization checkpoint")
     print("")
-    print("Example:")
+    print("  occt         Display OCC trace");
+    print("  pgpet        Display PGPE trace");
+    print("  occstate     Display OCC machine data");
+    print("  occhelp      This help")
+    print("")
+    print("For more detailed help on above commands: help <command>")
+    print("")
+    print("Manual commands:")
+    print('  OCCwrite -C 0x<CMD> -D "<data>" ')
+    print('  OCCwrite -C 0x<CMD> -D "<data>" ')
+    print('  OCCw     -C 0x<CMD> -D "<data>" ')
+    print("              0x<CMD>                  must be in hex and have the 0x in front of it.")
+    print('                         "<data>"      must be in hex without the 0x and have quotes around it.')
+    print("")
+    print("  OCCread  -C 0x<CMD> ")
+    print("  OCCr     -C 0x<CMD> ")
+    print("              0x<CMD>                  must be in hex and have the 0x in front of it.")
+    print("")
+    print("  Example:")
     print('    OCCw  -C 0x00 -D "20"             : OCC_CMD_POLL write')
     print("    OCCr  -C 0x00                     : OCC_CMD_POLL read")
     print("")
-    print("Other Commands ")
-    print('    OCCtool  -C 0x01 -D "<data>"      : OCC_CMD_QUERY_FIRMWARE_LEVEL')
-    print(" ")
-    print('    OCCtool  -C 0x10 -D "<data>"      : OCC_CMD_GET_ERROR_LOG')
-    print('    OCCtool  -C 0x11 -D "<data>"      : OCC_CMD_CONTINUE_ERROR_LOG')
+    print("  Other Commands ")
     print('    OCCtool  -C 0x12 -D "<data>"      : OCC_CMD_CLEAR_ERROR_LOG')
-    print(" ")
     print('    OCCtool  -C 0x20 -D "<data>"      : OCC_CMD_SET_MODE_AND_STATE')
     print('    OCCtool  -C 0x21 -D "<data>"      : OCC_CMD_SETUP_CONFIGURATION_DATA')
-    print('    OCCtool  -C 0x23 -D "<data>"      : OCC_CMD_SET_THERMAL_THROTTLE_MODE')
-    print('    OCCtool  -C 0x24 -D "<data>"      : OCC_CMD_SET_PEX_REGISTER')
-    print('    OCCtool  -C 0x25 -D "<data>"      : OCC_CMD_RESET_PREP')
-    print('    OCCtool  -C 0x26 -D "<data>"      : OCC_CMD_SNAPSHOT_SYNC')
-    print(" ")
-    print('    OCCtool  -C 0x30 -D "<data>"      : OCC_CMD_PEX_PASS_THROUGH')
-    print('    OCCtool  -C 0x31 -D "<data>"      : OCC_CMD_READ_STATUS_REGISTER')
-    print('    OCCtool  -C 0x32 -D "<data>"      : OCC_CMD_GET_THROTTLE_VALUES')
-    print('    OCCtool  -C 0x33 -D "<data>"      : OCC_CMD_GET_CPU_TEMPERATURES')
-    print('    OCCtool  -C 0x34 -D "<data>"      : OCC_CMD_GET_COOLING_REQUEST')
-    print('    OCCtool  -C 0x35 -D "<data>"      : OCC_CMD_GET_OCC_SNAPSHOT')
-    print(" ")
+    print('    OCCtool  -C 0x30 -D "<data>"      : OCC_CMD_SEND_AMBIENT')
     print('    OCCtool  -C 0x40 -D "<data>"      : OCC_CMD_DEBUG_PASS_THROUGH')
     print('    OCCtool  -C 0x41 -D "<data>"      : OCC_CMD_AME_PASS_THROUGH')
     print('    OCCtool  -C 0x42 -D "<data>"      : OCC_CMD_GET_FIELD_DEBUG_DATA')
-    print(" ")
-    print('    OCCtool  -C 0x50 -D "<data>"      : OCC_CMD_VRM_INTERFACE_TEST')
-    print('    OCCtool  -C 0x51 -D "<data>"      : OCC_CMD_PROCESSOR_INTERFACE_TEST')
-    print('    OCCtool  -C 0x52 -D "<data>"      : OCC_CMD_SET_PROCESSOR_CLOCK_FREQ')
     print('    OCCtool  -C 0x53 -D "<data>"      : OCC_CMD_MFG_TEST')
-    print('    OCCtool  -C 0x54 -D "<data>"      : OCC_CMD_GET_FOM_DATA')
-    print(" ")
-    print('    OCCtool  -C 0x60 -D "<data>"      : OCC_CMD_TUNABLE_PARAMETERS')
     print(" ")
     print("##################################################################")
-    print("Reason for HELP (" + callStr + ")\n\n")
+    if (callStr):
+        print("Reason for HELP (" + callStr + ")\n\n")
 
 
 # Given a hex string array, dump the data in hex:
@@ -141,6 +136,23 @@ def hexDumpString(stringArray):
         offset=offset+2
         if ((offset % 16) == 0):
             print("")
+    if ((offset % 16) != 0):
+        print("")
+
+# Given a hex string array, dump the data in hex (up to specified length)
+def hexDumpStringTrunc(stringArray, length):
+    offset=0
+    for hword in stringArray:
+        if ((offset % 16) == 0):
+            print("{0:#0{1}x}".format(offset,6)+":  ", end="")
+        if ((offset % 4) == 0):
+            print(" ", end="")
+        print(hword.upper(), end="")
+        offset=offset+2
+        if ((offset % 16) == 0):
+            print("")
+        if offset >= length:
+            break
     if ((offset % 16) != 0):
         print("")
 
@@ -185,6 +197,7 @@ def hexDumpSingleString(stringArray):
         print("")
 
 def hexDumpPanic(stringArray):
+    print("\n**** OCC PANIC DETECTED - COLLECTING PANIC DATA ********************\n");
     hex_filename = "/tmp/p10-OCC_panic.txt"
     hex_file = open(hex_filename, "w")
     offset=0
@@ -207,10 +220,10 @@ def hexDumpPanic(stringArray):
     hex_file.close()
     print("Panic data written to "+hex_filename)
     command = "!"+tools_directory+"/asm2bin "+hex_filename
-    print("==> Converting Panic to binary:" + command)
+    print("\n==> Converting Panic to binary:" + command)
     run_command(command)
     command = "!"+tools_directory+"/ffdcparser "+hex_filename+".bin"
-    print("==> Parsing Panic: " + command)
+    print("\n==> Parsing Panic Data: " + command + "\n")
     run_command(command)
 
 # Given a integer array, dump the data in hex:
@@ -303,9 +316,7 @@ def getCmdString(cmd):
 
 
 def getConfigString(config):
-    if   (config == 0x00): string=""
-    elif (config == 0x02): string="Frequency Points"
-    elif (config == 0x03): string="OCC Role"
+    if (config == 0x03): string="OCC Role"
     elif (config == 0x04): string="APSS Configuration"
     elif (config == 0x05): string="Memory Configuration"
     elif (config == 0x07): string="Power Cap Values"
@@ -315,8 +326,50 @@ def getConfigString(config):
     elif (config == 0x13): string="Thermal Control Thresholds"
     elif (config == 0x14): string="AVS Bus Configuration"
     elif (config == 0x15): string="GPU Configuration"
-    elif (config == 0x21): string="VRM Fault"
     else:                  string="UNKNOWN"
+    return string
+
+def getStateString(state):
+    if   (state == 0x01): string="Standby"
+    elif (state == 0x02): string="Observation"
+    elif (state == 0x03): string="Active"
+    elif (state == 0x04): string="Safe"
+    elif (state == 0x05): string="Characterization"
+    else:                 string="UNKNOWN"
+    return string
+
+def getModeString(state):
+    if   (state == 0x01): string="Disabled/Nominal"
+    elif (state == 0x03): string="Static Frequency Point"
+    elif (state == 0x04): string="Safe"
+    elif (state == 0x0A): string="Dynamic Performance"
+    elif (state == 0x0B): string="Fixed Frequency Override"
+    elif (state == 0x0C): string="Maximum Performance"
+    else:                 string="UNKNOWN"
+    return string
+
+def getRoleString(role):
+    if   (role == 0x00): string="Slave"
+    elif (role == 0x01): string="Master"
+    else:                string="UNKNOWN"
+    return string
+
+def getSevString(sev):
+    if   (sev == 0x00): string="Info"
+    elif (sev == 0x01): string="Predictive"
+    elif (sev == 0x02): string="Unrecoverable"
+    else:               string="UNKNOWN"
+    return string
+
+def getUDTypeString(value):
+    if   (value == 0x01): string="Trace Data"
+    elif (value == 0x02): string="Call Home Data"
+    elif (value == 0x03): string="Binary Data"
+    elif (value == 0x04): string="History"
+    elif (value == 0x05): string="WOF Data"
+    elif (value == 0x06): string="PGPE Trace"
+    elif (value == 0x07): string="PGPE Data"
+    else:                 string="UNKNOWN"
     return string
 
 def ReadSRAM(command, FLG_VRB):
@@ -363,203 +416,6 @@ def ReadPrint_CMD(FLG_VRB, data_length):
     hexDumpString(mylist)
     print("ReturnCode : " + str(RC))
 
-    return RC
-
-def ReadPrint_POLL(FLG_VRB, SeqNum):
-    RC = 0
-    CheckSum = 0
-    Successful = 0
-
-    sramRC, mylist = ReadSRAM(bp+"."+proc+".occ_cmp.oci_space.x "+G_occsram_rsp_buffer+" "+str(G_occ_rsp_buffer_size), FLG_VRB)
-
-    # loop through the data and calculate checksum.
-    # sheldon9999 make checksum calculations more of algorithem than this.
-    CheckSum += int( mylist[0][:2], 16 )
-    CheckSum += int( mylist[0][-2:], 16 )
-    CheckSum += int( mylist[1][:2], 16 )
-    CheckSum += int( mylist[1][-2:], 16 )
-    CheckSum += int( mylist[2][:2], 16 )
-    CheckSum += int( mylist[2][-2:], 16 )
-    CheckSum += int( mylist[3][:2], 16 )
-    CheckSum += int( mylist[3][-2:], 16 )
-    CheckSum += int( mylist[4][:2], 16 )
-    CheckSum += int( mylist[4][-2:], 16 )
-    CheckSum += int( mylist[5][:2], 16 )
-    CheckSum += int( mylist[5][-2:], 16 )
-    CheckSum += int( mylist[6][:2], 16 )
-    CheckSum += int( mylist[6][-2:], 16 )
-    CheckSum += int( mylist[7][:2], 16 )
-    CheckSum += int( mylist[7][-2:], 16 )
-    CheckSum += int( mylist[8][:2], 16 )
-    CheckSum += int( mylist[8][-2:], 16 )
-    CheckSum += int( mylist[9][:2], 16 )
-    CheckSum += int( mylist[9][-2:], 16 )
-    CheckSum += int( mylist[10][:2], 16 )
-
-    ReturnCheckSum = mylist[10][-2:] + mylist[11][:2]
-
-    #CheckSum += 1       #sheldonTEST
-
-    if(FLG_VRB):
-        print("Calculated Checkstop : " + str( hex( CheckSum ) ) + "\n\n")
-
-    if( sramRC == None) and ( CheckSum == int(ReturnCheckSum, 16) ):
-        print("Good Call Return from OCCread, and Good CheckSum " )
-        print("======================================================")
-        print("\tSeq Num                : " + mylist[0][:2],end="")
-        #SeqNum = '10'                                 #sheldonTEST
-        if(mylist[0][:2] == SeqNum):
-            print("\tValidation - Matched Last CMD")
-            Successful += 1
-        elif(SeqNum == '00'):
-            print("\tRead only no Validation.")
-            Successful += 1
-        else:
-            print("\tValidation FAILED - Last CMD Sequence Number : " + SeqNum)
-        cmdString=getCmdString(int(mylist[0][-2:],16))
-        print("\tCommand                : " + mylist[0][-2:] + " : " + cmdString)
-        rcString=getRcString(int(mylist[1][:2],16))
-        print("\tReturn Status          : " + mylist[1][:2] + " : " + rcString)
-        print("\tData Length            : " + mylist[1][-2:] + mylist[2][:2] )
-        #######################################################################################################
-        statusBits=["Master","Collect Fir Data","","OCC owns PMCR","Simics","","Observation Ready","Active Ready"]
-        values = parseBitField(mylist[2][-2:], statusBits)
-        print("\tStatus (1)             : " + "0x%08X" % int(mylist[2][-2:],16) + " : " + values)
-        print("\tStatus (1)             : " + mylist[2][-2:] + " : " + "{0:08b}".format( int(mylist[2][-2:], 16))  )
-        if( int(mylist[2][-2:], 16) & 0x80  ):
-            print("\t\t\t\t\tBit(7) : Master OCC")
-        else:
-            print("\t\t\t\t\tBit(7) : Slave OCC")
-        if( int(mylist[2][-2:], 16) & 0x40  ):
-            print("\t\t\t\t\tBit(6) : Collect FIR Data")
-        else:
-            print("\t\t\t\t\tBit(6) : Not collecing FIR Data")
-        print("\t\t\t\t\tBit(5) : Reserved")
-        if( int(mylist[2][-2:], 16) & 0x10  ):
-            print("\t\t\t\t\tBit(4) : Status Change -> pwr/thermal change needs to be reported.")
-        else:
-            print("\t\t\t\t\tBit(4) : State Change - N/A")
-        if( int(mylist[2][-2:], 16) & 0x08  ):
-            print("\t\t\t\t\tBit(3) : ATTNs - ENABLED")
-        else:
-            print("\t\t\t\t\tBit(3) : ATTNs - DISABLED")
-        print("\t\t\t\t\tBit(2) : Reserved")
-        if( int(mylist[2][-2:], 16) & 0x02  ):
-            print("\t\t\t\t\tBit(1) : OCC Observation Ready - ENABLED")
-        else:
-            print("\t\t\t\t\tBit(1) : OCC Observation Ready - DISABLED")
-        if( int(mylist[2][-2:], 16) & 0x01  ):
-            print("\t\t\t\t\tBit(0) : OCC Active READY - ENABLED")
-        else:
-            print("\t\t\t\t\tBit(0) : OCC Active READY - DISABLED")
-        #######################################################################################################
-        statusBits=["DVFS due to Proc OT","DVFS due to Power","Memory Trottle due to OT","Quick Power Drop","DVFS due to Vdd OT"]
-        values = parseBitField(mylist[2][-2:], statusBits)
-        print("\tExt Status (2)         : " + "0x%08X" % int(mylist[3][:2],16) + " : " + values)
-        print("\tExt Status (2)         : " + mylist[3][:2] + " : " + "{0:08b}".format( int(mylist[3][:2], 16))   )
-        if( int(mylist[3][:2], 16) & 0x80  ):
-            print("\t\t\t\t\tBit(7) : DVFS due to OT - Freq. below nominal due to over temp (proc or VRM)")
-        else:
-            print("\t\t\t\t\tBit(7) : DVFS due to OT - DISABLED")
-        if( int(mylist[3][:2], 16) & 0x40  ):
-            print("\t\t\t\t\tBit(6) : DVFS due to Power - Freq. below nominal due to reaching current power cap limit")
-        else:
-            print("\t\t\t\t\tBit(6) : DVFS due to Power - DISABLED")
-        if( int(mylist[3][:2], 16) & 0x20  ):
-            print("\t\t\t\t\tBit(5) : Memory throttle due to OT - Memory throttled due to over temp")
-        else:
-            print("\t\t\t\t\tBit(5) : Memory throttle due to OT - DISABLED")
-        if( int(mylist[3][:2], 16) & 0x10  ):
-            print("\t\t\t\t\tBit(4) : Quick Power Drop - Quick Power Drop/Oversubscription line asserted")
-        else:
-            print("\t\t\t\t\tBit(4) : Quick Power Drop - DISABLED")
-        print("\t\t\t\t\tBit(3) : Reserved")
-        if( int(mylist[3][:2], 16) & 0x04  ):
-            print("\t\t\t\t\tBit(2) : Sync Request - OCC needs to restart snapshot buffers")
-        else:
-            print("\t\t\t\t\tBit(2) : Sync Request - NO snapshot sync needed")
-        print("\t\t\t\t\tBit(1) : Reserved")
-        if( int(mylist[3][:2], 16) & 0x01  ):
-            print("\t\t\t\t\tBit(0) : Cooling Request - OCC has a fan increase request")
-        else:
-            print("\t\t\t\t\tBit(0) : Cooling Request - DISABLED")
-        #######################################################################################################
-        print("\tOCC Present (3)        : " + mylist[3][-2:] )
-        #######################################################################################################
-        configString = getConfigString(int(DataList[3],16));
-        print("\tConfig Data Needed (4) : " + mylist[4][:2] + "\t" + configString)
-        #######################################################################################################
-        print("\tCurrent OCC State (5)  : " + mylist[4][-2:] + " : " ,end="")
-        if(mylist[4][-2:] == "00"):
-            print("\tReserved")
-        elif(mylist[4][-2:] == "01"):
-            print("\tStandby")
-        elif(mylist[4][-2:] == "02"):
-            print("\tObservation")
-        elif(mylist[4][-2:] == "03"):
-            print("\tActive")
-        elif(mylist[4][-2:] == "04"):
-            print("\tSafe")
-        #######################################################################################################
-        print("\tCurrent Power Mode (6) : " + mylist[5][:2])
-        if(mylist[5][:2] == "01"):
-            print("\t\t\t\t\tDisabled/Nominal")
-        elif(mylist[5][:2] == "03"):
-            print("\t\t\t\t\tStatic Frequency Point")
-        elif(mylist[5][:2] == "04"):
-            print("\t\t\t\t\tSafe")
-        elif(mylist[5][:2] == "05"):
-            print("\t\t\t\t\tStatic Power Save")
-        elif(mylist[5][:2] == "0A"):
-            print("\t\t\t\t\tDynamic Performance")
-        elif(mylist[5][:2] == "0B"):
-            print("\t\t\t\t\tFixed Requency Override (FFO)")
-        elif(mylist[5][:2] == "0C"):
-            print("\t\t\t\t\tMaximum Performance")
-        else:
-            print("\t\t\t\t\tUnknown")
-        #######################################################################################################
-        print("\tCurrent Idle PWR SVR(7): " + mylist[5][-2:] + " : " + "{0:08b}".format( int(mylist[5][-2:], 16))   )
-        print("\t\t\t\t\tBit(7:2): Reserved")
-        if( int(mylist[5][-2:], 16) & 0x02  ):
-            print("\t\t\t\t\tBit(1) : IDLE Power Saver - ACTIVE")
-        else:
-            print("\t\t\t\t\tBit(1) : IDLE Power Saver - IN-ACTIVE")
-        if( int(mylist[5][-2:], 16) & 0x01  ):
-            print("\t\t\t\t\tBit(0) : IDLE Power Saver - ENABLED")
-        else:
-            print("\t\t\t\t\tBit(0) : IDLE Power Saver - DISABLED")
-        #######################################################################################################
-        elogId = mylist[6][:2]
-        print("\tError Log ID   : " + elogId)
-        if(elogId == "00"):
-            print("\t\t\t\t\tNO ERROR LOG")
-        elogAddress = mylist[6][-2:] + mylist[7] + mylist[8][:2]
-        print("\tError Log Start Address (9-12)  0x: " + elogAddress )
-        elogLength = mylist[8][-2:] + mylist[9][2:]
-        print("\tError Log Length (13-14) : 0x" + elogLength )
-        print("\tReserved (15-16)  : " + mylist[9][-2:] + mylist[10][:2])
-        print("\tChecksum : " + mylist[10][-2:] + mylist[11][:2])
-
-        if(Successful != 2) and (SeqNum != '00'):
-            hexDumpString(mylist)
-            RC = 1
-
-        if (elogId != "00"):
-            print("\nReadPrint_CMD: OCC ERROR LOG WAS RETURNED! (id:0x"+elogId+", addr:0x"+elogAddress+", len=0x"+elogLength+")\n")
-            ELOG_RC, elog = ReadSRAM(bp+"."+proc+".occ_cmp.oci_space.x 0x"+elogAddress+" 0x"+elogLength, FLG_VRB)
-            print("ReadSRAM returned rc "+str(ELOG_RC)+"\n")
-            hexDumpString(elog)
-            RC = 0xEEEE
-
-    else:
-        print("OCC Poll Validation - READ SRAM return code : " + str(RC) )
-        print("or")
-        print("Validation - CheckSum calculated (" + str(hex(CheckSum)) + ")     CheckSum from SRAM (" + str(hex(int(ReturnCheckSum, 16) ) ) + ")")
-        ReadPrint_OCCreturn(FLG_VRB, '00')
-        RC = 1
-
-    print("RemoteReturnCode = " + str(RC))
     return RC
 
 
@@ -762,6 +618,121 @@ def parseSensorList(DataList, DataLength, flg_verbose):
 
 
 
+def ReadPrint_AMEsensor(FLG_VRB, SeqNum):
+    RC = 0
+    CheckSum = 0
+    Successful = 0
+    last_sensor = 0
+
+    sramRC, mylist = ReadSRAM("backplane0."+proc+".occ_cmp.oci_space.x "+G_occsram_rsp_buffer+" "+str(G_occ_rsp_buffer_size), FLG_VRB)
+
+    # SCRIPT DEFINED FAILURES
+    # FC    Bad Checksum
+    # FD    Timeout
+
+    if (mylist[0][:2] == SeqNum) and (int(mylist[1][:2],16) == 0xff):
+        # Timeout waiting for response
+        RC = 0xFD
+    else:
+        CheckSum += int( mylist[0][:2], 16 )        #seq number
+        CheckSum += int( mylist[0][-2:], 16 )       #CMD
+        CheckSum += int( mylist[1][:2], 16 )        #return Status
+        DataLength = int(mylist[1][-2:] + mylist[2][:2],16)
+        CheckSum += int(mylist[1][-2:],16) + int(mylist[2][:2],16)
+
+        DataList=[]
+        if(DataLength != 0):
+            LoopCount = 5
+            # convert data to int array and continue checksum calculation
+            for i in xrange(LoopCount, DataLength+LoopCount):
+                LoopCount = i
+                if(i%2==0):
+                    DataList.append( int(mylist[ i/2 ][:2], 16 ))
+                    CheckSum += int( mylist[ i/2 ][:2], 16 )
+                else:
+                    DataList.append( int(mylist[ i/2 ][-2:], 16 ))
+                    CheckSum += int( mylist[ i/2 ][-2:], 16 )
+
+            LoopCount += 1
+            if( (LoopCount)%2==0):
+                ReturnCheckSum = mylist[LoopCount/2][:2] + mylist[LoopCount/2][-2:]
+            else:
+                ReturnCheckSum = mylist[LoopCount/2][-2:] + mylist[(LoopCount/2)+1][:2]
+        else:
+            ReturnCheckSum = mylist[2][-2:] + mylist[3][:2]
+        # Truncate checksum to 2 bytes
+        CheckSum = CheckSum & int("FFFF",16)
+
+        if(FLG_VRB):
+            print("Calculated Checksum : " + str( hex( CheckSum ) ) + "\n\n")
+
+        # Print Header
+        print("\tSeq Num                : 0x" + mylist[0][:2],end="")
+        if(mylist[0][:2] == SeqNum):
+            print("\tValidation - Matched Last CMD")
+            Successful += 1
+        elif(SeqNum == '00'):
+            print("\tRead only no Validation.")
+            Successful += 1
+        else:
+            print("\tValidation FAILED - Last CMD Sequence Number : " + SeqNum)
+        cmdString=getCmdString(int(mylist[0][-2:],16))
+        print("\tCommand                : 0x" + mylist[0][-2:] + " : " + cmdString)
+        rcString=getRcString(int(mylist[1][:2],16))
+        print("\tReturn Status          : 0x" + mylist[1][:2] + " : " + rcString)
+        print("\tData Length            : 0x" + '{:04X}'.format(DataLength) )
+
+        if( sramRC == None) and ( CheckSum == int(ReturnCheckSum, 16) ):
+            # Response for: OCCw -C 0x53 -D "05000000000002ffff" (0002 is the location (proc), ffff is the type)
+            parseAmeSensors(DataList, DataLength, FLG_VRB)
+
+            print("\tChecksum               : 0x" + ReturnCheckSum)
+
+        else:
+            print("ERROR: OCC Sensor Validation - READ SRAM return code : " + str(RC) )
+            print("or")
+            print("       CheckSum calculated (" + str(hex(CheckSum)) + ") vs CheckSum from SRAM (" + str(hex(int(ReturnCheckSum, 16) ) ) + ")")
+            hexDumpString(mylist)
+            RC = 0xFC
+
+    print("RemoteReturnCode = " + str(RC))
+    return last_sensor
+
+
+
+def parseAmeSensors(DataList, DataLength, flg_verbose):
+    last_sensor = 0
+
+    # Response for: OCCw -C 0x40 -D "080002ffff" (0002 is the location (proc), ffff is the type)
+    num_sensors = (DataList[0] << 8) + DataList[1]
+    print("\tNum Sensors        : " + str(num_sensors))
+    sensor_length=28
+    print("\t\tName               GUID     Sample      Min       Max      IPMI")
+    for i in xrange(0, num_sensors):
+        print("\t\t", end='')
+        offset = i * sensor_length
+        for j in xrange(0, 16):
+            if chr(DataList[2+offset+j]).isalnum():
+                print(chr(DataList[2+offset+j]), end='')
+            else:
+                print(" ", end='')
+        print("  0x" + '{:04X}'.format((DataList[18+offset] << 8)+DataList[19+offset]) + "  ", end='')
+        print("  0x" + '{:04X}'.format((DataList[20+offset] << 8)+DataList[21+offset]) + "  ", end='')
+        print("  0x" + '{:04X}'.format((DataList[22+offset] << 8)+DataList[23+offset]) + "  ", end='')
+        print("  0x" + '{:04X}'.format((DataList[24+offset] << 8)+DataList[25+offset]) + "  ", end='')
+        print("  0x" + '{:08X}'.format((DataList[26+offset] << 24)+(DataList[27+offset] << 16)+(DataList[28+offset] << 8)+DataList[29+offset]))
+        # Check buffer overflow
+        if (2 + offset + sensor_length) > DataLength:
+            print("ERROR: Buffer size/Data length ("+str(DataLength)+") mismatch! current offset=" + str(2+offset))
+            hexDumpInt(DataList);
+            break
+
+    # Print/Parse Data
+    if flg_verbose:
+        hexDumpInt(DataList);
+
+
+
 def ValidateCmd(FLG_VRB, SeqNumExpected, FLG_LAST, flg_quiet):
     global L_pgpe_enabled
 
@@ -770,6 +741,9 @@ def ValidateCmd(FLG_VRB, SeqNumExpected, FLG_LAST, flg_quiet):
     Successful = 0
     CheckPoint = 0
     delay = 1
+
+    if (FLG_VRB):
+        print(">>ValidateCmd(seq 0x" + SeqNumExpected + ")")
 
     if (FLG_LAST):
         print("OCCreadvalidate: Waiting for seq 0x" + SeqNumExpected + " (last try)")
@@ -815,6 +789,7 @@ def ValidateCmd(FLG_VRB, SeqNumExpected, FLG_LAST, flg_quiet):
             half_words = ((5+DataLength) / 2) + 1;
             # Truncate the buffer to only include the response and rsp data
             del mylist[half_words:]
+            print("\n**** OCC EXCEPTION ENCOUNTERED (ValidateCmd) ****");
             hexDumpString(mylist)
             RtnCode = 0xFF
         elif (SeqNumberRcvd == LastSeq):
@@ -928,6 +903,7 @@ def ValidateCmd(FLG_VRB, SeqNumExpected, FLG_LAST, flg_quiet):
             hexDumpPanic(mylist)
         elif (RC >= 0xE0) and (RC <= 0xEF):
             # Dump exception buffer
+            print("\n**** OCC EXCEPTION ENCOUNTERED (ValidateCmd 2) ****");
             hexDumpString(mylist)
         elif (RC != 0xFD) or (FLG_LAST):
             # dont dump buffer on timeout, unless last
@@ -947,170 +923,184 @@ def ValidateCmd(FLG_VRB, SeqNumExpected, FLG_LAST, flg_quiet):
         print("\tReturn Status          : " + "0x%02X" % RtnCode + " : " + rcString)
         print("\tData Length            : " + "0x%04X" % DataLength )
         if (DataLength > 0):
-        #if (1 == 1):
-            ### PARSE POLL RESPONSE ###
-            if(CmdNumber == 0):
-                #######################################################################################################
-                statusBits=["Master","Collect Fir Data","","OCC owns PMCR","Simics","","Observation Ready","Active Ready"]
-                values = parseBitField(DataList[0], statusBits)
-                print("\tStatus (1)             : " + "0x%02X" % DataList[0] + " : " + values)
-                #######################################################################################################
-                extStatusBits=["DVFS due to Proc OT","DVFS due to Power","Memory Trottle due to OT","Quick Power Drop","DVFS due to Vdd OT"]
-                values = parseBitField(DataList[1], extStatusBits)
-                print("\tExt Status (2)         : " + "0x%02X" % DataList[1] + " : " + values)
-                #######################################################################################################
-                print("\tOCC Present (3)        : " + "0x%02X" % DataList[2] + " : {0:08b}".format(DataList[2]))
-                #######################################################################################################
-                CurrentString = str(   format(DataList[3],'02X')  )
-                configString = getConfigString(DataList[3]);
-                print("\tConfig Data Needed (4) : 0x" + CurrentString + " : " + configString)
-                #######################################################################################################
-                print("\tCurrent OCC State (5)  : " + "0x%02X" % DataList[4] + " : ", end="")
-                if (DataList[4] == 0x00): print("N/A")
-                elif(DataList[4] == 0x01): print("Standby")
-                elif(DataList[4] == 0x02): print("Observation")
-                elif(DataList[4] == 0x03): print("Active")
-                elif(DataList[4] == 0x04): print("Safe")
-                else: print("UNKNOWN")
-                #######################################################################################################
-                print("\tCurrent Power Mode (6) : " + "0x%02X" % DataList[5] + " : " ,end="")
-                if(DataList[5] == "00"):   print("(O/S Frequency Control)")
-                elif(DataList[5] == 0x01): print("Disabled/Nominal")
-                elif(DataList[5] == 0x03): print("Static Frequency Point")
-                elif(DataList[5] == 0x04): print("Safe")
-                elif(DataList[5] == 0x05): print("Static Power Save")
-                elif(DataList[5] == 0x0A): print("Dynamic Performance")
-                elif(DataList[5] == 0x0B): print("Fixed Frequency Override")
-                elif(DataList[5] == 0x0C): print("Maximum Performance")
-                else: print("UNKNOWN")
-                #######################################################################################################
-                if (DataList[6] == 0):
-                    values = "Disabled"
-                else:
-                    ipsStatusBits=["","","","","","","Active","Enabled"]
-                    values = parseBitField(DataList[6], ipsStatusBits)
-                print("\tIdle Power Saver (7)   : " + "0x%02X" % DataList[6] + " : " + values)
-                #######################################################################################################
-                elogId = str(   format(DataList[7],'02X')  )
-                print("\tError Log ID (8)       : 0x" + elogId ,end="")
-                if (elogId == "00"): print("   (no error log)")
-                else: print("")
-                elogAddress = str(format(DataList[8],'02X')) + str(format(DataList[9],'02X')) + str(format(DataList[10],'02X')) + str(format(DataList[11],'02X'))
-                print("\tError Log Addr (9-12)  : 0x" + elogAddress)
-                elogLength = str(format(DataList[12],'02X')) + str(format(DataList[13],'02X'))
-                print("\tError Log Length(13-14): 0x" + elogLength)
-                print("\tError Log Source (15)  : " + "0x%02X" % DataList[14] + " : ", end="")
-                if   (DataList[14] == 0x00): print("OCC 405")
-                elif (DataList[14] == 0x10): print("PGPE")
-                elif (DataList[14] == 0x20): print("SGPE")
-                else                       : print("UNKNOWN")
-                #######################################################################################################
-                if (DataList[15] == 0):
-                    values = "None"
-                else:
-                    gpuPresentBits=["","","","","","GPU2","GPU1","GPU0"]
-                    values = parseBitField(DataList[15], gpuPresentBits)
-                print("\tGPU Configuration (16) : " + "0x%02X" % DataList[15] + " : {0:08b}".format(DataList[15]) + " : " + values)
-                #######################################################################################################
-                print("\t##############################################################")
-                hexstring = ''
-                for i in xrange(16,32):
-                    hexstring += str(format(DataList[i],'02X'))
-                print("\tOCC Code Level(17-32)  : " + bytearray.fromhex(hexstring).decode() )
-                hexstring = ''
-                for i in xrange(32,38):
-                    hexstring += str(format(DataList[i],'02X'))
-                print("\tSENSOR (33-38)         : " + bytearray.fromhex(hexstring).decode() )
-                print("\t##############################################################")
-                print("\tNum. Sensor Blocks (39): 0x" + str(format(DataList[38],'02X')) )
-                print("\tSensor Version (40)    : 0x" + str(format(DataList[39],'02X')) )
-                print("\t##############################################################")
-                indexdata = 40
-                for j in xrange(0,DataList[38] ):   # Loop through all the Sensor Data Blocks.
-                    hexstring = ''
-                    for i in xrange(0,4):   # 4 bytes Eye Catcher
-                        hexstring += str(format(DataList[indexdata],'02X'))
-                        indexdata += 1
-                    eyecatcher = bytearray.fromhex(hexstring).decode()
-                    print("\tSensor Name (0-3)      : " + eyecatcher )
-                    print("\tReserved (4)           : 0x" + str(format(DataList[indexdata],'02X')) )  # 1 byte Reserved
-                    indexdata += 1
-                    print("\tSensor format (5)      : 0x" + str(format(DataList[indexdata],'02X')) )  # 1 byte sensor format
-                    indexdata += 1
-                    sensorlength = DataList[indexdata]
-                    indexdata += 1
-                    print("\tSensor Length (6)      : 0x" + str(format(sensorlength ,'02X')) )  # 1 byte Sensor Length
-                    numbersensors = DataList[indexdata]
-                    indexdata += 1
-                    print("\tNumber Sensors (7)     : 0x" + str(format(numbersensors,'02X')) )   # 1 byte Number Sensors
-                    if eyecatcher == "CAPS":
-                        print("\t\tSensorData     :  " ,end="")
-                        for k in xrange(0, sensorlength):   # loop through data in Sensor
-                            if ((k > 0) and ((k % 24) == 0)): # split hex data on lines of 24 bytes
-                                print("\n\t\t               :  " ,end="")
-                            print(str(format(DataList[indexdata+k],'02X'))+" ",end="")
-                        print("");
-                        value = (DataList[indexdata] << 8) + DataList[indexdata+1]
-                        print("\t\t      Current Power Cap: " + '{:6d}'.format(value) + " Watts (0x"+ str(format(value,'04X')) + ")  (output power)")
-                        indexdata += 2
-                        value = (DataList[indexdata] << 8) + DataList[indexdata+1]
-                        print("\t\t          Current Power: " + '{:6d}'.format(value) + " Watts (0x"+ str(format(value,'04X')) + ")")
-                        indexdata += 2
-                        value = (DataList[indexdata] << 8) + DataList[indexdata+1]
-                        print("\t\t            N Power Cap: " + '{:6d}'.format(value) + " Watts (0x"+ str(format(value,'04X')) + ")")
-                        indexdata += 2
-                        value = (DataList[indexdata] << 8) + DataList[indexdata+1]
-                        print("\t\t          Max Power Cap: " + '{:6d}'.format(value) + " Watts (0x"+ str(format(value,'04X')) + ")")
-                        indexdata += 2
-                        value = (DataList[indexdata] << 8) + DataList[indexdata+1]
-                        print("\t\t     Hard Min Power Cap: " + '{:6d}'.format(value) + " Watts (0x"+ str(format(value,'04X')) + ")")
-                        indexdata += 2
-                        value = (DataList[indexdata] << 8) + DataList[indexdata+1]
-                        print("\t\t     Soft Min Power Cap: " + '{:6d}'.format(value) + " Watts (0x"+ str(format(value,'04X')) + ")")
-                        indexdata += 2
-                        value = (DataList[indexdata] << 8) + DataList[indexdata+1]
-                        print("\t\t         User Power Cap: " + '{:6d}'.format(value) + " Watts (0x"+ str(format(value,'04X')) + ")")
-                        indexdata += 2
-                        print("\t\tUser Power Limit Source: " + str(DataList[indexdata]) + "  (1=TMGT/BMC, 2=OPAL)")
-                        indexdata += 1
-                    else:
-                        for i in xrange(0, numbersensors):   # loop through the number of Sensors
-                            print("\t\tSensorData     :  " ,end="")
-                            for k in xrange(0, sensorlength):   # loop through data in Sensor
-                                if ((k > 0) and ((k % 24) == 0)): # split hex data on lines of 24 bytes
-                                    print("\n\t\t               :  " ,end="")
-                                print(str(format(DataList[indexdata],'02X'))+" ",end="")
-                                indexdata += 1
-                            if (eyecatcher == "EXTN"): # print eyecatchers for EXTN data
-                                print("  \"",end="")
-                                tempindex = indexdata - sensorlength
-                                for k in xrange(0, 4):
-                                    print(chr(DataList[tempindex]),end="")
-                                    tempindex += 1
-                                print("\"",end="")
-                            print("")
-                    print("\t##############################################################")
-
-                if (elogId != "00"):
-                    print("\nOCC ERROR LOG WAS RETURNED! (id:0x"+elogId+", addr:0x"+elogAddress+", len=0x"+elogLength+")\n")
-                    ELOG_RC, elog = ReadSRAM(bp+"."+proc+".occ_cmp.oci_space.x 0x"+elogAddress+" 0x"+elogLength, FLG_VRB)
-                    print("OCC SRC: 0x2A"+elog[2][:2].upper()+" / 0x"+elog[4][-2:]+elog[5][:2]+", Severity:0x"+elog[2][-2:]+", Actions:0x"+elog[3][:2]+"\n")
-                    #hexDumpString(elog)
-            else:
-                # Not a poll command (and it has rsp data)
-                if (len(DataList) > 0):
-                    hexDumpInt(DataList);
-            print("\tCheckSum               : 0x" + ReturnCheckSum )
-        else:
-            if (SeqNumExpected == "00") and (CmdNumber == 0):
-                print("\n\n############################################################")
-                print("ERROR: Response buffer may be uninitialized.  Check if OCC was started")
-                RC = 2
+            RC = parse_response(CmdNumber, DataList, FLG_VRB)
+            if (RC != 0) and (CmdNumber == 0):
+                # RC on poll response is the elog ID (can ignore)
+                RC = 0
 
     print("RemoteReturnCode = " + str(RC))
     print("RemoteReturnCode = " + "0x%02X" % RC)
 
+    if (FLG_VRB):
+        print("<<ValidateCmd() returning " + "0x%02X" % RC)
+
     return RC
+
+
+def parse_response(cmd, DataList, FLG_VRB):
+    RC = 0
+
+    if (FLG_VRB):
+        print(">>parse_response(0x"+str(format(cmd,'02X'))+" - "+str(len(DataList))+" bytes)")
+
+    if(cmd == 0):
+        RC = parse_response_POLL(DataList, FLG_VRB)
+    else:
+        # No parse routines for this response
+        hexDumpInt(DataList)
+
+    if (FLG_VRB):
+        print("<<parse_response() returning 0x"+str(format(cmd,'02X')))
+
+    return RC
+
+
+def parse_response_POLL(DataList, FLG_VRB):
+    elog_id = 0
+
+    if (FLG_VRB):
+        print(">>parse_response_POLL("+str(len(DataList))+" bytes)")
+
+    #######################################################################################################
+    statusBits=["Master","Collect Fir Data","","OCC owns PMCR","Simics","","Observation Ready","Active Ready"]
+    values = parseBitField(DataList[0], statusBits)
+    print("\tStatus (1)             : " + "0x%02X" % DataList[0] + " : " + values)
+    #######################################################################################################
+    extStatusBits=["DVFS due to Proc OT","DVFS due to Power","Memory Trottle due to OT","Quick Power Drop","DVFS due to Vdd OT"]
+    values = parseBitField(DataList[1], extStatusBits)
+    print("\tExt Status (2)         : " + "0x%02X" % DataList[1] + " : " + values)
+    #######################################################################################################
+    print("\tOCC Present (3)        : " + "0x%02X" % DataList[2] + " : {0:08b}".format(DataList[2]))
+    #######################################################################################################
+    CurrentString = str(   format(DataList[3],'02X')  )
+    configString = getConfigString(DataList[3]);
+    print("\tConfig Data Needed (4) : 0x" + CurrentString + " : " + configString)
+    #######################################################################################################
+    print("\tCurrent OCC State (5)  : " + "0x%02X" % DataList[4] + " : ", end="")
+    print(getStateString(DataList[4]))
+    #######################################################################################################
+    print("\tCurrent Power Mode (6) : " + "0x%02X" % DataList[5] + " : " ,end="")
+    print(getModeString(DataList[5]))
+    #######################################################################################################
+    if (DataList[6] == 0):
+        values = "Disabled"
+    else:
+        ipsStatusBits=["","","","","","","Active","Enabled"]
+        values = parseBitField(DataList[6], ipsStatusBits)
+    print("\tIdle Power Saver (7)   : " + "0x%02X" % DataList[6] + " : " + values)
+    #######################################################################################################
+    elogId = str(   format(DataList[7],'02X')  )
+    print("\tError Log ID (8)       : 0x" + elogId ,end="")
+    if (elogId == "00"): print("   (no error log)")
+    else: print("")
+    elogAddress = str(format(DataList[8],'02X')) + str(format(DataList[9],'02X')) + str(format(DataList[10],'02X')) + str(format(DataList[11],'02X'))
+    print("\tError Log Addr (9-12)  : 0x" + elogAddress)
+    elogLength = str(format(DataList[12],'02X')) + str(format(DataList[13],'02X'))
+    print("\tError Log Length(13-14): 0x" + elogLength)
+    print("\tError Log Source (15)  : " + "0x%02X" % DataList[14] + " : ", end="")
+    if   (DataList[14] == 0x00): print("OCC 405")
+    elif (DataList[14] == 0x10): print("PGPE")
+    elif (DataList[14] == 0x20): print("SGPE")
+    else                       : print("UNKNOWN")
+    #######################################################################################################
+    if (DataList[15] == 0):
+        values = "None"
+    else:
+        gpuPresentBits=["","","","","","GPU2","GPU1","GPU0"]
+        values = parseBitField(DataList[15], gpuPresentBits)
+    print("\tGPU Configuration (16) : " + "0x%02X" % DataList[15] + " : {0:08b}".format(DataList[15]) + " : " + values)
+    #######################################################################################################
+    print("\t##############################################################")
+    hexstring = ''
+    for i in xrange(16,32):
+        hexstring += str(format(DataList[i],'02X'))
+    print("\tOCC Code Level(17-32)  : " + bytearray.fromhex(hexstring).decode() )
+    hexstring = ''
+    for i in xrange(32,38):
+        hexstring += str(format(DataList[i],'02X'))
+    print("\tSENSOR (33-38)         : " + bytearray.fromhex(hexstring).decode() )
+    print("\t##############################################################")
+    print("\tNum. Sensor Blocks (39): 0x" + str(format(DataList[38],'02X')) )
+    print("\tSensor Version (40)    : 0x" + str(format(DataList[39],'02X')) )
+    print("\t##############################################################")
+    indexdata = 40
+    for j in xrange(0,DataList[38] ):   # Loop through all the Sensor Data Blocks.
+        hexstring = ''
+        for i in xrange(0,4):   # 4 bytes Eye Catcher
+            hexstring += str(format(DataList[indexdata],'02X'))
+            indexdata += 1
+        eyecatcher = bytearray.fromhex(hexstring).decode()
+        print("\tSensor Name (0-3)      : " + eyecatcher )
+        print("\tReserved (4)           : 0x" + str(format(DataList[indexdata],'02X')) )  # 1 byte Reserved
+        indexdata += 1
+        print("\tSensor format (5)      : 0x" + str(format(DataList[indexdata],'02X')) )  # 1 byte sensor format
+        indexdata += 1
+        sensorlength = DataList[indexdata]
+        indexdata += 1
+        print("\tSensor Length (6)      : 0x" + str(format(sensorlength ,'02X')) )  # 1 byte Sensor Length
+        numbersensors = DataList[indexdata]
+        indexdata += 1
+        print("\tNumber Sensors (7)     : 0x" + str(format(numbersensors,'02X')) )   # 1 byte Number Sensors
+        if eyecatcher == "CAPS":
+            print("\t\tSensorData     :  " ,end="")
+            for k in xrange(0, sensorlength):   # loop through data in Sensor
+                if ((k > 0) and ((k % 24) == 0)): # split hex data on lines of 24 bytes
+                    print("\n\t\t               :  " ,end="")
+                print(str(format(DataList[indexdata+k],'02X'))+" ",end="")
+            print("");
+            value = (DataList[indexdata] << 8) + DataList[indexdata+1]
+            print("\t\t      Current Power Cap: " + '{:6d}'.format(value) + " Watts (0x"+ str(format(value,'04X')) + ")  (output power)")
+            indexdata += 2
+            value = (DataList[indexdata] << 8) + DataList[indexdata+1]
+            print("\t\t          Current Power: " + '{:6d}'.format(value) + " Watts (0x"+ str(format(value,'04X')) + ")")
+            indexdata += 2
+            value = (DataList[indexdata] << 8) + DataList[indexdata+1]
+            print("\t\t            N Power Cap: " + '{:6d}'.format(value) + " Watts (0x"+ str(format(value,'04X')) + ")")
+            indexdata += 2
+            value = (DataList[indexdata] << 8) + DataList[indexdata+1]
+            print("\t\t          Max Power Cap: " + '{:6d}'.format(value) + " Watts (0x"+ str(format(value,'04X')) + ")")
+            indexdata += 2
+            value = (DataList[indexdata] << 8) + DataList[indexdata+1]
+            print("\t\t     Hard Min Power Cap: " + '{:6d}'.format(value) + " Watts (0x"+ str(format(value,'04X')) + ")")
+            indexdata += 2
+            value = (DataList[indexdata] << 8) + DataList[indexdata+1]
+            print("\t\t     Soft Min Power Cap: " + '{:6d}'.format(value) + " Watts (0x"+ str(format(value,'04X')) + ")")
+            indexdata += 2
+            value = (DataList[indexdata] << 8) + DataList[indexdata+1]
+            print("\t\t         User Power Cap: " + '{:6d}'.format(value) + " Watts (0x"+ str(format(value,'04X')) + ")")
+            indexdata += 2
+            print("\t\tUser Power Limit Source: " + str(DataList[indexdata]) + "  (1=TMGT/BMC, 2=OPAL)")
+            indexdata += 1
+        else:
+            for i in xrange(0, numbersensors):   # loop through the number of Sensors
+                print("\t\tSensorData     :  " ,end="")
+                for k in xrange(0, sensorlength):   # loop through data in Sensor
+                    if ((k > 0) and ((k % 24) == 0)): # split hex data on lines of 24 bytes
+                        print("\n\t\t               :  " ,end="")
+                    print(str(format(DataList[indexdata],'02X'))+" ",end="")
+                    indexdata += 1
+                if (eyecatcher == "EXTN"): # print eyecatchers for EXTN data
+                    print("  \"",end="")
+                    tempindex = indexdata - sensorlength
+                    for k in xrange(0, 4):
+                        print(chr(DataList[tempindex]),end="")
+                        tempindex += 1
+                    print("\"",end="")
+                print("")
+        print("\t##############################################################")
+
+    if (elogId != "00"):
+        print("\nOCC ERROR LOG WAS RETURNED! (id:0x"+elogId+", addr:0x"+elogAddress+", len=0x"+elogLength+")\n")
+        ELOG_RC, elog = ReadSRAM(bp+"."+proc+".occ_cmp.oci_space.x 0x"+elogAddress+" 0x"+elogLength, FLG_VRB)
+        print("OCC SRC: 0x2A"+elog[2][:2].upper()+" / 0x"+elog[4][-2:]+elog[5][:2]+", Severity:0x"+elog[2][-2:]+", Actions:0x"+elog[3][:2]+"\n")
+        #hexDumpString(elog)
+        print_elog(int(elogId,16), int(elogAddress,16), int(elogLength,16), FLG_VRB)
+        elog_id = int(elogId,16)
+
+    if (FLG_VRB):
+        print("<<parse_response_POLL() returning elog id 0x"+str("02X".format(elog_id)))
+
+    return elog_id
 
 
 #===============================================================================
@@ -1121,48 +1111,28 @@ def ValidateCmd(FLG_VRB, SeqNumExpected, FLG_LAST, flg_quiet):
 # invocation of the 'example_cmd' command.
 #
 #===============================================================================
-def write_cmd_func(flg_Cmd, Cmd_arg, flg_Data, Data_arg, flg_verbose ):
+def write_cmd_func2(flg_Cmd, Cmd_arg, flg_Data, Data_arg, flg_verbose ):
     """write_command function"""
     Parms = 0
     RCSeqNum = 0
 
+    if (flg_verbose):
+        print(">>write_cmd_func2(0x"+str(format(Cmd_arg,'02X'))+" - "+str(len(Data_arg))+" bytes)")
+
     if flg_Cmd: # Parse Command: -C xxx
         Command = '{0:02X}'.format(Cmd_arg)
         AcceptableCMD = {   '00' : 1,     #OCC_CMD_POLL
-                            '01' : 1,     #OCC_CMD_QUERY_FIRMWARE_LEVEL
 
-                            '10' : 1,     #OCC_CMD_GET_ERROR_LOG
-                            '11' : 1,     #OCC_CMD_CONTINUE_ERROR_LOG
                             '12' : 1,     #OCC_CMD_CLEAR_ERROR_LOG
-
                             '20' : 1,     #OCC_CMD_SET_MODE_AND_STATE
                             '21' : 1,     #OCC_CMD_SETUP_CONFIGURATION_DATA
                             '22' : 1,     #OCC_CMD_SET_POWER_LIMIT
-                            '23' : 1,     #OCC_CMD_SET_THERMAL_THROTTLE_MODE
-                            '24' : 1,     #OCC_CMD_SET_PEX_REGISTER
                             '25' : 1,     #OCC_CMD_RESET_PREP
-                            '26' : 1,     #OCC_CMD_SNAPSHOT_SYNC
-
-                            '30' : 1,     #OCC_CMD_PEX_PASS_THROUGH
-                            '31' : 1,     #OCC_CMD_READ_STATUS_REGISTER
-                            '32' : 1,     #OCC_CMD_GET_THROTTLE_VALUES
-                            '33' : 1,     #OCC_CMD_GET_CPU_TEMPERATURES
-                            '34' : 1,     #OCC_CMD_GET_COOLING_REQUEST
-                            '35' : 1,     #OCC_CMD_GET_OCC_SNAPSHOT
-
+                            '30' : 1,     #OCC_CMD_SEND_AMBIENT
                             '40' : 1,     #OCC_CMD_DEBUG_PASS_THROUGH
                             '41' : 1,     #OCC_CMD_AME_PASS_THROUGH
                             '42' : 1,     #OCC_CMD_GET_FIELD_DEBUG_DATA
-
-                            '50' : 1,     #OCC_CMD_VRM_INTERFACE_TEST
-                            '51' : 1,     #OCC_CMD_PROCESSOR_INTERFACE_TEST
-                            '52' : 1,     #OCC_CMD_SET_PROCESSOR_CLOCK_FREQ
                             '53' : 1,     #OCC_CMD_MFG_TEST
-                            '54' : 1,     #OCC_CMD_GET_FOM_DATA
-
-                            '60' : 1,     #OCC_CMD_TUNABLE_PARAMETERS
-
-                            #'FE' : 0,     #OCC_CMD_INTERNAL_SERVER_CMD
                         }
         if( AcceptableCMD.get(Command, "nothing") == 0 ):
             helper("Unsupported Command: -C " + Command )
@@ -1326,10 +1296,59 @@ def write_cmd_func(flg_Cmd, Cmd_arg, flg_Data, Data_arg, flg_verbose ):
             #hexDumpByteString(ByteList)
             ReadPrint_CMD(flg_verbose, 4+ByteCount+2)
 
+    if (flg_verbose):
+        print(">>write_cmd_func2() returning seq 0x"+str('{0:02X}'.format(RCSeqNum)))
+
+    return RCSeqNum
+
+
+# Calls write_cmd_func2() and returns string/message instead of the sequence number
+def write_cmd_func(flg_Cmd, Cmd_arg, flg_Data, Data_arg, flg_verbose ):
+    RCSeqNum = 0
+
+    if (flg_verbose):
+        print(">>write_cmd_func(0x"+str('{0:02X}'.format(Cmd_arg))+" - "+str(len(Data_arg))+" bytes)")
+
+    RCSeqNum = write_cmd_func2(flg_Cmd, Cmd_arg, flg_Data, Data_arg, flg_verbose)
+    #print("write_cmd_func() return Sequence Number("+str(RCSeqNum)+")")
+    #print("write_cmd_func("+str(Cmd_arg)+","+Data_arg+") return Sequence Number(0x%s)" % str('{0:02X}'.format(RCSeqNum)))
 
     return cli.command_return( message = "return Sequence Number(%s)" % str('{0:02X}'.format(RCSeqNum)),
                                value = RCSeqNum)
 
+
+#===============================================================================
+#
+# wait_for_resp
+#
+# Wait for response to specified cmd with sequence number.  Expected response
+# status can also be specified.
+#
+#===============================================================================
+def wait_for_resp(cmd, seq_num, expected_rc):
+    rc = 0
+    retry = 5
+
+    print("Waiting for response to 0x"+str('{0:02X}'.format(cmd))+
+            " command... (sequence 0x"+str('{0:02X}'.format(seq_num))+
+            " and up to "+str(retry)+" retries)")
+    complete = False;
+    while not complete:
+
+        rc = rValidate_cmd_func("-C", cmd, "-D", seq_num, "", "", "")
+        print("rValidate_cmd_func() returned "+str(rc))
+
+        if rc == 0:
+            complete = True
+        else:
+            retry = retry - 1
+            print("--> retries left "+str(retry))
+            time.sleep(1)
+
+        if retry == 0:
+            complete = True
+
+    return rc
 
 
 #===============================================================================
@@ -1342,15 +1361,100 @@ def write_cmd_func(flg_Cmd, Cmd_arg, flg_Data, Data_arg, flg_verbose ):
 #===============================================================================
 def read_cmd_func(flg_Cmd, Cmd_arg, flg_verbose ):
     """read_command function"""
-    if flg_Cmd:
-        if( '{0:02X}'.format(Cmd_arg) == '00'):
-            ReadPrint_POLL(flg_verbose, '00')
-        elif( '{0:02X}'.format(Cmd_arg) == '53'):
-            ReadPrint_OCCsensor(flg_verbose, '00')
-        else:
-            ReadPrint_OCCreturn(flg_verbose, '00')
+    RC = 0
+    parsed = 0
 
-    return
+    if (flg_verbose):
+        print(">>read_cmd_func(0x"+'{0:02X}'.format(Cmd_arg)+")")
+
+    # Read response
+    sramRC, mylist = ReadSRAM(bp+"."+proc+".occ_cmp.oci_space.x "+G_occsram_rsp_buffer+" "+str(G_occ_rsp_buffer_size), flg_verbose)
+
+    SeqNumberRcvd = str( format( int(mylist[0][:2], 16),'02X') )    #seq number
+    CmdNumber=int(mylist[0][-2:],16)
+    RtnCode = int(mylist[1][:2],16); # Convert to integer
+    DataLength = int(mylist[1][-2:] + mylist[2][:2],16)
+    print("read_cmd_func: response seq num:0x"+SeqNumberRcvd+", Cmd=0x%02X"%CmdNumber+", Length=0x%04X" % DataLength )
+    # Calculate the response checksum (for validation)
+    CheckSum = 0
+    CheckSum += int( SeqNumberRcvd, 16 )
+    CheckSum += CmdNumber
+    CheckSum += RtnCode
+    #CheckSum += DataLength
+    CheckSum += int( mylist[1][-2:], 16)
+    CheckSum += int( mylist[2][:2], 16)
+
+    DataList=[]
+    if(DataLength != 0):
+        LoopCount = 5
+        for i in xrange(LoopCount, DataLength+LoopCount):
+            LoopCount = i
+            #print("THis is the counter loop : " + str(LoopCount))
+            if(i%2==0):
+                #print("even number ->" + str( i ) + " / " + str( i/2 ) + " -2: " + mylist[ i/2 ][:2] )
+                    DataList.append( int(mylist[ i/2 ][:2], 16 ))
+                    CheckSum += int( mylist[ i/2 ][:2], 16 )
+            else:
+                #print("odd number ->" + str(i) + " / " + str( i/2 ) + " :2 " + mylist[ i/2 ][-2:] )
+                    DataList.append( int(mylist[ i/2 ][-2:], 16 ))
+                    CheckSum += int( mylist[ i/2 ][-2:], 16 )
+
+        LoopCount += 1                      #srb01a
+        if( (LoopCount)%2==0):              #srb01r LoopCount+1
+            #print("even number ->" + str( LoopCount ) + " / " + str( LoopCount/2 ) + " :2 " + mylist[ LoopCount/2 ][:2] )
+            ReturnCheckSum = mylist[LoopCount/2][:2] + mylist[LoopCount/2][-2:]
+        else:
+            #print("odd number ->" + str( LoopCount ) + " / " + str( LoopCount/2 ) + " -2: " + mylist[ LoopCount/2 ][-2:] )
+            ReturnCheckSum = mylist[LoopCount/2][-2:] + mylist[(LoopCount/2)+1][:2]
+    else:
+        ReturnCheckSum = mylist[2][-2:] + mylist[3][:2]
+    # Truncate checksum to 2 bytes
+    CheckSum = CheckSum & int("FFFF",16)
+    if( CheckSum != int(ReturnCheckSum, 16) ):
+        print("ERROR: read_cmd_func: CheckSum calculated (" + str(hex(CheckSum)) + ") != CheckSum from SRAM (" + str(hex(int(ReturnCheckSum, 16) ) ) + ")")
+
+    # TODO: ADD MORE ERROR CHECKING (Seq/cmd/etc)
+
+    cmdString=getCmdString(CmdNumber)
+    rcString=getRcString(RtnCode)
+    print("======================================================")
+    print("\tSeq Num                : 0x" + SeqNumberRcvd )
+    print("\tCommand                : " + "0x%02X" % CmdNumber + " : " + cmdString)
+    print("\tReturn Status          : " + "0x%02X" % RtnCode + " : " + rcString)
+    print("\tData Length            : " + "0x%04X" % DataLength )
+    print("")
+
+
+    if flg_Cmd:
+        if (len(DataList) > 0):
+            if (RtnCode == 0xE0):
+                # Parse OCC Panic
+                hexDumpPanic(mylist)
+            elif (RtnCode >= 0xE0) and (RtnCode <= 0xEF):
+                # Dump exception buffer
+                print("\n**** OCC EXCEPTION ENCOUNTERED (read_cmd_func) ****");
+                hexDumpString(mylist)
+            elif (RtnCode != 0):
+                print("\tElog ID                : " + "0x%02X" % DataList[0])
+                parsed = 1
+            else:
+                if Cmd_arg == 0x00:
+                    RC = parse_response_POLL(DataList, flg_verbose)
+                    parsed = 1
+                elif Cmd_arg == 0x40:
+                    ReadPrint_AMEsensor(flg_verbose, '00')
+                    parsed = 1
+                elif Cmd_arg == 0x53:
+                    ReadPrint_OCCsensor(flg_verbose, '00')
+                    parsed = 1
+                else:
+                    RC = parse_response(Cmd_arg, DataList, flg_verbose)
+                    #ReadPrint_OCCreturn(flg_verbose, '00')
+
+    if (flg_verbose):
+        print("<<read_cmd_func() returning rc=0x%02X" % RC+", parsed="+str(parsed))
+
+    return RC
 
 
 #===============================================================================
@@ -1372,6 +1476,81 @@ def rValidate_cmd_func(flg_Cmd, Cmd_arg, flg_Data, Data_arg, flg_verbose, flg_la
 
     return RC
 
+
+
+#===============================================================================
+#===============================================================================
+def print_elog(err_id, err_addr, err_len, flg_verbose):
+    RC = 0
+
+    if (err_id != 0) and (err_addr != 0) and (err_len != 0):
+        print("print_elog: Reading elog 0x"+str('{0:02X}'.format(err_id))+
+                " at 0x"+str('{0:08X}'.format(err_addr))+
+                " (0x"+str('{0:04X}'.format(err_len))+" bytes)")
+        sramRC, mylist = ReadSRAM("backplane0."+proc+".occ_cmp.oci_space.x "+str(err_addr)+" "+str(err_len), flg_verbose)
+        print("read RC:"+str(sramRC))
+        indent="        "
+        print(indent+"OCC Error Log ID 0x"+mylist[1][-2:])
+        print(indent+"    Checksum: 0x"+mylist[0])
+        print(indent+"     Version: 0x"+mylist[1][:2])
+        print(indent+"          ID: 0x"+mylist[1][-2:])
+        print(indent+"          RC: 0x2A"+mylist[2][:2].upper())
+        value = int(mylist[2][-2:],16)
+        print(indent+"    Severity: 0x"+str('{0:02X}'.format(value))+"  "+getSevString(value))
+        actionBits=["Reset Required", "Safe Required", "WOF Reset", "Force Error Post", "Mfg Error", "","","" ]
+        value = int(mylist[3][:2],16)
+        print(indent+"     Actions: 0x"+str('{0:02X}'.format(value))+"  "+parseBitField(value, actionBits))
+        print(indent+"Max Callouts: 0x"+mylist[3][-2:])
+        print(indent+" Extended RC: 0x"+mylist[4].upper())
+        print(indent+"Max Log Size: 0x"+mylist[5])
+        print(indent+"    Reserved: 0x"+mylist[6]+mylist[7])
+        offset = 8
+        for ii in range(0, 6):
+            print(indent+"    Callout: 0x"+mylist[offset]+mylist[offset+1]+mylist[offset+2]+mylist[offset+3]+
+                    ", 0x"+mylist[offset+4][:2]+", 0x"+mylist[offset+4][-2:]+
+                    ", 0x"+mylist[offset+5]+mylist[offset+6]+mylist[offset+7])
+            offset = offset + 8 # 16 bytes per callout
+        # User Details Header
+        print(indent+"User Details:")
+        print(indent+"     Version: 0x"+mylist[offset][:2])
+        print(indent+"    Reserved: 0x"+mylist[offset][-2:])
+        print(indent+"   Module ID: 0x"+mylist[offset+1])
+        print(indent+"FClipHistory: 0x"+mylist[offset+2]+mylist[offset+3])
+        print(indent+"   Timestamp: 0x"+mylist[offset+4]+mylist[offset+5]+mylist[offset+6]+mylist[offset+7])
+        print(indent+"      OCC ID: "+str(int(mylist[offset+8][:2],16)))
+        value = int(mylist[offset+8][-2:],16)
+        print(indent+"    OCC Role: 0x"+str('{0:02X}'.format(value))+"  "+getRoleString(value))
+        value = int(mylist[offset+9][:2],16)
+        print(indent+"       State: 0x"+str('{0:02X}'.format(value))+"  "+getStateString(value))
+        print(indent+"   Committed: 0x"+mylist[offset+9][-2:])
+        print(indent+"   UserData1: 0x"+mylist[offset+10]+mylist[offset+11])
+        print(indent+"   UserData2: 0x"+mylist[offset+12]+mylist[offset+13])
+        print(indent+"   UserData3: 0x"+mylist[offset+14]+mylist[offset+15])
+        totlength_hw=int(mylist[offset+16],16)/2
+        print(indent+"Tot Log Size: 0x"+mylist[offset+16])
+        udlength_hw=int(mylist[offset+17],16)/2
+        print(indent+"UsrDtls Size: 0x"+mylist[offset+17])
+        offset = offset + 18
+        # User Details
+        index=1
+        while offset+2 < totlength_hw:
+            print("  User Detail Block "+str(index)+":")
+            print(indent+"     Version: 0x"+mylist[offset][:2])
+            value = int(mylist[offset][-2:],16)
+            print(indent+"        Type: 0x"+str('{0:02X}'.format(value))+"  "+getUDTypeString(value))
+            length=int(mylist[offset+1],16)
+            print(indent+"      Length: 0x"+str('{0:04X}'.format(length)))
+            index=index+1
+            hexDumpStringTrunc(mylist[offset+2:], length)
+            offset = offset + ((4+length)/2) # half words
+
+    else:
+        print("ERROR: Invalid elog data (id=0x"+str('{0:02X}'.format(err_id))+", 0x"+
+                str('{0:08X}'.format(err_addr))+", 0x"+str('{0:04X}'.format(err_len)))
+
+    print("")
+
+    return RC
 
 
 #===============================================================================
@@ -1745,6 +1924,32 @@ def dump_occ_machine_state(flg_verbose):
     return RC
 
 
+def poll_and_clear_elog(flg_verbose):
+    """Poll and clear OCC elog"""
+    elog_id = 0
+    OCC = 0
+    ReturnData = []
+    global G_run_time
+    global LastCmd_SeqNum
+
+    # Send POLL command
+    print("Sending POLL command to OCC"+str(OCC))
+    seq_num=write_cmd_func2("-C", 0x00, "-D", "20", flg_verbose)
+    print("Seq="+str(seq_num))
+    #seq_num=0 # Ignore seq checking
+    # Let cmd run
+    cli.quiet_run_command("run 5 ms", output_mode = output_modes.formatted_text)
+
+    elog_id = read_cmd_func(1, 0x00, flg_verbose)
+
+    if elog_id != 0:
+        print("poll_and_clear_elog: Clearing ELOG ID 0x%02X" % elog_id)
+        seq_num=write_cmd_func2("-C", 0x12, "-D", "01%02X0000" % elog_id, flg_verbose)
+        cli.quiet_run_command("run 5 ms", output_mode = output_modes.formatted_text)
+        elog_id = read_cmd_func(1, 0x12, flg_verbose)
+    else:
+        print("\npoll_and_clear_elog: No errors found")
+
 
 def sensor_list(flg_verbose):
     """OCC Sensors"""
@@ -1809,7 +2014,9 @@ def send_occ_cmd(occ_cmd, occ_data, flg_verbose):
             # let simics run (if not already)
             cli.quiet_run_command("run "+str(timeout)+" s", output_mode = output_modes.formatted_text)
 
-        RC = rValidate_cmd_func("-C", occ_cmd, "-D", LastCmd_SeqNum, flg_verbose, "", "")
+        read_cmd_func(1, occ_cmd, flg_verbose)
+        RC = 0
+        #RC = rValidate_cmd_func("-C", occ_cmd, "-D", LastCmd_SeqNum, flg_verbose, "", "")
         if RC != 0:
             if RC == 0xFD:
                 retries = retries - 1
@@ -1818,6 +2025,7 @@ def send_occ_cmd(occ_cmd, occ_data, flg_verbose):
                 retries = 0
         else:
             # Command was successful, parse the response if supported
+            #read_cmd_func(1, occ_cmd, flg_verbose)
             retries = 0
         if retries > 0:
             print("TIMEOUT: Re-checking RSP buffer (retries="+str(retries)+")")
@@ -1834,6 +2042,26 @@ def send_occ_cmd(occ_cmd, occ_data, flg_verbose):
 #
 #===============================================================================
 
+#===============================================================================
+#
+# Dump the OCC machine state information (registers, etc)
+#
+#===============================================================================
+new_command("occhelp",         # The name of the command - required
+            helper,           # The function to call when the command is issued - required
+            args = [            # List of arguments to the command - required
+                arg(str_t, "", "?", None)
+                   ],
+        alias = "occh",     # Alias for the command name
+        short = "Display OCC Setup script help", # Short command description
+        type = ["ibm-util"],    # Command categories
+        # Command documentation, supports simple HTML like markup
+        doc =
+"""
+<b>Display OCC Setup script help including available commands<br>
+
+"""
+)
 #===============================================================================
 #
 # Write a command to the OCC command buffer (send command to the OCC)
@@ -1977,28 +2205,28 @@ new_command("OCCtrace",          # The name of the command - required
                     arg(str_t,  "PREFIX_arg", "?", None), # Optional Parameter
                    ],
         alias = "occt",           # Alias for the command name
-        short = "Dump OCC trace", # Short command description
+        short = "Display OCC trace", # Short command description
         type = ["ibm-util"],      # Command categories
         # Command documentation, supports simple HTML like markup
         doc =
 """
-<b>OCCtrace</b> string [-v] [-P TRACEPREFIX] - Display OCC trace<br>
+<b>Display OCC trace<br>
 
 <b>string</b> &nbsp; [optional] one of<br>
-         Directory name containing occStringFile, or <br>
-         Filename of OCC string file, or<br>
-         Github base directory containing OCC code<br>
+&nbsp;&nbsp;&nbsp;&nbsp; - Directory name containing occStringFile, or <br>
+&nbsp;&nbsp;&nbsp;&nbsp; - Filename of OCC string file, or<br>
+&nbsp;&nbsp;&nbsp;&nbsp; - Github base directory containing OCC code<br>
 
-<b>-D</b> &nbsp; [optional]
-<br>&nbsp;&nbsp;- Save traces to specified directory: TARGET_DIR<br>
-&nbsp;&nbsp;  If specified, then "string" must also be specified<br>
+<b>-D</b> &nbsp; [optional]<br>
+&nbsp;&nbsp;&nbsp;&nbsp; Save traces to specified directory: TARGET_DIR<br>
+&nbsp;&nbsp;&nbsp;&nbsp; If specified, then "string" must also be specified<br>
 
-<b>-P</b> &nbsp; [optional]
-<br>&nbsp;&nbsp;- Save trace with specified prefix (TRACEPREFIX_occMERG.txt)<br>
-&nbsp;&nbsp;  If specified, then -D must also be specified<br>
+<b>-P</b> &nbsp; [optional]<br>
+&nbsp;&nbsp;&nbsp;&nbsp; Save trace with specified prefix (TRACEPREFIX_occMERG.txt)<br>
+&nbsp;&nbsp;&nbsp;&nbsp; If specified, then -D must also be specified<br>
 
-<b>-v</b> &nbsp; [optional]
-<br>&nbsp;&nbsp;- verbose mode flag<br>
+<b>-v</b> &nbsp; [optional]<br>
+&nbsp;&nbsp;&nbsp;&nbsp; verbose mode flag<br>
 
 """
 )
@@ -2015,19 +2243,19 @@ new_command("PGPEtrace",         # The name of the command - required
                     arg(flag_t, "-v" ),
                    ],
         alias = "pgpet",          # Alias for the command name
-        short = "Dump PGPE trace", # Short command description
+        short = "Display PGPE trace", # Short command description
         type = ["ibm-util"],      # Command categories
         # Command documentation, supports simple HTML like markup
         doc =
 """
-<b>PGPEtrace</b> string [-v] - Display PGPE trace<br>
+Display PGPE trace<br>
 
 <b>string</b> &nbsp; [optional] one of<br>
-         Directory name containing PGPE trexStringFile, or <br>
-         Filename of PGPE string file<br>
+&nbsp;&nbsp;&nbsp;&nbsp; - Directory name containing PGPE trexStringFile, or <br>
+&nbsp;&nbsp;&nbsp;&nbsp; - Filename of PGPE string file<br>
 
-<b>-v</b> &nbsp; [optional]
-<br>&nbsp;&nbsp;- verbose mode flag<br>
+<b>-v</b> &nbsp; [optional]<br>
+&nbsp;&nbsp;&nbsp;&nbsp; verbose mode flag<br>
 
 """
 )
@@ -2048,10 +2276,10 @@ new_command("OCCstate",         # The name of the command - required
         # Command documentation, supports simple HTML like markup
         doc =
 """
-<b>OCCstate</b> [-v] - Display OCC machine state<br>
+<b>Display OCC machine state data<br>
 
-<b>-v</b> &nbsp; [optional]
-<br>&nbsp;&nbsp;- verbose mode flag<br>
+<b>-v</b> &nbsp; [optional]<br>
+&nbsp;&nbsp;&nbsp;&nbsp; verbose mode flag<br>
 
 """
 )
@@ -2072,11 +2300,10 @@ new_command("OCCsensorlist",    # The name of the command - required
         # Command documentation, supports simple HTML like markup
         doc =
 """
-<b>OCCstate</b> [-v] - Display OCC sensor list<br>
+<b>Display OCC sensor list<br>
 
-<b>-v</b> &nbsp; [optional]
-<br>&nbsp;&nbsp;- verbose mode flag<br>
-
+<b>-v</b> &nbsp; [optional]<br>
+&nbsp;&nbsp;&nbsp;&nbsp; verbose mode flag<br>
 """
 )
 
@@ -2093,19 +2320,45 @@ new_command("occcmd",       # The name of the command - required
                     arg(flag_t, "-v" ),
                    ],
         alias = "ocmd",     # Alias for the command name
-        short = "Send OCC Command", # Short command description
+        short = "Send OCC command and read response", # Short command description
         type = ["ibm-util"],    # Command categories
         # Command documentation, supports simple HTML like markup
         doc =
 """
-<b>occcmd</b> occ_cmd cmd_data_string [options] - Send command to OCC<br>
+Send command to OCC and read/parse the response<br>
 
-<b>occ_cmd</b> OCC command to send (integer)<br>
-<b>cmd_data_string</b> Command data to send (hexstring)<br>
+<b>occ_command</b>&nbsp;&nbsp; OCC command to send (integer)<br>
 
-<b>-v</b> &nbsp; [optional]
-<br>&nbsp;&nbsp;- verbose mode flag<br>
+<b>command_data_string</b>&nbsp;&nbsp; Command data to send (hexstring)<br>
 
+<b>-v</b> &nbsp; [optional]<br>
+&nbsp;&nbsp;&nbsp;&nbsp; verbose mode flag<br>
+
+Example: <b>occcmd 0x00 "20"</b>  (send a POLL command)
+"""
+)
+
+
+#===============================================================================
+#
+# Send specified config data to the OCC
+#
+#===============================================================================
+new_command("occerr",           # The name of the command - required
+            poll_and_clear_elog, # The function to call when the command is issued - required
+            args = [            # List of arguments to the command - required
+                    arg(flag_t, "-v" ),
+                   ],
+        alias = "occe",     # Alias for the command name
+        short = "Read and clear one OCC elog", # Short command description
+        type = ["ibm-util"],    # Command categories
+        # Command documentation, supports simple HTML like markup
+        doc =
+"""
+Send Poll command to OCC and collect/clear one error log if found<br>
+
+<b>-v</b> &nbsp; [optional]<br>
+&nbsp;&nbsp;&nbsp;&nbsp; verbose mode flag<br>
 """
 )
 
@@ -2119,11 +2372,15 @@ new_command("occcmd",       # The name of the command - required
 #===============================================================================
 # Prep simics to run OCC code
 #===============================================================================
-def occ_init(code_dir, flg_pgpe, flg_verbose):
+def occ_init(code_dir, flg_nopgpe, flg_verbose):
     """Initialization to get OCC ready to run"""
     RC = 0
     OCC = 0
     ReturnData = []
+    global L_pgpe_enabled
+
+    if flg_nopgpe:
+        L_pgpe_enabled = 0
 
     # Disable Mambo thread(s) - required for p10_standalone
     command = "foreach $proc in (get-object-list -all type = ppc_power10_mambo_core) {$proc.disable; continue-loop}"
@@ -2190,7 +2447,7 @@ def occ_init(code_dir, flg_pgpe, flg_verbose):
     print("==> " + command)
     cli.run_command(command)
 
-    if flg_pgpe:
+    if L_pgpe_enabled:
         print("\n==> Loading GPE2 (PGPE) binary: " + occ_gpe2_binary_to_load)
         cli.run_command("!ls -l "+occ_gpe2_binary_to_load)
         command = bp+"."+proc+".occ_cmp.oci_space.load-binary -v "+occ_gpe2_binary_to_load
@@ -2233,7 +2490,7 @@ def occ_init(code_dir, flg_pgpe, flg_verbose):
     cli.run_command(bp+"."+proc+".occ_cmp.oci_space.write 0xc0010088 0x4000000000000000 8 -b")
     cli.run_command(bp+"."+proc+".occ_cmp.oci_space.write 0xc0010088 0x2000000000000000 8 -b")
 
-    if flg_pgpe:
+    if L_pgpe_enabled:
         print("\n==> Start GPE2 (Hard Reset, Toggle XSR, Resume)")
         cli.run_command(bp+"."+proc+".occ_cmp.oci_space.write 0xc0020088 0x6000000000000000 8 -b") # GPE2
         cli.run_command(bp+"."+proc+".occ_cmp.oci_space.write 0xc0020088 0x4000000000000000 8 -b")
@@ -2385,7 +2642,7 @@ def occ_init(code_dir, flg_pgpe, flg_verbose):
     print("==> " + command)
     cli.run_command(command)
 
-    if flg_pgpe:
+    if L_pgpe_enabled:
         print("==> ENABLING 32 CORES...")
         command = bp+"."+proc+".occ_cmp.ocb_agen->OCB_AGEN_CCSR = 0xFFFFFFFF00000000" # Set CCSR
         print("==> " + command)
@@ -2394,7 +2651,7 @@ def occ_init(code_dir, flg_pgpe, flg_verbose):
         print("==> " + command)
         cli.run_command(command)
 
-    if (G_bypass_bootloader != 1) and flg_pgpe:
+    if (G_bypass_bootloader != 1) and L_pgpe_enabled:
         # Allow bootloader to run a while (sram test/copy code images)
         cli.quiet_run_command("run 40 ms", output_mode = output_modes.formatted_text)
 
@@ -2402,7 +2659,10 @@ def occ_init(code_dir, flg_pgpe, flg_verbose):
 
 
 def wait_for_checkpoint(flg_verbose):
+    global G_run_time
     keep_waiting = True
+    if flg_verbose:
+        print("<<wait_for_checkpoint()")
     while keep_waiting:
         sramRC, mylist = ReadSRAM(bp+"."+proc+".occ_cmp.oci_space.x "+G_occsram_rsp_buffer+" 16 " , flg_verbose)
         SeqNum = int( mylist[0][:2], 16 )
@@ -2415,10 +2675,10 @@ def wait_for_checkpoint(flg_verbose):
             keep_waiting = False
         if RtnCode == 0xE1:
             if (CheckPoint == 0x0EFF):
-                print("occ_to_active: Initialization Checkpoint 0x%04X (COMPLETE)" % CheckPoint + " (data length="+str(DataLength)+")")
+                print("wait_for_checkpoint: Initialization Checkpoint 0x%04X (COMPLETE)" % CheckPoint + " (data length="+str(DataLength)+")")
                 keep_waiting = False
             else:
-                print("occ_to_active: Initialization Checkpoint 0x%04X" % CheckPoint + " (data length="+str(DataLength)+")")
+                print("wait_for_checkpoint: Initialization Checkpoint 0x%04X" % CheckPoint + " (data length="+str(DataLength)+")")
         elif RtnCode != 0x00:
             print("ERROR: UNEXPECTED STATUS ("+str(RtnCode)+")");
             keep_waiting = False
@@ -2431,7 +2691,7 @@ def wait_for_checkpoint(flg_verbose):
 #===============================================================================
 # Wait for OCCs to complete init and then send one poll command
 #===============================================================================
-def occ_to_ckpt(flg_pgpe, flg_run, flg_verbose):
+def occ_to_ckpt(flg_nopgpe, flg_run, flg_verbose):
     """Wait for checkpoint and send Poll command"""
     RC = 0
     OCC = 0
@@ -2440,8 +2700,8 @@ def occ_to_ckpt(flg_pgpe, flg_run, flg_verbose):
     global LastCmd_SeqNum
     global L_pgpe_enabled
 
-    if flg_pgpe:
-        L_pgpe_enabled = 1
+    if flg_nopgpe:
+        L_pgpe_enabled = 0
 
     print("#### WAIT FOR OCC CHECKPOINT #############################################################################");
     if flg_run:
@@ -2457,7 +2717,7 @@ def occ_to_ckpt(flg_pgpe, flg_run, flg_verbose):
 #===============================================================================
 # Move OCCs to Active state (must be run after occ_init)
 #===============================================================================
-def occ_to_active(flg_pgpe, flg_run, flg_verbose):
+def occ_to_active(flg_nopgpe, flg_run, flg_verbose):
     """Config Required for Active State"""
     RC = 0
     OCC = 0
@@ -2466,13 +2726,17 @@ def occ_to_active(flg_pgpe, flg_run, flg_verbose):
     global LastCmd_SeqNum
     global L_pgpe_enabled
 
-    if flg_pgpe:
-        L_pgpe_enabled = 1
+    if flg_nopgpe:
+        L_pgpe_enabled = 0
+
+    if flg_verbose:
+        print("<<occ_to_active() PGPE="+str(L_pgpe_enabled))
 
     print("#### WAIT FOR OCC CHECKPOINT #############################################################################");
     if flg_run:
         # Simics is already running (do not issue any manual run commands)
         G_run_time = 0
+
     wait_for_checkpoint(flg_verbose);
 
     print("#### SEND POLL COMMAND ###################################################################################");
@@ -2587,7 +2851,7 @@ def occ_to_active(flg_pgpe, flg_run, flg_verbose):
     print("\n#### VALIDATE POLL DATA ##################################################################################");
     RC = send_occ_cmd(0x00, "20", flg_verbose);
 
-    print("\n#### SET NOMINAL MODE ####################################################################################");
+    print("\n#### SET DISABLED/NOMINAL MODE ###########################################################################");
     RC = send_occ_cmd(0x20, "300001000000", flg_verbose);
 
     print("\n#### VALIDATE POLL DATA ##################################################################################");
@@ -2613,7 +2877,7 @@ new_command("occinit",          # The name of the command - required
             occ_init,           # The function to call when the command is issued - required
             args = [            # List of arguments to the command - required
                     arg(str_t,  "dir", "?", None),
-                    arg(flag_t, "-p" ),
+                    arg(flag_t, "-nopgpe" ),
                     arg(flag_t, "-v" ),
                    ],
         alias = "oinit",     # Alias for the command name
@@ -2622,16 +2886,16 @@ new_command("occinit",          # The name of the command - required
         # Command documentation, supports simple HTML like markup
         doc =
 """
-<b>occinit</b> [dir] [-p] [-v] - Prep simics to run OCC code<br>
+Prep simics to run OCC code (with PGPE by default)<br>
 
-<b>dir</b> &nbsp; Directory name containing code images<br>
+<b>dir</b> &nbsp; [optional]
+<br>&nbsp;&nbsp;&nbsp;&nbsp;Directory name containing code images<br>
 
-<b>-p</b> &nbsp; [optional]
-<br>&nbsp;&nbsp;- also enable PGPE<br>
+<b>-nopgpe</b> &nbsp; [optional]
+<br>&nbsp;&nbsp;&nbsp;&nbsp;do NOT enable PGPE<br>
 
 <b>-v</b> &nbsp; [optional]
-<br>&nbsp;&nbsp;- verbose mode flag<br>
-
+<br>&nbsp;&nbsp;&nbsp;&nbsp;verbose mode flag<br>
 """
 )
 
@@ -2643,7 +2907,7 @@ new_command("occinit",          # The name of the command - required
 new_command("occ2ckpt",         # The name of the command - required
             occ_to_ckpt,        # The function to call when the command is issued - required
             args = [            # List of arguments to the command - required
-                    arg(flag_t, "-p" ),
+                    arg(flag_t, "-nopgpe" ),
                     arg(flag_t, "-r" ),
                     arg(flag_t, "-v" ),
                    ],
@@ -2653,16 +2917,16 @@ new_command("occ2ckpt",         # The name of the command - required
         # Command documentation, supports simple HTML like markup
         doc =
 """
-<b>occ2ckpt</b> [-r] [-v] - Wait for OCC init complete checkpoing and send poll<br>
+Wait for OCC init complete checkpoint and send poll command<br>
 
-<b>-p</b> &nbsp; [optional]
-<br>&nbsp;&nbsp;- also enable PGPE<br>
+<b>-nopgpe</b> &nbsp; [optional]
+<br>&nbsp;&nbsp;&nbsp;&nbsp;do NOT enable PGPE<br>
 
 <b>-r</b> &nbsp; [optional]
-<br>&nbsp;&nbsp;- simics is already running (do not run between commands)<br>
+<br>&nbsp;&nbsp;&nbsp;&nbsp;simics is already running (do not run between commands)<br>
 
 <b>-v</b> &nbsp; [optional]
-<br>&nbsp;&nbsp;- verbose mode flag<br>
+<br>&nbsp;&nbsp;&nbsp;&nbsp;verbose mode flag<br>
 
 """
 )
@@ -2676,26 +2940,26 @@ new_command("occ2ckpt",         # The name of the command - required
 new_command("occ2act",          # The name of the command - required
             occ_to_active,      # The function to call when the command is issued - required
             args = [            # List of arguments to the command - required
-                    arg(flag_t, "-p" ),
+                    arg(flag_t, "-nopgpe" ),
                     arg(flag_t, "-r" ),
                     arg(flag_t, "-v" ),
                    ],
         alias = "o2a",     # Alias for the command name
-        short = "Send Config required for Obs state", # Short command description
+        short = "Send required config and attempt to put OCC in Active state", # Short command description
         type = ["ibm-util"],    # Command categories
         # Command documentation, supports simple HTML like markup
         doc =
 """
-<b>occ2act</b> [-r] [-v] - Send config required to reach Active state<br>
+Send required config and attempt to put OCC in Active state<br>
 
-<b>-p</b> &nbsp; [optional]
-<br>&nbsp;&nbsp;- also enable PGPE<br>
+<b>-nopgpe</b> &nbsp; [optional]
+<br>&nbsp;&nbsp;&nbsp;&nbsp;do NOT enable PGPE<br>
 
 <b>-r</b> &nbsp; [optional]
-<br>&nbsp;&nbsp;- simics is already running (do not run between commands)<br>
+<br>&nbsp;&nbsp;&nbsp;&nbsp;simics is already running (do not run between commands)<br>
 
 <b>-v</b> &nbsp; [optional]
-<br>&nbsp;&nbsp;- verbose mode flag<br>
+<br>&nbsp;&nbsp;&nbsp;&nbsp;verbose mode flag<br>
 
 """
 )
