@@ -1071,6 +1071,53 @@ def parse_response_POLL(DataList, FLG_VRB):
             indexdata += 2
             print("\t\tUser Power Limit Source: " + str(DataList[indexdata]) + "  (1=TMGT/BMC, 2=OPAL)")
             indexdata += 1
+        elif eyecatcher == "EXTN":
+            for i in xrange(0, numbersensors):   # loop through the number of Sensors
+                sensorstart=indexdata
+                # Dump raw sensor data first
+                print("\t\tSensorData     :  " ,end="")
+                for k in xrange(0, sensorlength):   # loop through data in Sensor
+                    if ((k > 0) and ((k % 24) == 0)): # split hex data on lines of 24 bytes
+                        print("\n\t\t               :  " ,end="")
+                    print(str(format(DataList[indexdata],'02X'))+" ",end="")
+                    indexdata += 1
+                name=""
+                tempindex = indexdata - sensorlength
+                # Parse specific fields
+                for k in xrange(0, 4):
+                    if DataList[tempindex] != 0x00:
+                        name=name+chr(DataList[tempindex])
+                    else:
+                        name=name+" "
+                    tempindex += 1
+                print("\""+name+"\"  ",end="")
+                if (name == "FMIN") or (name == "FBAS") or (name == "FUT ") or (name == "FMAX"):
+                    tempindex += 2
+                    print("0x"+str(format(DataList[tempindex],'02X'))+"  ",end="")
+                    tempindex += 1
+                    value = (DataList[tempindex] << 8) + DataList[tempindex+1]
+                    print(str(value)+" MHz",end="")
+                    tempindex += 5 # ignore remaining data
+                elif (name == "CLIP"):
+                    tempindex += 2
+                    print("0x"+str(format(DataList[tempindex],'02X'))+"  ",end="")
+                    tempindex += 1
+                    print("0x"+str(format(DataList[tempindex],'02X'))+"  ",end="")
+                    tempindex += 1
+                    print("0x"+str(format(DataList[tempindex],'02X')),end="")
+                    print(""+str(format(DataList[tempindex+1],'02X')),end="")
+                    print(""+str(format(DataList[tempindex+2],'02X')),end="")
+                    print(""+str(format(DataList[tempindex+3],'02X')),end="")
+                elif (name == "ERRH"):
+                    tempindex += 2
+                    while tempindex < sensorstart+sensorlength:
+                        if DataList[tempindex] > 0:
+                            print("0x"+str(format(DataList[tempindex],'02X')),end="")
+                            print(":%-3d  "%DataList[tempindex+1],end="")
+                        tempindex += 2
+                #for k in xrange(tempindex, sensorstart+sensorlength):
+                #    print("  0x"+str(format(DataList[k],'02X')),end="")
+                print("")
         else:
             for i in xrange(0, numbersensors):   # loop through the number of Sensors
                 print("\t\tSensorData     :  " ,end="")
@@ -1079,13 +1126,6 @@ def parse_response_POLL(DataList, FLG_VRB):
                         print("\n\t\t               :  " ,end="")
                     print(str(format(DataList[indexdata],'02X'))+" ",end="")
                     indexdata += 1
-                if (eyecatcher == "EXTN"): # print eyecatchers for EXTN data
-                    print("  \"",end="")
-                    tempindex = indexdata - sensorlength
-                    for k in xrange(0, 4):
-                        print(chr(DataList[tempindex]),end="")
-                        tempindex += 1
-                    print("\"",end="")
                 print("")
         print("\t##############################################################")
 
@@ -2743,7 +2783,7 @@ def occ_to_active(flg_nopgpe, flg_run, flg_verbose):
     RC = send_occ_cmd(0x00, "20", flg_verbose);
 
     print("\n#### SET SYSTEM CONFIG ###################################################################################");
-    cmdData="0F3001" # single node
+    cmdData="0F3001" # single node (PowerVM)
     cmdData=cmdData+"00000001" # proc sensor id
     cmdData=cmdData+"00000002" # proc frequency sensor id
     cmdData=cmdData+"01000001" # core0 temp sensor id

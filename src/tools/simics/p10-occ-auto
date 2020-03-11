@@ -2268,14 +2268,11 @@ TESTS_thermal_limits()
 
     if [ $G_use_pgpe -ne 0 ]; then
 
-        ### Verify throttling when processor temperatures go over limits
-
-    printHeader "MODE: STATIC POWER SAVE"
-    SetPowerMode 0x05 0
+    ### Verify throttling when processor temperatures go over limits
 
     ValidatePollData
 
-        SetQuadTemp 0 0x61
+        SetQuadTemp 0 97
         echo WAIT : 10 seconds for OCC to throttle
         sleep 10
         # Ensure throttle due to processor over temperature bit is set
@@ -2285,14 +2282,14 @@ TESTS_thermal_limits()
     CaptureOccTraces "ThrottleInSPS"
 
 if [ 0 -eq 1 ]; then
-        SetQuadTemp 0 0x71
+        SetQuadTemp 0 113
         let expectedOccSrc=0x2A10 # and report 2A10 elog (Processor reached error temperature)
         echo WAIT : 10 seconds for OCC to generate elog
         sleep 10
         ValidatePollData
 fi
 
-        SetQuadTemp 0 0x31
+        SetQuadTemp 0 49
         echo WAIT : 60 seconds for the throttle to be cleared
         sleep 60
         # Ensure throttle due to processor over temperature bit is clear
@@ -2349,6 +2346,12 @@ TESTS_power_modes()
 {
     current_test="TESTS_power_modes"
 
+    # Mode  w/PGPE  w/o PGPE
+    # fmin   2400     2575
+    # fbas   2900     3700
+    # fut    4100        0
+    # fmax   4100        0
+
     printHeader "START OF ${current_test}"
     let start_time=`date +%s`
 
@@ -2367,20 +2370,26 @@ TESTS_power_modes()
     SetPowerMode 0x0A 0
     ValidatePollData
 
+    # FFO freq's allowed is min -> UT
     printHeader "MODE: FFO - 2300 (< fmin) - INVALID_DATA"
     let expectedOccSrc=0x2A03 # INVALID_DATA
     SetPowerMode 0x0B 2300
     ValidatePollData
 
-    printHeader "MODE: FFO - 2800 (< WOF Base)"
-    SetPowerMode 0x0B 2800
-    ValidatePollData
+    if [ $G_use_pgpe -ne 0 ]; then
+        printHeader "MODE: FFO - 2800 (< WOF Base)"
+        SetPowerMode 0x0B 2800
+        ValidatePollData
 
-    if [ 1 -eq 0 ]; then
-        printHeader "MODE: FFO - 3200" # TODO: OCC Currently does not allow frequencies above WOF Base
+        printHeader "MODE: FFO - 3200"
         SetPowerMode 0x0B 3200
         ValidatePollData
     fi
+
+    printHeader "MODE: FFO - 4101 (> UT) - INVALID_DATA"
+    let expectedOccSrc=0x2A03 # INVALID_DATA
+    SetPowerMode 0x0B 4101
+    ValidatePollData
 
     printHeader "MODE: STATIC FREQUENCY - Power Save"
     SetPowerMode 0x03 0x2000

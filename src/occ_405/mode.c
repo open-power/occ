@@ -473,7 +473,7 @@ errlHndl_t SMGR_mode_transition_to_ffo()
     // a chip that has a different range settable via FFO (FFO does NOT allow Fmax which we
     // know will be different per chip)
     if( (G_occ_master_mode_parm >= G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MIN_FREQ]) &&
-        (G_occ_master_mode_parm <= G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_WOF_BASE]) )
+        (G_occ_master_mode_parm <= G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_VPD_UT]) )
     {
         // Set the user defined frequency to be used by AMEC
         G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_USER] = G_occ_master_mode_parm;
@@ -498,7 +498,7 @@ errlHndl_t SMGR_mode_transition_to_ffo()
         TRAC_ERR("SMGR_mode_transition_to_ffo: Requested Frequency[%dMHz] out of range[%dMHz - %dMHz]",
                  G_occ_master_mode_parm,
                  G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MIN_FREQ],
-                 G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_WOF_BASE]);
+                 G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_VPD_UT]);
 
          /* @
           * @errortype
