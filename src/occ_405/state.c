@@ -381,7 +381,8 @@ errlHndl_t SMGR_characterization_to_observation()
 {
     errlHndl_t  l_errlHndl     = NULL;
     int         rc             = 0;
-    Pstate_t      l_pstate;
+    Pstate_t    l_pstate;
+    uint32_t    l_steps = 0;
     TRAC_IMP("SMGR: Characterization to Observation Transition Started");
 
     do
@@ -394,7 +395,7 @@ errlHndl_t SMGR_characterization_to_observation()
         }
 
         // set clips to modes disabled
-        l_pstate = proc_freq2pstate(G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_DISABLED]);
+        l_pstate = proc_freq2pstate(G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_DISABLED], &l_steps);
         rc = pgpe_set_clip_blocking(l_pstate);
         if(rc)
         {
@@ -579,7 +580,8 @@ errlHndl_t SMGR_observation_to_active()
     int             l_rc = 0;
     uint32_t        l_user_data = 0;
     uint32_t        l_freq = 0;
-    Pstate_t          l_pstate;
+    Pstate_t        l_pstate;
+    uint32_t        l_steps = 0;
 
     // clear mnfg quad pstate request to default OCC to control all quads
     memset(&g_amec->mnfg_parms.quad_pstate[0], 0xFF, MAXIMUM_QUADS);
@@ -613,13 +615,13 @@ errlHndl_t SMGR_observation_to_active()
                      // OCC controls frequency via clip
                      // set clip to WOF base until WOF is fully enabled
                      l_freq = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_WOF_BASE];
-                     l_pstate = proc_freq2pstate(l_freq);
+                     l_pstate = proc_freq2pstate(l_freq, &l_steps);
                 }
                 else
                 {
                     // OCC controls frequency with PMCR so ok to set clips wide open
                     // the OCC won't actually write PMCR with Pstates higher than base unless WOF is fully enabled
-                    l_pstate = proc_freq2pstate(G_proc_fmax_mhz);
+                    l_pstate = proc_freq2pstate(G_proc_fmax_mhz, &l_steps);
                 }
                 l_rc = pgpe_set_clip_blocking(l_pstate);
 
@@ -872,7 +874,8 @@ errlHndl_t SMGR_active_to_observation()
     enum occExtReasonCode ext_rc = OCC_NO_EXTENDED_RC;
     errlHndl_t       l_errlHndl = NULL;
     uint32_t         wait_time  = 0;
-    Pstate_t           l_pstate;
+    Pstate_t         l_pstate;
+    uint32_t         l_steps = 0;
 
     TRAC_IMP("SMGR: Active to Observation Transition Started");
 
@@ -890,7 +893,7 @@ errlHndl_t SMGR_active_to_observation()
         }
 
         // set clips to modes disabled
-        l_pstate = proc_freq2pstate(G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_DISABLED]);
+        l_pstate = proc_freq2pstate(G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_DISABLED], &l_steps);
         rc = pgpe_set_clip_blocking(l_pstate);
         if(rc)
         {

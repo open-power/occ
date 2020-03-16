@@ -221,15 +221,16 @@ errlHndl_t amec_set_freq_range(const OCC_MODE i_mode)
     }
     else
     {
-      g_amec->sys.fmin = l_freq_min;
-      g_amec->sys.fmax = l_freq_max;
+        uint32_t l_steps = 0;
+        g_amec->sys.fmin = l_freq_min;
+        g_amec->sys.fmax = l_freq_max;
 
-      TRAC_INFO("amec_set_freq_range: Mode[0x%02x] Fmin[%u] (Pmin 0x%02x) Fmax[%u] (Pmax 0x%02x)",
-                i_mode,
-                l_freq_min,
-                proc_freq2pstate(g_amec->sys.fmin),
-                l_freq_max,
-                proc_freq2pstate(g_amec->sys.fmax));
+        TRAC_INFO("amec_set_freq_range: Mode[0x%02x] Fmin[%u] (Pmin 0x%02x) Fmax[%u] (Pmax 0x%02x)",
+                  i_mode,
+                  l_freq_min,
+                  proc_freq2pstate(g_amec->sys.fmin, &l_steps),
+                  l_freq_max,
+                  proc_freq2pstate(g_amec->sys.fmax, &l_steps));
     }
     return l_err;
 }
@@ -623,9 +624,10 @@ void amec_slv_freq_smh(void)
                l_atLeast1Core[quad] = TRUE;
                l_atLeast1Quad = TRUE;
                // The higher the pstate number, the lower the frequency
-               if(pmax[quad] <  proc_freq2pstate(g_amec->proc[0].core[core_num].f_request))
+               uint32_t l_steps = 0;
+               if(pmax[quad] <  proc_freq2pstate(g_amec->proc[0].core[core_num].f_request, &l_steps))
                {
-                   pmax[quad] = proc_freq2pstate(g_amec->proc[0].core[core_num].f_request);
+                   pmax[quad] = proc_freq2pstate(g_amec->proc[0].core[core_num].f_request, &l_steps);
                    if(pmax_chip < pmax[quad])  // check if this is a new lowest freq for the chip
                       pmax_chip = pmax[quad];
                }

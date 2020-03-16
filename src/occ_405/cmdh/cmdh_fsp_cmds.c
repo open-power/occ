@@ -724,17 +724,18 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
     l_sensorHeader.format = 0x01;
     l_sensorHeader.length = sizeof(cmdh_poll_extn_sensor_t);
     l_sensorHeader.count  = 0;
+    uint32_t l_steps = 0;
 
     cmdh_poll_extn_sensor_t l_extnSensorList[MAX_EXTN_SENSORS] = {{0}};
     l_extnSensorList[l_sensorHeader.count].name = EXTN_NAME_FMIN;
     uint16_t freq = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MIN_FREQ];
-    l_extnSensorList[l_sensorHeader.count].data[0] = proc_freq2pstate(freq);
+    l_extnSensorList[l_sensorHeader.count].data[0] = proc_freq2pstate(freq, &l_steps);
     l_extnSensorList[l_sensorHeader.count].data[1] = CONVERT_UINT16_UINT8_HIGH(freq);
     l_extnSensorList[l_sensorHeader.count].data[2] = CONVERT_UINT16_UINT8_LOW(freq);
     l_sensorHeader.count++;
     l_extnSensorList[l_sensorHeader.count].name = EXTN_NAME_FBAS;
     freq = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_WOF_BASE];
-    l_extnSensorList[l_sensorHeader.count].data[0] = proc_freq2pstate(freq);
+    l_extnSensorList[l_sensorHeader.count].data[0] = proc_freq2pstate(freq, &l_steps);
     l_extnSensorList[l_sensorHeader.count].data[1] = CONVERT_UINT16_UINT8_HIGH(freq);
     l_extnSensorList[l_sensorHeader.count].data[2] = CONVERT_UINT16_UINT8_LOW(freq);
     l_sensorHeader.count++;
@@ -742,7 +743,7 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
     freq = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_VPD_UT];
     if (freq > 0)
     {
-        l_extnSensorList[l_sensorHeader.count].data[0] = proc_freq2pstate(freq);
+        l_extnSensorList[l_sensorHeader.count].data[0] = proc_freq2pstate(freq, &l_steps);
         l_extnSensorList[l_sensorHeader.count].data[1] = CONVERT_UINT16_UINT8_HIGH(freq);
         l_extnSensorList[l_sensorHeader.count].data[2] = CONVERT_UINT16_UINT8_LOW(freq);
     }
@@ -751,7 +752,7 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
     freq = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_FMAX];
     if (freq > 0)
     {
-        l_extnSensorList[l_sensorHeader.count].data[0] = proc_freq2pstate(freq);
+        l_extnSensorList[l_sensorHeader.count].data[0] = proc_freq2pstate(freq, &l_steps);
         l_extnSensorList[l_sensorHeader.count].data[1] = CONVERT_UINT16_UINT8_HIGH(freq);
         l_extnSensorList[l_sensorHeader.count].data[2] = CONVERT_UINT16_UINT8_LOW(freq);
     }
@@ -763,7 +764,8 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
     freq = g_amec->proc[0].core_min_freq;
     if (freq > 0)
     {
-        l_extnSensorList[l_sensorHeader.count].data[0] = proc_freq2pstate(freq);
+        l_extnSensorList[l_sensorHeader.count].data[0] = proc_freq2pstate(freq, &l_steps);
+        l_extnSensorList[l_sensorHeader.count].data[0] += l_steps;
     }
     else
     {

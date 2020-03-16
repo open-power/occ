@@ -933,7 +933,8 @@ void read_pgpe_produced_wof_values( void )
     // populate values used by WOF alg
 
     // Average Frequency
-    l_freq = proc_pstate2freq((Pstate_t)l_PgpeWofValues.dw0.fields.average_frequency_pstate);
+    uint32_t l_steps = 0;
+    l_freq = proc_pstate2freq((Pstate_t)l_PgpeWofValues.dw0.fields.average_frequency_pstate, &l_steps);
     // value returned in kHz, save in MHz
     g_wof->c_ratio_vdd_freq = (l_freq / 1000);
     g_wof->f_clip_freq = g_wof->c_ratio_vdd_freq;

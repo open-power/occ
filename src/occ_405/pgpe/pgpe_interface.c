@@ -620,7 +620,9 @@ int pgpe_clip_update(void)
     const unsigned int pstate = G_desired_pstate;
 
     // Set clip bounds
-    G_clip_update_parms.ps_val_clip_min = proc_freq2pstate(g_amec->sys.fmin);
+    uint32_t l_steps = 0;
+    G_clip_update_parms.ps_val_clip_min = proc_freq2pstate(g_amec->sys.fmin, &l_steps);
+    G_clip_update_parms.ps_val_clip_min += l_steps;
     G_clip_update_parms.ps_val_clip_max = pstate;
 
     // Always send request on PowerVM, on OPAL only send the request if there was a change or need to force a send
@@ -1027,7 +1029,8 @@ int set_nominal_pstate(void)
        }
 
        // Pstate protocol is now enabled for OCC to set Pstate to mode off point
-       l_pstate = proc_freq2pstate(G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_DISABLED]);
+       uint32_t l_steps = 0;
+       l_pstate = proc_freq2pstate(G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_DISABLED], &l_steps);
        // Update pmcr value with nominal pstate and version (Version 1: Fast Request Mode)
        G_pmcr_set_parms.pmcr = ((uint64_t)l_pstate << 48) | 1;
 

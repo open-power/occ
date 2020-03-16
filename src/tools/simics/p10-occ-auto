@@ -2270,7 +2270,7 @@ TESTS_thermal_limits()
 
     ### Verify throttling when processor temperatures go over limits
 
-    ValidatePollData
+        ValidatePollData
 
         SetQuadTemp 0 97
         echo WAIT : 10 seconds for OCC to throttle
@@ -2279,15 +2279,11 @@ TESTS_thermal_limits()
         let expectedThrottleStatus=0x80
         ValidatePollData
 
-    CaptureOccTraces "ThrottleInSPS"
-
-if [ 0 -eq 1 ]; then
         SetQuadTemp 0 113
         let expectedOccSrc=0x2A10 # and report 2A10 elog (Processor reached error temperature)
         echo WAIT : 10 seconds for OCC to generate elog
         sleep 10
         ValidatePollData
-fi
 
         SetQuadTemp 0 49
         echo WAIT : 60 seconds for the throttle to be cleared
@@ -2296,7 +2292,6 @@ fi
         let expectedThrottleStatus=0x00
         ValidatePollData
 
-if [ 0 -eq 1 ]; then
         ### Verify throttling when limits are updated (temps not changing)
 
         printHeader "SET PROCESSOR DVFS_TEMP TO FORCE THROTTLING (via TCT CONFIG) - 68C (0x44)"
@@ -2330,7 +2325,6 @@ if [ 0 -eq 1 ]; then
     else
         echo -e "\nWARNING: unable to test processor thermal limits if PGPE is not enabled\n"
     fi
-fi
 
     let end_time=`date +%s`
     let delta_time=$end_time-$start_time

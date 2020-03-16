@@ -1071,7 +1071,24 @@ bool read_oppb_params()
 
         // frequency points are valid, now populate our internal frequency table
         populate_sys_mode_freq_table();
-/* @mb temp RTC 209558
+
+        // verify pstate_max_throttle is defined and larger than min
+        if (G_oppb.pstate_max_throttle >= G_oppb.pstate_min)
+        {
+            MAIN_TRAC_IMP("read_oppb_header:  pstate_max_throttle[0x%02X]  Fmin Pstate[0x%02X]",
+                          G_oppb.pstate_max_throttle,
+                          G_oppb.pstate_min);
+        }
+        else  // TODO RTC 249985 create error log instead when supported by PGPE
+        {
+            // set to 32 pstates from Fmin
+            MAIN_TRAC_IMP("read_oppb_header: invalid pstate_max_throttle[0x%02X] setting to[0x%02X]",
+                          G_oppb.pstate_max_throttle,
+                          G_oppb.pstate_min + 32);
+            G_oppb.pstate_max_throttle = G_oppb.pstate_min + 32;
+        }
+
+        /* @mb temp RTC 209558
         // Confirm whether we have wof support
         if(!(G_oppb.attr.fields.wof_enabled))
         {

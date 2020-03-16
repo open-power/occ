@@ -98,6 +98,20 @@ bool proc_is_hwpstate_enabled(void)
     return ( G_proc_pstate_status == PSTATES_ENABLED ? TRUE : FALSE);
 }
 
+// The higher the pstate number, the lower the frequency
+// When pstate is in the throttle space, the frequency will be fixed at the minimum
+// and the throttling will vary depending on the pstate.
+//
+//                     Pstate                         Frequency
+//                   __--------------------------     ------------------------
+//                  /  G_oppb.pstate_max_throttle     G_oppb.frequency_min_khz (lowest)
+// throttle space--{     ...                          G_oppb.frequency_min_khz
+//                  \__  ...                          G_oppb.frequency_min_khz
+//                     G_oppb.pstate_min              fmax - (pstate * frequency_step_size)
+//                       ...                            ...
+//                     0 (lowest)                     G_oppb.frequency_max_khz (highest)
+
+
 // Function Specification
 //
 // Name:  proc_pstate2freq
@@ -105,18 +119,31 @@ bool proc_is_hwpstate_enabled(void)
 // Description:  Convert Pstate to Frequency in kHz
 //
 // End Function Specification
-uint32_t proc_pstate2freq(Pstate_t i_pstate)
+uint32_t proc_pstate2freq(Pstate_t i_pstate, uint32_t *o_steps)
 {
-    // The higher the pstate number, the lower the frequency:
-    // If passed in Pstate is lower than Pmin (higher pstate value),
-    // just use Pmin.
+    uint32_t l_freq = 0;
+    *o_steps = 0;
+
     if(i_pstate > G_oppb.pstate_min)
     {
-        i_pstate = G_oppb.pstate_min;
+        // pstate is in the throttle space, return min frequency
+        l_freq = G_oppb.frequency_min_khz;
+        // and number of steps into the throttle space
+        *o_steps = i_pstate - G_oppb.pstate_min;
+
+        // Ensure steps does not put pstate over max throttle
+        if ((*o_steps + G_oppb.pstate_min) > G_oppb.pstate_max_throttle)
+        {
+            *o_steps = G_oppb.pstate_max_throttle - G_oppb.pstate_min;
+        }
+    }
+    else
+    {
+        // Calculate Frequency in kHz based on Pstate
+        l_freq = G_oppb.frequency_max_khz - (i_pstate * G_oppb.frequency_step_khz);
     }
 
-    // Calculate Frequency in kHz based on Pstate
-    return ( G_oppb.frequency_max_khz - (i_pstate * G_oppb.frequency_step_khz));
+    return l_freq;
 }
 
 // Function Specification
@@ -126,64 +153,56 @@ uint32_t proc_pstate2freq(Pstate_t i_pstate)
 // Description:  Convert Frequency to Nearest Pstate
 //
 // End Function Specification
-Pstate_t proc_freq2pstate(uint32_t i_freq_mhz)
+Pstate_t proc_freq2pstate(uint32_t i_freq_mhz, uint32_t *o_additional_steps)
 {
-    int8_t   l_pstate = 0;
-    int8_t   l_temp_pstate = 0;
-    int32_t  l_temp_freq_khz = 0;
+    uint8_t  l_pstate = 0;
     uint32_t l_freq_khz = 0;
+    *o_additional_steps = 0;
 
-    do
+    // Freq Units need to be in kHz, not Mhz for the following calculations
+    l_freq_khz = i_freq_mhz * 1000;
+
+    // first make sure frequency passed in is under this chip's max
+    if(i_freq_mhz > G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MAX_FREQ])
     {
-        // Freq Units need to be in kHz, not Mhz for the following calculations
-        l_freq_khz = i_freq_mhz * 1000;
+        l_freq_khz = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MAX_FREQ] * 1000;
+    }
 
-        // first make sure frequency passed in is within this chip's min and max
-        if(i_freq_mhz < G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MIN_FREQ])
+    // frequency is above min pstate, calculate Pstate from max
+    // G_oppb.frequency_max_khz is the frequency for Pstate 0 (PMAX)
+    if(l_freq_khz < G_oppb.frequency_max_khz)
+    {
+        // First, calculate the delta between passed in freq, and Pmax
+        const int32_t l_delta_freq_khz = G_oppb.frequency_max_khz - l_freq_khz;
+
+        // Next, calculate how many Pstate steps there are in that delta
+        const int8_t l_delta_pstates = l_delta_freq_khz / (int32_t) G_oppb.frequency_step_khz;
+
+        // Higher Pstates are lower frequency, add number of steps to the highest frequency Pstate
+        l_pstate = PMAX + l_delta_pstates;
+
+        if (l_pstate > G_oppb.pstate_min)
         {
-            l_freq_khz =  G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MIN_FREQ] * 1000;
-        }
-        else if(i_freq_mhz > G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MAX_FREQ])
-        {
-            l_freq_khz = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MAX_FREQ] * 1000;
-        }
+            // frequency is in throttle space
 
-        // Return Pmin if the frequency is below or equal to the min Freq for the lowest Pstate
-        if(l_freq_khz <= G_oppb.frequency_min_khz )
-        {
-            l_pstate = G_oppb.pstate_min;
-            break;
-        }
+            // Determine number of pstate steps into throttle space
+            *o_additional_steps = l_pstate - G_oppb.pstate_min;
 
-        // frequency is above min pstate, calculate Pstate from max
-        // G_oppb.frequency_max_khz is the frequency for Pstate 0 (PMAX)
-        if(l_freq_khz < G_oppb.frequency_max_khz)
-        {
-            // First, calculate the delta between passed in freq, and Pmax
-            l_temp_freq_khz = G_oppb.frequency_max_khz - l_freq_khz;
-
-            // Next, calculate how many Pstate steps there are in that delta
-            l_temp_pstate = l_temp_freq_khz / (int32_t) G_oppb.frequency_step_khz;
-
-            // Higher Pstates are lower frequency, add number of steps to the highest frequency Pstate
-            l_pstate = PMAX + l_temp_pstate;
-
-            // As an extra safety check make sure the calculated Pstate is not out of the PGPE range
-            // this should never happen!
-            if(l_pstate > G_oppb.pstate_min)
+            // Ensure steps does not put pstate over max throttle
+            if ((*o_additional_steps + G_oppb.pstate_min) > G_oppb.pstate_max_throttle)
             {
-                TRAC_ERR("proc_freq2pstate: Invalid calculated Pstate[%d] for freq[%dkHz] PGPE min Pstate[%d] freq[%dkHz]",
-                          l_pstate, l_freq_khz, G_oppb.pstate_min, G_oppb.frequency_min_khz);
-                l_pstate = G_oppb.pstate_min;
+                *o_additional_steps = G_oppb.pstate_max_throttle - G_oppb.pstate_min;
             }
-        }
-        else
-        {
-            // Freq is higher than or equal to the maximum frequency -- return Pmax
-            l_pstate = PMAX;
+
+            // Return pstate where frequency changes end
+            l_pstate = G_oppb.pstate_min;
         }
     }
-    while(0);
+    else
+    {
+        // Freq is higher than or equal to the maximum frequency -- return Pmax
+        l_pstate = PMAX;
+    }
 
     return (Pstate_t) l_pstate;
 }
@@ -296,14 +315,15 @@ void populate_opal_static_data()
 // End Function Specification
 void populate_opal_static_config_data(void)
 {
+    uint32_t l_steps = 0;
     // Static OPAL configuration data
     G_opal_static_table.config.valid    = 1;
     G_opal_static_table.config.version  = 0x90;
     G_opal_static_table.config.occ_role = G_occ_role;
-    G_opal_static_table.config.pmin     = proc_freq2pstate(g_amec->sys.fmin);
-    G_opal_static_table.config.pnominal = proc_freq2pstate(G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_DISABLED]);
-    G_opal_static_table.config.pturbo   = proc_freq2pstate(G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_WOF_BASE]);
-    G_opal_static_table.config.puturbo  = proc_freq2pstate(G_proc_fmax_mhz);
+    G_opal_static_table.config.pmin     = proc_freq2pstate(g_amec->sys.fmin, &l_steps);
+    G_opal_static_table.config.pnominal = proc_freq2pstate(G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_DISABLED], &l_steps);
+    G_opal_static_table.config.pturbo   = proc_freq2pstate(G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_WOF_BASE], &l_steps);
+    G_opal_static_table.config.puturbo  = proc_freq2pstate(G_proc_fmax_mhz, &l_steps);
 }
 
 // Function Specification
@@ -317,11 +337,12 @@ void populate_opal_static_config_data(void)
 void populate_opal_static_pstates_data(void)
 {
     uint16_t i; // loop variable
+    uint32_t l_steps = 0;
     for (i=0; i <= G_oppb.pstate_min; i++)
     {
         G_opal_static_table.pstates[i].pstate   = i;  // pstate number
         G_opal_static_table.pstates[i].flag     = 0;  // flag is reserved for future use
-        G_opal_static_table.pstates[i].freq_khz = proc_pstate2freq(i); // pstate's frequency
+        G_opal_static_table.pstates[i].freq_khz = proc_pstate2freq(i, &l_steps); // pstate's frequency
     }
 
     for (i=0; i<MAX_NUM_CORES; i++)
