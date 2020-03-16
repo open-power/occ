@@ -57,23 +57,33 @@ typedef enum
 } OCC_MODE;
 
 // Additional set mode parameter when setting static freq point mode
+// also used for processor auto-slew mfg test command
 typedef enum
 {
-    OCC_MODE_PARM_NONE             = 0x0000,
-    OCC_MODE_PARM_VPD_CF0_PT       = 0x1000,
-    OCC_MODE_PARM_VPD_CF1_PT       = 0x1001,
-    OCC_MODE_PARM_VPD_CF2_PT       = 0x1002,
-    OCC_MODE_PARM_VPD_CF3_PT       = 0x1003,
-    OCC_MODE_PARM_VPD_CF4_PT       = 0x1004,
-    OCC_MODE_PARM_VPD_CF5_PT       = 0x1005,
-    OCC_MODE_PARM_VPD_CF6_PT       = 0x1006,
-    OCC_MODE_PARM_VPD_CF7_PT       = 0x1007,
-    OCC_MODE_PARM_MIN_FREQ_PT      = 0x2000,
-    OCC_MODE_PARM_WOF_BASE_FREQ_PT = 0x2001,
-    OCC_MODE_PARM_UT_FREQ_PT       = 0x2002,
-    OCC_MODE_PARM_FMAX_FREQ_PT     = 0x2003,
-    OCC_MODE_PARM_MODE_OFF_FREQ_PT = 0x2004
-} OCC_MODE_PARM;
+    OCC_FREQ_PT_PARM_NONE             = 0x0000,
+    OCC_FREQ_PT_PARM_VPD_CF0_PT       = 0x1000,
+    OCC_FREQ_PT_PARM_VPD_CF1_PT       = 0x1001,
+    OCC_FREQ_PT_PARM_VPD_CF2_PT       = 0x1002,
+    OCC_FREQ_PT_PARM_VPD_CF3_PT       = 0x1003,
+    OCC_FREQ_PT_PARM_VPD_CF4_PT       = 0x1004,
+    OCC_FREQ_PT_PARM_VPD_CF5_PT       = 0x1005,
+    OCC_FREQ_PT_PARM_VPD_CF6_PT       = 0x1006,
+    OCC_FREQ_PT_PARM_VPD_CF7_PT       = 0x1007,
+    OCC_FREQ_PT_PARM_MIN_FREQ_PT      = 0x2000,
+    OCC_FREQ_PT_PARM_WOF_BASE_FREQ_PT = 0x2001,
+    OCC_FREQ_PT_PARM_UT_FREQ_PT       = 0x2002,
+    OCC_FREQ_PT_PARM_FMAX_FREQ_PT     = 0x2003,
+    OCC_FREQ_PT_PARM_MODE_OFF_FREQ_PT = 0x2004,
+    // this is the absolute lowest Pstate i.e. lowest freq + most severe throttle setting
+    OCC_FREQ_PT_PARM_BOTTOM_THROTTLE  = 0x4000,
+} OCC_FREQ_PT_PARM;
+
+#define OCC_FREQ_PT_PARM_IS_VALID(parm) ((parm == OCC_FREQ_PT_PARM_NONE) || \
+                                 ((parm >= OCC_FREQ_PT_PARM_VPD_CF0_PT) && \
+                                 (parm <= OCC_FREQ_PT_PARM_VPD_CF7_PT)) || \
+                                 ((parm >= OCC_FREQ_PT_PARM_MIN_FREQ_PT) && \
+                                 (parm <= OCC_FREQ_PT_PARM_MODE_OFF_FREQ_PT)) || \
+                                 (parm == OCC_FREQ_PT_PARM_BOTTOM_THROTTLE))
 
 // Used to index G_sysConfigData.sys_mode_freq.table used to store all frequency points
 typedef enum
@@ -96,6 +106,7 @@ typedef enum
     OCC_FREQ_PT_MODE_MAX_PERF = 0x0F,
     OCC_FREQ_PT_MODE_FMAX = 0x10,
     OCC_FREQ_PT_MODE_USER = 0x11,   // used for FFO and static freq pt modes
+    OCC_FREQ_PT_BOTTOM_THROTTLE = 0x12,
     OCC_FREQ_PT_COUNT,
     OCC_FREQ_PT_INVALID  = 0xFF
 } OCC_FREQ_POINT;
@@ -107,7 +118,7 @@ typedef enum
  */
 typedef struct
 {
-  OCC_MODE_PARM  mode_parm;
+  OCC_FREQ_PT_PARM  freq_pt_parm;
   OCC_FREQ_POINT freq_point;
 } smgr_sfp_parm_trans_t;
 
@@ -127,9 +138,9 @@ extern OCC_MODE           G_occ_external_req_mode;
 extern OCC_MODE           G_occ_external_req_mode_kvm;
 extern OCC_MODE           G_occ_master_mode;
 
-extern OCC_MODE_PARM      G_occ_internal_mode_parm;
-extern OCC_MODE_PARM      G_occ_external_req_mode_parm;
-extern OCC_MODE_PARM      G_occ_master_mode_parm;
+extern OCC_FREQ_PT_PARM      G_occ_internal_mode_parm;
+extern OCC_FREQ_PT_PARM      G_occ_external_req_mode_parm;
+extern OCC_FREQ_PT_PARM      G_occ_master_mode_parm;
 
 // Returns true if we are in the middle of a mode transition
 inline bool SMGR_is_mode_transitioning(void);

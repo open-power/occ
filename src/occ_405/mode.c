@@ -46,7 +46,7 @@ errlHndl_t SMGR_mode_transition_to_max_perf();
 
 // Mode that OCC is currently in
 OCC_MODE           G_occ_internal_mode      = OCC_MODE_NOCHANGE;
-OCC_MODE_PARM      G_occ_internal_mode_parm = OCC_MODE_PARM_NONE;
+OCC_FREQ_PT_PARM   G_occ_internal_mode_parm = OCC_FREQ_PT_PARM_NONE;
 
 // Mode that OCC is requesting that TMGT put OCC into
 OCC_MODE           G_occ_internal_req_mode  = OCC_MODE_NOCHANGE;
@@ -54,7 +54,7 @@ OCC_MODE           G_occ_internal_req_mode  = OCC_MODE_NOCHANGE;
 // Mode that TMGT is requesting OCC go to
 OCC_MODE           G_occ_external_req_mode      = OCC_MODE_NOCHANGE;
 // In FFO or Static Frequency Point, this extra parameter is used to define the frequency
-OCC_MODE_PARM      G_occ_external_req_mode_parm = OCC_MODE_PARM_NONE;
+OCC_FREQ_PT_PARM   G_occ_external_req_mode_parm = OCC_FREQ_PT_PARM_NONE;
 
 // Mode that TMGT is requesting OCC go to in KVM
 OCC_MODE           G_occ_external_req_mode_kvm = OCC_MODE_NOCHANGE;
@@ -64,7 +64,7 @@ bool                G_mode_transition_occuring = FALSE;
 
 // Mode that OCC Master is in
 OCC_MODE            G_occ_master_mode      = OCC_MODE_NOCHANGE;
-OCC_MODE_PARM       G_occ_master_mode_parm = OCC_MODE_PARM_NONE;
+OCC_FREQ_PT_PARM    G_occ_master_mode_parm = OCC_FREQ_PT_PARM_NONE;
 
 // Semaphore to allow mode change to be called from multiple threads
 SsxSemaphore        G_smgrModeChangeSem;
@@ -89,19 +89,20 @@ const uint8_t G_smgr_mode_trans_count = sizeof(G_smgr_mode_trans)/sizeof(smgr_st
 const smgr_sfp_parm_trans_t G_smgr_sfp_mode_parm_trans[] =
 {
     // Static Freq Pt Mode Parameter         Freq point
-    {OCC_MODE_PARM_VPD_CF0_PT,          OCC_FREQ_PT_VPD_CF0},
-    {OCC_MODE_PARM_VPD_CF1_PT,          OCC_FREQ_PT_VPD_CF1},
-    {OCC_MODE_PARM_VPD_CF2_PT,          OCC_FREQ_PT_VPD_CF2},
-    {OCC_MODE_PARM_VPD_CF3_PT,          OCC_FREQ_PT_VPD_CF3},
-    {OCC_MODE_PARM_VPD_CF4_PT,          OCC_FREQ_PT_VPD_CF4},
-    {OCC_MODE_PARM_VPD_CF5_PT,          OCC_FREQ_PT_VPD_CF5},
-    {OCC_MODE_PARM_VPD_CF6_PT,          OCC_FREQ_PT_VPD_CF6},
-    {OCC_MODE_PARM_VPD_CF7_PT,          OCC_FREQ_PT_VPD_LAST_CF},
-    {OCC_MODE_PARM_MIN_FREQ_PT,         OCC_FREQ_PT_MIN_FREQ},
-    {OCC_MODE_PARM_WOF_BASE_FREQ_PT,    OCC_FREQ_PT_WOF_BASE},
-    {OCC_MODE_PARM_UT_FREQ_PT,          OCC_FREQ_PT_VPD_UT},
-    {OCC_MODE_PARM_FMAX_FREQ_PT,        OCC_FREQ_PT_MAX_FREQ},
-    {OCC_MODE_PARM_MODE_OFF_FREQ_PT,    OCC_FREQ_PT_MODE_DISABLED}
+    {OCC_FREQ_PT_PARM_VPD_CF0_PT,          OCC_FREQ_PT_VPD_CF0},
+    {OCC_FREQ_PT_PARM_VPD_CF1_PT,          OCC_FREQ_PT_VPD_CF1},
+    {OCC_FREQ_PT_PARM_VPD_CF2_PT,          OCC_FREQ_PT_VPD_CF2},
+    {OCC_FREQ_PT_PARM_VPD_CF3_PT,          OCC_FREQ_PT_VPD_CF3},
+    {OCC_FREQ_PT_PARM_VPD_CF4_PT,          OCC_FREQ_PT_VPD_CF4},
+    {OCC_FREQ_PT_PARM_VPD_CF5_PT,          OCC_FREQ_PT_VPD_CF5},
+    {OCC_FREQ_PT_PARM_VPD_CF6_PT,          OCC_FREQ_PT_VPD_CF6},
+    {OCC_FREQ_PT_PARM_VPD_CF7_PT,          OCC_FREQ_PT_VPD_LAST_CF},
+    {OCC_FREQ_PT_PARM_MIN_FREQ_PT,         OCC_FREQ_PT_MIN_FREQ},
+    {OCC_FREQ_PT_PARM_WOF_BASE_FREQ_PT,    OCC_FREQ_PT_WOF_BASE},
+    {OCC_FREQ_PT_PARM_UT_FREQ_PT,          OCC_FREQ_PT_VPD_UT},
+    {OCC_FREQ_PT_PARM_FMAX_FREQ_PT,        OCC_FREQ_PT_MAX_FREQ},
+    {OCC_FREQ_PT_PARM_MODE_OFF_FREQ_PT,    OCC_FREQ_PT_MODE_DISABLED},
+    {OCC_FREQ_PT_PARM_BOTTOM_THROTTLE,     OCC_FREQ_PT_BOTTOM_THROTTLE}
 };
 const uint8_t G_smgr_sfp_parm_trans_count = sizeof(G_smgr_sfp_mode_parm_trans)/sizeof(smgr_sfp_parm_trans_t);
 
@@ -176,7 +177,7 @@ errlHndl_t SMGR_set_mode( const OCC_MODE i_mode )
 
          //Check to see if we need to make a change
          if( (l_mode == OCC_MODE_NOCHANGE) &&
-             (G_occ_master_mode_parm == OCC_MODE_PARM_NONE) )
+             (G_occ_master_mode_parm == OCC_FREQ_PT_PARM_NONE) )
          {
              break;
          }
@@ -357,7 +358,7 @@ errlHndl_t SMGR_mode_transition_to_static_freq_point()
     // to an actual frequency
     for(i=0; i<G_smgr_sfp_parm_trans_count; i++)
     {
-        if(G_smgr_sfp_mode_parm_trans[i].mode_parm == G_occ_master_mode_parm)
+        if(G_smgr_sfp_mode_parm_trans[i].freq_pt_parm == G_occ_master_mode_parm)
         {
             // We found the mode parameter, verify there is a valid frequency
             l_freq_pt = G_smgr_sfp_mode_parm_trans[i].freq_point;
@@ -367,7 +368,11 @@ errlHndl_t SMGR_mode_transition_to_static_freq_point()
                if(l_freq)
                 {
                      // Set the user defined frequency to be used by AMEC
-                     if(l_freq < G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MIN_FREQ])
+                     if(G_smgr_sfp_mode_parm_trans[i].freq_pt_parm == OCC_FREQ_PT_PARM_BOTTOM_THROTTLE)
+                     {
+                          // ok for freq to be below min don't clip
+                     }
+                     else if(l_freq < G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MIN_FREQ])
                      {
                           TRAC_IMP("SMGR_mode_transition_to_static_freq_point: freq pt freq %dMHz is below min freq %dMHz",
                                     l_freq,

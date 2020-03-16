@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -177,7 +177,7 @@ void amec_master_auto_slew(void)
     /*  Local Variables                                                       */
     /*------------------------------------------------------------------------*/
     static int8_t               l_direction = 1;
-    uint16_t                    l_freq = 0;
+    int16_t                     l_pstate = 0;
     static uint16_t             l_step_delay = 0;
     static bool                 l_first_time_enable = TRUE;
     static bool                 l_first_time_disable = FALSE;
@@ -194,7 +194,7 @@ void amec_master_auto_slew(void)
             if (l_first_time_enable)
             {
                 // Need to start the auto-slew from fmax
-                g_amec->mnfg_parms.foverride = g_amec->mnfg_parms.fmax;
+                g_amec->mnfg_parms.poverride = g_amec->mnfg_parms.pmax;
 
                 // Reset the delay counter and reset the direction
                 l_step_delay = g_amec->mnfg_parms.delay;
@@ -213,7 +213,7 @@ void amec_master_auto_slew(void)
             if (l_first_time_disable)
             {
                 // Clear the frequency override parameter
-                g_amec->mnfg_parms.foverride = 0;
+                g_amec->mnfg_parms.poverride = 0xff;
 
                 l_first_time_enable = TRUE;
                 l_first_time_disable = FALSE;
@@ -235,11 +235,11 @@ void amec_master_auto_slew(void)
         // Our delay counter has expired, reset it to its original value
         l_step_delay = g_amec->mnfg_parms.delay;
 
-        // Now, generate a new frequency override
-        l_freq = g_amec->mnfg_parms.foverride -
-            (l_direction * g_amec->mnfg_parms.fstep);
+        // Now, generate a new frequency override in terms of a pState
+        l_pstate = g_amec->mnfg_parms.poverride +
+            (l_direction * g_amec->mnfg_parms.pstep);
 
-        if (l_freq <= g_amec->mnfg_parms.fmin)
+        if (l_pstate >= g_amec->mnfg_parms.pmin)
         {
             // We've reached an edge, increment our counter
             g_amec->mnfg_parms.slew_counter++;
@@ -247,10 +247,10 @@ void amec_master_auto_slew(void)
             // Change direction of the auto-slew
             l_direction = -l_direction;
 
-            // Clip frequency to fmin
-            l_freq = g_amec->mnfg_parms.fmin;
+            // Clip frequency to pmin
+            l_pstate = g_amec->mnfg_parms.pmin;
         }
-        else if (l_freq >= g_amec->mnfg_parms.fmax)
+        else if (l_pstate <= g_amec->mnfg_parms.pmax)
         {
             // We've reached an edge, increment our counter
             g_amec->mnfg_parms.slew_counter++;
@@ -258,10 +258,10 @@ void amec_master_auto_slew(void)
             // Change direction of the auto-slew
             l_direction = -l_direction;
 
-            // Clip frequency to fmax
-            l_freq = g_amec->mnfg_parms.fmax;
+            // Clip frequency to pmax
+            l_pstate = g_amec->mnfg_parms.pmax;
         }
-        g_amec->mnfg_parms.foverride = l_freq;
+        g_amec->mnfg_parms.poverride = l_pstate;
 
     }while(0);
 

@@ -49,6 +49,8 @@
 #include <amec_freq.h>
 #include "pss_constants.h"
 #include <memory.h>
+#include "common.h"
+#include <pstates_occ.H>
 
 //*************************************************************************
 // Externs
@@ -58,8 +60,9 @@ extern dimm_sensor_flags_t G_dimm_temp_expired_bitmap;
 
 extern uint16_t G_proc_fmax_mhz;
 
-
+extern uint16_t G_allow_trace_flags;
 extern bool G_allowPstates;
+extern OCCPstateParmBlock_t G_oppb;
 
 //*************************************************************************
 // Defines/Enums
@@ -263,6 +266,9 @@ void amec_slv_proc_voting_box(void)
     uint32_t                        l_core_reason = 0;
     amec_proc_voting_reason_t       l_kvm_throt_reason = NO_THROTTLE;
     amec_part_t                     *l_part = NULL;
+    uint32_t                        l_steps = 0;
+    uint32_t                        l_core_freq_kHz = 0;
+    uint32_t                        l_steps_in_freq = 0;
 
     // frequency threshold for reporting throttling
     uint16_t l_report_throttle_freq = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_WOF_BASE];
@@ -431,35 +437,30 @@ void amec_slv_proc_voting_box(void)
                 }
             }
 
-            // Override frequency with request from Master OCC
-            if(g_amec->foverride_enable)
+            // Override frequency with request from Master OCC from mfg auto slew
+            if(g_amec->poverride_enable)
             {
-                if(g_amec->foverride != 0)
+                if(g_amec->poverride != 0xff)
                 {
-                    // Override the frequency on all cores if Master OCC sends
-                    // a non-zero request
-                    l_core_freq = g_amec->foverride;
+                    // Override the Pstate on all cores if Master OCC sends
+                    // a non-0xff Pstate request
+                    l_core_freq_kHz = proc_pstate2freq(g_amec->poverride, &l_steps);
+                    // check if entered into throttle space
+                    if(l_steps)
+                    {
+                        // convert l_steps into frequency in kHz
+                        l_steps_in_freq = l_steps * G_oppb.frequency_step_khz;
+                        // subtract off the additional frequency to get into throttle space
+                        if(l_steps_in_freq <= l_core_freq_kHz)  // prevent going negative
+                            l_core_freq_kHz -= l_steps_in_freq;
+                        else
+                            l_core_freq_kHz = 1000;  // can't use 0, that indicates core not online
+                    }
+                    // proc_pstate2_freq returns frequency in kHz, need to convert to mHz for l_core_freq
+                    l_core_freq = l_core_freq_kHz / 1000;
                     l_core_reason = AMEC_VOTING_REASON_OVERRIDE;
                 }
-
                 l_kvm_throt_reason = MANUFACTURING_OVERRIDE;
-            }
-
-            if(g_amec->pstate_foverride_enable)
-            {
-                if(g_amec->pstate_foverride != 0)
-                {
-                    // Override the frequency on all cores if the Global Pstate
-                    // table has been modified
-                    l_core_freq = g_amec->pstate_foverride;
-                    l_core_reason = AMEC_VOTING_REASON_OVERRIDE;
-                }
-            }
-
-            //Make sure the frequency is not less then the system min
-            if(l_core_freq < g_amec->sys.fmin)
-            {
-                l_core_freq = g_amec->sys.fmin;
             }
 
             // Override frequency via Amester parameter interface
@@ -597,87 +598,40 @@ void amec_slv_freq_smh(void)
     /*------------------------------------------------------------------------*/
     /*  Local Variables                                                       */
     /*------------------------------------------------------------------------*/
-    uint8_t     quad = 0;       // loop through quads
-    uint8_t     core_num = 0;   // core ID
-    uint8_t     core_idx = 0;   // loop through cores within each quad
-    Pstate_t      pmax[MAXIMUM_QUADS] = {0}; // max pstate (min frequency) within each quad
-    Pstate_t      pmax_chip = 0;  // highest Pstate (lowest frequency) across all quads
-    bool        l_atLeast1Core[MAXIMUM_QUADS] = {FALSE};  // at least 1 core present and online in quad
-    bool        l_atLeast1Quad = FALSE;    // at least 1 quad online
-    static bool L_mfg_set_trace[MAXIMUM_QUADS] = {FALSE};
-    static bool L_mfg_clear_trace[MAXIMUM_QUADS] = {FALSE};
+    uint8_t     core_num = 0;   // loop through cores
+    uint8_t     core_pmax = 0;
+    Pstate_t    pmax_chip = 0;  // highest Pstate (lowest frequency) across all cores
 
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
 
-    // loop through all quads, get f_requests, translate to pstates and determine pmax across chip
-    for (quad = 0; quad < MAXIMUM_QUADS; quad++)
+    // loop through all cores, get f_requests, translate to pstates and determine pmax across chip
+    for (core_num=0; core_num<MAX_CORES; core_num++)  // loop thru all cores
     {
-        for (core_idx=0; core_idx<NUM_CORES_PER_QUAD; core_idx++)  // loop thru all cores in quad
+        // ignore core if freq request is 0 (core not present when amec_slv_proc_voting_box ran)
+        if(g_amec->proc[0].core[core_num].f_request != 0)
         {
-            core_num = (quad*NUM_CORES_PER_QUAD) + core_idx;
+           uint32_t l_steps = 0;
+           core_pmax = proc_freq2pstate(g_amec->proc[0].core[core_num].f_request, &l_steps);
+           // add the throttle steps to the pstate
+           core_pmax += l_steps;
 
-            // ignore core if freq request is 0 (core not present when amec_slv_proc_voting_box ran)
-            if((core_num < MAX_CORES) && (g_amec->proc[0].core[core_num].f_request != 0))
-            {
-               l_atLeast1Core[quad] = TRUE;
-               l_atLeast1Quad = TRUE;
-               // The higher the pstate number, the lower the frequency
-               uint32_t l_steps = 0;
-               if(pmax[quad] <  proc_freq2pstate(g_amec->proc[0].core[core_num].f_request, &l_steps))
-               {
-                   pmax[quad] = proc_freq2pstate(g_amec->proc[0].core[core_num].f_request, &l_steps);
-                   if(pmax_chip < pmax[quad])  // check if this is a new lowest freq for the chip
-                      pmax_chip = pmax[quad];
-               }
-            }
+           // The higher the pstate number, the lower the frequency and increasing throttle
+           if(pmax_chip < core_pmax)
+           {
+               pmax_chip = core_pmax;
+           }
         }
     }
-
-    // Skip determining new frequency if all cores in all quads are offline
-    if(l_atLeast1Quad)
+    if( (G_desired_pstate != pmax_chip) &&
+        (G_allow_trace_flags & ALLOW_AMEC_PSTATE_TRACE) )
     {
-        // check for mfg quad Pstate request and set Pstate for each quad
-        for (quad = 0; quad < MAXIMUM_QUADS; quad++)
-        {
-            // set quad with no cores present to lowest frequency for the chip
-            if(l_atLeast1Core[quad] == FALSE)
-               pmax[quad] = pmax_chip;
-
-            // check if there is a mnfg Pstate request for this quad
-            if(g_amec->mnfg_parms.quad_pstate[quad] != 0xFF)
-            {
-               // use mnfg request if it is a lower frequency (higher pState)
-               if(g_amec->mnfg_parms.quad_pstate[quad] > pmax[quad])
-                  pmax[quad] = g_amec->mnfg_parms.quad_pstate[quad];
-
-               if(L_mfg_clear_trace[quad] == FALSE)
-                  L_mfg_set_trace[quad] = TRUE;
-            }
-            else if(L_mfg_clear_trace[quad] == TRUE)
-            {
-                TRAC_INFO("amec_slv_freq_smh: mfg Quad %d Pstate request cleared. New Pstate = 0x%02x", quad, pmax[quad]);
-                L_mfg_clear_trace[quad] = FALSE;
-            }
-
-#ifdef PROC_DEBUG
-            if (G_desired_pstate != pmax[quad])
-            {
-                TRAC_IMP("Updating Quad %d's Pstate to %d", quad, pmax[quad]);
-            }
-#endif
-            // update quad pstate request
-            G_desired_pstate = pmax[quad];
-
-            if(L_mfg_set_trace[quad] == TRUE)
-            {
-                TRAC_INFO("amec_slv_freq_smh: mfg Quad %d Pstate request set = 0x%02x", quad, pmax[quad]);
-                L_mfg_set_trace[quad] = FALSE;
-                L_mfg_clear_trace[quad] = TRUE;
-            }
-        }
-    }  // if at least 1 core online
+        TRAC_IMP("Updating chip Pstate from %d to %d",
+                 G_desired_pstate, pmax_chip);
+    }
+    // update pstate request
+    G_desired_pstate = pmax_chip;
 }
 
 

@@ -282,7 +282,7 @@ typedef struct __attribute__ ((__packed__)) smgr_setmodestate_v30_query
     uint8_t       occ_state;
     // New mode from OCC_MODE_*
     uint8_t       occ_mode;
-    // Additional mode parameter
+    // Additional mode parameter (either freq for FFO or OCC_FREQ_PT_PARM_* for SFP)
     uint16_t      mode_parm;
 
     uint8_t       _reserved;

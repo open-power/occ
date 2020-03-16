@@ -126,8 +126,8 @@ uint32_t dcom_build_slv_inbox(void)
 
 
         // Collect mnfg parameters that need to be sent to slaves
-        G_dcom_slv_inbox_tx[l_slv_idx].foverride_enable = g_amec->mnfg_parms.auto_slew;
-        G_dcom_slv_inbox_tx[l_slv_idx].foverride = g_amec->mnfg_parms.foverride;
+        G_dcom_slv_inbox_tx[l_slv_idx].poverride_enable = g_amec->mnfg_parms.auto_slew;
+        G_dcom_slv_inbox_tx[l_slv_idx].poverride = g_amec->mnfg_parms.poverride;
         G_dcom_slv_inbox_tx[l_slv_idx].emulate_oversub = AMEC_INTF_GET_OVERSUBSCRIPTION_EMULATION();
 
         // Collect Idle Power Saver parameters to be sent to slaves

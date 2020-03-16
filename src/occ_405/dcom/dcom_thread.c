@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -123,11 +123,11 @@ void Dcom_thread_routine(void *arg)
         else
         {
             l_newOccMode  = (G_occ_master_mode  == CURRENT_MODE() ) ? OCC_MODE_NOCHANGE : G_occ_master_mode;
-            l_newOccModeParm  = (G_occ_master_mode_parm  == G_occ_internal_mode_parm ) ? OCC_MODE_PARM_NONE : G_occ_master_mode_parm;
+            l_newOccModeParm  = (G_occ_master_mode_parm  == G_occ_internal_mode_parm ) ? OCC_FREQ_PT_PARM_NONE : G_occ_master_mode_parm;
             // check if need to override mode due to mode parameter change
             // only valid for FFO and static freq point modes
             if( (l_newOccMode == OCC_MODE_NOCHANGE) &&
-                (l_newOccModeParm != OCC_MODE_PARM_NONE) &&
+                (l_newOccModeParm != OCC_FREQ_PT_PARM_NONE) &&
                 ( (G_occ_master_mode == OCC_MODE_FFO) ||
                   (G_occ_master_mode == OCC_MODE_STATIC_FREQ_POINT) ) )
             {
@@ -147,7 +147,7 @@ void Dcom_thread_routine(void *arg)
 
         if( (OCC_STATE_NOCHANGE != l_newOccState)
             || (OCC_MODE_NOCHANGE != l_newOccMode)
-            || (OCC_MODE_PARM_NONE != l_newOccModeParm) )
+            || (OCC_FREQ_PT_PARM_NONE != l_newOccModeParm) )
         {
             // If we're active, then we should always process the mode change first
             // If we're not active, then we should always process the state change first

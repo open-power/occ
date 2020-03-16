@@ -44,7 +44,7 @@ typedef enum {
 #define MNFG_INTF_SLEW_STOP     0x01
 #define MNFG_INTF_SINGLE_STEP   0x00
 #define MNFG_INTF_FULL_SLEW     0x01
-
+#define MNFG_PROC_AUTO_SLEW_VERSION  0x30
 #define MNFG_INTF_RUN_STOP_SLEW_RSP_SIZE 6
 
 // Used by OCC to get mnfg run/stop slew command
@@ -54,10 +54,8 @@ typedef struct __attribute__ ((packed))
     uint8_t   sub_cmd;
     uint8_t   version;
     uint8_t   action;
-    uint8_t   bottom_mode;
-    int8_t    bottom_percent;
-    uint8_t   high_mode;
-    int8_t    high_percent;
+    uint16_t  bottom_freq_pt;
+    uint16_t  top_freq_pt;
     uint8_t   step_mode;
     uint8_t   step_delay;
 }mnfg_run_stop_slew_cmd_t;
@@ -67,8 +65,8 @@ typedef struct __attribute__ ((packed))
 {
     struct    cmdh_fsp_rsp_header;
     uint16_t  slew_count;
-    uint16_t  fstart;
-    uint16_t  fstop;
+    uint16_t  pstart;
+    uint16_t  pstop;
     uint16_t  checksum;
 }mnfg_run_stop_slew_rsp_t;
 

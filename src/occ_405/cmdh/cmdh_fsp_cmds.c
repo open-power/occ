@@ -1150,7 +1150,7 @@ errlHndl_t cmdh_tmgt_setmodestate(const cmdh_fsp_cmd_t * i_cmd_ptr,
     SsxTimebase                     l_start        = ssx_timebase_get();
     OCC_STATE                       l_pre_state    = CURRENT_STATE();
     OCC_MODE                        l_pre_mode     = CURRENT_MODE();
-    OCC_MODE_PARM                   l_mode_parm    = OCC_MODE_PARM_NONE;
+    OCC_FREQ_PT_PARM                l_mode_parm    = OCC_FREQ_PT_PARM_NONE;
 
     // No mode support with OPAL just accept the request
     // and keep reporting back that it is in that mode.
@@ -1215,13 +1215,12 @@ errlHndl_t cmdh_tmgt_setmodestate(const cmdh_fsp_cmd_t * i_cmd_ptr,
             (l_cmd_ptr->occ_mode == OCC_MODE_STATIC_FREQ_POINT) )
         {
             l_mode_parm = l_cmd_ptr->mode_parm;
-            bool l_vpd_curve_fit_point = ((l_mode_parm >= OCC_MODE_PARM_VPD_CF0_PT) && (l_mode_parm <= OCC_MODE_PARM_VPD_CF7_PT)) ? TRUE : FALSE;
-            bool l_other_mode = ((l_mode_parm >= OCC_MODE_PARM_MIN_FREQ_PT) && (l_mode_parm <= OCC_MODE_PARM_MODE_OFF_FREQ_PT)) ? TRUE : FALSE;
             bool l_valid_freq = ((l_mode_parm >= G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MIN_FREQ]) &&
                              (l_mode_parm <= G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_VPD_UT])) ? TRUE : FALSE;
 
-            if( ((l_cmd_ptr->occ_mode == OCC_MODE_STATIC_FREQ_POINT) && !(l_vpd_curve_fit_point || l_other_mode)) ||
-            ((l_cmd_ptr->occ_mode == OCC_MODE_FFO) && !l_valid_freq))
+            if( ( (l_cmd_ptr->occ_mode == OCC_MODE_STATIC_FREQ_POINT) &&
+                  (!(OCC_FREQ_PT_PARM_IS_VALID(l_mode_parm))) ) ||
+                ( (l_cmd_ptr->occ_mode == OCC_MODE_FFO) && !l_valid_freq) )
             {
                 CMDH_TRAC_ERR("OCC received an invalid additional mode parameter! Mode[0x%02X] Additional Paramater[0x%04X]",
                               l_cmd_ptr->occ_mode, l_mode_parm);
@@ -1262,7 +1261,7 @@ errlHndl_t cmdh_tmgt_setmodestate(const cmdh_fsp_cmd_t * i_cmd_ptr,
                         ( (G_dcom_slv_outbox_rx[l_slv_idx].occ_fw_mailbox.mode == G_occ_external_req_mode)
                           || (G_occ_external_req_mode == OCC_MODE_NOCHANGE)                               ) &&
                         ( (G_dcom_slv_outbox_rx[l_slv_idx].occ_fw_mailbox.mode_parm == G_occ_external_req_mode_parm)
-                          || (G_occ_external_req_mode_parm == OCC_MODE_PARM_NONE)                         ) )
+                          || (G_occ_external_req_mode_parm == OCC_FREQ_PT_PARM_NONE)                         ) )
                     {
                         l_occ_bitmap_succeeded |= (0x01<<l_slv_idx);
                         l_occ_passed_num++;

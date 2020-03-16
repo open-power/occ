@@ -158,8 +158,8 @@ typedef struct __attribute__ ((packed))
     uint8_t  tod[ TOD_SIZE ];                                       // [42]  -  6 bytes
 
     // Manufacturing parameters
-    uint16_t foverride;                                             // [48] -  2 bytes
-    uint8_t  foverride_enable;                                      // [50] -  1 byte
+    uint16_t poverride;                                             // [48] -  2 bytes
+    uint8_t  poverride_enable;                                      // [50] -  1 byte
     uint8_t  emulate_oversub;                                       // [51] -  1 byte
 
     // Idle Power Saver parameters

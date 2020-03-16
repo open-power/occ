@@ -495,24 +495,22 @@ typedef struct amec_mnfg
 {
     ///Auto-slewing flag: enable=1, disable=0
     uint8_t             auto_slew;
-    ///Minimum frequency in MHz for auto-slewing
-    uint16_t            fmin;
-    ///Maximum frequency in MHz for auto-slewing
-    uint16_t            fmax;
-    ///Step size in MHz for auto-slewing
-    uint16_t            fstep;
+    ///Minimum frequency as a pState for auto-slewing
+    uint16_t            pmin;
+    ///Maximum frequency as a pState for auto-slewing
+    uint16_t            pmax;
+    ///Step size in Pstate(s) for auto-slewing
+    uint16_t            pstep;
     ///Additional delay in ticks for auto-slewing
     uint16_t            delay;
-    ///Frequency override to be sent to all slave OCCs
-    uint16_t            foverride;
+    ///Frequency override as a Pstate to be sent to all slave OCCs
+    uint16_t            poverride;
     ///Counter of times we reached fmin or fmax
     uint16_t            slew_counter;
     ///memory auto-slewing flag: enable=1, disable=0
     bool                mem_autoslew;
     ///memory slewing count
     uint32_t            mem_slew_counter;
-    ///Per Quad Pstate request: 0xFF=no request
-    uint8_t             quad_pstate[MAXIMUM_QUADS];
 } amec_mnfg_t;
 
 //-------------------------------------------------------------
@@ -554,14 +552,11 @@ typedef struct
   // Global memory speed request
   uint16_t              mem_speed_request;
 
-  // Flag to enable frequency override in the voting box due to Master OCC request
-  uint8_t               foverride_enable;
-  // Override frequency to be used by the voting box due to Master OCC request
-  uint16_t              foverride;
-  // Flag to enable frequency override in the voting box due to a Pstate table update
-  uint8_t               pstate_foverride_enable;
-  // Override frequency to be used by the voting box due to a Pstate table update
-  uint16_t              pstate_foverride;
+  // Must use Pstate (not frequency) for mfg auto slew in order to allow auto slew into throttle space
+  // Flag to enable Pstate override in the voting box due to Master OCC request (mfg auto slew)
+  uint8_t               poverride_enable;
+  // Override Pstate to be used by the voting box due to Master OCC request  (mfg auto slew)
+  uint16_t              poverride;
 
   // Idle Power Saver frequency request sent by Master OCC
   uint16_t              slv_ips_freq_request;

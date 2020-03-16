@@ -419,7 +419,7 @@ void dcom_build_occfw_msg( const dcom_error_type_t i_which_msg )
         if(G_sysConfigData.system_type.kvm )
         {
             G_dcom_slv_outbox_tx.occ_fw_mailbox.mode = G_occ_external_req_mode_kvm;
-            G_dcom_slv_outbox_tx.occ_fw_mailbox.mode_parm = OCC_MODE_PARM_NONE;
+            G_dcom_slv_outbox_tx.occ_fw_mailbox.mode_parm = OCC_FREQ_PT_PARM_NONE;
         }
         else
         {
@@ -460,7 +460,7 @@ void task_dcom_parse_occfwmsg(task_t *i_self)
             if(G_sysConfigData.system_type.kvm )
             {
                 G_dcom_slv_outbox_rx[l_slv_idx].occ_fw_mailbox.mode = G_occ_external_req_mode_kvm;
-                G_dcom_slv_outbox_tx.occ_fw_mailbox.mode_parm = OCC_MODE_PARM_NONE;
+                G_dcom_slv_outbox_tx.occ_fw_mailbox.mode_parm = OCC_FREQ_PT_PARM_NONE;
             }
             else
             {
@@ -494,8 +494,8 @@ void task_dcom_parse_occfwmsg(task_t *i_self)
     }
 
     // Copy mnfg parameters into g_amec structure
-    g_amec->foverride_enable = G_dcom_slv_inbox_rx.foverride_enable;
-    g_amec->foverride = G_dcom_slv_inbox_rx.foverride;
+    g_amec->poverride_enable = G_dcom_slv_inbox_rx.poverride_enable;
+    g_amec->poverride = G_dcom_slv_inbox_rx.poverride;
 
     // Copy IPS parameters sent by Master OCC
     g_amec->slv_ips_freq_request = G_dcom_slv_inbox_rx.ips_freq_request;

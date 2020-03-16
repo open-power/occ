@@ -378,6 +378,9 @@ void populate_sys_mode_freq_table(void)
                    G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_MAX_PERF],
                    G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_FMAX]);
 
+    // set freq for bottom throttle point to 1Mhz this will translate into pstate for the most throttled settin
+    G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_BOTTOM_THROTTLE] = 1;
+
     // Set the frequency range for amec, at this point there is no mode set
     l_err = amec_set_freq_range(OCC_MODE_NOCHANGE);
     if(l_err)

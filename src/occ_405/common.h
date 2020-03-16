@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -28,14 +28,15 @@
 #include <rtls.h>
 
 // Allow Trace Masks
-#define ALLOW_PMCR_TRACE       0x0001
-#define ALLOW_CLIP_TRACE       0x0002
-#define ALLOW_VRT_TRACE        0x0004
-#define ALLOW_OPAL_TRACE       0x0008
-#define ALLOW_MEM_TRACE        0x0010
-#define ALLOW_AVSBUS_TRACE     0x0020
-#define ALLOW_WOF_OCS_TRACE    0x0040
+#define ALLOW_PMCR_TRACE           0x0001
+#define ALLOW_CLIP_TRACE           0x0002
+#define ALLOW_VRT_TRACE            0x0004
+#define ALLOW_OPAL_TRACE           0x0008
+#define ALLOW_MEM_TRACE            0x0010
+#define ALLOW_AVSBUS_TRACE         0x0020
+#define ALLOW_WOF_OCS_TRACE        0x0040
 #define ALLOW_CEFF_RATIO_VDD_TRACE 0x0080
+#define ALLOW_AMEC_PSTATE_TRACE    0x0100
 
 // Start of SRAM memory
 #define SRAM_START_ADDRESS_405      0xFFF40000

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -53,15 +53,15 @@
 #define AMEC_MST_SUBSTATE_NEXT()        AMEC_SUBSTATE_NEXT(&G_amec_mst_state);
 #define AMEC_MST_SUB_SUBSTATE_NEXT()    AMEC_SUB_SUBSTATE_NEXT(&G_amec_mst_state);
 
-#define AMEC_MST_SET_MNFG_FMIN(a)       AMEC_MST_CUR_MNFG_FMIN() = a
-#define AMEC_MST_SET_MNFG_FMAX(a)       AMEC_MST_CUR_MNFG_FMAX() = a
-#define AMEC_MST_SET_MNFG_FSTEP(a)      g_amec->mnfg_parms.fstep = a
+#define AMEC_MST_SET_MNFG_PMIN(a)       AMEC_MST_CUR_MNFG_PMIN() = a
+#define AMEC_MST_SET_MNFG_PMAX(a)       AMEC_MST_CUR_MNFG_PMAX() = a
+#define AMEC_MST_SET_MNFG_PSTEP(a)      g_amec->mnfg_parms.pstep = a
 #define AMEC_MST_SET_MNFG_DELAY(a)      g_amec->mnfg_parms.delay = a
 #define AMEC_MST_START_AUTO_SLEW()      g_amec->mnfg_parms.auto_slew = 1
 #define AMEC_MST_STOP_AUTO_SLEW()       g_amec->mnfg_parms.auto_slew = 0
 #define AMEC_MST_CUR_SLEW_COUNT()       g_amec->mnfg_parms.slew_counter
-#define AMEC_MST_CUR_MNFG_FMIN()        g_amec->mnfg_parms.fmin
-#define AMEC_MST_CUR_MNFG_FMAX()        g_amec->mnfg_parms.fmax
+#define AMEC_MST_CUR_MNFG_PMIN()        g_amec->mnfg_parms.pmin
+#define AMEC_MST_CUR_MNFG_PMAX()        g_amec->mnfg_parms.pmax
 
 //*************************************************************************
 // Structures

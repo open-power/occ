@@ -583,9 +583,6 @@ errlHndl_t SMGR_observation_to_active()
     Pstate_t        l_pstate;
     uint32_t        l_steps = 0;
 
-    // clear mnfg quad pstate request to default OCC to control all quads
-    memset(&g_amec->mnfg_parms.quad_pstate[0], 0xFF, MAXIMUM_QUADS);
-
     do
     {
         // NOTE that this is really unnecessary if you follow the TMGT OCC

@@ -33,8 +33,12 @@
 #include "amec_smh.h"
 #include "amec_master_smh.h"
 #include <pgpe_shared.h>
+#include <pstates_occ.H>
 
 extern amec_sys_t g_amec_sys;
+extern smgr_sfp_parm_trans_t G_smgr_sfp_mode_parm_trans[];
+extern uint8_t G_smgr_sfp_parm_trans_count;
+extern OCCPstateParmBlock_t G_oppb;
 
 // SSX Block Copy Request for copying mfg Pstate table from HOMER to SRAM
 BceRequest G_mfg_pba_request;
@@ -54,11 +58,14 @@ uint8_t cmdh_mnfg_run_stop_slew(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                       cmdh_fsp_rsp_t * o_rsp_ptr)
 {
     uint8_t                     l_rc = ERRL_RC_SUCCESS;
-    uint16_t                    l_fmin = 0;
-    uint16_t                    l_fmax = 0;
+    uint16_t                    l_pmin = 0xff;
+    uint16_t                    l_pmax = 0xff;
     uint16_t                    l_step_size = 0;
     uint16_t                    l_step_delay = 0;
     uint32_t                    l_temp = 0;
+    uint32_t                    l_additional_pstates = 0;
+    OCC_FREQ_POINT              l_freq_pt = 0;
+    int                         i = 0;
     mnfg_run_stop_slew_cmd_t    *l_cmd_ptr = (mnfg_run_stop_slew_cmd_t*) i_cmd_ptr;
     mnfg_run_stop_slew_rsp_t    *l_rsp_ptr = (mnfg_run_stop_slew_rsp_t*) o_rsp_ptr;
 
@@ -68,15 +75,18 @@ uint8_t cmdh_mnfg_run_stop_slew(const cmdh_fsp_cmd_t * i_cmd_ptr,
         if (G_occ_role == OCC_SLAVE)
         {
             TRAC_ERR("cmdh_mnfg_run_stop_slew: Mnfg command not supported on Slave OCCs!");
+            l_rc = ERRL_RC_INVALID_CMD;
             break;
         }
 
         // Do some basic input verification
-        if ((l_cmd_ptr->action > MNFG_INTF_SLEW_STOP) ||
+        if ((l_cmd_ptr->version != MNFG_PROC_AUTO_SLEW_VERSION) ||
+            (l_cmd_ptr->action > MNFG_INTF_SLEW_STOP) ||
             (l_cmd_ptr->step_mode > MNFG_INTF_FULL_SLEW))
         {
             // Invalid values were passed by the user!
-            TRAC_ERR("cmdh_mnfg_run_stop_slew: Invalid values were detected! action[0x%02x] step_mode[0x%02x]",
+            TRAC_ERR("cmdh_mnfg_run_stop_slew: Invalid value! version[0x%02x] action[0x%02x] step_mode[0x%02x]",
+                     l_cmd_ptr->version,
                      l_cmd_ptr->action,
                      l_cmd_ptr->step_mode);
             l_rc = ERRL_RC_INVALID_DATA;
@@ -90,13 +100,13 @@ uint8_t cmdh_mnfg_run_stop_slew(const cmdh_fsp_cmd_t * i_cmd_ptr,
             l_rsp_ptr->slew_count = AMEC_MST_CUR_SLEW_COUNT();
 
             // Collect the frequency range used for the auto-slew
-            l_rsp_ptr->fstart = AMEC_MST_CUR_MNFG_FMIN();
-            l_rsp_ptr->fstop = AMEC_MST_CUR_MNFG_FMAX();
+            l_rsp_ptr->pstart = AMEC_MST_CUR_MNFG_PMIN();
+            l_rsp_ptr->pstop = AMEC_MST_CUR_MNFG_PMAX();
 
-            TRAC_INFO("cmdh_mnfg_run_stop_slew: Auto-slewing has been stopped. Count[%u] fstart[%u] fstop[%u]",
+            TRAC_INFO("cmdh_mnfg_run_stop_slew: Auto-slewing has been stopped. Count[%u] pmin[0x%02X] pmax[0x%02X]",
                       AMEC_MST_CUR_SLEW_COUNT(),
-                      AMEC_MST_CUR_MNFG_FMIN(),
-                      AMEC_MST_CUR_MNFG_FMAX());
+                      AMEC_MST_CUR_MNFG_PMIN(),
+                      AMEC_MST_CUR_MNFG_PMAX());
 
             // Send a signal to RTL to stop auto-slewing
             AMEC_MST_STOP_AUTO_SLEW();
@@ -106,75 +116,154 @@ uint8_t cmdh_mnfg_run_stop_slew(const cmdh_fsp_cmd_t * i_cmd_ptr,
         }
 
         // If we made it here, that means we are starting up a slew run
-        // First, determine the Fmax and Fmin for the slew run
-        if (l_cmd_ptr->bottom_mode == OCC_MODE_PWRSAVE)
+        // Determine Pmax for the slew run
+        if (OCC_FREQ_PT_PARM_IS_VALID(l_cmd_ptr->top_freq_pt))
         {
-            // If bottom mode is Static Power Save, use the min frequency
-            // available
-            l_fmin = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MIN_FREQ];
+            if (l_cmd_ptr->top_freq_pt == OCC_FREQ_PT_PARM_FMAX_FREQ_PT)
+            {
+                // If top freq point is Fmax use PMAX (Pstate 0)
+                // each chip will clip to its real Pmax as needed
+                l_pmax = PMAX;
+            }
+            else
+            {
+               for(i=0; i<G_smgr_sfp_parm_trans_count; i++)
+                 {
+                     if(G_smgr_sfp_mode_parm_trans[i].freq_pt_parm == l_cmd_ptr->top_freq_pt)
+                     {
+                         // We found the freq point translate to Pstate
+                        l_freq_pt = G_smgr_sfp_mode_parm_trans[i].freq_point;
+                        if(l_freq_pt < OCC_FREQ_PT_COUNT)
+                        {
+                           l_pmax = proc_freq2pstate(G_sysConfigData.sys_mode_freq.table[l_freq_pt], &l_additional_pstates);
+                           l_pmax += l_additional_pstates;
+                        }
+                        else
+                        {
+                            TRAC_ERR("cmdh_mnfg_run_stop_slew: Invalid freq point[0x%02X] found for top freq parameter[0x%04X]",
+                                      l_freq_pt, l_cmd_ptr->top_freq_pt);
+                            l_rc = ERRL_RC_INVALID_DATA;
+                        }
+                        break;
+                     } // if freq point found
+                 }  // for loop
+            }
         }
         else
         {
-            l_fmin = G_sysConfigData.sys_mode_freq.table[l_cmd_ptr->bottom_mode];
+            TRAC_ERR("cmdh_mnfg_run_stop_slew: Invalid top freq point[0x%04x]",
+                     l_cmd_ptr->top_freq_pt);
+            l_rc = ERRL_RC_INVALID_DATA;
+            break;
         }
-        l_fmax = G_sysConfigData.sys_mode_freq.table[l_cmd_ptr->high_mode];
 
-        // Add the percentages to compute the min/max frequencies
-        l_fmin = l_fmin + (l_fmin * l_cmd_ptr->bottom_percent)/100;
-        l_fmax = l_fmax + (l_fmax * l_cmd_ptr->high_percent)/100;
-
-        TRAC_INFO("cmdh_mnfg_run_stop_slew: We are about to start auto-slewing function");
-        TRAC_INFO("cmdh_mnfg_run_stop_slew: bottom_mode[0x%.2X] freq[%u] high_mode[0x%.2X] freq[%u]",
-                  l_cmd_ptr->bottom_mode,
-                  l_fmin,
-                  l_cmd_ptr->high_mode,
-                  l_fmax);
-
-        // Determine the frequency step size and the step delay
-        if (l_cmd_ptr->step_mode == MNFG_INTF_FULL_SLEW)
+        // If top freq point was successfull then determine Pmim for the slew run
+        if ( (l_rc == ERRL_RC_SUCCESS) &&
+             OCC_FREQ_PT_PARM_IS_VALID(l_cmd_ptr->bottom_freq_pt) )
         {
-            l_step_size = l_fmax - l_fmin;
+            if(l_cmd_ptr->bottom_freq_pt == OCC_FREQ_PT_PARM_BOTTOM_THROTTLE)
+            {
+                // If bottom freq point is throttle range set min Pstate to bottom of throttle range
+                l_pmin = G_oppb.pstate_max_throttle;
+            }
+            else
+            {
+                 for(i=0; i<G_smgr_sfp_parm_trans_count; i++)
+                 {
+                     if(G_smgr_sfp_mode_parm_trans[i].freq_pt_parm == l_cmd_ptr->bottom_freq_pt)
+                     {
+                         // We found the freq point translate to Pstate
+                        l_freq_pt = G_smgr_sfp_mode_parm_trans[i].freq_point;
+                        if(l_freq_pt < OCC_FREQ_PT_COUNT)
+                        {
+                           l_pmin = proc_freq2pstate(G_sysConfigData.sys_mode_freq.table[l_freq_pt], &l_additional_pstates);
+                           l_pmin += l_additional_pstates;
+                        }
+                        else
+                        {
+                            TRAC_ERR("cmdh_mnfg_run_stop_slew: Invalid freq point[0x%02X] found for bottom freq parameter[0x%04X]",
+                                      l_freq_pt, l_cmd_ptr->top_freq_pt);
+                            l_rc = ERRL_RC_INVALID_DATA;
+                        }
+                        break;
+                     } // if freq point found
+                 }  // for loop
+            }
 
-            // Disable step delays if full slew mode has been selected
-            l_step_delay = 0;
+            // make sure we have valid Pstate for min and max
+            if(l_rc != ERRL_RC_SUCCESS)  // already found an error
+                 break;
+            if( (l_pmin == 0xff) || (l_pmax == 0xff) )
+            {
+                TRAC_ERR("cmdh_mnfg_run_stop_slew: bottom pState[0x%02x] and/or top pState[0x%02x] invalid",
+                         l_pmin,
+                         l_pmax);
+                l_rc = ERRL_RC_INVALID_DATA;
+                break;
+            }
+            if(l_pmin < l_pmax)
+            {
+                TRAC_ERR("cmdh_mnfg_run_stop_slew: bottom pState[0x%02x] higher freq than top pState[0x%02x]",
+                         l_pmin,
+                         l_pmax);
+                l_rc = ERRL_RC_INVALID_DATA;
+                break;
+            }
 
-            TRAC_INFO("cmdh_mnfg_run_stop_slew: Enabling full-slew mode with step_size[%u] step_delay[%u]",
-                      l_step_size,
-                      l_step_delay);
-        }
-        else
+            TRAC_INFO("cmdh_mnfg_run_stop_slew: We are about to start auto-slewing function");
+            TRAC_INFO("cmdh_mnfg_run_stop_slew: Top freq Pstate[0x%02X] bottom freq Pstate[0x%02X]",
+                      l_pmax,
+                      l_pmin);
+
+            // Determine the frequency step size and the step delay
+            if (l_cmd_ptr->step_mode == MNFG_INTF_FULL_SLEW)
+            {
+                l_step_size = l_pmin - l_pmax;
+
+                // Disable step delays if full slew mode has been selected
+                l_step_delay = 0;
+
+                TRAC_INFO("cmdh_mnfg_run_stop_slew: Enabling full-slew mode with step_size[%u Pstates]",
+                          l_step_size);
+            }
+            else
+            {
+                l_step_size = 1;  // one Pstate
+
+                // Translate the step delay to internal OCC ticks
+                l_temp = (l_cmd_ptr->step_delay * 1000) / AMEC_US_PER_TICK;
+                l_step_delay = (uint16_t) l_temp;
+
+                TRAC_INFO("cmdh_mnfg_run_stop_slew: Enabling single-step mode with step_delay[%u us]",
+                          l_step_delay*AMEC_US_PER_TICK);
+            }
+
+            // Now, load the values for RTL consumption
+            AMEC_MST_SET_MNFG_PMIN(l_pmin);
+            AMEC_MST_SET_MNFG_PMAX(l_pmax);
+            AMEC_MST_SET_MNFG_PSTEP(l_step_size);
+            AMEC_MST_SET_MNFG_DELAY(l_step_delay);
+
+            // Reset the slew-counter before we start auto-slewing
+            AMEC_MST_CUR_SLEW_COUNT() = 0;
+
+            // Wait a little bit for RTL to process above parameters
+            ssx_sleep(SSX_MILLISECONDS(5));
+
+            // Send a signal to RTL to start auto-slewing
+            AMEC_MST_START_AUTO_SLEW();
+
+            // We are auto-slewing now, populate the response packet
+            l_rsp_ptr->slew_count = 0;
+            l_rsp_ptr->pstart = l_pmin;
+            l_rsp_ptr->pstop = l_pmax;
+        }  // if bottom point valid
+        else if(l_rc == ERRL_RC_SUCCESS)
         {
-            l_step_size = (uint16_t)G_mhz_per_pstate;
-
-            // Translate the step delay to internal OCC ticks
-            l_temp = (l_cmd_ptr->step_delay * 1000) / AMEC_US_PER_TICK;
-            l_step_delay = (uint16_t) l_temp;
-
-            TRAC_INFO("cmdh_mnfg_run_stop_slew: Enabling single-step mode with step_size[%u] step_delay[%u]",
-                      l_step_size,
-                      l_step_delay);
+            TRAC_ERR("cmdh_mnfg_run_stop_slew: Invalid bottom freq point[0x%04x]",
+                     l_cmd_ptr->bottom_freq_pt);
+            l_rc = ERRL_RC_INVALID_DATA;
         }
-
-        // Now, load the values for RTL consumption
-        AMEC_MST_SET_MNFG_FMIN(l_fmin);
-        AMEC_MST_SET_MNFG_FMAX(l_fmax);
-        AMEC_MST_SET_MNFG_FSTEP(l_step_size);
-        AMEC_MST_SET_MNFG_DELAY(l_step_delay);
-
-        // Reset the slew-counter before we start auto-slewing
-        AMEC_MST_CUR_SLEW_COUNT() = 0;
-
-        // Wait a little bit for RTL to process above parameters
-        ssx_sleep(SSX_MILLISECONDS(5));
-
-        // Send a signal to RTL to start auto-slewing
-        AMEC_MST_START_AUTO_SLEW();
-
-        // We are auto-slewing now, populate the response packet
-        l_rsp_ptr->slew_count = 0;
-        l_rsp_ptr->fstart = l_fmin;
-        l_rsp_ptr->fstop = l_fmax;
-
     }while(0);
 
     // Populate the response data packet
