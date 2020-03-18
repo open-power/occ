@@ -84,8 +84,9 @@ extern uint32_t G_max_ceff_ratio;
 #define WOF_RC_IPC_FAILURE                         0x00800000
 #define WOF_RC_USER_DISABLED_WOF                   0x01000000
 #define WOF_RC_RESET_DEBUG_CMD                     0x02000000
-#define WOF_RC_DIVIDE_BY_ZERO_VCS                 0x04000000
+#define WOF_RC_DIVIDE_BY_ZERO_VCS                  0x04000000
 #define WOF_RC_INVALID_IDDQ_SAMPLE_DEPTH           0x08000000
+#define WOF_RC_NEGATIVE_MMA_LEAKAGE                0x10000000
 
 //***************************************************************************
 // Temp space used to save hard coded addresses

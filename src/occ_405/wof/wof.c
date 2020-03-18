@@ -1071,10 +1071,6 @@ void calculate_core_leakage( void )
         g_wof->single_core_on_vdd_chip_eqs_ua = ( (g_wof->scaled_good_eqs_on_on_vdd_chip_ua - g_wof->scaled_all_off_on_vdd_chip_ua_c)
                                                  / G_oppb.iddq.good_normal_cores_per_EQs[l_oct_idx] ) + g_wof->single_core_off_vdd_chip_ua_c;
 
-// TODO RTC 209558 # What about MMA leakage for Vmin?  It should be OFF.
-// #    - Need to take out the MMA ON component and add in the MMA OFF component.
-// #    - How do we get the MMA ON component?  Is it the same as the MMA OFF leakage percentage?
-
         g_wof->scaled_good_eqs_on_on_vdd_vmin_ua = scale_and_interpolate(G_oppb.iddq.iddq_eqs_good_cores_on_good_caches_on_5ma[l_oct_idx],
                                                                          G_oppb.iddq.avgtemp_all_cores_on_good_caches_on_p5c,
                                                                          g_amec_sys.static_wof_data.Vdd_vmin_index,
@@ -1084,6 +1080,13 @@ void calculate_core_leakage( void )
 
         g_wof->single_core_on_vdd_vmin_eqs_ua = ( (g_wof->scaled_good_eqs_on_on_vdd_vmin_ua - g_wof->scaled_all_off_on_vdd_vmin_ua_c)
                                                  / G_oppb.iddq.good_normal_cores_per_EQs[l_oct_idx] ) + g_wof->single_core_off_vdd_vmin_ua_c;
+        // need to take away the MMA portion of the single core on at vdd vmin if the Iddq includes the MMA, Retention mode guarantees MMA OFF
+        if (G_oppb.iddq.mma_not_active == 0)  // MMA on
+        {
+            g_wof->single_core_on_vdd_vmin_eqs_ua *= (100 - G_oppb.iddq.mma_off_leakage_pct);
+            // divide by 100 to account for leakage percentage to keep unit of ua
+            g_wof->single_core_on_vdd_vmin_eqs_ua /= 100;
+        }
 
         g_wof->scaled_good_eqs_on_on_vcs_chip_ua = scale_and_interpolate(G_oppb.iddq.icsq_eqs_good_cores_on_good_caches_on_5ma[l_oct_idx],
                                                                          G_oppb.iddq.avgtemp_all_cores_on_good_caches_on_p5c,
@@ -1126,19 +1129,28 @@ void calculate_core_leakage( void )
 
             l_iddq_p000001ua += g_wof->single_core_off_vdd_chip_ua_nc * g_wof->p1pct_off[l_core_idx] * l_t_p001_scale_nc;
 
-            // if MMA was on subtract off MMA leakage
             if(G_oppb.iddq.mma_not_active == 0)  // MMA on
             {
                 l_temp64 = g_wof->single_core_on_vdd_chip_eqs_ua *
                            G_oppb.iddq.mma_off_leakage_pct *
                            g_wof->p1pct_mma_off[l_core_idx] *
+                           g_wof->p1pct_on[l_core_idx] *
                            l_t_p001_scale_c;
-                // divide by 100 to account for iddq.mma_off_leakage_pct to get unit of 0.000001ua
-                l_temp64 = (uint32_t)(l_temp64 / 100);
+                // to get unit of 0.000001ua divide by 100,000: 100 to account for iddq.mma_off_leakage_pct * 1000 for p1pct_on
+                // note the p1pct_mma_off is accounted for in the final divide at the very end
+                l_temp64 = (uint32_t)(l_temp64 / 100000);
 
-                // prevent going negative
+                // prevent going negative.  This should never be negative
                 if(l_temp64 > l_iddq_p000001ua)
                     l_iddq_p000001ua -= l_temp64;
+                else
+                {
+                    INTR_TRAC_ERR("calculate_core_leakage: core[%d] MMA[%d]>l_iddq_p000001ua[%d]",
+                                   l_core_idx, l_temp64, l_iddq_p000001ua);
+                    set_clear_wof_disabled(SET,
+                                           WOF_RC_NEGATIVE_MMA_LEAKAGE,
+                                           ERC_WOF_NEGATIVE_MMA_LEAKAGE);
+                }
             }
 
             l_iddq_p000001ua += g_wof->single_core_on_vdd_vmin_eqs_ua *
