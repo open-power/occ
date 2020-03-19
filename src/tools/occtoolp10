@@ -39,9 +39,9 @@ fi
 binfile="binary.bin"
 inputfile=""
 G_powerArch="p9";
-cmd_sram_addr="fffbe000"
+cmd_sram_addr="ffffd000"
 doorbell_addr="6d035"
-rsp_sram_addr="fffbf000"
+rsp_sram_addr="ffffe000"
 poll_version="20"
 occ_cmd=""
 occ_cmd_data=""
@@ -736,7 +736,9 @@ function send_occ_cmd
             echo -e "${red}ERROR: failed sending doorbell to OCC (rc=$rc)${normal}"
         fi
 
-        # Third, collect response from response buffer in SRAa
+        # TODO: Poll response buffer for response
+
+        # Third, collect response from response buffer in SRAM
         if [ $verbose -ne 0 ]; then
             echo -e "${bold}==> getsram $rsp_sram_addr 1024 -p${occ} -ch $channel $quiet  (read POLL response from SRAM)${normal}"
         fi
@@ -2100,20 +2102,20 @@ function occ_trace_cronus
         echo -e "${bold}Collecting OCC$occ Trace via cronus:  (`date`)${normal}"
         # Confirm eyecatcher is correct
         if [ $verbose -ne 0 ]; then
-            echo "==> getsram fffb4003 $min_sram_size -ch $channel -p$occ -n$node -exp 42455252"
+            echo "==> getsram ffff6403 $min_sram_size -ch $channel -p$occ -n$node -exp 42455252"
         fi
-        getsram fffb4003 $min_sram_size -ch $channel -p$occ -n$node
-        getsram fffb4003 $min_sram_size -ch $channel -p$occ -n$node -exp 42455252 # "BERR"
+        getsram ffff6403 $min_sram_size -ch $channel -p$occ -n$node
+        getsram ffff6403 $min_sram_size -ch $channel -p$occ -n$node -exp 42455252 # "BERR"
         let foundERR=$?
         if [ $foundERR -eq 0 ]; then
             # Remove old files
             rm -f ./occTrace*.bin ./occTrace.ppe
-            echo -e "${bold}==> getsram fffb4000 8192 -p$occ -n$node -fb ./occTraceERR.bin -ch $channel ${normal}"
-            getsram                     fffb4000 8192 -p$occ -n$node -fb ./occTraceERR.bin -ch $channel
-            echo -e "${bold}==> getsram fffb6000 8192 -p$occ -n$node -fb ./occTraceINF.bin -ch $channel ${normal}"
-            getsram                     fffb6000 8192 -p$occ -n$node -fb ./occTraceINF.bin -ch $channel
-            echo -e "${bold}==> getsram fffb8000 8192 -p$occ -n$node -fb ./occTraceIMP.bin -ch $channel ${normal}"
-            getsram                     fffb8000 8192 -p$occ -n$node -fb ./occTraceIMP.bin -ch $channel
+            echo -e "${bold}==> getsram ffff6400 9216 -p$occ -n$node -fb ./occTraceERR.bin -ch $channel ${normal}"
+            getsram                     ffff6400 9216 -p$occ -n$node -fb ./occTraceERR.bin -ch $channel
+            echo -e "${bold}==> getsram ffff8800 9216 -p$occ -n$node -fb ./occTraceINF.bin -ch $channel ${normal}"
+            getsram                     ffff8800 9216 -p$occ -n$node -fb ./occTraceINF.bin -ch $channel
+            echo -e "${bold}==> getsram ffffac00 9216 -p$occ -n$node -fb ./occTraceIMP.bin -ch $channel ${normal}"
+            getsram                     ffffac00 9216 -p$occ -n$node -fb ./occTraceIMP.bin -ch $channel
 
             if [ -e "./ppe2fsp" ]; then
                 ppe2fsp_cmd="./ppe2fsp"
@@ -2152,8 +2154,8 @@ function occ_trace_cronus
                 fi
             fi
 
-            GPE1ADDR=`getsram fffb3c18 $min_sram_size -ch $channel | grep 00000000 | awk '{print $2}'`
-            GPE1SIZEHEX=`getsram fffb3c1c $min_sram_size -ch $channel | grep 00000000 | awk '{print $2}'`
+            GPE1ADDR=`getsram ffff6018 $min_sram_size -ch $channel | grep 00000000 | awk '{print $2}'`
+            GPE1SIZEHEX=`getsram ffff601c $min_sram_size -ch $channel | grep 00000000 | awk '{print $2}'`
             #GPE1SIZE=`echo \$((16#$GPE1SIZEHEX))`
             let GPE1SIZE=0x${GPE1SIZEHEX}
             if [ $GPE0SIZE -gt 2048 ]; then

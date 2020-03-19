@@ -48,6 +48,8 @@ L_pgpe_enabled = 1
 G_run_time = 1
 # Set bypass to 1 to bypass the bootloader and start the 405 code directly
 G_bypass_bootloader = 0
+# Indicates if the symbols were loaded (by running occinit)
+G_symbols_loaded = 0
 
 # P10
 bp = "backplane0"   # Standalone
@@ -1705,12 +1707,12 @@ def occ_trace(directory_arg, flg_verbose, flg_directory, i_directory, flg_prefix
     print("==> Collecting GPE1 traces: " + command)
     run_command(command)
 
-    trace_filename = target_trace_directory+"/tracessx.gpebin"
-    #TODO: symbolic access fails in hostboot simics due to sym table not being loaded
-    ssx_addr,junk = cli.quiet_run_command(bp+"."+proc+".occ_cmp.proc_405.sym g_ssx_trace_buf_ptr", output_mode = output_modes.formatted_text)
-    command = "pipe \""+bp+"."+proc+".occ_cmp.oci_space.x (0x"+str('{0:08X}'.format(ssx_addr))+") 512\" \"sed \\\"s/^p:0x........ //g\\\" | sed \\\"s/ ................$//g\\\" | sed \\\"s/ //g\\\" | xxd -r -p > "+trace_filename+" \""
-    print("==> Collecting SSX traces: " + command)
-    run_command(command)
+    if G_symbols_loaded == 1:
+        trace_filename = target_trace_directory+"/tracessx.gpebin"
+        ssx_addr,junk = cli.quiet_run_command(bp+"."+proc+".occ_cmp.proc_405.sym g_ssx_trace_buf_ptr", output_mode = output_modes.formatted_text)
+        command = "pipe \""+bp+"."+proc+".occ_cmp.oci_space.x (0x"+str('{0:08X}'.format(ssx_addr))+") 512\" \"sed \\\"s/^p:0x........ //g\\\" | sed \\\"s/ ................$//g\\\" | sed \\\"s/ //g\\\" | xxd -r -p > "+trace_filename+" \""
+        print("==> Collecting SSX traces: " + command)
+        run_command(command)
 
     # Parse the trace files
     command = "!"+tools_directory+"/parseOccBinTrace " + parse_opts + " " + target_trace_directory
@@ -2516,6 +2518,8 @@ def occ_init(code_dir, flg_nopgpe, flg_verbose):
         #command = bp+"."+proc+".occ_cmp.oci_space.write 0xfff201a0 0x10300000 -b" # Enable PGPE immediate return
         #print("\n==> " + command + " (enable PGPE immediate return)")
         #cli.run_command(command)
+
+    G_symbols_loaded = 1
 
     #print("\n==> Enable GPE2 (needed?)")
     #cli.run_command(bp+"."+proc+".occ_cmp.gpe_ppe2.enable") #Enable GPE2
