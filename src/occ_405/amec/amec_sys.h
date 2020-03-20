@@ -313,6 +313,9 @@ typedef struct
 
   // ambient temperature (deg C)
   sensor_t ambient;
+
+  // altitude in meters 0xffff indicates not available
+  uint16_t altitude;
 } amec_systemwide_t;
 
 

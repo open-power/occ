@@ -124,6 +124,9 @@ amec_parm_t g_amec_parm_list[] = {
     // frequency override enable bit (1=active)
     AMEC_PARM_UINT8(PARM_FREQ_OR_EN,"freq_or_en",&g_amec_sys.proc[0].parm_f_override_enable),
 
+    // Altitude in meters
+    AMEC_PARM_UINT16(PARM_ALTITUDE,"altitude",&g_amec_sys.sys.altitude),
+
     // Thermal controller parameters
     AMEC_PARM_UINT16(PARM_SYS_THRM_SP,"sys_thrm_sp",&g_amec_sys.thermalproc.setpoint),
     AMEC_PARM_UINT16(PARM_SYS_THRM_GAIN,"sys_thrm_gain",&g_amec_sys.thermalproc.Pgain),

@@ -400,6 +400,8 @@ void amec_init_gamec_struct(void)
   // Initialize wof_disabled until we get a mode change that supports WOF
   g_amec->wof.wof_disabled = WOF_RC_MODE_NO_SUPPORT_MASK;
 
+  // Initialize that altitude is not available until we recieve one from FSP/BMC
+  g_amec->sys.altitude = ALTITUDE_NOT_AVAILABLE;
 }
 
 // Function Specification

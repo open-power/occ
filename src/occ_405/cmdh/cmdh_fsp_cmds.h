@@ -372,6 +372,7 @@ typedef struct __attribute__ ((packed)) cmdh_reset_prep
 //---------------------------------------------------------
 
 #define SEND_AMBIENT_VERSION_0 0x00
+#define ALTITUDE_NOT_AVAILABLE 0xFFFF
 
 typedef struct __attribute__ ((packed)) cmdh_send_ambient_temp
 {
@@ -380,9 +381,11 @@ typedef struct __attribute__ ((packed)) cmdh_send_ambient_temp
     // Command Version
     uint8_t version;
     // Ambient Reading Status (0x00 = Sucess, 0xFF = Failure)
-    uint8_t status;
+    uint8_t  ambient_status;
     // Ambient Temperature Reading
-    uint8_t reading;
+    uint8_t  ambient;
+    uint16_t altitude;  // altitude in meters
+    uint8_t  reserved[3];
 } cmdh_send_ambient_temp_t;
 
 //---------------------------------------------------------

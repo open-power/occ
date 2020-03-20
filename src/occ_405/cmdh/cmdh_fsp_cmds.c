@@ -1943,10 +1943,21 @@ errlHndl_t cmdh_send_ambient_temp(const cmdh_fsp_cmd_t * i_cmd_ptr,
     errlHndl_t                  l_err   = NULL;
     cmdh_send_ambient_temp_t*   l_cmd   = (cmdh_send_ambient_temp_t *) i_cmd_ptr;
     ERRL_RC                     l_rc    = ERRL_RC_SUCCESS;
-
+    uint16_t                    l_data_length = sizeof(cmdh_send_ambient_temp_t) - sizeof(cmdh_fsp_cmd_header_t);
     static bool L_trace_fail = FALSE, L_trace_success = FALSE;
+    static bool L_traced_altitude = FALSE;
     do
     {
+        // Verify we got the correct data length
+        if( CMDH_DATALEN_FIELD_UINT16(i_cmd_ptr) != l_data_length)
+        {
+            TRAC_ERR("cmdh_send_ambient_temp: invalid data length got[%d] expected[%d]",
+                      CMDH_DATALEN_FIELD_UINT16(i_cmd_ptr),
+                      l_data_length);
+            l_rc = ERRL_RC_INVALID_CMD_LEN;
+            break;
+        }
+
         // Verify we got the correct packet version
         if(SEND_AMBIENT_VERSION_0 != l_cmd->version)
         {
@@ -1955,8 +1966,8 @@ errlHndl_t cmdh_send_ambient_temp(const cmdh_fsp_cmd_t * i_cmd_ptr,
             break;
         }
 
-        // Check that the reading is valid (if not, just ignore it)
-        if(0xFF == l_cmd->status)
+        // Check that the ambient reading is valid (if not, just ignore it)
+        if(0xFF == l_cmd->ambient_status)
         {
             if(!L_trace_fail)
             {
@@ -1965,23 +1976,23 @@ errlHndl_t cmdh_send_ambient_temp(const cmdh_fsp_cmd_t * i_cmd_ptr,
                 L_trace_success = FALSE;
             }
         }
-        else if(0x00 == l_cmd->status)
+        else if(0x00 == l_cmd->ambient_status)
         {
             if(!L_trace_success)
             {
-                TRAC_INFO("cmdh_send_ambient_temp: successfully received ambient temp[%d]",
-                           l_cmd->reading);
+                TRAC_INFO("cmdh_send_ambient_temp: successfully received ambient temp[%d] altitude[0x%04X]",
+                           l_cmd->ambient, l_cmd->altitude);
                 L_trace_success = TRUE;
                 L_trace_fail = FALSE;
             }
 
             // Store off the current ambient temperature
-            sensor_update(AMECSENSOR_PTR(TEMPAMBIENT), (uint16_t)l_cmd->reading);
+            sensor_update(AMECSENSOR_PTR(TEMPAMBIENT), (uint16_t)l_cmd->ambient);
         }
         else
         {
             TRAC_ERR("cmdh_send_ambient_temp: invalid ambient temp read status[0x%02X]",
-                      l_cmd->status);
+                      l_cmd->ambient_status);
             l_rc = ERRL_RC_INVALID_DATA;
             break;
         }
@@ -1992,6 +2003,21 @@ errlHndl_t cmdh_send_ambient_temp(const cmdh_fsp_cmd_t * i_cmd_ptr,
     if(l_rc)
     {
         cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, l_rc, &l_err);
+    }
+    else  // save altitude
+    {
+        // only save altitude if it was available, if we previously
+        // received an altitude we will just keep it
+        if(l_cmd->altitude != ALTITUDE_NOT_AVAILABLE)
+        {
+            g_amec->sys.altitude = l_cmd->altitude;
+            if(!L_traced_altitude)
+            {
+                TRAC_INFO("cmdh_send_ambient_temp received altitude[%d]",
+                           l_cmd->altitude);
+                L_traced_altitude = TRUE;
+            }
+        }
     }
 
     return l_err;
