@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -415,7 +415,7 @@ void amec_pcap_calc(const bool i_oversub_state)
             // if memory is not throttled and frequency is at min shed additional power
             // by throttling memory
             if( (g_amec->pcap.active_mem_level == 0) &&
-                (g_amec->proc[0].pwr_votes.ppb_fmax == g_amec->sys.fmin) )
+                (g_amec->proc[0].pwr_votes.ppb_fmax == g_amec->sys.fmin_max_throttled) )
             {
                 if( L_trace_pcap_throttle ||
                    (G_allow_trace_flags & ALLOW_MEM_TRACE) )
@@ -450,7 +450,7 @@ void amec_pcap_calc(const bool i_oversub_state)
         //      nominal cores will drop below nominal if ppb_fmax drops below nominal
         if(g_amec->pcap.active_node_pcap < G_sysConfigData.pcap.max_pcap)
         {
-           g_amec->proc[0].pwr_votes.nom_pcap_fmin = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MIN_FREQ];
+           g_amec->proc[0].pwr_votes.nom_pcap_fmin = g_amec->sys.fmin_max_throttled;
         }
         else
         {
@@ -498,9 +498,9 @@ void amec_pcap_controller(void)
         l_proc_pcap_vote = G_proc_fmax_mhz;
     }
 
-    if(l_proc_pcap_vote < G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MIN_FREQ])
+    if(l_proc_pcap_vote < g_amec->sys.fmin_max_throttled)
     {
-        l_proc_pcap_vote = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MIN_FREQ];
+        l_proc_pcap_vote = g_amec->sys.fmin_max_throttled;
     }
 
     //Power capping for nominal cores is not allowed to drop frequency below nom_pcap_fmin
@@ -584,9 +584,9 @@ void amec_ppb_fmax_calc(void)
                 G_sysConfigData.master_ppb_fmax = G_proc_fmax_mhz;
             }
 
-            if(G_sysConfigData.master_ppb_fmax < G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MIN_FREQ])
+            if(G_sysConfigData.master_ppb_fmax < g_amec->sys.fmin_max_throttled)
             {
-                G_sysConfigData.master_ppb_fmax = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MIN_FREQ];
+                G_sysConfigData.master_ppb_fmax = g_amec->sys.fmin_max_throttled;
             }
         }
     }//End of Master code

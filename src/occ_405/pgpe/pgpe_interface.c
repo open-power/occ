@@ -41,6 +41,7 @@
 #include "pgpe_shared.h"
 #include "amec_sys.h"
 #include "common.h"             // For ignore_pgpe_error()
+#include "pstates_occ.H"
 
 // Maximum waiting time (usec) for clip update IPC task
 #define CLIP_UPDATE_TIMEOUT 500  // maximum waiting time (usec) for clip update IPC task
@@ -51,10 +52,12 @@ extern volatile bool G_set_pStates;
 
 extern uint16_t G_proc_fmax_mhz;
 extern uint32_t G_present_cores;
+extern OCCPstateParmBlock_t G_oppb;
 
 extern bool G_simics_environment;
 
 extern uint16_t G_allow_trace_flags;
+
 // IPC GPE Requests
 GpeRequest G_clip_update_req;
 GpeRequest G_pmcr_set_req;
@@ -620,9 +623,7 @@ int pgpe_clip_update(void)
     const unsigned int pstate = G_desired_pstate;
 
     // Set clip bounds
-    uint32_t l_steps = 0;
-    G_clip_update_parms.ps_val_clip_min = proc_freq2pstate(g_amec->sys.fmin, &l_steps);
-    G_clip_update_parms.ps_val_clip_min += l_steps;
+    G_clip_update_parms.ps_val_clip_min = G_oppb.pstate_max_throttle;
     G_clip_update_parms.ps_val_clip_max = pstate;
 
     // Always send request on PowerVM, on OPAL only send the request if there was a change or need to force a send

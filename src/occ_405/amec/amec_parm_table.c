@@ -113,7 +113,7 @@ extern amec_sys_t g_amec_sys;
 amec_parm_t g_amec_parm_list[] = {
     // System fmin and fmax
     AMEC_PARM_UINT16(PARM_SYS_FMAX,"sys_fmax",&g_amec_sys.sys.fmax),
-    AMEC_PARM_UINT16(PARM_SYS_FMIN,"sys_fmin",&g_amec_sys.sys.fmin),
+    AMEC_PARM_UINT16(PARM_SYS_FMIN,"sys_fmin",&G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MIN_FREQ]),
 
     // MHz per pstate
     AMEC_PARM_UINT32(PARM_PSTATE_MHZ,"pstate_mhz",&G_mhz_per_pstate),

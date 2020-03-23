@@ -120,7 +120,7 @@ def helper(callStr):
 
 
 # Given a hex string array, dump the data in hex:
-#   Input: intArray=['0102','0304','00AA,0xBBAA, ...]
+#   Input: intArray=['0102','0304','00AA','0xBBAA', ...]
 #   Output:
 #     0x0000:  01020304 00AABBAA 01000000 0500004E  "...............N"
 #     0x0010:  48021000 0000AAAA AA020000 00050000  "H........ ......"
@@ -397,6 +397,8 @@ def ReadSRAM(command, FLG_VRB):
     for N in xrange(0, len(tmplist)):
         if(len(tmplist[N]) == 4) and ( all(c in hex_digits for c in tmplist[N]) == True ):
             ReturnList.append( tmplist[N] )
+        elif(len(tmplist[N]) == 2) and ( all(c in hex_digits for c in tmplist[N]) == True ):
+            ReturnList.append( tmplist[N]+"  " )
         #     print("KEEP   : " + str(N) + " : " + tmplist[N] )
         # else:
         #     print("DELETE : " + str(N) + " : " + tmplist[N] )
@@ -917,6 +919,10 @@ def ValidateCmd(FLG_VRB, SeqNumExpected, FLG_LAST, flg_quiet):
             print("############################################################\n\n")
     else:
         # GETTING HERE MEANS WE HAVE A SUCCESSFUL COMMAND.
+        if FLG_VRB:
+            print("OCC Response Buffer:")
+            hexDumpStringTrunc(mylist, DataLength+7)
+
         print("======================================================")
         print("\tSeq Num                : 0x" + SeqNumberRcvd )
         print("\tCommand                : " + "0x%02X" % CmdNumber + " : " + cmdString)
@@ -973,7 +979,10 @@ def parse_response_POLL(DataList, FLG_VRB):
     print("\tOCC Present (3)        : " + "0x%02X" % DataList[2] + " : {0:08b}".format(DataList[2]))
     #######################################################################################################
     CurrentString = str(   format(DataList[3],'02X')  )
-    configString = getConfigString(DataList[3]);
+    if (DataList[3] != 0):
+        configString = getConfigString(DataList[3]);
+    else:
+        configString = ""
     print("\tConfig Data Needed (4) : 0x" + CurrentString + " : " + configString)
     #######################################################################################################
     print("\tCurrent OCC State (5)  : " + "0x%02X" % DataList[4] + " : ", end="")
@@ -1424,6 +1433,10 @@ def read_cmd_func(flg_Cmd, Cmd_arg, flg_verbose ):
     CheckSum += int( mylist[1][-2:], 16)
     CheckSum += int( mylist[2][:2], 16)
 
+    if flg_verbose:
+        print("OCC Response Buffer:")
+        hexDumpStringTrunc(mylist, DataLength+7)
+
     DataList=[]
     if(DataLength != 0):
         LoopCount = 5
@@ -1743,9 +1756,9 @@ def pgpe_trace(directory_arg, flg_verbose):
     trace_filename = target_trace_directory+"/tracegpe2.gpebin"
 
     trace_len,junk = cli.quiet_run_command(bp+"."+proc+".occ_cmp.oci_space.read "+trace_length_ptr+" 4", output_mode = output_modes.formatted_text)
-    if trace_len > 0x0800:
-        print("WARNING: read PGPE trace length of "+str(trace_len)+". Truncating to 2K");
-        trace_len = 0x0800
+    if trace_len > 0x2000:
+        print("WARNING: read PGPE trace length of "+str(trace_len)+". Truncating to 8K");
+        trace_len = 0x2000
     command = "pipe \""+bp+"."+proc+".occ_cmp.oci_space.x ("+bp+"."+proc+".occ_cmp.oci_space.read "+trace_address_ptr+" 4) (0x"+str('{0:08X}'.format(trace_len))+")\" \"sed \\\"s/^p:0x........ //g\\\" | sed \\\"s/ ................$//g\\\" | sed \\\"s/ //g\\\" | xxd -r -p > "+trace_filename+" \""
     print("==> Collecting PGPE (GPE2) traces: " + command)
     run_command(command)
@@ -2852,7 +2865,7 @@ def occ_to_active(flg_nopgpe, flg_run, flg_verbose):
     RC = send_occ_cmd(0x00, "20", flg_verbose);
 
     print("\n#### SET ROLE COMMAND - MASTER ###########################################################################");
-    RC = send_occ_cmd(0x21, "0301000", flg_verbose);
+    RC = send_occ_cmd(0x21, "03010000", flg_verbose);
 
     print("\n#### POLL TO VERIFY NO ELOGS #############################################################################");
     RC = send_occ_cmd(0x00, "20", flg_verbose);

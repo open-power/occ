@@ -147,6 +147,10 @@ usage()
     echo ""
     echo "           options:"
     echo "               -g gitRepoDir : use OCC binaries/string file from specified repo"
+    echo "                               If not specified, it will also check \$OCCREPO"
+    if [ -n "$OCCREPO" ]; then
+        echo "                               OCCREPO = $OCCREPO"
+    fi
     echo "               -nopgpe       : do NOT enable PGPE"
     #echo "               -p10sa        : use p10_standalone model (instead of powman)"
     echo "               -b            : copy/update any binary patches available from:"
@@ -289,6 +293,11 @@ main()
             cat ${patch_dir}/simenv_user.simics >> ${simics_base}/targets/p10_standalone/simenv_user.simics
             echo ""
         fi
+    fi
+
+    if [ -z "$git_repo" ] && [ -n "$OCCREPO" ] && [ -d "$OCCREPO" ]; then
+        # Use environment variable
+        git_repo="$OCCREPO/occ"
     fi
 
     # Copy files from OCCREPO to the SIMICS binaries directory
@@ -630,11 +639,6 @@ main()
         CaptureOccTraces "OccActive"
 
 
-        if [ $test_depth -eq 4 ] || [ $test_depth -eq $ALL_TESTS ]; then
-            TESTS_elogs
-        fi
-
-
         if [ $test_depth -gt 10 ]; then
 
             #printHeader "VALIDATE CURRENT STATE - ACTIVE"
@@ -697,8 +701,8 @@ main()
         fi
 
 
-        if [ $test_depth -eq 5 ] || [ $test_depth -eq $ALL_TESTS ]; then
-            TESTS_pcaps
+        if [ $test_depth -eq 4 ] || [ $test_depth -eq $ALL_TESTS ]; then
+            TESTS_elogs
         fi
 
         if [ $test_depth -eq 6 ] || [ $test_depth -eq $ALL_TESTS ]; then
@@ -711,6 +715,11 @@ main()
 
         if [ $test_depth -eq 8 ] || [ $test_depth -eq $ALL_TESTS ]; then
             TESTS_power_modes
+        fi
+
+        # PCAP test moved to end because it leaves OCC in safe (2A06 - Unable to maintain power cap)
+        if [ $test_depth -eq 5 ] || [ $test_depth -eq $ALL_TESTS ]; then
+            TESTS_pcaps
         fi
 
     fi
@@ -1520,8 +1529,8 @@ ValidatePollData()
                     rcvdValue=`grep -i "$sensor" $lastRspBuffer | awk '{print $7 $8}'`
                     echo -e "${red}ERROR: core$core temp is not correct (received 0x$rcvdValue C, expected 0x$sensorValue for $sensor)${normal}"
                     let fail=1
-                else
-                    echo "core$core temp is correct ($sensorValue C)"
+                #else
+                #    echo "core$core temp is correct ($sensorValue C)"
                 fi
             fi
             let temp=$temp+1
@@ -1552,16 +1561,13 @@ ValidatePollData()
         #Verify Core Frequencies
         let core=0
         let freq=0
+        echo "WARNING: Core frequencies are not currently being verified in the poll response"
         while [ $core -lt $numCores ]; do
             let coreSensor=$core
             sensor='SensorData     :  01 00 '$(printf "%02d" $coreSensor)' 02'
             # First verify core is present
             grep -iq "$sensor " $lastRspBuffer
-            if [ $? -ne 0 ]; then
-                echo "ERROR: core$core frequency was not found in poll response"
-                #echo -e "${red}ERROR: core$core frequency was not found in poll response${normal}"
-                # TEMP ALLOW                let fail=1
-            else
+            if [ $? -eq 0 ]; then
                 #sensorValue=$(printf "00 %02X" $freq)
                 #grep -iq "$sensor $sensorValue" $lastRspBuffer
                 #if [ $? -ne 0 ]; then
@@ -1571,6 +1577,10 @@ ValidatePollData()
                 #else
                     echo "core$core frequency was present ($sensor)"
                 #fi
+            #else
+                #echo "ERROR: core$core frequency was not found in poll response"
+                #echo -e "${red}ERROR: core$core frequency was not found in poll response${normal}"
+                # TEMP ALLOW                let fail=1
             fi
             let core=$core+1
         done
@@ -1956,7 +1966,7 @@ printTestResults()
 
 
 
-TESTS_elogs()
+TESTS_elogs() # test 4
 {
     current_test="TESTS_elogs"
 
@@ -2125,7 +2135,7 @@ TESTS_elogs()
 } # end TESTS_elogs()
 
 
-TESTS_pcaps()
+TESTS_pcaps() # test 5
 {
     current_test="TESTS_pcaps"
 
@@ -2159,28 +2169,41 @@ TESTS_pcaps()
     WaitForResponse 0x22
     ValidatePollData
 
+    printHeader "SET POWER CAP BELOW CURRENT POWER (SOFT)"
+    autosim --simcmd '$SeqNum=(OCCw -C 0x22 -D "0122")' ### 290W ### valid cap that is < current power
+    WaitForResponse 0x22
+    echo WAIT : 10 seconds before next poll
+    sleep 10
+    let expectedThrottleStatus=0x40 # throttle due to power bit
+    ValidatePollData
 
-    printHeader "TODO: SET POWER CAP BELOW CURRENT POWER"
-    ### DEBUG: Set power limit BELOW current power usage to test OCC code
-    if [ 0 -eq 1 ]; then
-        autosim --simcmd '$SeqNum=(OCCw -C 0x22 -D "0145")' ### 325W ### valid cap that is < current power
-        WaitForResponse 0x22
-        ValidatePollData
-        echo WAIT : 10 seconds before next poll
-        sleep 10
-        let expectedState=0x04 # Expect to be in safe mode
-        let expectedOccSrc=0x2A06 # and report 2A06 elog
-        ValidatePollData
-        echo WAIT : 10 seconds before next poll
-        sleep 10
-        ValidatePollData
-        autosim --simcmd '$SeqNum=(OCCw -C 0x22 -D "0384")' ### 900W ### valid cap that is < current power
-        WaitForResponse 0x22
-        ValidatePollData
-        echo WAIT : 10 seconds before next poll
-        sleep 10
-        ValidatePollData
-    fi
+    printHeader "CLEAR USER POWER CAP"
+    autosim --simcmd '$SeqNum=(OCCw -C 0x22 -D "0000")'
+    WaitForResponse 0x22
+    echo WAIT : 10 seconds before next poll
+    sleep 10
+    let expectedThrottleStatus=0x00 # throttle due to power bit
+    ValidatePollData
+
+    printHeader "SET POWER CAP BELOW CURRENT POWER (HARD)"
+    autosim --simcmd '$SeqNum=(OCCw -C 0x22 -D "0145")' ### 325W ### valid cap that is < current power
+    WaitForResponse 0x22
+    echo WAIT : 20 seconds before next poll
+    sleep 20
+    let expectedState=0x04 # Expect to be in safe mode
+    let expectedOccSrc=0x2A06 # and report 2A06 elog
+    let expectedThrottleStatus=0x40 # throttle due to power bit
+    ValidatePollData
+
+    # OCC is in safe state due to unable to maintain hard power cap
+
+    printHeader "SET 2ND POWER CAP BELOW CURRENT POWER (HARD)"
+    autosim --simcmd '$SeqNum=(OCCw -C 0x22 -D "0384")' ### 900W ### valid cap that is < current power
+    WaitForResponse 0x22
+    echo WAIT : 10 seconds before next poll
+    sleep 10
+    ValidatePollData
+
 
     let end_time=`date +%s`
     let delta_time=$end_time-$start_time
@@ -2191,7 +2214,7 @@ TESTS_pcaps()
 } # end TESTS_pcaps()
 
 
-TESTS_sensors()
+TESTS_sensors() # test 6
 {
     current_test="TESTS_sensors"
 
@@ -2259,7 +2282,7 @@ TESTS_sensors()
 
 
 
-TESTS_thermal_limits()
+TESTS_thermal_limits() # test 7
 {
     current_test="TESTS_thermal_limits"
 
@@ -2275,8 +2298,11 @@ TESTS_thermal_limits()
         SetQuadTemp 0 97
         echo WAIT : 10 seconds for OCC to throttle
         sleep 10
-        # Ensure throttle due to processor over temperature bit is set
-        let expectedThrottleStatus=0x80
+        let expectedThrottleStatus=0x80 # throttle due to processor over temperature bit is set
+        ValidatePollData
+        echo WAIT : 10 seconds for OCC to throttle
+        sleep 10
+        let expectedThrottleStatus=0x80 # throttle due to processor over temperature bit is set
         ValidatePollData
 
         SetQuadTemp 0 113
@@ -2288,8 +2314,7 @@ TESTS_thermal_limits()
         SetQuadTemp 0 49
         echo WAIT : 60 seconds for the throttle to be cleared
         sleep 60
-        # Ensure throttle due to processor over temperature bit is clear
-        let expectedThrottleStatus=0x00
+        let expectedThrottleStatus=0x00 # NOT throttled due to processor over temperature
         ValidatePollData
 
         ### Verify throttling when limits are updated (temps not changing)
@@ -2300,8 +2325,7 @@ TESTS_thermal_limits()
         WaitForResponse 0x21
         echo WAIT : 10 seconds for OCC to throttle
         sleep 10
-        # Ensure throttle due to processor over temperature bit is set
-        let expectedThrottleStatus=0x80
+        let expectedThrottleStatus=0x80 # throttle due to processor over temperature bit is set
         ValidatePollData
 
         printHeader "SET PROCESSOR ERROR_TEMP (NO ERROR, SINCE ALREADY LOGGED) (via TCT CONFIG) - 80C (0x50)"
@@ -2317,8 +2341,7 @@ TESTS_thermal_limits()
         WaitForResponse 0x21
         echo WAIT : 60 seconds for the throttle to be cleared
         sleep 60
-        # Ensure throttle due to processor over temperature bit is now clear
-        let expectedThrottleStatus=0x00
+        let expectedThrottleStatus=0x00 # NOT throttled due to processor over temperature
         ValidatePollData
 
         let expectedThrottleStatus=0xFFFF # ignore throttle status validation
@@ -2336,7 +2359,7 @@ TESTS_thermal_limits()
 
 
 
-TESTS_power_modes()
+TESTS_power_modes() # test 8
 {
     current_test="TESTS_power_modes"
 

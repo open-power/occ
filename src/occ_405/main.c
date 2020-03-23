@@ -1078,8 +1078,10 @@ bool read_oppb_params()
         // verify pstate_max_throttle is defined and larger than min
         if (G_oppb.pstate_max_throttle >= G_oppb.pstate_min)
         {
-            MAIN_TRAC_IMP("read_oppb_header:  pstate_max_throttle[0x%02X]  Fmin Pstate[0x%02X]",
-                          G_oppb.pstate_max_throttle,
+            uint32_t l_steps = 0;
+            uint32_t l_max_throt_freq = proc_pstate2freq(G_oppb.pstate_max_throttle, &l_steps);
+            MAIN_TRAC_IMP("read_oppb_header:  pstate_max_throttle[0x%02X]/%dkHz(%d steps)  Fmin Pstate[0x%02X]",
+                          G_oppb.pstate_max_throttle, l_max_throt_freq, l_steps,
                           G_oppb.pstate_min);
         }
         else  // TODO RTC 249985 create error log instead when supported by PGPE

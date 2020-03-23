@@ -290,9 +290,6 @@ typedef struct
   sensor_t todclock1;
   sensor_t todclock2;
 
-  // Minimum Frequency that can be set in the current policy
-  uint16_t fmin;
-
   // Maximum Frequency that can be set in the current policy
   uint16_t fmax;
 
@@ -316,6 +313,10 @@ typedef struct
 
   // altitude in meters 0xffff indicates not available
   uint16_t altitude;
+
+  // effective frequency when the system is at max throttled pstate
+  uint16_t fmin_max_throttled;
+
 } amec_systemwide_t;
 
 

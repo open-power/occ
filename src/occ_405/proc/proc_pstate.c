@@ -320,7 +320,7 @@ void populate_opal_static_config_data(void)
     G_opal_static_table.config.valid    = 1;
     G_opal_static_table.config.version  = 0x90;
     G_opal_static_table.config.occ_role = G_occ_role;
-    G_opal_static_table.config.pmin     = proc_freq2pstate(g_amec->sys.fmin, &l_steps);
+    G_opal_static_table.config.pmin     = proc_freq2pstate(G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MIN_FREQ], &l_steps);
     G_opal_static_table.config.pnominal = proc_freq2pstate(G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_DISABLED], &l_steps);
     G_opal_static_table.config.pturbo   = proc_freq2pstate(G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_WOF_BASE], &l_steps);
     G_opal_static_table.config.puturbo  = proc_freq2pstate(G_proc_fmax_mhz, &l_steps);
@@ -328,7 +328,7 @@ void populate_opal_static_config_data(void)
 
 // Function Specification
 //
-// Name:  populate_opal_static_data
+// Name:  populate_opal_static_pstates_data
 //
 // Description: populate the generated pstates table, and maximum
 //              pstates for all possible number of active cores.

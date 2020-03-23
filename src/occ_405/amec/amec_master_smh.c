@@ -403,9 +403,9 @@ void amec_mst_check_under_pcap(void)
     do
     {
         // Check if done everything possible to shed power and power still above a hard power cap
-        // ppb_fmax = Fmin and PWRSYS > Node power cap and
+        // ppb_fmax = Fmin@MaxThrottle and PWRSYS > Node power cap and
         // Node power cap >=  hard_min_pcap AND memory is throttled
-        if((g_amec->proc[0].pwr_votes.ppb_fmax == g_amec->sys.fmin) &&
+        if((g_amec->proc[0].pwr_votes.ppb_fmax == g_amec->sys.fmin_max_throttled) &&
            (AMECSENSOR_PTR(PWRSYS)->sample > g_amec->pcap.active_node_pcap) &&
            (g_amec->pcap.active_node_pcap >= G_sysConfigData.pcap.hard_min_pcap) &&
            (g_amec->pcap.active_mem_level != 0) )
@@ -616,8 +616,8 @@ void amec_mst_ips_main(void)
                 // ignore the IPS request from the master
                 g_amec->mst_ips_parms.freq_request = 0;
 
-                TRAC_INFO("amec_mst_ips_main: We have exited IPS active state! exit_count[%u] freq_request[%u]",
-                          G_ips_exit_count[i][j], g_amec->mst_ips_parms.freq_request);
+                TRAC_INFO("amec_mst_ips_main: We have exited IPS active state! exit_count[%u] freq_request[0]",
+                          G_ips_exit_count[i][j]);
             }
         }
         else //IPS is inactive, check if entry criteria has been met
@@ -680,8 +680,8 @@ void amec_mst_ips_main(void)
                         }
                     }
 
-                    g_amec->mst_ips_parms.freq_request =
-                        G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MIN_FREQ];
+                    // Allow IPS to go into the throttle space
+                    g_amec->mst_ips_parms.freq_request = g_amec->sys.fmin_max_throttled;
 
                     TRAC_INFO("amec_mst_ips_main: We have entered IPS active state! entry_count[%u] freq_request[%u]",
                               G_ips_entry_count, g_amec->mst_ips_parms.freq_request);

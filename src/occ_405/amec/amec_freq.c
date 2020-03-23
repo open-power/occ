@@ -113,14 +113,26 @@ errlHndl_t amec_set_freq_range(const OCC_MODE i_mode)
     /*------------------------------------------------------------------------*/
     errlHndl_t                  l_err = NULL;
     uint16_t                    l_freq_min  = 0;
+    uint32_t                    l_freq_min_at_max_throttle  = 0;
     uint16_t                    l_freq_max  = 0;
+    uint32_t                    l_steps = 0;
 
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
 
-    // all modes use the same minimum
+    // freq_min is the lowest frequency the processers actually run at
     l_freq_min = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MIN_FREQ];
+    // power capping will allow frequencies into throttle space (even through
+    // the processor frequency will never really drop below fmin)
+    l_freq_min_at_max_throttle = proc_pstate2freq(G_oppb.pstate_max_throttle, &l_steps);
+    if (l_steps)
+    {
+        // adjust min frequency by convert l_steps into frequency in kHz
+        l_freq_min_at_max_throttle -= l_steps * G_oppb.frequency_step_khz;
+        // convert to Mhz
+        l_freq_min_at_max_throttle /= 1000;
+    }
 
     // Determine Max Freq for this mode
     // if no mode set yet or running with OPAL set to the full range
@@ -182,15 +194,16 @@ errlHndl_t amec_set_freq_range(const OCC_MODE i_mode)
       }
     }
 
-    if( (l_freq_min == 0) || (l_freq_max == 0) )
+    if( (l_freq_min == 0) || (l_freq_max == 0) || (l_freq_min_at_max_throttle == 0))
     {
       // Do not update amec vars with a 0 frequency.
       // The frequency limit for each mode should have been set prior
       // to calling or the mode passed was invalid
-      TRAC_ERR("amec_set_freq_range: Freq of 0 found! mode[0x%02x] Fmin[%u] Fmax[%u]",
+      TRAC_ERR("amec_set_freq_range: Freq of 0 found! mode[0x%02x] Fmin[%u] Fmax[%u] Fmin@maxThrot[%u]",
                   i_mode,
                   l_freq_min,
-                  l_freq_max);
+                  l_freq_max,
+                  l_freq_min_at_max_throttle);
 
       // Log an error if this is PowerVM as this should never happen when OCC
       // supports modes
@@ -225,15 +238,18 @@ errlHndl_t amec_set_freq_range(const OCC_MODE i_mode)
     else
     {
         uint32_t l_steps = 0;
-        g_amec->sys.fmin = l_freq_min;
+        g_amec->sys.fmin_max_throttled = l_freq_min_at_max_throttle;
         g_amec->sys.fmax = l_freq_max;
 
-        TRAC_INFO("amec_set_freq_range: Mode[0x%02x] Fmin[%u] (Pmin 0x%02x) Fmax[%u] (Pmax 0x%02x)",
+        TRAC_INFO("amec_set_freq_range: Mode[0x%02x] Fmin[%u/0x%02X] Fmax[%u/0x%02X]",
                   i_mode,
                   l_freq_min,
-                  proc_freq2pstate(g_amec->sys.fmin, &l_steps),
+                  G_oppb.pstate_min,
                   l_freq_max,
-                  proc_freq2pstate(g_amec->sys.fmax, &l_steps));
+                  proc_freq2pstate(l_freq_max, &l_steps));
+        TRAC_INFO("amec_set_freq_range:   Fmin@MaxThrot[%u/0x%02X]",
+                  l_freq_min_at_max_throttle,
+                  G_oppb.pstate_max_throttle);
     }
     return l_err;
 }
@@ -271,11 +287,18 @@ void amec_slv_proc_voting_box(void)
     uint32_t                        l_steps_in_freq = 0;
 
     // frequency threshold for reporting throttling
-    uint16_t l_report_throttle_freq = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_WOF_BASE];
+    OCC_FREQ_POINT l_freq_point = OCC_FREQ_PT_WOF_BASE;
+    if ( CURRENT_MODE() && G_sysConfigData.system_type.kvm )
+    {
+        if (CURRENT_MODE() == OCC_MODE_DISABLED)
+            l_freq_point = OCC_FREQ_PT_MODE_DISABLED;
+        else if (CURRENT_MODE() == OCC_MODE_PWRSAVE)
+            l_freq_point = OCC_FREQ_PT_MODE_PWR_SAVE;
+        else if ((CURRENT_MODE() == OCC_MODE_STATIC_FREQ_POINT) || (CURRENT_MODE() == OCC_MODE_FFO))
+            l_freq_point = OCC_FREQ_PT_MODE_USER;
+    }
+    const uint16_t l_report_throttle_freq = G_sysConfigData.sys_mode_freq.table[l_freq_point];
 
-    /*------------------------------------------------------------------------*/
-    /*  Code                                                                  */
-    /*------------------------------------------------------------------------*/
     if (!G_allowPstates)
     {
         // Don't allow pstates to be sent until after initial mode has been set
@@ -334,6 +357,7 @@ void amec_slv_proc_voting_box(void)
         }
         else
         {
+            // report DVFS due to proc OT in poll response
             l_kvm_throt_reason = CPU_OVERTEMP;
         }
     }
