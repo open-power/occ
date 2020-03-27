@@ -1093,7 +1093,7 @@ bool read_oppb_params()
             G_oppb.pstate_max_throttle = G_oppb.pstate_min + 32;
         }
 
-        /* @mb temp RTC 209558
+        /* TODO RTC 249985
         // Confirm whether we have wof support
         if(!(G_oppb.attr.fields.wof_enabled))
         {
@@ -1103,7 +1103,7 @@ bool read_oppb_params()
                                     ERC_WOF_OPPB_WOF_DISABLED );
         }
         else
-        {   // TODO RTC 209558 need added to OPPB */
+        {   // TODO RTC 249985 need added to OPPB */
             g_amec->static_wof_data.Vdd_vmin_p1mv  = 6000;
 //            g_amec->static_wof_data.Vdd_vmin_p1mv  = G_oppb.Vdd_vmin_mv * 10;
             g_amec->static_wof_data.Vdd_vmin_index = get_voltage_index(g_amec->static_wof_data.Vdd_vmin_p1mv);

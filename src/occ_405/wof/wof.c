@@ -443,8 +443,17 @@ void wof_main( void )
     calculate_AC_currents();
 
     // Calculate ceff_ratio_vdd and ceff_ratio_vcs
-    calculate_ceff_ratio_vdd();
-    calculate_ceff_ratio_vcs();
+    // If we get v_ratio of 0 from pgpe, force ceff_ratios to 0;
+    if( g_wof->v_ratio == 0 )
+    {
+        g_wof->ceff_ratio_vdd = 0;
+        g_wof->ceff_ratio_vcs = 0;
+    }
+    else
+    {
+        calculate_ceff_ratio_vdd();
+        calculate_ceff_ratio_vcs();
+    }
 
     // Calculate how many steps from the beginning for each VRT parm that is not currently
     // being overwritten by mfg select VRT command
@@ -563,6 +572,7 @@ uint16_t calculate_step_from_start(uint16_t i_vrt_parm,
 uint32_t calc_vrt_mainstore_addr( void )
 {
     static bool L_trace_char_test = true;
+           uint32_t l_vrt_mm_offset = 0;
 
     // skip calculation and return first table if WOF Char testing is enabled
     if(G_internal_flags & INT_FLAG_ENABLE_WOF_CHAR_TEST)
@@ -586,16 +596,17 @@ uint32_t calc_vrt_mainstore_addr( void )
        // Calculate the VRT offset in main memory
        // tables are sorted by Vcs, then Vdd, then IO Pwr, then ambient
        // first determine number of VRT tables need to be skipped due to Vcs
-       g_wof->vrt_mm_offset = g_wof->vcs_step_from_start * g_amec_sys.static_wof_data.wof_header.vdd_size * g_amec_sys.static_wof_data.wof_header.io_pwr_size * g_amec_sys.static_wof_data.wof_header.ambient_size;
+       l_vrt_mm_offset = g_wof->vcs_step_from_start * g_amec_sys.static_wof_data.wof_header.vdd_size * g_amec_sys.static_wof_data.wof_header.io_pwr_size * g_amec_sys.static_wof_data.wof_header.ambient_size;
        // next add number of tables skipped within this Vcs based on Vdd
-       g_wof->vrt_mm_offset += (g_wof->vdd_step_from_start * g_amec_sys.static_wof_data.wof_header.io_pwr_size * g_amec_sys.static_wof_data.wof_header.ambient_size);
+       l_vrt_mm_offset += (g_wof->vdd_step_from_start * g_amec_sys.static_wof_data.wof_header.io_pwr_size * g_amec_sys.static_wof_data.wof_header.ambient_size);
        // now add number of tables skipped within this Vcs/Vdd based on IO power
-       g_wof->vrt_mm_offset += (g_wof->io_pwr_step_from_start * g_amec_sys.static_wof_data.wof_header.ambient_size);
+       l_vrt_mm_offset += (g_wof->io_pwr_step_from_start * g_amec_sys.static_wof_data.wof_header.ambient_size);
        // now add number of tables skipped within this Vcs/Vdd/IO power based on ambient
-       g_wof->vrt_mm_offset += g_wof->ambient_step_from_start;
+       l_vrt_mm_offset += g_wof->ambient_step_from_start;
 
        // We now have the total number of tables to skip multiply by the sizeof one VRT to get final offset
-       g_wof->vrt_mm_offset *= g_amec_sys.static_wof_data.wof_header.vrt_block_size;
+       l_vrt_mm_offset *= g_amec_sys.static_wof_data.wof_header.vrt_block_size;
+       g_wof->vrt_mm_offset = l_vrt_mm_offset;
     }
 
     // Skip over the WOF header to find the base address where the tables actually start
@@ -936,8 +947,14 @@ void read_pgpe_produced_wof_values( void )
     uint32_t l_steps = 0;
     l_freq = proc_pstate2freq((Pstate_t)l_PgpeWofValues.dw0.fields.average_frequency_pstate, &l_steps);
     // value returned in kHz, save in MHz
-    g_wof->c_ratio_vdd_freq = (l_freq / 1000);
-    g_wof->f_clip_freq = g_wof->c_ratio_vdd_freq;
+    g_wof->avg_freq_mhz = (l_freq / 1000);
+    // Need to do some linear interpolation with #V data to track Ceff ratio with current
+    // average frequency, find the two #V points that the average frequency falls between
+    get_poundV_points(g_wof->avg_freq_mhz,
+                      &g_wof->vpd_index1,
+                      &g_wof->vpd_index2);
+
+
     g_wof->v_ratio = l_PgpeWofValues.dw0.fields.vratio_avg;
     sensor_update(AMECSENSOR_PTR(VRATIO), (uint16_t)g_wof->v_ratio);
 
@@ -1054,6 +1071,7 @@ void calculate_core_leakage( void )
     uint64_t  l_t_p001_scale_nc = 0; // unit 0.001
     uint16_t  l_temperature = 0;
     uint64_t  l_temp64 = 0;
+    uint32_t  l_temp32 = 0;
     int l_oct_idx = 0;  // octant index
     int l_core_idx = 0; // core index
     bool l_non_core_scaling_line = FALSE;  // default to core scaling line
@@ -1078,15 +1096,16 @@ void calculate_core_leakage( void )
                                                                          g_amec_sys.static_wof_data.Vdd_vmin_p1mv,
                                                                          l_non_core_scaling_line);
 
-        g_wof->single_core_on_vdd_vmin_eqs_ua = ( (g_wof->scaled_good_eqs_on_on_vdd_vmin_ua - g_wof->scaled_all_off_on_vdd_vmin_ua_c)
+        l_temp32 = ( (g_wof->scaled_good_eqs_on_on_vdd_vmin_ua - g_wof->scaled_all_off_on_vdd_vmin_ua_c)
                                                  / G_oppb.iddq.good_normal_cores_per_EQs[l_oct_idx] ) + g_wof->single_core_off_vdd_vmin_ua_c;
         // need to take away the MMA portion of the single core on at vdd vmin if the Iddq includes the MMA, Retention mode guarantees MMA OFF
         if (G_oppb.iddq.mma_not_active == 0)  // MMA on
         {
-            g_wof->single_core_on_vdd_vmin_eqs_ua *= (100 - G_oppb.iddq.mma_off_leakage_pct);
+            l_temp32 *= (100 - G_oppb.iddq.mma_off_leakage_pct);
             // divide by 100 to account for leakage percentage to keep unit of ua
-            g_wof->single_core_on_vdd_vmin_eqs_ua /= 100;
+            l_temp32 /= 100;
         }
+        g_wof->single_core_on_vdd_vmin_eqs_ua = l_temp32;
 
         g_wof->scaled_good_eqs_on_on_vcs_chip_ua = scale_and_interpolate(G_oppb.iddq.icsq_eqs_good_cores_on_good_caches_on_5ma[l_oct_idx],
                                                                          G_oppb.iddq.avgtemp_all_cores_on_good_caches_on_p5c,
@@ -1191,56 +1210,29 @@ void calculate_core_leakage( void )
 }
 
 /**
- * calculate_effective_capacitance
+ * calculate_exp_1p3
  *
- * Description: Generic function to perform the effective capacitance
- *              calculations.
- *              C_eff = I / (V^1.3 * F)
+ * Description: Generic function to perform x^1.3
  *
- *              I is the AC component of Idd in 0.01 Amps (or10 mA)
- *              V is the silicon voltage in 100 uV
- *              F is the frequency in MHz
+ * Param[in]: i_x - Value to raise to 1.3
+ *                  NOTE the best fit equation is assuming value passed in is in 0.1mv unit
+ *                        and was calculated for a range of 0.5V - 1.0V (error -0.020% - 0.010%)
  *
- *              Note: Caller must ensure they check for a 0 return value
- *                    and disable wof if that is the case
- *
- * Param[in]: i_iAC - the AC component
- * Param[in]: i_voltage - the voltage component in 100uV
- * Param[in]: i_frequency - the frequency component
- *
- * Return: The calculated effective capacitance
+ * Return: i_x^1.3
  */
-uint32_t calculate_effective_capacitance( uint32_t i_iAC_10ma,
-                                          uint32_t i_voltage_100uV,
-                                          uint32_t i_frequency_mhz )
+uint32_t calculate_exp_1p3(uint32_t i_x)
 {
-    // Prevent divide by zero
-    if( (i_frequency_mhz == 0)  || (i_voltage_100uV == 0) )
-    {
-        // Return 0 causing caller to disable wof.
+    uint64_t temp64 = 0;
+
+    // Compute i_x^1.3 using best-fit equation
+    // y = 18.839*x - 31142
+    //   = (18839*x - 31142000) / 1000
+    //   = (19291*x - 31889408) / 1024
+    temp64 = 19291 * i_x;
+    if(temp64 >= 31889408)
+        return (uint32_t)( (temp64 - 31889408) >> 10 );
+    else
         return 0;
-    }
-
-    // Compute V^1.3 using a best-fit equation
-    // (V^1.3) = (21374 * (voltage in 100uV) - 50615296)>>10
-    uint32_t v_exp_1_dot_3 = (21374 * i_voltage_100uV - 50615296) >> 10;
-
-    // Compute I / (V^1.3)
-    uint32_t I = i_iAC_10ma << 14; // * 16384
-
-    // Prevent divide by zero
-    if( v_exp_1_dot_3 == 0 )
-    {
-        // Return 0 causing caller to disable wof.
-        return 0;
-    }
-
-    uint32_t c_eff = (I / v_exp_1_dot_3);
-    c_eff = c_eff << 14; // * 16384
-
-    // Divide by frequency and return the final value.
-    // (I / (V^1.3 * F)) == I / V^1.3 /F
-    return c_eff / i_frequency_mhz;
 }
 
 /**
@@ -1248,40 +1240,116 @@ uint32_t calculate_effective_capacitance( uint32_t i_iAC_10ma,
  *
  * Description: Function to calculate the effective capacitance ratio
  *              for the cache
+ * Ceff_ratio_vcs derivation to get less divides
+ * Ceff_vcs_avg_tdp= ics_ac_avg_tdp_ma / ((vcs_avg_tdp_mv* vratio_avg)^1.3 * Favg_pstate)
+ * Ceff_vcs_avg_present= ics_ac_avg_ma / (vcs_avg_mv)^1.3 * Favg_pstate)
+ * Ceff_ratio_vcs_avg= Ceff_vcs_avg_present / Ceff_vcs_avg_tdp =
+ *                     ics_ac_avg_ma / (vcs_avg_mv^1.3 * Favg_pstate)/ics_ac_tdp_ma / ((vcs_tdp_mv* vratio_avg)^1.3 * Favg_pstate) =
+ *                     ics_ac_avg_ma / (vcs_avg_mv^1.3 * Favg_pstate)/ics_ac_tdp_ma / ((vcs_tdp_mv* vratio_avg)^1.3 * Favg_pstate) =
+ *                     ics_ac_avg_ma /  vcs_avg_mv^1.3 / ics_ac_tdp_ma / ((vcs_tdp_mv * vratio_avg)^1.3) =
+ * IMPLEMENT CODE>>>> (ics_ac_avg_ma / ics_ac_tdp_ma) * ((vcs_tdp_mv * vratio_avg)^1.3) / vcs_avg_mv^1.3
  */
 void calculate_ceff_ratio_vcs( void )
 {
-// TODO - RTC 209558 Get ceff_tdp_vcs from OCCPPB or calculate? where's the freq?
-#if 0
-    g_wof->ceff_tdp_vcs = G_oppb.ceff_tdp_vcs;
+    uint32_t l_ceff_ratio = 0;
+    uint32_t l_temp32     = 0;
 
-    // Calculate ceff_vcs
-    // iac_vcs/ (VOLTVCS^1.3 * Focc)
-    g_wof->c_ratio_vcs_freq = G_occ_frequency_mhz;
-    g_wof->ceff_vcs =
-                calculate_effective_capacitance( g_wof->iac_vcs,
-                                                 g_wof->Vcs_chip_p1mv,
-                                                 g_wof->c_ratio_vcs_freq );
-
-    // Prevent divide by zero
-    if( g_wof->ceff_tdp_vcs == 0 )
+    do
     {
-        INTR_TRAC_ERR("WOF Disabled! Ceff VCS divide by 0");
-        print_oppb();
-        // Return 0
-        g_wof->ceff_ratio_vcs = 0;
+        // track Ceff ratio with currrent average frequency from PGPE
+        // The two #V points (g_wof->vpd_index1 and g_wof->vpd_index2) that
+        // the average frequency falls between were updated in read_pgpe_produced_wof_values()
 
-        set_clear_wof_disabled(SET,
-                               WOF_RC_DIVIDE_BY_ZERO_VCS,
-                               ERC_WOF_DIVIDE_BY_ZERO_VCS);
-    }
-    else
-    {
-        g_wof->ceff_ratio_vcs = g_wof->ceff_vcs / g_wof->ceff_tdp_vcs;
-        sensor_update(AMECSENSOR_PTR(CEFFVCSRATIO), (uint16_t)g_wof->ceff_ratio_vcs);
-    }
-#endif
+        // Calculate Vcs AC Current average TDP by interpolating #V current@g_wof->avg_freq_mhz
+        g_wof->iac_tdp_vcs_10ma = interpolate_linear( g_wof->avg_freq_mhz,
+                                                      G_oppb.operating_points[g_wof->vpd_index1].frequency_mhz,
+                                                      G_oppb.operating_points[g_wof->vpd_index2].frequency_mhz,
+                                                      G_oppb.operating_points[g_wof->vpd_index1].ics_tdp_ac_10ma,
+                                                      G_oppb.operating_points[g_wof->vpd_index2].ics_tdp_ac_10ma);
 
+        // Calculate Vcs voltage average TDP by interpolating #V voltage@g_wof->avg_freq_mhz
+        // *10 to convert mV to 100uV
+        g_wof->vcs_avg_tdp_100uv = 10 * interpolate_linear( g_wof->avg_freq_mhz,
+                                                            G_oppb.operating_points[g_wof->vpd_index1].frequency_mhz,
+                                                            G_oppb.operating_points[g_wof->vpd_index2].frequency_mhz,
+                                                            G_oppb.operating_points[g_wof->vpd_index1].vcs_mv,
+                                                            G_oppb.operating_points[g_wof->vpd_index2].vcs_mv);
+
+        if(G_allow_trace_flags & ALLOW_CEFF_RATIO_VCS_TRACE)
+        {
+            INTR_TRAC_INFO("ceff_ratio_vcs: F[%d] between #V OP index[%d] freq[%d] and index[%d] freq[%d]",
+                            g_wof->avg_freq_mhz,
+                            g_wof->vpd_index1, G_oppb.operating_points[g_wof->vpd_index1].frequency_mhz,
+                            g_wof->vpd_index2, G_oppb.operating_points[g_wof->vpd_index2].frequency_mhz);
+            INTR_TRAC_INFO("ceff_ratio_vcs: interpolated iac_tdp_vcs_10ma[%d] point1[%d] point2[%d]",
+                            g_wof->iac_tdp_vcs_10ma,
+                            G_oppb.operating_points[g_wof->vpd_index1].ics_tdp_ac_10ma,
+                            G_oppb.operating_points[g_wof->vpd_index2].ics_tdp_ac_10ma);
+            INTR_TRAC_INFO("ceff_ratio_vcs: interpolated vcs_avg_tdp_100uv[%d] point1[%d] point2[%d]",
+                            g_wof->vcs_avg_tdp_100uv,
+                            G_oppb.operating_points[g_wof->vpd_index1].vcs_mv * 10,
+                            G_oppb.operating_points[g_wof->vpd_index2].vcs_mv * 10);
+        }
+
+        // Calculate roundup(ics_ac_avg_ma/ ics_ac_tdp_ma)
+        if(g_wof->iac_tdp_vcs_10ma) // prevent divide by 0
+        {
+            // 10ma times 10,000 to get ua unit
+            l_temp32 = g_wof->iac_vcs_ua / (g_wof->iac_tdp_vcs_10ma * 10000);
+            // roundup
+            if( g_wof->iac_vcs_ua % (g_wof->iac_tdp_vcs_10ma * 10000) )
+                l_temp32++;
+            g_wof->iac_vcs_tdp_ratio = l_temp32;
+        }
+        else
+        {
+            INTR_TRAC_ERR("WOF Disabled! iac_tdp_vcs_10ma is 0");
+            print_oppb();
+            // Return 0
+            g_wof->ceff_ratio_vcs = 0;
+
+            set_clear_wof_disabled(SET,
+                                   WOF_RC_DIVIDE_BY_ZERO_VDD,
+                                   ERC_WOF_DIVIDE_BY_ZERO_VDD);
+            break;
+        }
+
+        // Calculate (vcs_tdp_mv * vratio_avg)^1.3
+        g_wof->c_ratio_vcs_volt = multiply_v_ratio(g_wof->vcs_avg_tdp_100uv);
+        g_wof->ceff_tdp_vcs = calculate_exp_1p3(g_wof->c_ratio_vcs_volt);
+
+        // Calculate vcs_avg_mv^1.3
+        g_wof->ceff_vcs = calculate_exp_1p3(g_wof->Vcs_chip_p1mv);
+
+        // Prevent divide by zero
+        if( g_wof->ceff_vcs == 0 )
+        {
+            INTR_TRAC_ERR("WOF Disabled! Ceff VCS is 0 Vcs_chip_p1mv[%d]", g_wof->Vcs_chip_p1mv);
+            print_oppb();
+            // Return 0
+            g_wof->ceff_ratio_vcs = 0;
+
+            set_clear_wof_disabled(SET,
+                                   WOF_RC_DIVIDE_BY_ZERO_VDD,
+                                   ERC_WOF_DIVIDE_BY_ZERO_VDD);
+        }
+        else
+        {
+            // Finally put pieces together and calculate Vcs ceff ratio =
+            // roundup(ics_ac_avg_ma/ ics_ac_tdp_ma) *  roundup(((vcs_tdp_mv* vratio_avg)^1.3)  / (vcs_avg_mv^1.3))
+            l_ceff_ratio = g_wof->ceff_tdp_vcs / g_wof->ceff_vcs;
+
+            // roundup
+            if( g_wof->ceff_tdp_vcs % g_wof->ceff_vcs )
+                l_ceff_ratio++;
+
+            g_wof->ceff_ratio_vcs = (uint16_t)(l_ceff_ratio * g_wof->iac_vcs_tdp_ratio);
+
+            // Save Vcs ceff ratio to a sensor
+            sensor_update(AMECSENSOR_PTR(CEFFVCSRATIO), (uint16_t)g_wof->ceff_ratio_vcs);
+        }
+
+    }while( 0 );
 }
 
 /**
@@ -1289,88 +1357,91 @@ void calculate_ceff_ratio_vcs( void )
  *
  *  Description: Function to calculate the effective capacitance ratio
  *               for the core
- */
+ * Ceff_ratio_vdd derivation to get less divides
+ * Ceff_vdd_avg_tdp= idd_ac_avg_tdp_ma / ((vdd_avg_tdp_mv* vratio_avg)^1.3 * Favg_pstate)
+ * Ceff_vdd_avg_present= idd_ac_avg_ma / (vdd_avg_mv)^1.3 * Favg_pstate)
+ * Ceff_ratio_vdd_avg= Ceff_vdd_avg_present / Ceff_vdd_avg_tdp =
+ *                     idd_ac_avg_ma / (vdd_avg_mv^1.3 * Favg_pstate)/idd_ac_tdp_ma / ((vdd_tdp_mv* vratio_avg)^1.3 * Favg_pstate) =
+ *                     idd_ac_avg_ma / (vdd_avg_mv^1.3 * Favg_pstate)/idd_ac_tdp_ma / ((vdd_tdp_mv* vratio_avg)^1.3 * Favg_pstate) =
+ *                     idd_ac_avg_ma /  vdd_avg_mv^1.3 / idd_ac_tdp_ma / ((vdd_tdp_mv * vratio_avg)^1.3) =
+ * IMPLEMENT CODE>>>> (idd_ac_avg_ma / idd_ac_tdp_ma) * ((vdd_tdp_mv * vratio_avg)^1.3) / vdd_avg_mv^1.3
+*/
 void calculate_ceff_ratio_vdd( void )
 {
     uint32_t l_raw_ceff_ratio = 0;
-    uint8_t l_point1_index = 0;
-    uint8_t l_point2_index = 0;
+    uint32_t l_temp32 = 0;
 
-    // If we get v_ratio of 0 from pgpe, force ceff_ratio_vdd to 0;
-    if( g_wof->v_ratio == 0 )
+    do
     {
-        g_wof->ceff_ratio_vdd = 0;
-    }
-    else
-    {
-        // track Ceff ratio with currrent average frequency from PGPE (c_ratio_vdd_freq)
-        // Need to do some linear interpolation with #V data, find the two #V points that
-        // the average frequency falls between
-        // NOTE: g_wof->c_ratio_vdd_freq == g_wof->f_clip_freq is the average frequency
-        //       and were updated in read_pgpe_produced_wof_values()
-        get_poundV_points( g_wof->c_ratio_vdd_freq,
-                           &l_point1_index,
-                           &l_point2_index);
+        // track Ceff ratio with currrent average frequency from PGPE
+        // The two #V points (g_wof->vpd_index1 and g_wof->vpd_index2) that
+        // the average frequency falls between were updated in read_pgpe_produced_wof_values()
 
-        // Calculate Vdd AC Current average TDP by interpolating #V current@g_wof->c_ratio_vdd_freq
-        g_wof->iac_tdp_vdd = interpolate_linear( g_wof->c_ratio_vdd_freq,
-                                                 G_oppb.operating_points[l_point1_index].frequency_mhz,
-                                                 G_oppb.operating_points[l_point2_index].frequency_mhz,
-                                                 G_oppb.operating_points[l_point1_index].idd_tdp_ac_10ma,
-                                                 G_oppb.operating_points[l_point2_index].idd_tdp_ac_10ma);
+        // Calculate Vdd AC Current average TDP by interpolating #V current@g_wof->avg_freq_mhz
+        g_wof->iac_tdp_vdd_10ma = interpolate_linear( g_wof->avg_freq_mhz,
+                                                      G_oppb.operating_points[g_wof->vpd_index1].frequency_mhz,
+                                                      G_oppb.operating_points[g_wof->vpd_index2].frequency_mhz,
+                                                      G_oppb.operating_points[g_wof->vpd_index1].idd_tdp_ac_10ma,
+                                                      G_oppb.operating_points[g_wof->vpd_index2].idd_tdp_ac_10ma);
 
-        // Calculate Vdd voltage average TDP by interpolating #V voltage@g_wof->c_ratio_vdd_freq
+        // Calculate Vdd voltage average TDP by interpolating #V voltage@g_wof->avg_freq_mhz
         // *10 to convert mV to 100uV
-        g_wof->vdd_avg_tdp_100uv = 10 * interpolate_linear( g_wof->c_ratio_vdd_freq,
-                                                            G_oppb.operating_points[l_point1_index].frequency_mhz,
-                                                            G_oppb.operating_points[l_point2_index].frequency_mhz,
-                                                            G_oppb.operating_points[l_point1_index].vdd_mv,
-                                                            G_oppb.operating_points[l_point2_index].vdd_mv);
+        g_wof->vdd_avg_tdp_100uv = 10 * interpolate_linear( g_wof->avg_freq_mhz,
+                                                            G_oppb.operating_points[g_wof->vpd_index1].frequency_mhz,
+                                                            G_oppb.operating_points[g_wof->vpd_index2].frequency_mhz,
+                                                            G_oppb.operating_points[g_wof->vpd_index1].vdd_mv,
+                                                            G_oppb.operating_points[g_wof->vpd_index2].vdd_mv);
 
         if(G_allow_trace_flags & ALLOW_CEFF_RATIO_VDD_TRACE)
         {
             INTR_TRAC_INFO("ceff_ratio_vdd: F[%d] between #V OP index[%d] freq[%d] and index[%d] freq[%d]",
-                            g_wof->c_ratio_vdd_freq,
-                            l_point1_index, G_oppb.operating_points[l_point1_index].frequency_mhz,
-                            l_point2_index, G_oppb.operating_points[l_point2_index].frequency_mhz);
-            INTR_TRAC_INFO("ceff_ratio_vdd: interpolated iac_tdp_vdd[%d] point1[%d] point2[%d]",
-                            g_wof->iac_tdp_vdd,
-                            G_oppb.operating_points[l_point1_index].idd_tdp_ac_10ma,
-                            G_oppb.operating_points[l_point2_index].idd_tdp_ac_10ma);
+                            g_wof->avg_freq_mhz,
+                            g_wof->vpd_index1, G_oppb.operating_points[g_wof->vpd_index1].frequency_mhz,
+                            g_wof->vpd_index2, G_oppb.operating_points[g_wof->vpd_index2].frequency_mhz);
+            INTR_TRAC_INFO("ceff_ratio_vdd: interpolated iac_tdp_vdd_10ma[%d] point1[%d] point2[%d]",
+                            g_wof->iac_tdp_vdd_10ma,
+                            G_oppb.operating_points[g_wof->vpd_index1].idd_tdp_ac_10ma,
+                            G_oppb.operating_points[g_wof->vpd_index2].idd_tdp_ac_10ma);
             INTR_TRAC_INFO("ceff_ratio_vdd: interpolated vdd_avg_tdp_100uv[%d] point1[%d] point2[%d]",
                             g_wof->vdd_avg_tdp_100uv,
-                            G_oppb.operating_points[l_point1_index].vdd_mv * 10,
-                            G_oppb.operating_points[l_point2_index].vdd_mv * 10);
+                            G_oppb.operating_points[g_wof->vpd_index1].vdd_mv * 10,
+                            G_oppb.operating_points[g_wof->vpd_index2].vdd_mv * 10);
         }
 
-        g_wof->c_ratio_vdd_volt = multiply_ratio( g_wof->vdd_avg_tdp_100uv,
-                                                  g_wof->v_ratio );
+        // Calculate roundup(idd_ac_avg_ma / idd_ac_tdp_ma)
+        if(g_wof->iac_tdp_vdd_10ma) // prevent divide by 0
+        {
+            // 10ma times 10,000 to get ua unit
+            l_temp32 = g_wof->iac_vdd_ua / (g_wof->iac_tdp_vdd_10ma * 10000);
+            // roundup
+            if( g_wof->iac_vdd_ua % (g_wof->iac_tdp_vdd_10ma * 10000) )
+                l_temp32++;
+            g_wof->iac_vdd_tdp_ratio = l_temp32;
+        }
+        else
+        {
+            INTR_TRAC_ERR("WOF Disabled! iac_tdp_vdd_10ma is 0");
+            print_oppb();
+            // Return 0
+            g_wof->ceff_ratio_vdd = 0;
 
-        // Calculate ceff_tdp_vdd
-        // iac_tdp_vdd / ((V@Freq*Vratio)^1.3 * (Freq*Fratio))
-        // Freq is the average frequency from PGPE
-        g_wof->ceff_tdp_vdd =
-                    calculate_effective_capacitance( g_wof->iac_tdp_vdd,
-                                                     g_wof->c_ratio_vdd_volt,
-                                                     g_wof->c_ratio_vdd_freq );
-        // Calculate ceff_vdd
-        // iac_vdd / (V^1.3 * Freq)
-        g_wof->ceff_vdd =
-                    calculate_effective_capacitance( g_wof->iac_vdd,
-                                                     g_wof->Vdd_chip_p1mv,
-                                                     g_wof->f_clip_freq );
+            set_clear_wof_disabled(SET,
+                                   WOF_RC_DIVIDE_BY_ZERO_VDD,
+                                   ERC_WOF_DIVIDE_BY_ZERO_VDD);
+            break;
+        }
+
+        // Calculate (vdd_tdp_mv * vratio_avg)^1.3
+        g_wof->c_ratio_vdd_volt = multiply_v_ratio(g_wof->vdd_avg_tdp_100uv);
+        g_wof->ceff_tdp_vdd = calculate_exp_1p3(g_wof->c_ratio_vdd_volt);
+
+        // Calculate vdd_avg_mv^1.3
+        g_wof->ceff_vdd = calculate_exp_1p3(g_wof->Vdd_chip_p1mv);
 
         // Prevent divide by zero
-        if( g_wof->ceff_tdp_vdd == 0 )
+        if( g_wof->ceff_vdd == 0 )
         {
-            // Print debug info to help isolate offending variable
-            INTR_TRAC_ERR("WOF Disabled! Ceff VDD divide by 0");
-            INTR_TRAC_ERR("iac_tdp_vdd = %d", g_wof->iac_tdp_vdd );
-            INTR_TRAC_ERR("v_ratio     = %d", g_wof->v_ratio );
-            INTR_TRAC_ERR("c ratio vdd V = %d", g_wof->c_ratio_vdd_volt);
-            INTR_TRAC_ERR("c ratio vdd F    = %d", g_wof->c_ratio_vdd_freq);
-            INTR_TRAC_ERR("f_clip_freq   = 0x%x", g_wof->f_clip_freq);
-
+            INTR_TRAC_ERR("WOF Disabled! Ceff VDD is 0 Vdd_chip_p1mv[%d]", g_wof->Vdd_chip_p1mv);
             print_oppb();
             // Return 0
             g_wof->ceff_ratio_vdd = 0;
@@ -1381,9 +1452,17 @@ void calculate_ceff_ratio_vdd( void )
         }
         else
         {
+            // Finally put pieces together and calculate raw ceff ratio =
+            // roundup(idd_ac_avg_ma / idd_ac_tdp_ma) * roundup(((vdd_tdp_mv * vratio_avg)^1.3) / vdd_avg_mv^1.3)
+            l_raw_ceff_ratio = g_wof->ceff_tdp_vdd / g_wof->ceff_vdd;
+
+            // roundup
+            if( g_wof->ceff_tdp_vdd % g_wof->ceff_vdd )
+                l_raw_ceff_ratio++;
+
+            l_raw_ceff_ratio *= g_wof->iac_vdd_tdp_ratio;
+
             // Save raw ceff ratio vdd to a sensor, this sensor is NOT to be used by the WOF alg
-            // Multiply by 10000 to convert to correct granularity.
-            l_raw_ceff_ratio = (g_wof->ceff_vdd*10000) / g_wof->ceff_tdp_vdd;
             sensor_update(AMECSENSOR_PTR(CEFFVDDRATIO), (uint16_t)l_raw_ceff_ratio);
 
             // Now check the raw ceff ratio to prevent Over current by clipping to max of 100%
@@ -1392,53 +1471,58 @@ void calculate_ceff_ratio_vdd( void )
             // save the final adjusted Ceff ratio to a sensor
             sensor_update(AMECSENSOR_PTR(CEFFVDDRATIOADJ), (uint16_t)g_wof->ceff_ratio_vdd);
         }
-    }  // else v_ratio != 0
+
+    }while( 0 );
+}
+
+/** multiply_v_ratio
+ *
+ *  Description: Helper function to multiply by V ratio
+ *
+ *  Param[in]: i_value - value to multiply v_ratio by
+ *
+ *  Return: i_value * v_ratio
+ */
+uint32_t multiply_v_ratio( uint32_t i_value )
+{
+    // We get v_ratio from the PGPE ranging from 0x0000 to 0xffff
+    // These hex values conceptually translate from 0.0 to 1.0
+    // (v_ratio / 0xFFFF) * i_value
+    // *16384 to avoid floating point math 16384 chosen so can /16384 with >>14
+    // (v_ratio*16384/0xffff) * i_value / 16384
+
+    return ((((g_wof->v_ratio*16384)/0xFFFF) * i_value) >> 14);
 }
 
 /**
  *  calculate_AC_currents
  *
- *  Description: Calculate the AC currents
+ *  Description: Calculate the AC component of the workload
  */
 void calculate_AC_currents( void )
 {
+    // sensor readings are in 0.01A *100 to get ua
+    uint16_t l_idd_avg_ua = g_wof->curvdd_sensor * 100;
+    uint16_t l_ics_avg_ua = g_wof->curvcs_sensor * 100;
+
     // avoid negative AC currents
-    if(g_wof->curvdd_sensor > g_wof->iddq_ua)
+    if(l_idd_avg_ua > g_wof->iddq_ua)
     {
-       g_wof->iac_vdd = g_wof->curvdd_sensor - g_wof->iddq_ua;
+       g_wof->iac_vdd_ua = l_idd_avg_ua - g_wof->iddq_ua;
     }
     else
     {
-       g_wof->iac_vdd = 0;
+       g_wof->iac_vdd_ua = 0;
     }
 
-    if(g_wof->curvcs_sensor > g_wof->icsq_ua)
+    if(l_ics_avg_ua > g_wof->icsq_ua)
     {
-       g_wof->iac_vcs = g_wof->curvcs_sensor - g_wof->icsq_ua;
+       g_wof->iac_vcs_ua = l_ics_avg_ua - g_wof->icsq_ua;
     }
     else
     {
-       g_wof->iac_vcs = 0;
+       g_wof->iac_vcs_ua = 0;
     }
-}
-
-/** multiply_ratio
- *
- *  Description: Helper function to multiply V/F Ratio's by their
- *               operating point preserving the correct granularity
- *
- *  Param[in]: i_operating_point - Operating point taken from the OPPB
- *  Param[in]: i_ratio - the V/F ratio taken from shared OCC-PGPE SRAM
- *
- *  Return: Operating point * ratio
- */
-uint32_t multiply_ratio( uint32_t i_operating_point,
-                                uint32_t i_ratio )
-{
-    // We get i_ratio from the PGPE ranging from 0x0000 to 0xffff
-    // These hex values conceptually translate from 0.0 to 1.0
-    // Extra math is used to convert units to avoid floating point math.
-    return ((((i_ratio*10000)/0xFFFF) * i_operating_point) / 10000);
 }
 
 /**
@@ -1479,15 +1563,21 @@ void get_poundV_points( uint32_t i_freq_mhz,
                         uint8_t* o_point2_index)
 {
     int i;
+    static bool L_trace_max_freq = TRUE;
+
     // this should never happen that we get a frequency > the highest VPD point
     // for now just trace we may decide later that this should cause a WOF reset
     if(i_freq_mhz > G_oppb.operating_points[NUM_PV_POINTS-1].frequency_mhz)
     {
-       INTR_TRAC_ERR("get_poundV_points: Frequency[%d] is higher than max VPD[%d]",
-                      i_freq_mhz, G_oppb.operating_points[NUM_PV_POINTS-1].frequency_mhz);
-
        *o_point1_index = NUM_PV_POINTS-1;
        *o_point2_index = NUM_PV_POINTS-1;
+
+       if(L_trace_max_freq)
+       {
+           L_trace_max_freq = FALSE;
+           INTR_TRAC_ERR("get_poundV_points: Frequency[%d] is higher than max VPD[%d]",
+                          i_freq_mhz, G_oppb.operating_points[NUM_PV_POINTS-1].frequency_mhz);
+       }
     }
     else
     {
@@ -2291,8 +2381,11 @@ int get_voltage_index( uint32_t i_voltage )
 /**
  * scale
  *
- * Description: Performs full_leakage_08V^(-((T1 - T2) / 257.731)) * 1.45^((T1 - T2)/10)
+ * Description: Leakage temperature scaling function is split into "core" vs "non-core" curves
+ *              based on the distribution of VT devices used in those areas
+ *              new current = present current * (1 + (t2c(T1) - t2c(T2)) / t2c(T2))
  *              using a 3rd degree polynomial for either core or non-core temperature scaling line
+ *              t2c(T) = aT^3 + bT^2 + cT + d
  *              result is returned in 0.001 unit
  * Param[in]: i_target_temp
  * Param[in]: i_reference_temp

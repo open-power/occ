@@ -238,17 +238,17 @@ typedef struct __attribute__ ((packed))
     // [355] Contains the estimated cache leakage based on temp, voltage and vpd-leak
     uint32_t icsq_ua;
     // [359] Contains the AC component of the workload for the core
-    uint32_t iac_vdd;
+    uint32_t iac_vdd_ua;
     // [363] Contains the AC component of the workload for the cache
-    uint32_t iac_vcs;
-    // [367] Contains iac_tdp_vdd(@turbo) read from the pstate parameter block
-    uint32_t iac_tdp_vdd;
+    uint32_t iac_vcs_ua;
+    // [367] Contains iac_tdp_vdd(@avg F) interpolated from OPPB operating points
+    uint32_t iac_tdp_vdd_10ma;
     // [371] Contains Vratio, read from OCC-PGPE shared SRAM
     uint16_t v_ratio;
     // [373] Contains clip_state value last read from VRT, read from OCC-PGPE shared SRAM
-    uint8_t f_clip_ps;
-    // [374] Contains the frequency for average frequency pState read from PGPE shared SRAM;
-    uint32_t f_clip_freq;
+    uint8_t  f_clip_ps;
+    // [374]
+    uint32_t reserved;
     // [378] Contains the calculated effective capacitance for tdp_vdd
     uint32_t ceff_tdp_vdd;
     // [382] Contains the calculated effective capacitance for vdd
@@ -363,12 +363,12 @@ typedef struct __attribute__ ((packed))
     uint8_t wof_vrt_req_rc;
     // [574] Voltage used in ceff_ratio_vdd calc
     uint32_t c_ratio_vdd_volt;
-    // [578] Frequency used in ceff_ratio_vdd calc
-    uint32_t c_ratio_vdd_freq;
+    // [578] Average frequency (read from PGPE) used in ceff ratio vdd and vcs calculations
+    uint32_t avg_freq_mhz;
     // [582] Voltage used in ceff_ratio_vcs calc
     uint32_t c_ratio_vcs_volt;
-    // [586] Frequency used in ceff_ratio_vcs calc
-    uint32_t c_ratio_vcs_freq;
+    // [586] Contains iac_tdp_vcs(@avg F) interpolated from OPPB operating points
+    uint32_t iac_tdp_vcs_10ma;
     // [590] Holds the state of various async operations relating to sending a VRT
     uint8_t vrt_state;
 
@@ -394,7 +394,7 @@ typedef struct __attribute__ ((packed))
     // [630] Final adjusted CeffRatio from previous tick
     uint16_t vdd_ceff_ratio_adj_prev;
     // [632]
-    uint32_t vdd_avg_tdp_100uv;
+    uint32_t vdd_avg_tdp_uv;
     // [636] count of number of times not dirty (type 0)
     uint32_t ocs_not_dirty_count;
     // [640] count of not dirty (type 1) this counter should be 0
@@ -405,7 +405,19 @@ typedef struct __attribute__ ((packed))
     uint32_t ocs_dirty_type1_count;
     // [652] Ambient condition used to determine VRT
     uint32_t ambient_condition;
-} amec_wof_t;  // 656 bytes total
+    // [656] #V index 1 used for ceff ratio frequency interpolation
+    uint8_t  vpd_index1;
+    // [657] #V index 2 used for ceff ratio frequency interpolation
+    uint8_t  vpd_index2;
+    // [658] Vdd voltage average TDP by interpolating #V voltage@(avg F)
+    uint32_t vdd_avg_tdp_100uv;
+    // [662] value of roundup(idd_ac_avg / idd_ac_tdp)
+    uint32_t iac_vdd_tdp_ratio;
+    // [666] Vcs voltage average TDP by interpolating #V voltage@(avg F)
+    uint32_t vcs_avg_tdp_100uv;
+    // [670] value of roundup(ics_ac_avg / ics_ac_tdp)
+    uint32_t iac_vcs_tdp_ratio;
+} amec_wof_t;  // 674 bytes total
 
 // Structure used in g_amec to hold static WOF data
 typedef struct __attribute__ ((packed))
@@ -482,6 +494,8 @@ void calculate_ceff_ratio_vcs( void );
 
 void calculate_ceff_ratio_vdd( void );
 
+uint32_t multiply_v_ratio( uint32_t i_value );
+
 void calculate_AC_currents( void );
 
 int32_t interpolate_linear( int32_t i_X,
@@ -494,9 +508,7 @@ void get_poundV_points( uint32_t i_freq_mhz,
                         uint8_t* o_point1_index,
                         uint8_t* o_point2_index);
 
-uint32_t calculate_effective_capacitance( uint32_t i_iAC,
-                                          uint32_t i_voltage,
-                                          uint32_t i_frequency );
+uint32_t calculate_exp_1p3(uint32_t i_x);
 
 void read_sensor_data( void );
 
@@ -539,6 +551,4 @@ uint32_t prevent_over_current( uint32_t i_ceff_ratio );
 
 void schedule_vrt_request( void );
 
-uint32_t multiply_ratio( uint32_t i_operating_point,
-                                uint32_t i_ratio );
 #endif
