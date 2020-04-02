@@ -626,6 +626,43 @@ void cmdh_dbug_dump_static_wof_data( const cmdh_fsp_cmd_t * i_cmd_ptr,
 
 // Function Specification
 //
+// Name: cmdh_dbug_dump_wof_off_data
+//
+// Description: Dumps out the contents of g_amec->oc_wof_off
+//
+// End Function Specification
+void cmdh_dbug_dump_wof_off_data( const cmdh_fsp_cmd_t * i_cmd_ptr,
+                                        cmdh_fsp_rsp_t * o_rsp_ptr)
+{
+    uint16_t l_datalen = sizeof(oc_wof_off_t) + 1;
+
+    // Fill in response data
+    o_rsp_ptr->data[0] = g_amec->wof.ocs_dirty;
+
+    memcpy((void*)&(o_rsp_ptr->data[1]),
+           (void*)&(g_amec->oc_wof_off),
+           sizeof(oc_wof_off_t));
+
+    TRAC_INFO("WOF OFF DATA - decrease_pstate[%d] increase_pstate[%d] pstate_max[0x%02X]",
+               g_amec->oc_wof_off.decrease_pstate,
+               g_amec->oc_wof_off.increase_pstate,
+               g_amec->oc_wof_off.pstate_max);
+
+    TRAC_INFO("WOF OFF DATA - dirty bits[0x%02X] pstate_request[0x%02X] freq_request[0x%04X]",
+               g_amec->wof.ocs_dirty,
+               g_amec->oc_wof_off.pstate_request,
+               g_amec->oc_wof_off.freq_request);
+
+
+    // Fill in response data length
+    o_rsp_ptr->data_length[0] = CONVERT_UINT16_UINT8_HIGH(l_datalen);
+    o_rsp_ptr->data_length[1] = CONVERT_UINT16_UINT8_LOW(l_datalen);
+    G_rsp_status = ERRL_RC_SUCCESS;
+    return;
+}
+
+// Function Specification
+//
 // Name: cmdh_dbug_wof_ocs
 //
 // Description: Writes data related to OCS support
@@ -644,7 +681,20 @@ void cmdh_dbug_wof_ocs( const cmdh_fsp_cmd_t * i_cmd_ptr,
     {
         l_rc = ERRL_RC_INTERNAL_FAIL;
     }
-    else
+    else if(l_cmd_ptr->pstates)  // values are Pstates used when WOF is off
+    {
+        // Save the OCS up and down addrs
+        g_amec->oc_wof_off.increase_pstate = l_cmd_ptr->ceff_up_amount;
+        g_amec->oc_wof_off.decrease_pstate = l_cmd_ptr->ceff_down_amount;
+
+        TRAC_INFO("DEBUG - OCS Pstate Adders written up[%d] down[%d]",
+                   g_amec->oc_wof_off.increase_pstate, g_amec->oc_wof_off.decrease_pstate);
+
+        // Fill in response data
+        l_rsp_ptr->ceff_up_amount = g_amec->oc_wof_off.increase_pstate;
+        l_rsp_ptr->ceff_down_amount = g_amec->oc_wof_off.decrease_pstate;
+    }
+    else  // values are ceff values used when WOF is on
     {
         // Save the OCS up and down addrs
         g_amec->wof.ocs_increase_ceff = l_cmd_ptr->ceff_up_amount;
@@ -1248,7 +1298,11 @@ void cmdh_dbug_cmd (const cmdh_fsp_cmd_t * i_cmd_ptr,
             break;
 
         case DBUG_DUMP_STATIC_WOF_DATA:
-             cmdh_dbug_dump_static_wof_data(i_cmd_ptr, o_rsp_ptr);
+            cmdh_dbug_dump_static_wof_data(i_cmd_ptr, o_rsp_ptr);
+            break;
+
+        case DBUG_DUMP_WOF_OFF_DATA:
+            cmdh_dbug_dump_wof_off_data(i_cmd_ptr, o_rsp_ptr);
             break;
 
         case DBUG_DUMP_RAW_AD:

@@ -42,6 +42,9 @@ extern uint8_t G_max_vrt_chances;
 extern uint8_t G_max_wof_control_chances;
 extern uint32_t G_max_ceff_ratio;
 
+// number of consecutive times IDDQ activity can be invalid (per core) before logging error
+#define IDDQ_ACTIVITY_ERROR_COUNT 1  // set to 1 so it is seen if this ever happens
+
 #define MAX_CEFF_RATIO              10000   // 1.0 ratio = 10000
                                             // (scaled to avoid floating point)
 // value to indicate VRT dimension does not have an override set by mfg test cmd
@@ -86,7 +89,8 @@ extern uint32_t G_max_ceff_ratio;
 #define WOF_RC_RESET_DEBUG_CMD                     0x02000000
 #define WOF_RC_DIVIDE_BY_ZERO_VCS                  0x04000000
 #define WOF_RC_INVALID_IDDQ_SAMPLE_DEPTH           0x08000000
-#define WOF_RC_NEGATIVE_MMA_LEAKAGE                0x10000000
+#define WOF_RC_IDDQ_ACTIVITY_INVALID               0x10000000
+#define WOF_RC_NEGATIVE_MMA_LEAKAGE                0x20000000
 
 //***************************************************************************
 // Temp space used to save hard coded addresses
@@ -463,6 +467,21 @@ typedef struct __attribute__ ((packed))
     uint8_t data[MIN_BCE_REQ_SIZE];
 } temp_bce_request_buffer_t __attribute ((aligned(128)));
 
+// structure for overcurrent protection controller when WOF is off
+typedef struct __attribute__ ((packed))
+{
+    // *STATIC VALUE* number of Pstates to decrease by (increase freq) when no OC
+    uint8_t                       decrease_pstate;
+    // *STATIC VALUE* number of Pstates to increase by (decrease freq) when OC type act detected
+    uint8_t                       increase_pstate;
+    // *STATIC VALUE* Maximum Pstate (lowest freq) controller may ask for
+    uint8_t                      pstate_max;
+    // Pstate request of the controller
+    uint8_t                       pstate_request;
+    // Pstate request as frequency in MHz (may include throttle space)
+    uint16_t                      freq_request;
+}oc_wof_off_t;
+
 //******************************************************************************
 // Function Prototypes
 //******************************************************************************
@@ -548,6 +567,8 @@ void print_data( void );
 void print_oppb( void );
 
 uint32_t prevent_over_current( uint32_t i_ceff_ratio );
+
+void prevent_oc_wof_off( void );
 
 void schedule_vrt_request( void );
 

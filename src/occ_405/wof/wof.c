@@ -164,6 +164,17 @@ void call_wof_main( void )
                                         ERC_WOF_PGPE_WOF_DISABLED );
                 g_wof->pgpe_wof_disabled = 0;
             }
+
+            // if the only reason WOF isn't running is due to Static Freq Point mode
+            // allow WOF to run thru calculations anyway for lab debug.  WOF will not
+            // be enabled on the PGPE to avoid actual WOF clipping
+            if( ((g_wof->wof_disabled & (~WOF_RC_MODE_NO_SUPPORT_MASK)) == 0) &&
+                (CURRENT_MODE() == OCC_MODE_STATIC_FREQ_POINT) &&
+                (IS_OCC_STATE_ACTIVE()) )
+            {
+                wof_main();
+            }
+
             break;
         }
 
@@ -407,6 +418,16 @@ void call_wof_main( void )
                     // Finally make sure we are in the fully enabled state
                     if( g_wof->wof_init_state == PGPE_WOF_ENABLED_NO_PREV_DATA )
                     {
+                        // remove any OC clip that was set while WOF was off now that OC
+                        // will be handled by WOF vdd ceff ratio adjustment
+                        if(g_amec->oc_wof_off.pstate_request)
+                        {
+                            INTR_TRAC_INFO("call_wof_main: WOF now enabled removing OC wof off pstate clip[%d]",
+                                            g_amec->oc_wof_off.pstate_request);
+                            g_amec->oc_wof_off.pstate_request = 0;
+                            g_amec->oc_wof_off.freq_request = 0xFFFF;
+                        }
+
                         g_wof->wof_init_state = WOF_ENABLED;
                         // Set the the frequency ranges
                         errlHndl_t l_errl = amec_set_freq_range(CURRENT_MODE());
@@ -510,8 +531,12 @@ void wof_main( void )
     // the calculated steps from start
     g_wof->vrt_main_mem_addr = calc_vrt_mainstore_addr();
 
-    // Copy the new vrt from main memory to sram
-    copy_vrt_to_sram( g_wof->vrt_main_mem_addr );
+    // skip sending VRT to PGPE if only went thru calculation due to SFP mode
+    if(CURRENT_MODE() != OCC_MODE_STATIC_FREQ_POINT)
+    {
+        // Copy the new vrt from main memory to sram
+        copy_vrt_to_sram( g_wof->vrt_main_mem_addr );
+    }
 }
 
 /**
@@ -851,6 +876,12 @@ void read_pgpe_produced_wof_values( void )
     else
         INTR_TRAC_ERR("???????? Invalid ocs_dirty[%d]", g_wof->ocs_dirty);
 
+    // if WOF is disabled determine the Pstate clip based on dirty bits for OC protection
+    if( (g_wof->wof_init_state < PGPE_WOF_ENABLED_NO_PREV_DATA) || g_wof->wof_disabled )
+    {
+        prevent_oc_wof_off();
+    }
+
     // Update V/I from PGPE
     uint16_t l_voltage = 0;
     uint16_t l_current = 0;
@@ -990,6 +1021,8 @@ void read_xgpe_values( void )
     static bool L_trace_io_index_invalid = TRUE;
     // used to trace only once getting invalid IDDQ activity from XGPE
     static bool L_trace_iddq_activity_invalid = TRUE;
+    // used to keep track of consecutive invalid iddq activity counts
+    static uint16_t L_iddq_activity_invalid[MAX_NUM_CORES] = {0};
 
     // Read and process XGPE Produced WOF values
     l_XgpeWofValues.value = in64(g_amec_sys.static_wof_data.xgpe_values_sram_addr);
@@ -1021,7 +1054,9 @@ void read_xgpe_values( void )
        // sanity check -- this should never happen (XGPE code bug)
        if(l_core_vmin_off_samples > g_amec_sys.static_wof_data.iddq_activity_sample_depth)
        {
-           if(L_trace_iddq_activity_invalid)
+           L_iddq_activity_invalid[l_core]++;
+           if( (L_trace_iddq_activity_invalid) ||
+               (L_iddq_activity_invalid[l_core] == IDDQ_ACTIVITY_ERROR_COUNT) )
            {
                L_trace_iddq_activity_invalid = FALSE;
                TRAC_ERR("read_xgpe_values: Core[%d] has invalid IDDQ activity samples off[%d] + vmin[%d] > depth[%d]",
@@ -1029,15 +1064,26 @@ void read_xgpe_values( void )
                          l_IDDQActivityValues.core_off[l_core],
                          l_IDDQActivityValues.core_vmin[l_core],
                          g_amec_sys.static_wof_data.iddq_activity_sample_depth);
+
+               // if this core reached the max error count, log error and disable WOF
+               if(L_iddq_activity_invalid[l_core] == IDDQ_ACTIVITY_ERROR_COUNT)
+               {
+                    set_clear_wof_disabled(SET,
+                                           WOF_RC_IDDQ_ACTIVITY_INVALID,
+                                           ERC_WOF_IDDQ_ACTIVITY_INVALID);
+               }
            }
 
+           // set samples to 0 to be conservative
            l_core_samples_on = 0;
-           // To get activity total equal to depth split depth between vmin and off
-           l_IDDQActivityValues.core_off[l_core] = g_amec_sys.static_wof_data.iddq_activity_sample_depth >> 1;
-           l_IDDQActivityValues.core_vmin[l_core] = g_amec_sys.static_wof_data.iddq_activity_sample_depth - l_IDDQActivityValues.core_off[l_core];
+           l_IDDQActivityValues.core_off[l_core] = 0;
+           l_IDDQActivityValues.core_vmin[l_core] = 0;
        }
-       else
+       else  // activity counts valid
        {
+           // clear invalid counter
+           L_iddq_activity_invalid[l_core] = 0;
+
            l_core_samples_on = g_amec_sys.static_wof_data.iddq_activity_sample_depth - l_core_vmin_off_samples;
        }
        // store in 0.1% unit
@@ -2657,3 +2703,100 @@ uint32_t prevent_over_current( uint32_t i_ceff_ratio )
 
     return l_clipped_ratio;
 }
+
+/**
+ * prevent_oc_wof_off
+ *
+ * Description: Determines Pstate clip to prevent over-current when WOF is off
+ *
+ */
+void prevent_oc_wof_off( void )
+{
+    static uint8_t  L_ocs_dirty_prev = 0;
+           uint16_t l_pstate = 0;
+           uint32_t l_steps = 0;
+           uint32_t l_steps_in_kHz = 0;
+           uint32_t l_freq_kHz = 0;
+
+    // check if OC protection when WOF is off was disabled
+    if(G_internal_flags & INT_FLAG_DISABLE_OC_WOF_OFF)
+        return;
+
+    if((g_wof->ocs_dirty & OCS_PGPE_DIRTY_MASK) == 0)
+    {
+        // no over current condition detected on previous PGPE tick time
+        // decrease Pstate clip (i.e. increase frequency)
+        if(g_amec->oc_wof_off.pstate_request > g_amec->oc_wof_off.decrease_pstate)
+        {
+             g_amec->oc_wof_off.pstate_request -= g_amec->oc_wof_off.decrease_pstate;
+        }
+        else  // no clip needed
+        {
+             g_amec->oc_wof_off.pstate_request = 0;
+        }
+
+        if( (L_ocs_dirty_prev != g_wof->ocs_dirty) &&
+            (G_allow_trace_flags & ALLOW_WOF_OCS_TRACE) )
+        {
+           INTR_TRAC_IMP("OCS NOW CLEAN: Pstate Request[%d]",
+                          g_amec->oc_wof_off.pstate_request);
+        }
+    }
+    else if(g_wof->ocs_dirty == (OCS_PGPE_DIRTY_MASK | OCS_PGPE_DIRTY_TYPE_MASK)) // dirty type 1 (act)
+    {
+        INCREMENT_ERR_HISTORY( ERRH_CEFF_RATIO_VDD_EXCURSION );
+
+        // over current condition detected on previous PGPE tick time
+        // increase Pstate clip (i.e. decrease frequency) stop at max allowed
+        l_pstate = g_amec->oc_wof_off.pstate_request + g_amec->oc_wof_off.increase_pstate;
+
+        if(l_pstate > g_amec->oc_wof_off.pstate_max)
+        {
+            g_amec->oc_wof_off.pstate_request = g_amec->oc_wof_off.pstate_max;
+        }
+        else
+        {
+            g_amec->oc_wof_off.pstate_request = (Pstate_t)l_pstate;
+        }
+
+        if( (L_ocs_dirty_prev != g_wof->ocs_dirty) &&
+            (G_allow_trace_flags & ALLOW_WOF_OCS_TRACE) )
+        {
+           INTR_TRAC_IMP("OCS DIRTY ACT TYPE: Pstate vote[%d]",
+                          g_amec->oc_wof_off.pstate_request);
+        }
+
+    }
+    else // OCS Dirty but type is 0 (block action)
+    {
+        INCREMENT_ERR_HISTORY(ERRH_OCS_DIRTY_BLOCK);
+
+        // over current condition detected on previous PGPE tick time
+        // but type is block action so no adjustment
+        if( (L_ocs_dirty_prev != g_wof->ocs_dirty) &&
+            (G_allow_trace_flags & ALLOW_WOF_OCS_TRACE) )
+        {
+           INTR_TRAC_IMP("OCS DIRTY HOLD TYPE: Pstate vote[%d]",
+                          g_amec->oc_wof_off.pstate_request);
+        }
+    }
+
+    // update frequency vote
+    l_freq_kHz = proc_pstate2freq(g_amec->oc_wof_off.pstate_request, &l_steps);
+    // convert l_steps into frequency in kHz
+    l_steps_in_kHz = l_steps * G_oppb.frequency_step_khz;
+    // subtract off the additional frequency to get into throttle space
+    if(l_steps_in_kHz <= l_freq_kHz)  // prevent going negative
+        l_freq_kHz -= l_steps_in_kHz;
+    else
+        l_freq_kHz = 1000;  // vote 1mHz
+
+    // save in MHz
+    g_amec->oc_wof_off.freq_request = (l_freq_kHz / 1000);
+
+    // save dirty to previous
+    L_ocs_dirty_prev = g_wof->ocs_dirty;
+
+    return;
+}
+

@@ -238,6 +238,10 @@ errlHndl_t amec_set_freq_range(const OCC_MODE i_mode)
     else
     {
         uint32_t l_steps = 0;
+        uint8_t l_pstate = proc_freq2pstate(l_freq_max, &l_steps);
+        // add the steps to the pstate to reflect the actual Fmax Pstate
+        l_pstate += l_steps;
+
         g_amec->sys.fmin_max_throttled = l_freq_min_at_max_throttle;
         g_amec->sys.fmax = l_freq_max;
 
@@ -246,7 +250,7 @@ errlHndl_t amec_set_freq_range(const OCC_MODE i_mode)
                   l_freq_min,
                   G_oppb.pstate_min,
                   l_freq_max,
-                  proc_freq2pstate(l_freq_max, &l_steps));
+                  l_pstate);
         TRAC_INFO("amec_set_freq_range:   Fmin@MaxThrot[%u/0x%02X]",
                   l_freq_min_at_max_throttle,
                   G_oppb.pstate_max_throttle);
@@ -376,6 +380,14 @@ void amec_slv_proc_voting_box(void)
         {
             l_kvm_throt_reason = VDD_OVERTEMP;
         }
+    }
+
+    // Overcurrent protection when WOF is disabled
+    if(g_amec->oc_wof_off.freq_request < l_chip_fmax)
+    {
+        l_chip_fmax = g_amec->oc_wof_off.freq_request;
+        l_chip_reason = AMEC_VOTING_REASON_OVER_CURRENT;
+        l_kvm_throt_reason = OVERCURRENT;
     }
 
     for (k=0; k<MAX_NUM_CORES; k++)

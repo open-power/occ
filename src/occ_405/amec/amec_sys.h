@@ -612,6 +612,9 @@ typedef struct
   // Thermal Controller based on VRM Vdd temperatures
   amec_controller_t     thermalvdd;
 
+  // OC controller when WOF is off based on dirty bits from PGPE
+  oc_wof_off_t          oc_wof_off;
+
   // Oversubscription Status
   oversub_status_t      oversub_status;
 

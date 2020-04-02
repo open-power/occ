@@ -64,7 +64,7 @@ typedef enum
     DBUG_DUMP_GPU_TIMINGS     = 0x08,
     DBUG_PEEK                 = 0x09,
     DBUG_DUMP_STATIC_WOF_DATA = 0x0A,
-//  free = 0x0B,
+    DBUG_DUMP_WOF_OFF_DATA    = 0x0B,
 //  free = 0x0C,
     DBUG_DUMP_RAW_AD          = 0x0D,
 //  free = 0x0E,
@@ -236,8 +236,9 @@ typedef struct __attribute__ ((packed))
 {
     struct      cmdh_fsp_cmd_header;    // Standard command header
     uint8_t     sub_cmd;                // Debug sub-command
-    uint16_t    ceff_up_amount;           // OCS Ceff Addr going up
-    uint16_t    ceff_down_amount;         // OCS Ceff Addr going down
+    uint8_t     pstates;                // non-zero=next bytes are pstate adjustments
+    uint16_t    ceff_up_amount;         // OCS Ceff Addr going up
+    uint16_t    ceff_down_amount;       // OCS Ceff Addr going down
 } cmdh_dbug_wof_ocs_cmd_t;
 
 // DBUG_WOF_OCS response struct
