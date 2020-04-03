@@ -252,7 +252,7 @@ typedef struct __attribute__ ((packed))
     // [373] Contains clip_state value last read from VRT, read from OCC-PGPE shared SRAM
     uint8_t  f_clip_ps;
     // [374]
-    uint32_t reserved;
+    uint8_t  reserved[4];
     // [378] Contains the calculated effective capacitance for tdp_vdd
     uint32_t ceff_tdp_vdd;
     // [382] Contains the calculated effective capacitance for vdd
@@ -267,8 +267,8 @@ typedef struct __attribute__ ((packed))
     uint32_t ceff_ratio_vcs;
     // [402]
     uint8_t Vdd_chip_index;
-    // [403]
-    uint8_t Vdd_vmin_index;
+    // [403] Contains degrees C ambient is increased by to account for higher altitudes
+    uint8_t ambient_adj_for_altitude;
     // [404]
     uint8_t Vcs_chip_index;
     // [405]
@@ -384,7 +384,7 @@ typedef struct __attribute__ ((packed))
     uint64_t pgpe_wof_values_dw2;
     // [615] PGPE Produced WOF Values
     uint64_t pgpe_wof_values_dw3;
-    // [623] OVercurrent status dirty bits. Set by PGPE read from OCC Flag 0 register
+    // [623] Overcurrent status dirty bits. Set by PGPE read from OCC Flag 0 register
     uint8_t  ocs_dirty;
 
     // the following two vars can be changed via debug command
@@ -442,14 +442,16 @@ typedef struct __attribute__ ((packed))
     uint32_t xgpe_iddq_activity_sram_addr;
     // The SRAM address of the pstates for the quads.
     uint32_t pstate_tbl_sram_addr;
-    // Vmin in 0.1mv (100uV) unit read from OPPB
-    uint32_t Vdd_vmin_p1mv;
-    // voltage index for Vdd_vmin_p1mv
-    uint8_t Vdd_vmin_index;
+    // Vdd voltage in 0.1mv (100uV) with cores in retention state read from OPPB
+    uint32_t Vdd_vret_p1mv;
+    // voltage index for Vdd_vret_p1mv
+    uint8_t Vdd_vret_index;
     // Number of XGPE sample ticks for IDDQ activity counters
     uint8_t iddq_activity_sample_depth;
     // Number of bits to shift right to divide by IDDQ activity sample depth to calculate percentage
     uint8_t iddq_activity_divide_bit_shift;
+    // Altitude temperature adjustment (in (degrees Celsius/km)*1000)
+    uint32_t altitude_temp_adj_degCpMm;
 } amec_static_wof_t;
 
 // Structure for sensors used in g_amec for AMESTER for additional debug

@@ -1137,9 +1137,9 @@ void calculate_core_leakage( void )
 
         g_wof->scaled_good_eqs_on_on_vdd_vmin_ua = scale_and_interpolate(G_oppb.iddq.iddq_eqs_good_cores_on_good_caches_on_5ma[l_oct_idx],
                                                                          G_oppb.iddq.avgtemp_all_cores_on_good_caches_on_p5c,
-                                                                         g_amec_sys.static_wof_data.Vdd_vmin_index,
+                                                                         g_amec_sys.static_wof_data.Vdd_vret_index,
                                                                          g_wof->T_racetrack,
-                                                                         g_amec_sys.static_wof_data.Vdd_vmin_p1mv,
+                                                                         g_amec_sys.static_wof_data.Vdd_vret_p1mv,
                                                                          l_non_core_scaling_line);
 
         l_temp32 = ( (g_wof->scaled_good_eqs_on_on_vdd_vmin_ua - g_wof->scaled_all_off_on_vdd_vmin_ua_c)
@@ -1659,14 +1659,21 @@ void get_poundV_points( uint32_t i_freq_mhz,
  */
 void read_sensor_data( void )
 {
+    uint8_t l_ambient = 0;
+
     // Read out necessary Sensor data for WOF calculation
 
-    g_wof->ambient_condition = getSensorByGsid(TEMPAMBIENT)->sample;
-    if(g_wof->ambient_condition == 0)
+    l_ambient = (uint8_t)getSensorByGsid(TEMPAMBIENT)->sample;
+    if(l_ambient == 0)
     {
        // have not received ambient temperature
        // set condition to ff so highest ambient table is used
        g_wof->ambient_condition = 0xFF;
+    }
+    else
+    {
+       // add on adjustment to account for altitude
+       g_wof->ambient_condition = l_ambient + g_wof->ambient_adj_for_altitude;
     }
 
     g_wof->curvdd_sensor  = getSensorByGsid(CURVDD)->sample;
@@ -1706,9 +1713,9 @@ void setup_vdd( void )
 
     g_wof->scaled_all_off_off_vdd_vmin_ua_c = scale_and_interpolate(G_oppb.iddq.iddq_all_good_cores_off_good_caches_off_5ma,
                                                                     G_oppb.iddq.avgtemp_all_cores_off_caches_off_p5c,
-                                                                    g_amec_sys.static_wof_data.Vdd_vmin_index,
+                                                                    g_amec_sys.static_wof_data.Vdd_vret_index,
                                                                     g_wof->T_racetrack,
-                                                                    g_amec_sys.static_wof_data.Vdd_vmin_p1mv,
+                                                                    g_amec_sys.static_wof_data.Vdd_vret_p1mv,
                                                                     l_non_core_scaling_line);
 
     g_wof->scaled_all_off_on_vdd_chip_ua_c = scale_and_interpolate(G_oppb.iddq.iddq_all_good_cores_off_good_caches_on_5ma,
@@ -1720,9 +1727,9 @@ void setup_vdd( void )
 
     g_wof->scaled_all_off_on_vdd_vmin_ua_c = scale_and_interpolate(G_oppb.iddq.iddq_all_good_cores_off_good_caches_on_5ma,
                                                                    G_oppb.iddq.avgtemp_all_good_cores_off_good_caches_on_p5c,
-                                                                   g_amec_sys.static_wof_data.Vdd_vmin_index,
+                                                                   g_amec_sys.static_wof_data.Vdd_vret_index,
                                                                    g_wof->T_racetrack,
-                                                                   g_amec_sys.static_wof_data.Vdd_vmin_p1mv,
+                                                                   g_amec_sys.static_wof_data.Vdd_vret_p1mv,
                                                                    l_non_core_scaling_line);
 
     // divide by 32 to get single core
@@ -1750,9 +1757,9 @@ void setup_vdd( void )
 
     g_wof->scaled_all_off_off_vdd_vmin_ua_nc = scale_and_interpolate(G_oppb.iddq.iddq_all_good_cores_off_good_caches_off_5ma,
                                                                      G_oppb.iddq.avgtemp_all_cores_off_caches_off_p5c,
-                                                                     g_amec_sys.static_wof_data.Vdd_vmin_index,
+                                                                     g_amec_sys.static_wof_data.Vdd_vret_index,
                                                                      g_wof->T_racetrack,
-                                                                     g_amec_sys.static_wof_data.Vdd_vmin_p1mv,
+                                                                     g_amec_sys.static_wof_data.Vdd_vret_p1mv,
                                                                      l_non_core_scaling_line);
 
     g_wof->scaled_all_off_on_vdd_chip_ua_nc = scale_and_interpolate(G_oppb.iddq.iddq_all_good_cores_off_good_caches_on_5ma,
@@ -1764,9 +1771,9 @@ void setup_vdd( void )
 
     g_wof->scaled_all_off_on_vdd_vmin_ua_nc = scale_and_interpolate(G_oppb.iddq.iddq_all_good_cores_off_good_caches_on_5ma,
                                                                     G_oppb.iddq.avgtemp_all_good_cores_off_good_caches_on_p5c,
-                                                                    g_amec_sys.static_wof_data.Vdd_vmin_index,
+                                                                    g_amec_sys.static_wof_data.Vdd_vret_index,
                                                                     g_wof->T_racetrack,
-                                                                    g_amec_sys.static_wof_data.Vdd_vmin_p1mv,
+                                                                    g_amec_sys.static_wof_data.Vdd_vret_p1mv,
                                                                     l_non_core_scaling_line);
 
     g_wof->single_core_off_vdd_chip_ua_nc = ( (g_wof->scaled_all_off_off_vdd_chip_ua_nc *

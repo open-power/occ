@@ -184,7 +184,15 @@ typedef struct
     // are more efficient on PPE platforms
     uint32_t            pstate_max_throttle;
 
-    uint8_t reserved[52];
+    // VDD voltage (in mV) associated with cores in retention
+    // state.
+    uint32_t            vdd_vret_mv;
+
+    // Altitude temperature adjustment (in (degrees Celsius/km)*1000)
+    // eg 8C/2100m = 8C/2.1Km = 3.809 -> 1000 = 3809
+    uint32_t            altitude_temp_adj_degCpMm;
+
+    uint8_t reserved[44];
 
 } OCCPstateParmBlock_t __attribute__((aligned(128))) ;
 

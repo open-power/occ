@@ -1103,14 +1103,30 @@ bool read_oppb_params()
                                     ERC_WOF_OPPB_WOF_DISABLED );
         }
         else
-        {   // TODO RTC 249985 need added to OPPB */
-            g_amec->static_wof_data.Vdd_vmin_p1mv  = 6000;
-//            g_amec->static_wof_data.Vdd_vmin_p1mv  = G_oppb.Vdd_vmin_mv * 10;
-            g_amec->static_wof_data.Vdd_vmin_index = get_voltage_index(g_amec->static_wof_data.Vdd_vmin_p1mv);
-            MAIN_TRAC_INFO("OPPB has WOF enabled(%d) Vdd Vmin[%d]100uv  Vdd Vmin index[%d]",
+        {    */
+            if(G_oppb.vdd_vret_mv)
+                g_amec->static_wof_data.Vdd_vret_p1mv = G_oppb.vdd_vret_mv * 10;
+            else
+            {
+                // TODO RTC 249985 PGPE support delete default and log error (disable WOF) if 0
+                g_amec->static_wof_data.Vdd_vret_p1mv = 6000;
+            }
+
+            g_amec->static_wof_data.Vdd_vret_index = get_voltage_index(g_amec->static_wof_data.Vdd_vret_p1mv);
+
+            if(G_oppb.altitude_temp_adj_degCpMm)
+                g_amec->static_wof_data.altitude_temp_adj_degCpMm = G_oppb.altitude_temp_adj_degCpMm;
+            else
+            {
+                // TODO RTC 249985 PGPE support delete default no error for 0 as that can be valid value
+                g_amec->static_wof_data.altitude_temp_adj_degCpMm = 3809;
+            }
+
+            MAIN_TRAC_INFO("OPPB has WOF enabled(%d) Vdd Vret[%d]100uv  Vdd Vret index[%d] altitude_temp_adj_degCpMm[%d] ",
                            G_oppb.attr.fields.wof_enabled,
-                           g_amec->static_wof_data.Vdd_vmin_p1mv,
-                           g_amec->static_wof_data.Vdd_vmin_index);
+                           g_amec->static_wof_data.Vdd_vret_p1mv,
+                           g_amec->static_wof_data.Vdd_vret_index,
+                           g_amec->static_wof_data.altitude_temp_adj_degCpMm);
 // @mb temp        }
 
     } while (0);
