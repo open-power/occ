@@ -76,6 +76,8 @@ typedef enum
     OCC_FREQ_PT_PARM_MODE_OFF_FREQ_PT = 0x2004,
     // this is the absolute lowest Pstate i.e. lowest freq + most severe throttle setting
     OCC_FREQ_PT_PARM_BOTTOM_THROTTLE  = 0x4000,
+    // MSB of 0xFF indciates Pstate, the LSB will be the Pstate to set
+    OCC_FREQ_PT_PARM_PSTATE           = 0xFF00,
 } OCC_FREQ_PT_PARM;
 
 #define OCC_FREQ_PT_PARM_IS_VALID(parm) ((parm == OCC_FREQ_PT_PARM_NONE) || \
@@ -83,6 +85,7 @@ typedef enum
                                  (parm <= OCC_FREQ_PT_PARM_VPD_CF7_PT)) || \
                                  ((parm >= OCC_FREQ_PT_PARM_MIN_FREQ_PT) && \
                                  (parm <= OCC_FREQ_PT_PARM_MODE_OFF_FREQ_PT)) || \
+                                 ((parm & OCC_FREQ_PT_PARM_PSTATE) == OCC_FREQ_PT_PARM_PSTATE) || \
                                  (parm == OCC_FREQ_PT_PARM_BOTTOM_THROTTLE))
 
 // Used to index G_sysConfigData.sys_mode_freq.table used to store all frequency points

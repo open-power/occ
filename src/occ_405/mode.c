@@ -34,6 +34,7 @@
 #include "amec_part.h"
 #include "amec_data.h"
 #include "amec_sys.h"
+#include <pstates_occ.H>
 
 errlHndl_t SMGR_mode_transition_to_disabled();
 errlHndl_t SMGR_mode_transition_to_powersave();
@@ -105,6 +106,8 @@ const smgr_sfp_parm_trans_t G_smgr_sfp_mode_parm_trans[] =
     {OCC_FREQ_PT_PARM_BOTTOM_THROTTLE,     OCC_FREQ_PT_BOTTOM_THROTTLE}
 };
 const uint8_t G_smgr_sfp_parm_trans_count = sizeof(G_smgr_sfp_mode_parm_trans)/sizeof(smgr_sfp_parm_trans_t);
+
+extern OCCPstateParmBlock_t G_oppb;
 
 // Function Specification
 //
@@ -347,67 +350,88 @@ errlHndl_t SMGR_mode_transition_to_powersave()
 errlHndl_t SMGR_mode_transition_to_static_freq_point()
 {
     OCC_FREQ_POINT          l_freq_pt = 0;
-    uint16_t                l_freq  = 0;
+    uint32_t                l_steps = 0;
+    uint32_t                l_freq  = 0;
+    uint8_t                 l_pstate = 0;
     bool                    l_fail  = FALSE;
     errlHndl_t              l_errlHndl = NULL;
     int                     i=0;
 
-    TRAC_IMP("SMGR: Mode to Static Frequency Point Transition Started");
+    TRAC_IMP("SMGR: Mode to Static Frequency Point with parm[0x%04X] Transition Started",
+               G_occ_master_mode_parm);
 
-    // Loop through SFP mode parameter translation table to convert parameter
-    // to an actual frequency
-    for(i=0; i<G_smgr_sfp_parm_trans_count; i++)
+    if( (G_occ_master_mode_parm & OCC_FREQ_PT_PARM_PSTATE) == OCC_FREQ_PT_PARM_PSTATE )
     {
-        if(G_smgr_sfp_mode_parm_trans[i].freq_pt_parm == G_occ_master_mode_parm)
-        {
-            // We found the mode parameter, verify there is a valid frequency
-            l_freq_pt = G_smgr_sfp_mode_parm_trans[i].freq_point;
-            if(l_freq_pt < OCC_FREQ_PT_COUNT)
-            {
-                l_freq = G_sysConfigData.sys_mode_freq.table[l_freq_pt];
-               if(l_freq)
-                {
-                     // Set the user defined frequency to be used by AMEC
-                     if(G_smgr_sfp_mode_parm_trans[i].freq_pt_parm == OCC_FREQ_PT_PARM_BOTTOM_THROTTLE)
-                     {
-                          // ok for freq to be below min don't clip
-                     }
-                     else if(l_freq < G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MIN_FREQ])
-                     {
-                          TRAC_IMP("SMGR_mode_transition_to_static_freq_point: freq pt freq %dMHz is below min freq %dMHz",
-                                    l_freq,
-                                    G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MIN_FREQ]);
-                          l_freq = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MIN_FREQ];
-                     }
-                     else if(l_freq > G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MAX_FREQ])
-                     {
-                          TRAC_IMP("SMGR_mode_transition_to_static_freq_point: freq pt freq %dMHz is above max freq %dMHz",
-                                    l_freq,
-                                    G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MAX_FREQ]);
-                          l_freq = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MAX_FREQ];
-                     }
-                     G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_USER] = l_freq;
+        // the LSB of the mode parm is the Pstate to set
+        l_pstate = (uint8_t)(G_occ_master_mode_parm & 0x00FF);
 
-                     // update this OCCs internal mode parm that it now matches what was sent
-                     // from master
-                     G_occ_internal_mode_parm = G_occ_master_mode_parm;
+        // translate Pstate to freq and set the user defined frequency to be used by AMEC
+        l_freq = proc_pstate2freq(l_pstate, &l_steps);
+        // adjust frequency for l_steps to allow Pstates in throttle space
+        l_freq -= (l_steps * G_oppb.frequency_step_khz);
+        // l_freq is in kHz, save in MHz
+        G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_USER] = (l_freq / 1000);
+
+        // update this OCC internal mode parm that it now matches what was sent from master
+        G_occ_internal_mode_parm = G_occ_master_mode_parm;
+    }
+    else
+    {
+        // Loop through SFP mode parameter translation table to convert parameter
+        // to an actual frequency
+        for(i=0; i<G_smgr_sfp_parm_trans_count; i++)
+        {
+            if(G_smgr_sfp_mode_parm_trans[i].freq_pt_parm == G_occ_master_mode_parm)
+            {
+                // We found the mode parameter, verify there is a valid frequency
+                l_freq_pt = G_smgr_sfp_mode_parm_trans[i].freq_point;
+                if(l_freq_pt < OCC_FREQ_PT_COUNT)
+                {
+                    l_freq = G_sysConfigData.sys_mode_freq.table[l_freq_pt];
+                    if(l_freq)
+                    {
+                         // Set the user defined frequency to be used by AMEC
+                         if(G_smgr_sfp_mode_parm_trans[i].freq_pt_parm == OCC_FREQ_PT_PARM_BOTTOM_THROTTLE)
+                         {
+                              // ok for freq to be below min don't clip
+                         }
+                         else if(l_freq < G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MIN_FREQ])
+                         {
+                              TRAC_IMP("SMGR_mode_transition_to_static_freq_point: freq pt freq %dMHz is below min freq %dMHz",
+                                        l_freq,
+                                        G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MIN_FREQ]);
+                              l_freq = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MIN_FREQ];
+                         }
+                         else if(l_freq > G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MAX_FREQ])
+                         {
+                              TRAC_IMP("SMGR_mode_transition_to_static_freq_point: freq pt freq %dMHz is above max freq %dMHz",
+                                        l_freq,
+                                        G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MAX_FREQ]);
+                              l_freq = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MAX_FREQ];
+                         }
+                         G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_USER] = l_freq;
+
+                         // update this OCCs internal mode parm that it now matches what was sent
+                         // from master
+                         G_occ_internal_mode_parm = G_occ_master_mode_parm;
+                    }
+                    else
+                    {
+                        TRAC_ERR("SMGR_mode_transition_to_static_freq_point: Zero frequency found for mode parameter[0x%04X]",
+                                 G_occ_master_mode_parm);
+                        l_fail = TRUE;
+                    }
                 }
                 else
                 {
-                    TRAC_ERR("SMGR_mode_transition_to_static_freq_point: Zero frequency found for mode parameter[0x%04X]",
-                             G_occ_master_mode_parm);
+                    TRAC_ERR("SMGR_mode_transition_to_static_freq_point: Invalid freq point[0x%02X] found for mode parameter[0x%04X]",
+                              l_freq_pt, G_occ_master_mode_parm);
                     l_fail = TRUE;
                 }
-            }
-            else
-            {
-                TRAC_ERR("SMGR_mode_transition_to_static_freq_point: Invalid freq point[0x%02X] found for mode parameter[0x%04X]",
-                          l_freq_pt, G_occ_master_mode_parm);
-                l_fail = TRUE;
-            }
-            break;
-        } // if mode parm matches
-    }  // for loop
+                break;
+            } // if mode parm matches
+        }  // for loop
+    } // else parm is not OCC_FREQ_PT_PARM_PSTATE
 
     // Check if we had a failure or hit the end of the table without finding a valid
     // frequency.  If we did, log an internal error.

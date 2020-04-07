@@ -422,7 +422,7 @@ void call_wof_main( void )
                         // will be handled by WOF vdd ceff ratio adjustment
                         if(g_amec->oc_wof_off.pstate_request)
                         {
-                            INTR_TRAC_INFO("call_wof_main: WOF now enabled removing OC wof off pstate clip[%d]",
+                            INTR_TRAC_INFO("call_wof_main: WOF now enabled removing OC wof off pstate clip[0x%02X]",
                                             g_amec->oc_wof_off.pstate_request);
                             g_amec->oc_wof_off.pstate_request = 0;
                             g_amec->oc_wof_off.freq_request = 0xFFFF;
