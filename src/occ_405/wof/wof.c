@@ -1376,7 +1376,8 @@ void calculate_ceff_ratio_vdd( void )
            }
 
            // Read iac_tdp_vdd from OCCPstateParmBlock struct
-           g_wof->iac_tdp_vdd = G_oppb.lac_tdp_vdd_turbo_10ma;
+           g_wof->iac_tdp_vdd = multiply_ratio( G_oppb.lac_tdp_vdd_turbo_10ma,
+                                                g_wof->v_ratio );
 
            // Get Vturbo and convert to 100uV (mV -> 100uV) = mV*10
            g_wof->vdd_avg_tdp_100uv = 10 * G_oppb.operating_points[TURBO].vdd_mv;
@@ -1467,8 +1468,8 @@ void calculate_ceff_ratio_vdd( void )
            }
         }  // else track to frequency
 
-        g_wof->c_ratio_vdd_volt = multiply_ratio( g_wof->vdd_avg_tdp_100uv,
-                                                  g_wof->v_ratio );
+        // Get Vturbo and convert to 100uV (mV -> 100uV) = mV*10
+        g_wof->c_ratio_vdd_volt = G_oppb.operating_points[TURBO].vdd_mv * 10;
 
         // Calculate ceff_tdp_vdd
         // iac_tdp_vdd / ((V@Freq*Vratio)^1.3 * (Freq*Fratio))
