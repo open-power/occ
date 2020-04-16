@@ -71,7 +71,7 @@ typedef enum
 //  free = 0x0F,
 //  free = 0x10,
     DBUG_WRITE_SENSOR         = 0x11,
-    DBUG_TRIGGER_EPOW         = 0x12,
+//  free = 0x12,
     DBUG_INJECT_PGPE_ERRL     = 0x13,
     DBUG_INJECT_ERRL          = 0x14,
     DBUG_DIMM_INJECT          = 0x15,

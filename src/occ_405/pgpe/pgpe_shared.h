@@ -38,14 +38,6 @@
 #define PGPE_DEBUG_TRACE_ADDR_OFFSET   0x04
 #define PGPE_DEBUG_TRACE_SIZE_OFFSET   0x08
 
-// OCC-PGPE Shared SRAM offsets from G_pgpe_header.shared_sram_addr
-#define IDDQ_ACTIVITY_SAMPLE_DEPTH_SRAM_OFFSET 0x17
-// TODO RTC 249985 remove these hard codes and read offsets from OCC-PGPE shared SRAM when PGPE supports
-#define OCC_PRODUCED_WOF_VALUES_SRAM_OFFSET    0x18
-#define XGPE_PRODUCED_WOF_VALUES_SRAM_OFFSET   0x20
-#define PGPE_PRODUCED_WOF_VALUES_SRAM_OFFSET   0x28
-#define HCODE_ELOG_TABLE_SRAM_OFFSET           0x48
-#define XGPE_IDDQ_ACTIVITY_SRAM_OFFSET         0xF0
 
 // This size must be a multiple of 128
 typedef struct __attribute__ ((packed))
@@ -82,6 +74,7 @@ typedef struct __attribute__ ((packed))
 } ppmr_header_t __attribute__ ((aligned (128)));
 
 
+// HCODE structure is in ekb/chips/p10/procedures/hwp/lib/p10_hcode-image_defines.H
 typedef struct __attribute__ ((packed))
 {
     uint64_t magic_number;
@@ -91,7 +84,7 @@ typedef struct __attribute__ ((packed))
     uint32_t shared_sram_length;
     uint32_t build_date;
     uint32_t version;
-    uint32_t pgpe_flags;
+    uint32_t reserved0;
     uint32_t timebase_hz;
     uint32_t global_pstate_parm_block_sram_addr;
     uint32_t pgpe_hcode_length;
@@ -102,7 +95,7 @@ typedef struct __attribute__ ((packed))
     uint32_t occ_pstate_table_sram_addr;
     uint32_t occ_pstate_table_length;
     uint32_t beacon_sram_addr;
-    uint32_t reserved;
+    uint32_t reserved1;
     uint32_t wof_state_address;
     uint32_t reserved2;
     uint32_t wof_tables_addr;

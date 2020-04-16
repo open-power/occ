@@ -41,6 +41,7 @@
 extern "C" {
 #endif
 
+#define HCODE_OCC_SHARED_MAGIC_NUMBER_OPS2      0x4F505332 //OPS2
 
 //---------------
 // IPC from 405
@@ -192,8 +193,8 @@ typedef struct
         {
             uint64_t average_pstate             : 8;
             uint64_t average_frequency_pstate   : 8;
-            uint64_t clip_pstate                : 8;
-            uint64_t reserved                   : 8;
+            uint64_t wof_clip_pstate            : 8;
+            uint64_t average_throttle_idx       : 8;
             uint64_t vratio_inst                : 16;
             uint64_t vratio_avg                 : 16;
         } fields;
@@ -381,14 +382,26 @@ typedef struct
     /// OCC Data offset from start of OCC Shared SRAM
     uint16_t            occ_data_offset;
 
+    /// OCC Data Length
+    uint16_t            occ_data_length;
+
+    /// PGPE Data offset from start of OCC Shared SRAM
+    uint16_t            pgpe_data_offset;
+
+    /// PGPE Data Length
+    uint16_t            pgpe_data_length;
+
     /// XGPE Data offset from start of OCC Shared SRAM
     uint16_t            xgpe_data_offset;
 
-    /// XGPE Data offset from start of OCC Shared SRAM
-    uint16_t            pgpe_data_offset;
+    /// XGPE Data Length
+    uint16_t            xgpe_data_length;
 
     /// IDDQ Data offset from start of OCC Shared SRAM
     uint16_t            iddq_data_offset;
+
+    /// IDDQ Data Length
+    uint16_t            iddq_data_length;
 
     /// Error Log offset from start of OCC Shared SRAM
     uint16_t            error_log_offset;
@@ -404,13 +417,11 @@ typedef struct
     /// OCC Produced WOF Values
     occ_wof_values_t    occ_wof_values;
 
-    uint64_t            reserved1;
+    /// XGPE Produced WOF Values
+    xgpe_wof_values_t    xgpe_wof_values;
 
     /// PGPE Produced WOF Values
     pgpe_wof_values_t   pgpe_wof_values;
-
-    /// XGPE Produced WOF Values
-    xgpe_wof_values_t    xgpe_wof_values;
 
     /// Hcode Error Log Index
     hcode_error_table_t  errlog_idx;

@@ -342,6 +342,7 @@ def getModeString(state):
     if   (state == 0x01): string="Disabled/Nominal"
     elif (state == 0x03): string="Static Frequency Point"
     elif (state == 0x04): string="Safe"
+    elif (state == 0x09): string="Fmax"
     elif (state == 0x0A): string="Dynamic Performance"
     elif (state == 0x0B): string="Fixed Frequency Override"
     elif (state == 0x0C): string="Maximum Performance"
@@ -708,8 +709,8 @@ def parseAmeSensors(DataList, DataLength, flg_verbose):
     # Response for: OCCw -C 0x40 -D "080002ffff" (0002 is the location (proc), ffff is the type)
     num_sensors = (DataList[0] << 8) + DataList[1]
     print("\tNum Sensors        : " + str(num_sensors))
-    sensor_length=28
-    print("\t\tName               GUID     Sample      Min       Max      IPMI")
+    sensor_length=24
+    print("\t\tName               GUID     Sample      Min       Max")
     for i in xrange(0, num_sensors):
         print("\t\t", end='')
         offset = i * sensor_length
@@ -721,8 +722,7 @@ def parseAmeSensors(DataList, DataLength, flg_verbose):
         print("  0x" + '{:04X}'.format((DataList[18+offset] << 8)+DataList[19+offset]) + "  ", end='')
         print("  0x" + '{:04X}'.format((DataList[20+offset] << 8)+DataList[21+offset]) + "  ", end='')
         print("  0x" + '{:04X}'.format((DataList[22+offset] << 8)+DataList[23+offset]) + "  ", end='')
-        print("  0x" + '{:04X}'.format((DataList[24+offset] << 8)+DataList[25+offset]) + "  ", end='')
-        print("  0x" + '{:08X}'.format((DataList[26+offset] << 24)+(DataList[27+offset] << 16)+(DataList[28+offset] << 8)+DataList[29+offset]))
+        print("  0x" + '{:04X}'.format((DataList[24+offset] << 8)+DataList[25+offset]) + "  ")
         # Check buffer overflow
         if (2 + offset + sensor_length) > DataLength:
             print("ERROR: Buffer size/Data length ("+str(DataLength)+") mismatch! current offset=" + str(2+offset))

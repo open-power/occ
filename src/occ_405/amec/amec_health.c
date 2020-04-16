@@ -1132,6 +1132,22 @@ void amec_health_check_vrm_vdd_temp(const sensor_t *i_sensor)
     {
         l_ot_error = g_amec->thermalvdd.ot_error;
 
+        static bool L_logged_invalid = false;
+        if (i_sensor->sample > 255)
+        {
+            if (!L_logged_invalid)
+            {
+                TRAC_ERR("amec_health_check_vrm_vdd_temp: VRM vdd temp was out of range: temp[%u] ot_error[%u]",
+                         i_sensor->sample,
+                         l_ot_error);
+                L_logged_invalid = true;
+            }
+        }
+        else
+        {
+            L_logged_invalid = false;
+        }
+
         // Check to see if we exceeded our error temperature
         if ((l_ot_error != 0) && (i_sensor->sample > l_ot_error))
         {

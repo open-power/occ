@@ -990,7 +990,7 @@ void read_pgpe_produced_wof_values( void )
     sensor_update(AMECSENSOR_PTR(VRATIO), (uint16_t)g_wof->v_ratio);
 
     // clip Pstate is the last value read from VRT and used for debug only
-    g_wof->f_clip_ps = l_PgpeWofValues.dw0.fields.clip_pstate;
+    g_wof->f_clip_ps = l_PgpeWofValues.dw0.fields.wof_clip_pstate;
 
     // save the full PGPE WOF values for debug
     g_wof->pgpe_wof_values_dw0 = l_PgpeWofValues.dw0.value;
@@ -2398,7 +2398,7 @@ void send_initial_vrt_to_pgpe( void )
  *              of the two voltages surrounding the input voltage in
  *              G_iddq_voltages
  *
- * Param[in]: i_voltage - the input voltage to select the index for
+ * Param[in]: i_voltage - the input voltage to select the index for (100uV units)
  *
  * Return: The index to the lower bound voltage in G_iddq_voltages
  */
@@ -2505,7 +2505,7 @@ uint32_t scale( uint16_t i_target_temp,
  *                            in i_leak_arr were measured. Also taken from vpd.
  * Param[in]: i_idx - The index into the two arrays calculated from voltage
  * Param[in]: i_target_temp - The target temperature used to scale the current
- * Param[in]: i_voltage - The associated voltage.
+ * Param[in]: i_voltage - The associated voltage. (100uV units)
  * Param[in]: i_non_core_scaling_line - TRUE use non-core temperature scaling line,
  *                                      FALSE use core temperature scaling line
  *

@@ -2292,23 +2292,42 @@ TESTS_thermal_limits() # test 7
     if [ $G_use_pgpe -ne 0 ]; then
 
     ### Verify throttling when processor temperatures go over limits
+        let throttle_wait=10
+
+        # Disable OC protection (on when WOF disabled)
+        autosim --simcmd '$SeqNum=(OCCw -C 0x40 -D "1F00000800")' # DEBUG
+        WaitForResponse 0x40
 
         ValidatePollData
 
         SetQuadTemp 0 97
-        echo WAIT : 10 seconds for OCC to throttle
-        sleep 10
+        echo WAIT : $throttle_wait seconds for OCC to throttle
+        sleep $throttle_wait
         let expectedThrottleStatus=0x80 # throttle due to processor over temperature bit is set
         ValidatePollData
-        echo WAIT : 10 seconds for OCC to throttle
-        sleep 10
+
+        # Re-enable OC protection (on when WOF disabled)
+        autosim --simcmd '$SeqNum=(OCCw -C 0x40 -D "1F00000000")' # DEBUG
+        WaitForResponse 0x40
+
+        echo WAIT : $throttle_wait seconds to confirm no throttle - OC protection instead
+        sleep $throttle_wait
+        let expectedThrottleStatus=0x00 # NOT throttled due to processor over temperature bit is set
+        ValidatePollData
+
+        # Disable OC protection (on when WOF disabled)
+        autosim --simcmd '$SeqNum=(OCCw -C 0x40 -D "1F00000800")' # DEBUG
+        WaitForResponse 0x40
+
+        echo WAIT : $throttle_wait seconds for OCC to throttle
+        sleep $throttle_wait
         let expectedThrottleStatus=0x80 # throttle due to processor over temperature bit is set
         ValidatePollData
 
         SetQuadTemp 0 113
         let expectedOccSrc=0x2A10 # and report 2A10 elog (Processor reached error temperature)
-        echo WAIT : 10 seconds for OCC to generate elog
-        sleep 10
+        echo WAIT : $throttle_wait seconds for OCC to generate elog
+        sleep $throttle_wait
         ValidatePollData
 
         SetQuadTemp 0 49
@@ -2323,8 +2342,8 @@ TESTS_thermal_limits() # test 7
         # FRU 0x00 = Processor, 0x03 = MC+DIMM  (DVFS temp, ERROR temp, max read timeout, reserved x 2)
         autosim --simcmd '$SeqNum=(OCCw -C '$OCCCMD_SET_CFG_DATA' -D "1330140A08020044700A0000038090140000" '$G_simics_options')'
         WaitForResponse 0x21
-        echo WAIT : 10 seconds for OCC to throttle
-        sleep 10
+        echo WAIT : $throttle_wait seconds for OCC to throttle
+        sleep $throttle_wait
         let expectedThrottleStatus=0x80 # throttle due to processor over temperature bit is set
         ValidatePollData
 
@@ -2332,8 +2351,8 @@ TESTS_thermal_limits() # test 7
         autosim --simcmd '$SeqNum=(OCCw -C '$OCCCMD_SET_CFG_DATA' -D "1330140A08020044500A0000038090140000" '$G_simics_options')'
         WaitForResponse 0x21
         #let expectedOccSrc=0x2A10 # and report 2A10 elog (Already logged, so will not log again)
-        echo WAIT : 10 seconds for OCC to generate elog
-        sleep 10
+        echo WAIT : $throttle_wait seconds for OCC to generate elog
+        sleep $throttle_wait
         ValidatePollData
 
         printHeader "SET PROCESSOR LIMITS BACK TO NORMAL (via TCT CONFIG)"
@@ -2394,18 +2413,22 @@ TESTS_power_modes() # test 8
     ValidatePollData
 
     if [ $G_use_pgpe -ne 0 ]; then
+        printHeader "MODE: FMAX"
+        SetPowerMode 0x09 0
+        ValidatePollData
+
         printHeader "MODE: FFO - 2800 (< WOF Base)"
         SetPowerMode 0x0B 2800
         ValidatePollData
 
-        printHeader "MODE: FFO - 3200"
-        SetPowerMode 0x0B 3200
+        printHeader "MODE: FFO - 3000"
+        SetPowerMode 0x0B 3000
         ValidatePollData
     fi
 
-    printHeader "MODE: FFO - 4101 (> UT) - INVALID_DATA"
+    printHeader "MODE: FFO - 3100 (> UT) - INVALID_DATA"
     let expectedOccSrc=0x2A03 # INVALID_DATA
-    SetPowerMode 0x0B 4101
+    SetPowerMode 0x0B 3100
     ValidatePollData
 
     printHeader "MODE: STATIC FREQUENCY - Power Save"
@@ -2416,21 +2439,30 @@ TESTS_power_modes() # test 8
     SetPowerMode 0x03 0x2001
     ValidatePollData
 
+    printHeader "MODE: STATIC FREQUENCY - Mode Disabled"
+    SetPowerMode 0x03 0x2004
+    ValidatePollData
+
     if [ $G_use_pgpe -ne 0 ]; then
         printHeader "MODE: STATIC FREQUENCY - Ultra Turbo"
         SetPowerMode 0x03 0x2002
         ValidatePollData
 
+        printHeader "MODE: STATIC FREQUENCY - Bottom Throttle Space"
+        SetPowerMode 0x03 0x4000
+        ValidatePollData
+
+        let vpd_point=0
+        while [ $vpd_point -le 7 ]; do
+            printHeader "MODE: STATIC FREQUENCY - VPD Curve Fit Point $vpd_point"
+            let point=0x1000+$vpd_point
+            SetPowerMode 0x03 $point
+            ValidatePollData
+            let vpd_point=$vpd_point+1
+        done
+
         printHeader "MODE: STATIC FREQUENCY - Fmax"
         SetPowerMode 0x03 0x2003
-        ValidatePollData
-
-        printHeader "MODE: STATIC FREQUENCY - VPD Curve Fit Point 0"
-        SetPowerMode 0x03 0x1000
-        ValidatePollData
-
-        printHeader "MODE: STATIC FREQUENCY - VPD Curve Fit Point 2"
-        SetPowerMode 0x03 0x1002
         ValidatePollData
     fi
 

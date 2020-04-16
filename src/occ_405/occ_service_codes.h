@@ -118,6 +118,7 @@ enum occReasonCode
     GPE_REQUEST_RC_FAILURE          = 0xD8,
 
     WOF_DISABLED_RC                 = 0xDA,
+    INVALID_PSTATE                  = 0xDB,
     INVALID_MAGIC_NUMBER            = 0xDC,
     INVALID_FREQUENCY               = 0xDE,
     WOF_RE_ENABLED                  = 0xDF,

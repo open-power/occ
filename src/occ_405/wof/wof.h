@@ -62,15 +62,15 @@ extern uint32_t G_max_ceff_ratio;
 // WOF Reason Code Masks
 //******************************************************************************
 #define WOF_RC_NO_WOF_HEADER_MASK                  0x00000001
-#define WOF_RC_INVALID_ACTIVE_QUADS                0x00000002
+//#define WOF_RC_                                    0x00000002
 #define WOF_RC_INVALID_VDD_VDN                     0x00000004
-#define WOF_RC_PGPE_REQ_NOT_IDLE                   0x00000008
+//#define WOF_RC_                                    0x00000008
 #define WOF_RC_PGPE_WOF_DISABLED                   0x00000010
 #define WOF_RC_PSTATE_PROTOCOL_OFF                 0x00000020
 #define WOF_RC_VRT_REQ_TIMEOUT                     0x00000040
 #define WOF_RC_CONTROL_REQ_TIMEOUT                 0x00000080
 #define WOF_RC_STATE_CHANGE                        0x00000100
-#define WOF_RC_MODE_CHANGE                         0x00000200
+//#define WOF_RC_                                    0x00000200
 #define WOF_RC_MODE_NO_SUPPORT_MASK                0x00000400
 #define WOF_RC_DIVIDE_BY_ZERO_VDD                  0x00000800
 #define WOF_RC_VRT_REQ_FAILURE                     0x00001000
@@ -82,7 +82,7 @@ extern uint32_t G_max_ceff_ratio;
 #define WOF_RC_OPPB_WOF_DISABLED                   0x00040000
 #define WOF_RC_SYSTEM_WOF_DISABLE                  0x00080000
 #define WOF_RC_RESET_LIMIT_REACHED                 0x00100000
-#define WOF_RC_UNSUPPORTED_FREQUENCIES             0x00200000
+//#define WOF_RC_                                    0x00200000
 #define WOF_RC_NO_CONFIGURED_CORES                 0x00400000
 #define WOF_RC_IPC_FAILURE                         0x00800000
 #define WOF_RC_USER_DISABLED_WOF                   0x01000000
@@ -97,8 +97,7 @@ extern uint32_t G_max_ceff_ratio;
 //***************************************************************************
 
 // Reason codes which should NOT create an error log should be added here
-#define ERRL_RETURN_CODES ~(WOF_RC_MODE_CHANGE  | \
-                            WOF_RC_STATE_CHANGE | \
+#define ERRL_RETURN_CODES ~(WOF_RC_STATE_CHANGE | \
                             WOF_RC_MODE_NO_SUPPORT_MASK | \
                             WOF_RC_NO_CONFIGURED_CORES | \
                             WOF_RC_RESET_LIMIT_REACHED | \
@@ -107,8 +106,8 @@ extern uint32_t G_max_ceff_ratio;
                             WOF_RC_USER_DISABLED_WOF )
 
 // Reason codes that should NOT request a reset should be added here
-#define IGNORE_WOF_RESET (WOF_RC_SYSTEM_WOF_DISABLE | \
-                          WOF_RC_UNSUPPORTED_FREQUENCIES )
+#define IGNORE_WOF_RESET (WOF_RC_SYSTEM_WOF_DISABLE )
+
 // Enumeration to define the WOF initialization steps
 enum wof_init_states
 {
