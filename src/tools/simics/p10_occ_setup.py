@@ -2599,6 +2599,12 @@ def occ_init(code_dir, flg_nopgpe, flg_verbose):
 
     # Load the OCC image into main memory
     if G_bypass_bootloader != 1:
+        # Solution for defect SW490772
+        cli.run_command("set-class-attr p10_pba pba_slvctl3 0xe7205400_00004000")
+        cli.run_command("set-class-attr p10_pba pba_slvctl0 0xd500080000000000")
+        cli.run_command("set-class-attr p10_pba pba_slvctl1 0x8700860000000000")
+        cli.run_command("set-class-attr p10_pba pba_slvctl2 0x9700964000000000")
+
         print("==> Loading OCC image: "+base_dir+"/image.bin @ 0x00000000")
         cli.run_command(bp+"."+proc+".pib_cmp.mc0_ocmb_mem_image0.load-file "+base_dir+"/image.bin 0x00000000")
 
