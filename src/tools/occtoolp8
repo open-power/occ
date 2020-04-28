@@ -1,4 +1,28 @@
 #!/bin/bash
+# IBM_PROLOG_BEGIN_TAG
+# This is an automatically generated prolog.
+#
+# $Source: src/tools/occtoolp8 $
+#
+# OpenPOWER OnChipController Project
+#
+# Contributors Listed Below - COPYRIGHT 2017,2020
+# [+] International Business Machines Corp.
+#
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+# implied. See the License for the specific language governing
+# permissions and limitations under the License.
+#
+# IBM_PROLOG_END_TAG
 
 blue=""
 red=""
@@ -469,10 +493,8 @@ function sendOccCmdBmc
         options=""
         if [ $verbose -eq 0 ]; then
             options="-q"
-        else
-            echo -e "${bold}==> /afs/rch/usr2/cjcain/bin/asm2bin.new -s:1 $options ${outName}${normal}"
         fi
-        /afs/rch/usr2/cjcain/bin/asm2bin.new -s:1 $options  ${outName}
+        # TODO: Convert to BINARY:
         if [ -e "${outName}.bin" ]; then
             binfile="${outName}.bin"
         else
@@ -1684,8 +1706,6 @@ function occ_trace_cronus
 
             if [ -e "./ppe2fsp" ]; then
                 ppe2fsp_cmd="./ppe2fsp"
-            elif [ -e "/gsa/ausgsa/home/w/i/wilbryan/public/bin/ppe2fsp" ]; then
-                ppe2fsp_cmd="/gsa/ausgsa/home/w/i/wilbryan/public/bin/ppe2fsp"
             else
                 echo -e "${red}Unable to find ppe2fsp to convert GPE traces to FSP trace format${normal}"
                 echo "NOTE: Command is available in occ/obj/ppetools/ppe2fsp"
@@ -1740,26 +1760,9 @@ function occ_trace_cronus
 
             if [ -e "./fsp-trace" ]; then
                 fsptrace_cmd="./fsp-trace"
-            elif [ -e "/gsa/ausgsa/home/w/i/wilbryan/public/bin/fsp-trace" ]; then
-                fsptrace_cmd="/gsa/ausgsa/home/w/i/wilbryan/public/bin/fsp-trace"
             else
                 #echo -e "${red}Unable to find fsp-trace to parse FSP traces${normal}"
                 fsptrace_cmd="fsp-trace";
-            fi
-
-            if [ $use_gpe_string -eq 1 ]; then
-                if [ -d "/gsa/ausgsa/projects/o/opocc/occStringFiles" ]; then
-                    gpe_string_file=`ls -tr /gsa/ausgsa/projects/o/opocc/occStringFiles/occStringFile_* | tail -1`
-                    if [ -n "$gpe_string_file" ] && [ -s "$gpe_string_file" ]; then
-                        echo "Using GPE String file: $gpe_string_file"
-                        if [ -n "$fsptrace_cmd" ] && [ -s ./occTraceGPE1.bin ]; then
-                            echo -e "${bold}==> $fsptrace_cmd -s $gpe_string_file ./occTraceGPE1.bin ${normal}"
-                            $fsptrace_cmd                     -s $gpe_string_file ./occTraceGPE1.bin > /tmp/${USER}_occTraceGPE1.txt
-                            # Rename to prevent parsing with normal string file
-                            mv ./occTraceGPE1.bin ./occTraceGPE1.bin2
-                        fi
-                    fi
-                fi
             fi
 
             if [ -n "$string_file" ]; then
