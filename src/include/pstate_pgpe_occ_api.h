@@ -31,11 +31,11 @@
 // *HWP Level           : 1
 // *HWP Consumed by     : PGPE:OCC
 
-
 #ifndef __PSTATES_PGPE_OCC_API_H__
 #define __PSTATES_PGPE_OCC_API_H__
 
 #include <pstates_common.H>
+#include "hcode_errl_table.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -247,84 +247,6 @@ typedef struct
         } fields;
     } dw3;
 } pgpe_wof_values_t;
-
-// -----------------------------------------------------------------------------
-// Start Error Log Table
-
-/// Maximum number of error log entries available
-#define MAX_HCODE_ELOG_ENTRIES 20
-
-/// Index into the array of error log entries
-enum elog_entry_index
-{
-    ELOG_PGPE_CRITICAL      = 0,
-    ELOG_PGPE_INFO          = 1,
-    ELOG_XGPE_CRITICAL      = 2,
-    ELOG_XGPE_INFO          = 3,
-    ELOG_QME0_CRITICAL      = 4,
-    ELOG_QME0_INFO          = 5,
-    ELOG_QME1_CRITICAL      = 6,
-    ELOG_QME1_INFO          = 7,
-    ELOG_QME2_CRITICAL      = 8,
-    ELOG_QME2_INFO          = 9,
-    ELOG_QME3_CRITICAL      = 10,
-    ELOG_QME3_INFO          = 11,
-    ELOG_QME4_CRITICAL      = 12,
-    ELOG_QME4_INFO          = 13,
-    ELOG_QME5_CRITICAL      = 14,
-    ELOG_QME5_INFO          = 15,
-    ELOG_QME6_CRITICAL      = 16,
-    ELOG_QME6_INFO          = 17,
-    ELOG_QME7_CRITICAL      = 18,
-    ELOG_QME7_INFO          = 19,
-};
-
-/// Structure of an individual error log entry
-typedef struct
-{
-    union
-    {
-        uint64_t value;
-        struct
-        {
-            uint32_t high_order;
-            uint32_t low_order;
-        } words;
-        struct
-        {
-            uint64_t errlog_id                  : 8;
-            uint64_t errlog_src                 : 8;
-            uint64_t errlog_len                 : 16;
-            uint64_t errlog_addr                : 32;
-        } fields;
-    } dw0;
-} hcode_elog_entry_t;
-
-/// Full Error Log Table
-typedef struct pgpe_error_table
-{
-    union
-    {
-        uint64_t value;
-        struct
-        {
-            uint32_t high_order;
-            uint32_t low_order;
-        } words;
-        struct
-        {
-            uint64_t magic_word                 : 32; //ELTC
-            uint64_t total_log_slots            : 8;
-            uint64_t reserved                   : 24;
-        } fields;
-    } dw0;
-
-    /// Array of error log entries (index with enum elog_entry_index)
-    hcode_elog_entry_t  elog[MAX_HCODE_ELOG_ENTRIES];
-} hcode_error_table_t;
-
-// End Error Log Table
-// -----------------------------------------------------------------------------
 
 typedef union
 {
