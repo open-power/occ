@@ -129,4 +129,9 @@ SECTIONS
     // writeable section length
     ////////////////////////////////
    __WRITEABLE_DATA_LEN__ = (__WRITEABLE_ADDR__ + SIZEOF(.sdata) + SIZEOF(.rela) + SIZEOF(.rwdata)) - __WRITEABLE_ADDR__;
+
+    /DISCARD/ : {
+       *(.eh_frame)
+    }
+
 }

@@ -73,4 +73,7 @@ SECTIONS
 
    __WRITEABLE_DATA_LEN__ = . - __WRITEABLE_DATA_ADDR__;
 
+    /DISCARD/ : {
+       *(.eh_frame)
+    }
 }
