@@ -158,6 +158,7 @@ void cmdh_dbug_get_ame_sensor (const cmdh_fsp_cmd_t * i_cmd_ptr,
                                cmdh_fsp_rsp_t * o_rsp_ptr)
 {
     int                          l_rc = ERRL_RC_SUCCESS;
+    bool                         l_clear = FALSE;
     uint16_t                     l_type = 0;
     uint16_t                     l_location = 0;
     uint16_t                     i = 0;
@@ -180,9 +181,13 @@ void cmdh_dbug_get_ame_sensor (const cmdh_fsp_cmd_t * i_cmd_ptr,
         // Capture user inputs
         l_type = l_cmd_ptr->type;
         l_location = l_cmd_ptr->location;
-        TRAC_INFO("dbug_get_ame_sensor: Type[0x%04x] Location[0x%04x]",
+        if(l_cmd_ptr->sub_cmd == DBUG_GET_AND_CLEAR_AME_SENSOR)
+            l_clear = TRUE;
+
+        TRAC_INFO("dbug_get_ame_sensor: Type[0x%04x] Location[0x%04x] Clear?[%d]",
                   l_type,
-                  l_location);
+                  l_location,
+                  l_clear);
 
         // Initialize the arguments to query sensor list
         querySensorListArg_t l_qsl_arg = {
@@ -244,6 +249,11 @@ void cmdh_dbug_get_ame_sensor (const cmdh_fsp_cmd_t * i_cmd_ptr,
                 }
                 l_resp_ptr->sensor[i].sample_min = l_sensor_ptr->sample_min;
                 l_resp_ptr->sensor[i].sample_max = l_sensor_ptr->sample_max;
+
+                if(l_clear)
+                {
+                    sensor_reset(l_sensor_ptr);
+                }
             }
         }
 
@@ -1149,6 +1159,34 @@ void dbug_apss_dump(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
 // Function Specification
 //
+// Name:  dbug_clear_errh
+//
+// Description: Clear all error history counters
+//
+// End Function Specification
+void dbug_clear_errh(const cmdh_fsp_cmd_t * i_cmd_ptr,
+                           cmdh_fsp_rsp_t * i_rsp_ptr)
+{
+    uint16_t l_datalen = sizeof(G_error_history);
+
+    // Copy the current error history counters to the response buffer befor clearing
+    memcpy((void *) &(i_rsp_ptr->data[0]),
+           (void *) &(G_error_history[0]),
+           l_datalen);
+
+    memset(G_error_history, 0x00, l_datalen);
+
+    // Fill out the rest of the response data
+    i_rsp_ptr->data_length[0] = CONVERT_UINT16_UINT8_HIGH(l_datalen);
+    i_rsp_ptr->data_length[1] = CONVERT_UINT16_UINT8_LOW(l_datalen);
+    G_rsp_status              = ERRL_RC_SUCCESS;
+
+    return;
+}
+
+
+// Function Specification
+//
 // Name: cmdh_dbug_write_sensor
 //
 // Description: Write the given value to the given gsid
@@ -1258,7 +1296,8 @@ void cmdh_dbug_cmd (const cmdh_fsp_cmd_t * i_cmd_ptr,
         // ----------------------------------------------------
         case DBUG_GET_TRACE:
         case DBUG_GET_AME_SENSOR:
-	case DBUG_WRITE_SENSOR:
+        case DBUG_WRITE_SENSOR:
+        case DBUG_GET_AND_CLEAR_AME_SENSOR:
             // Don't trace that we got these debug commands, they happen too
             // often, or are not destructive when they do occur.
             break;
@@ -1296,6 +1335,7 @@ void cmdh_dbug_cmd (const cmdh_fsp_cmd_t * i_cmd_ptr,
             break;
 
         case DBUG_GET_AME_SENSOR:
+        case DBUG_GET_AND_CLEAR_AME_SENSOR:
             cmdh_dbug_get_ame_sensor(i_cmd_ptr, o_rsp_ptr);
             break;
 
@@ -1317,6 +1357,10 @@ void cmdh_dbug_cmd (const cmdh_fsp_cmd_t * i_cmd_ptr,
 
         case DBUG_DUMP_RAW_AD:
              dbug_apss_dump(i_cmd_ptr, o_rsp_ptr);
+             break;
+
+        case DBUG_CLEAR_ERRH:
+             dbug_clear_errh(i_cmd_ptr, o_rsp_ptr);
              break;
 
         case DBUG_WRITE_SENSOR:

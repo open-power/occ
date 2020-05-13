@@ -65,9 +65,9 @@ typedef enum
     DBUG_PEEK                 = 0x09,
     DBUG_DUMP_STATIC_WOF_DATA = 0x0A,
     DBUG_DUMP_WOF_OFF_DATA    = 0x0B,
-//  free = 0x0C,
+    DBUG_GET_AND_CLEAR_AME_SENSOR = 0x0C,  // does DBUG_GET_AME_SENSOR and clears sensor data
     DBUG_DUMP_RAW_AD          = 0x0D,
-//  free = 0x0E,
+    DBUG_CLEAR_ERRH           = 0x0E,   // clear all error history counters
 //  free = 0x0F,
 //  free = 0x10,
     DBUG_WRITE_SENSOR         = 0x11,
@@ -134,7 +134,7 @@ typedef struct __attribute__ ((packed))
 // Size of standard response header plus checksum
 #define CMDH_DBUG_FSP_RESP_LEN     (CMDH_FSP_SEQ_CMD_RC_SIZE + CMDH_FSP_DATALEN_SIZE + CMDH_FSP_CHECKSUM_SIZE)
 
-// Used by OCC firmware to respond "cmdh_dbug_get_ame_sensor" debug command
+// Used by OCC firmware to respond "cmdh_dbug_get_ame_sensor" and DBUG_GET_AND_CLEAR_AME_SENSOR commands
 typedef struct __attribute__ ((packed))
 {
     struct                  cmdh_fsp_rsp_header;
