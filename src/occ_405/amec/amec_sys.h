@@ -119,12 +119,13 @@ typedef struct
 } amec_portpair_t;
 
 // bit masks for fru_temp_t flags
-#define FRU_SENSOR_STATUS_STALLED       0x01
-#define FRU_SENSOR_STATUS_ERROR         0x02
-#define FRU_SENSOR_STATUS_VALID_OLD     0x04
-#define FRU_TEMP_OUT_OF_RANGE           0x08
-#define FRU_SENSOR_STATUS_INVALID       0x10 //membuf only
-#define FRU_TEMP_FAST_CHANGE            0x20
+#define FRU_SENSOR_STATUS_STALLED         0x01
+#define FRU_SENSOR_STATUS_ERROR           0x02
+#define FRU_SENSOR_STATUS_VALID_OLD       0x04
+#define FRU_TEMP_OUT_OF_RANGE             0x08
+#define FRU_SENSOR_STATUS_INVALID         0x10 //membuf only
+#define FRU_TEMP_FAST_CHANGE              0x20
+#define FRU_SENSOR_STATUS_REDUNDANCY_LOST 0x40
 
 // OpenCAPI memory only bit masks for fru_temp_t dts_type_mask
 #define OCM_DTS_TYPE_DIMM_MASK          0x01
@@ -140,10 +141,10 @@ typedef struct
     // Sensor ID for reporting temperature to BMC and FSP
     uint32_t temp_sid;
 
-    // Type of thermal sensor this represents
+    // Type of thermal sensor this represents used by (H)TMGT to send mem config and thermal thresholds
     eConfigDataFruType  temp_fru_type;
 
-    // Indicates what this temperature is for
+    // Indicates what this temperature is for used by amec_health_check_dimm_timeout()
     uint8_t  dts_type_mask;
 
 }fru_temp_t;
@@ -157,7 +158,8 @@ typedef struct
       amec_portpair_t       mba[NUM_PORT_PAIRS_PER_MEM_BUF];
   };  // Just a different name to refer to same thing
 
-  // Current dimm tempuratures
+  // Current temperatures for the on board DTS sensors aka "DIMM" but what the sensor
+  // really represents (i.e. DRAM, PMIC...) is defined in dimm_temps[].temp_fru_type
   fru_temp_t dimm_temps[NUM_DIMMS_PER_OCMB];
 
   // Temperature of this membuf

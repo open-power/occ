@@ -398,7 +398,7 @@ void amec_update_ocmb_dts_sensors(OcmbMemData * i_sensor_cache, uint8_t i_membuf
 
         AMEC_DBG("Membuf[%d]: HotMembuf=%d\n",i_membuf,l_dts);
     }
-    else // internal sensor not being used$
+    else // internal sensor not being used
     {
         // make sure temperature is 0 indicating not present
         l_fru->cur_temp = 0;

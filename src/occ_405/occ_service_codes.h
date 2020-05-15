@@ -61,6 +61,8 @@ enum occReasonCode
     VR_HOT_MEM_PROC_ASSERTED        = 0x23,
     /// DIMM reached error threshold
     DIMM_ERROR_TEMP                 = 0x30,
+    /// Loss of redundant temperature sensor
+    FRU_TEMP_REDUNDANCY_LOST        = 0x31,
     /// Frequency limited due to oversubscription condition
     OVERSUB_LIMIT_ALERT             = 0x33,
     /// Invalid configuration data (MRW, etc.)

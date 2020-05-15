@@ -285,15 +285,18 @@ void amec_health_check_dimm_timeout()
 {
     static dimm_sensor_flags_t L_temp_update_bitmap_prev = {{0}};
     dimm_sensor_flags_t l_need_inc, l_need_clr, l_temp_update_bitmap;
-    uint8_t l_dimm, l_membuf, l_temp_timeout;
+    uint8_t l_dimm, l_other_dimm, l_membuf, l_temp_timeout;
     fru_temp_t* l_fru;
     errlHndl_t  l_err = NULL;
+    errlHndl_t  l_redundancy_lost_err = NULL;
     uint32_t    l_callouts_count = 0;
+    uint32_t    l_redundancy_lost_callouts_count = 0;
     uint64_t    l_huid;
     static bool L_ran_once = FALSE;
     uint8_t     l_max_membuf = 0; // number of membufs
     uint8_t     l_max_dimm_per_membuf = 0; // dimms per membuf
     uint8_t     l_ocm_dts_type_expired_bitmap = 0;
+    bool        l_redundancy_lost = FALSE;
 
     do
     {
@@ -363,6 +366,7 @@ void amec_health_check_dimm_timeout()
                 }
 
                 //we found one.
+                l_redundancy_lost = FALSE;
                 l_fru = &g_amec->proc[0].memctl[l_membuf].membuf.dimm_temps[l_dimm];
 
                 //increment timer
@@ -420,8 +424,25 @@ void amec_health_check_dimm_timeout()
                     TRAC_ERR("Timed out reading DIMM%04X temperature sensor type[0x%02X]",
                              (l_membuf<<8)|l_dimm,
                              l_fru->temp_fru_type);
-                }
 
+                    // mark that this sensor is lost
+                    l_fru->flags |= FRU_SENSOR_STATUS_REDUNDANCY_LOST;
+
+                    // if there is a good "DIMM" sensor then this is loss of redundancy only
+                    for(l_other_dimm = 0; l_other_dimm < NUM_DIMMS_PER_OCMB; l_other_dimm++)
+                    {
+                       // make sure the other sensor is being used
+                       if( (l_other_dimm != l_dimm) &&
+                           (MEMBUF_SENSOR_ENABLED(l_membuf, l_other_dimm)) )
+                       {
+                           if( !(g_amec->proc[0].memctl[l_membuf].membuf.dimm_temps[l_other_dimm].flags &
+                                 FRU_SENSOR_STATUS_REDUNDANCY_LOST) )
+                           {
+                               l_redundancy_lost = TRUE;
+                           }
+                       }
+                    }
+                }
                 //If we've already logged an error for this FRU go to the next one.
                 if(G_dimm_timeout_logged_bitmap.bytes[l_membuf] & (DIMM_SENSOR0 >> l_dimm))
                 {
@@ -439,8 +460,8 @@ void amec_health_check_dimm_timeout()
                     break;
                 }
 
-                TRAC_ERR("Timed out reading DIMM%04X temperature (cur_temp[%d] flags[0x%02X])",
-                         (l_membuf<<8)|l_dimm, l_fru->cur_temp, l_fru->flags);
+                TRAC_ERR("Timed out reading DIMM%04X temperature (cur_temp[%d] flags[0x%02X] redundancy[%d])",
+                         (l_membuf<<8)|l_dimm, l_fru->cur_temp, l_fru->flags, l_redundancy_lost);
 
                 //Mark DIMM as logged so we don't log it more than once
                 amec_mem_mark_logged(l_membuf,
@@ -448,8 +469,8 @@ void amec_health_check_dimm_timeout()
                                      &G_membuf_timeout_logged_bitmap,
                                      &G_dimm_timeout_logged_bitmap.bytes[l_membuf]);
 
-                // Create single elog with up to MAX_CALLOUTS
-                if(l_callouts_count < ERRL_MAX_CALLOUTS)
+                // Create single elog for error and single for redundancy lost with up to MAX_CALLOUTS
+                if( (!l_redundancy_lost) && (l_callouts_count < ERRL_MAX_CALLOUTS) )
                 {
                     if(!l_err)
                     {
@@ -482,6 +503,42 @@ void amec_health_check_dimm_timeout()
 
                     l_callouts_count++;
                 }
+                else if( l_redundancy_lost && (l_redundancy_lost_callouts_count < ERRL_MAX_CALLOUTS) )
+                {
+                    if(!l_redundancy_lost_err)
+                    {
+                        /* @
+                         * @errortype
+                         * @moduleid    AMEC_HEALTH_CHECK_DIMM_TIMEOUT
+                         * @reasoncode  FRU_TEMP_REDUNDANCY_LOST
+                         * @userdata1   timeout value in seconds
+                         * @userdata2   0
+                         * @userdata4   ERC_AMEC_DIMM_TEMP_TIMEOUT
+                         * @devdesc     Failed to read a memory DIMM temperature
+                         *
+                         */
+                        l_redundancy_lost_err = createErrl(AMEC_HEALTH_CHECK_DIMM_TIMEOUT,    //modId
+                                                           FRU_TEMP_REDUNDANCY_LOST,          //reasoncode
+                                                           ERC_AMEC_DIMM_TEMP_TIMEOUT,        //Extended reason code
+                                                           ERRL_SEV_INFORMATIONAL,            //Severity
+                                                           NULL,                              //Trace Buf
+                                                           DEFAULT_TRACE_SIZE,                //Trace Size
+                                                           l_temp_timeout,                    //userdata1
+                                                           0);                                //userdata2
+
+                        // set the mfg action flag (allows callout to be added to info error)
+                        setErrlActions(l_redundancy_lost_err, ERRL_ACTIONS_MANUFACTURING_ERROR);
+                    }
+
+                    //Get the HUID for the DIMM and add callout
+                    l_huid = amec_mem_get_huid(l_membuf, l_dimm);
+                    addCalloutToErrl(l_redundancy_lost_err,
+                                     ERRL_CALLOUT_TYPE_HUID,
+                                     l_huid,
+                                     ERRL_CALLOUT_PRIORITY_MED);
+
+                    l_redundancy_lost_callouts_count++;
+                }
             } //iterate over all dimms
             if(G_log_gpe1_error)
             {
@@ -493,6 +550,11 @@ void amec_health_check_dimm_timeout()
         if(l_err)
         {
             commitErrl(&l_err);
+        }
+
+        if(l_redundancy_lost_err)
+        {
+            commitErrl(&l_redundancy_lost_err);
         }
 
         //skip clearing if no dimms need it
