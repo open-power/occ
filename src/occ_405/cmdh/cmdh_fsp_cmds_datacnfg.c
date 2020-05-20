@@ -1601,6 +1601,15 @@ errlHndl_t data_store_sys_config(const cmdh_fsp_cmd_t * i_cmd_ptr,
                  "ProcFreqSID[0x%08X]", G_sysConfigData.system_type.byte, G_sysConfigData.backplane_huid,
                  G_sysConfigData.apss_huid, G_sysConfigData.proc_huid, G_sysConfigData.proc_freq_huid);
 
+        // Check if we have to disable WOF due to reset limit
+        if (G_sysConfigData.system_type.wof_reset_limit)
+        {
+            CMDH_TRAC_INFO("WOF Disabled due to reset limit");
+            set_clear_wof_disabled( SET,
+                                    WOF_RC_RESET_LIMIT_REACHED,
+                                    ERC_WOF_RESET_LIMIT_REACHED );
+        }
+
         // Check to see if we have to disable WOF due to no mode set yet on PowerVM
         if( !G_sysConfigData.system_type.kvm &&
            (CURRENT_MODE() == OCC_MODE_NOCHANGE) )
