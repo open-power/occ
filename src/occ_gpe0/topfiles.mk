@@ -22,13 +22,11 @@
 # permissions and limitations under the License.
 #
 # IBM_PROLOG_END_TAG
-FIRDATA_SOURCES = $(wildcard firdata/*.c)
-FIRDATA_CXX_SOURCES = $(wildcard firdata/*.C)
 
 TOP-C-SOURCES = gpe0_main.c pk_app_irq_table.c ipc_func_tables.c apss_read.c \
-                apss_init.c gpe_util.c core_data.c gpe_core_data.c nest_dts.c ${FIRDATA_SOURCES} \
+                apss_init.c gpe_util.c core_data.c gpe_core_data.c nest_dts.c \
                 gpe_get_tod.c
-TOP-CXX-SOURCES = ${FIRDATA_CXX_SOURCES}
+TOP-CXX-SOURCES =
 TOP-S-SOURCES =
 
 TOP_OBJECTS = $(TOP-C-SOURCES:.c=.o) $(TOP-CXX-SOURCES:.C=.o) $(TOP-S-SOURCES:.S=.o)

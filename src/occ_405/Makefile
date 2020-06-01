@@ -67,7 +67,6 @@ LIB_DIRS =  -L$(OBJDIR) \
             -L$(OBJDIR)/amec \
             -L$(OBJDIR)/dcom \
             -L$(OBJDIR)/proc \
-            -L$(OBJDIR)/firdata \
             -L$(OBJDIR)/cent \
             -L$(OBJDIR)/mem \
             -L$(OBJDIR)/wof \
