@@ -52,6 +52,8 @@
 // Core Data Errors
 #define GPE_RC_GET_CORE_DATA_FAILED  0x60     // Failed to collect core data
 #define GPE_RC_GET_NEST_DTS_FAILED   0x61     // Failed to collect nest DTS temperatures
+#define GPE_RC_GET_CORE_DDS_FAILED   0x62     // Failed to collect core digital droop sensor data
+#define GPE_RC_GET_NEST_DDS_FAILED   0x63     // Failed to collect nest digital droop sensor data
 
 // GPU Errors
 #define GPE_RC_NO_GPU_SUPPORT        0x80     // GPE1 image doesn't support GPUs

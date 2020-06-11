@@ -97,7 +97,7 @@ uint32_t get_core_data(uint32_t i_core,
         // Send command to select which emmpath counter to read
         uint64_t empath_scom_data = CORE_RAW_CYCLES;
 
-        uint32_t empathSelect = quadSelect + EMPATH_CORE_REGION(i_core);
+        uint32_t empathSelect = quadSelect + CORE_REGION(i_core);
         rc = putscom(empathSelect, PC_OCC_SPRC, empath_scom_data);
         if (rc)
         {
@@ -260,5 +260,44 @@ uint32_t get_core_data(uint32_t i_core,
     mtmsr((mfmsr() & ~(MSR_SEM | MSR_SIBRC | MSR_SIBRCA))
           | (org_sem & MSR_SEM));
 
+    return rc;
+}
+
+uint32_t get_core_droop_sensors(uint32_t i_core,
+                                DdsData* o_data)
+{
+    //DPLL_ECHAR offset 0x01060058(PAU) 0x01060158(NEST)
+    //[1:3] DATA (000b,100b,110b, 111b are valid, otherwise discard)
+    //[5:7] MIN_DATA
+    //[9:11] MAX_DATA
+
+    uint32_t rc = 0;
+    uint32_t coreSelect = CHIPLET_QUAD_BASE((i_core / CORES_PER_QUAD)) +
+                          CORE_REGION(i_core);
+
+    cpms_sdsr_t sdsr;
+
+    o_data->value = 0;
+
+    rc = getscom(coreSelect, CPMS_SDSR, &(sdsr.value));
+
+    if(rc == 0)
+    {
+        uint32_t data = sdsr.fields.data;
+        o_data->fields.dds_reading = data;
+        if(data <= 24)
+        {
+            o_data->fields.dds_valid = 1;
+        }
+        o_data->fields.dds_min  = sdsr.fields.data_min;
+        o_data->fields.dds_min_valid = 1;
+
+        data = sdsr.fields.data_max;
+        o_data->fields.dds_max  = data;
+        if(data <= 24)
+        {
+            o_data->fields.dds_max_valid = 1;
+        }
+    }
     return rc;
 }

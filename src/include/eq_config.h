@@ -59,6 +59,32 @@ typedef union sensor_result
 
 } sensor_result_t;
 
+typedef union cpms_sdsr
+{
+    uint64_t value;
+    struct
+    {
+        uint64_t data : 5;
+        uint64_t data_min : 5;
+        uint64_t data_max : 5;
+        uint64_t not_used : 49;
+    } fields;
+} cpms_sdsr_t;
+
+typedef union dpll_echar_reg
+{
+    uint64_t value;
+    struct
+    {
+        uint64_t unused1 : 1;
+        uint64_t encode : 3;
+        uint64_t unused2 : 1;
+        uint64_t encode_min : 3;
+        uint64_t unused3 : 1;
+        uint64_t encode_max : 3;
+        uint64_t unused4 : 52;
+    } fields;
+} dpll_echar_reg_t;
 
 /// SCOM address Ranges:
 // Cores (EX chiplet): 0x20000000 - 0x37000000

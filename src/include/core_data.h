@@ -37,6 +37,7 @@
 #define PC_OCC_SPRC             0x00020410
 #define PC_OCC_SPRD             0x00020411
 #define TOD_VALUE_REG           0x00040020
+#define CPMS_SDSR               0x000e0e68
 #define STOP_STATE_HIST_OCC_REG 0x000F0112 // TODO RTC 213673 Exist on P10?
 
 #define CORE_RAW_CYCLES             0x200
@@ -53,7 +54,7 @@
 #define SIBRC_TIMEOUT           (7)
 
 #define EMPATH_VALID    (1)
-#define EMPATH_CORE_REGION(n) \
+#define CORE_REGION(n) \
     (0x8000 >> (n % CORES_PER_QUAD))
 
 
@@ -108,6 +109,21 @@ typedef struct // 136 bytes
     uint32_t                   empathValid;     // 4
 } CoreData;
 
+typedef union
+{
+    uint64_t value;
+    struct
+    {
+        uint64_t dds_valid : 1;
+        uint64_t dds_reading : 15;
+        uint64_t dds_min_valid : 1;
+        uint64_t dds_min : 15;
+        uint64_t dds_max_valid : 1;
+        uint64_t dds_max : 15;
+        uint16_t reserved : 16;
+    } fields;
+} DdsData;
+
 #ifdef __cplusplus
 extern "C"
 {
@@ -120,6 +136,7 @@ extern "C"
  * @return result of scom operation
  */
 uint32_t  get_core_data(uint32_t i_core, CoreData* o_data);
+uint32_t  get_core_droop_sensors(uint32_t i_core, DdsData* o_data);
 
 #ifdef __cplusplus
 };

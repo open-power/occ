@@ -122,3 +122,96 @@ void gpe_get_nest_dts(ipc_msg_t* cmd, void* arg)
         pk_halt();
     }
 }
+
+/*
+ * Function Specifications:
+ *
+ * Name: gpe_get_core_dds_data
+ *
+ * Description:  extract core number, call get_core digital droop sensor data
+ *               with the proper core id and pointer to DdsData
+ *
+ * Inputs:       cmd is a pointer to IPC msg's cmd and cmd_data struct
+ *
+ * Outputs:      error: sets rc, address, and ffdc in the cmd_data's
+ *                      GpeErrorStruct
+ *
+ * End Function Specification
+ */
+void gpe_get_core_dds(ipc_msg_t* cmd, void* arg)
+{
+    uint32_t rc;    // return code
+    ipc_async_cmd_t *async_cmd  = (ipc_async_cmd_t*)cmd;
+    ipc_core_dds_parms_t *args = (ipc_core_dds_parms_t*) async_cmd->cmd_data;
+    static uint32_t L_trace = 0;
+
+    rc = get_core_droop_sensors(args->core_num,     // core ID
+                                args->data);        // DdsData*
+
+    if(rc)
+    {
+        // trace non-offline error once per core.
+        // offline errors are normal with stop states and ignored by the 405
+        if( (!(L_trace & (1 << args->core_num))) && (rc != PCB_ERROR_CHIPLET_OFFLINE) )
+        {
+            PK_TRACE("gpe_get_core_dds: get_core_dds failed, rc = 0x%08x, core = 0x%08x",
+                     rc, args->core_num);
+            L_trace |= (1 << args->core_num);
+        }
+        gpe_set_ffdc(&(args->error), args->core_num,
+                      GPE_RC_GET_CORE_DDS_FAILED, rc);
+    }
+
+    // send back a response, IPC success even if ffdc/rc are non zeros
+    rc = ipc_send_rsp(cmd, IPC_RC_SUCCESS);
+    if(rc)
+    {
+        PK_TRACE("gpe_get_core_dds: Failed to send response back. Halting GPE0", rc);
+        gpe_set_ffdc(&(args->error), 0x00, GPE_RC_IPC_SEND_FAILED, rc);
+        pk_halt();
+    }
+
+}
+
+
+/*
+ * Function Specifications:
+ *
+ * Name: gpe_get_nest_dds
+ *
+ * Description:  Get the NEST digital droop sensor readings
+ *
+ * Inputs:       cmd is a pointer to IPC msg's cmd and cmd_data struct
+ *
+ * Outputs:      error: sets rc, address, and ffdc in the cmd_data's
+ *                      GpeErrorStruct
+ *
+ * End Function Specification
+ */
+void gpe_get_nest_dds(ipc_msg_t* cmd, void* arg)
+{
+    uint32_t rc;    // return code
+    ipc_async_cmd_t *async_cmd  = (ipc_async_cmd_t*)cmd;
+    ipc_nest_dds_parms_t *args = (ipc_nest_dds_parms_t*) async_cmd->cmd_data;
+
+    args->error.error = 0;
+    args->error.ffdc = 0;
+
+    rc = get_nest_droop_sensors(args->data);        // NestDdsData*
+
+    if(rc)
+    {
+        PK_TRACE("gpe_get_nest_dds: get_nest_dds failed, rc = 0x%08x", rc);
+        gpe_set_ffdc(&(args->error), 0x00,
+                      GPE_RC_GET_NEST_DDS_FAILED, rc);
+    }
+
+    // send back a response, IPC success even if ffdc/rc are non zeros
+    rc = ipc_send_rsp(cmd, IPC_RC_SUCCESS);
+    if(rc)
+    {
+        PK_TRACE("gpe_get_nest_dds: Failed to send response back. Halting GPE0", rc);
+        gpe_set_ffdc(&(args->error), 0x00, GPE_RC_IPC_SEND_FAILED, rc);
+        pk_halt();
+    }
+}
