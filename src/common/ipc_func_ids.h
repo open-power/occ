@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -59,7 +59,6 @@ IPC_FUNCIDS_TABLE_START
         IPC_FUNC_ID(IPC_ST_SCOM_OPERATION)
         IPC_FUNC_ID(IPC_ST_GPE0_NOP)
         IPC_FUNC_ID(IPC_ST_GET_NEST_DTS_FUNCID)
-        IPC_FUNC_ID(IPC_ST_FIR_COLLECTION)
         IPC_FUNC_ID(IPC_ST_GET_TOD_FUNCID)
         IPC_FUNC_ID(IPC_ST_APSS_RESET_FUNCID)
     IPC_FUNCIDS_ST_END(OCCHW_INST_ID_GPE0)

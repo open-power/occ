@@ -129,9 +129,6 @@ SsxTimer G_mainThrdTimer;
 // Variable holding main thread loop count
 uint32_t G_mainThreadLoopCounter = 0x0;
 
-// Global flag indicating FIR collection is required
-bool G_fir_collection_required = FALSE;
-
 // Global flag indicating we are running on Simics
 bool G_simics_environment = FALSE;
 

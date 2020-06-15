@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -66,7 +66,6 @@ uint32_t            G_hcode_elog_table_slots = 0;
 uint8_t G_error_history[ERR_HISTORY_SIZE] = {0};
 
 extern uint8_t G_occ_interrupt_type;
-extern bool G_fir_collection_required;
 extern amec_sys_t g_amec_sys;
 
 
@@ -826,18 +825,14 @@ void reportErrorLog( errlHndl_t i_err, uint16_t i_entrySize )
 
     TRAC_INFO("Reporting error @ %p with size %d",i_err, i_entrySize );
     TRAC_INFO("ModID: 0x%08X, RC: 0x%08X, UserData1: 0x%08X, UserData2: 0x%08X",
-           i_err->iv_userDetails.iv_modId, i_err->iv_reasonCode,
-           i_err->iv_userDetails.iv_userData1, i_err->iv_userDetails.iv_userData2);
+              i_err->iv_userDetails.iv_modId, i_err->iv_reasonCode,
+              i_err->iv_userDetails.iv_userData1, i_err->iv_userDetails.iv_userData2);
 
-    // Defer the interrupt if FIR collection is required
-    if (!G_fir_collection_required)
+    // If this system is not FSP, send an interrupt to Host so that
+    // Host can inform HTMGT to collect the error log
+    if (G_occ_interrupt_type != FSP_SUPPORTED_OCC)
     {
-        // If this system is not FSP, send an interrupt to Host so that
-        // Host can inform HTMGT to collect the error log
-        if (G_occ_interrupt_type != FSP_SUPPORTED_OCC)
-        {
-            notify_host(INTR_REASON_HTMGT_SERVICE_REQUIRED);
-        }
+        notify_host(INTR_REASON_HTMGT_SERVICE_REQUIRED);
     }
 }
 
@@ -883,9 +878,6 @@ void commitErrl( errlHndl_t *io_err )
 
                 // Suspend all error log commits
                 L_log_commits_suspended_by_safe_mode = TRUE;
-
-                // Motivate FIR data collection
-                G_fir_collection_required = TRUE;
             }
 
             // if reset action bit is set force severity to unrecoverable and

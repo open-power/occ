@@ -28,8 +28,6 @@
 #include "pss_constants.h"
 #include "gpe_util.h"
 #include "gpe_export.h"
-#include <fir_data_collect.h>
-#include <scom_util.h>
 
 #define SPIPSS_P2S_ONGOING_MASK 0x8000000000000000
 
@@ -245,32 +243,6 @@ void ipc_scom_operation(ipc_msg_t* cmd, void* arg)
     }
 }
 
-/*
- * Function Specification
- *
- * Name: ipc_fir_collection
- *
- * Description: Does fir data collection in case of a checkstop
- *
- * End Function Specification
- */
-void ipc_fir_collection(ipc_msg_t* cmd, void* arg)
-{
-    int l_rc;
-    PK_TRACE("ipc_fir_collection: starting fir_data_collect");
-
-    fir_data_collect();
-
-    // send back a response, IPC success even if ffdc/rc are non zeros
-    l_rc = ipc_send_rsp(cmd, IPC_RC_SUCCESS);
-    if(l_rc)
-    {
-        PK_TRACE("ipc_fir_collection: Failed to send response back. Halting GPE0", l_rc);
-        pk_halt();
-    }
-
-    PK_TRACE("ipc_fir_collection: fir_data_collect finished");
-}
 
 /*
  * Function Specification:
