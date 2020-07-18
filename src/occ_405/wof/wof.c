@@ -188,6 +188,7 @@ void call_wof_main( void )
     static uint8_t L_pstate_protocol_off = 0;
     // GpeRequest more than 1 extra time.
     bool enable_success = false;
+    bool l_idle = false;
     do
     {
         // If the init state says we just turned WOF on in pgpe, clear
@@ -292,13 +293,19 @@ void call_wof_main( void )
                     case INITIAL_VFRT_SENT_WAITING:
                         // Check if request is still processing.
                         // Init state updated in wof_vfrt_callback
-                        if( (!async_request_is_idle(&G_wof_vfrt_req.request)) ||
-                             (g_wof->vfrt_state != STANDBY) )
+                        l_idle = async_request_is_idle(&G_wof_vfrt_req.request);
+                        if( (!l_idle) || (g_wof->vfrt_state != STANDBY) )
                         {
                             if( (L_vfrt_last_chance == 0) && (!ignore_pgpe_error()) )
                             {
-                                INTR_TRAC_ERR("WOF Disabled!"
-                                              " Init VFRT request timeout");
+                                INTR_TRAC_ERR("WOF Disabled! Init VFRT req timeout! state[%d] IPC idle?[%d]", g_wof->vfrt_state, l_idle);
+                                // if state is SCHEDULED that means the BCE completed, trace time for BCE
+                                if( (!l_idle) && (g_wof->vfrt_state == SCHEDULED) )
+                                {
+                                    sensor_t *l_bce_sensor = getSensorByGsid(VFRT_BCEdur);
+                                    INTR_TRAC_ERR("Initial VFRT timeout! BCE completed in %dus",
+                                                   l_bce_sensor->sample);
+                                }
                                 set_clear_wof_disabled( SET,
                                                         WOF_RC_VFRT_REQ_TIMEOUT,
                                                         ERC_WOF_VFRT_REQ_TIMEOUT );
@@ -307,8 +314,8 @@ void call_wof_main( void )
                             {
                                 if( L_vfrt_last_chance == 1 )
                                 {
-                                    INTR_TRAC_INFO("initial VFRT NOT idle. Last chance out of %d chances",
-                                                    MAX_VFRT_CHANCES);
+                                    INTR_TRAC_INFO("Initial VFRT NOT complete state[%d] idle?[%d]. Last chance out of %d chances",
+                                                    g_wof->vfrt_state, l_idle, MAX_VFRT_CHANCES);
                                 }
                                 L_vfrt_last_chance--;
                             }
@@ -423,15 +430,20 @@ void call_wof_main( void )
                 !g_wof->wof_disabled )
             {
                 // Normal execution of wof algorithm
-                if( (!async_request_is_idle(&G_wof_vfrt_req.request)) ||
-                    (g_wof->vfrt_state != STANDBY) )
+                l_idle = async_request_is_idle(&G_wof_vfrt_req.request);
+                if( (!l_idle) || (g_wof->vfrt_state != STANDBY) )
                 {
                     if( L_vfrt_last_chance == 0 )
                     {
                         // Treat as an error only if not currently ignoring PGPE failures
                         if(!ignore_pgpe_error())
                         {
-                            INTR_TRAC_ERR("WOF Disabled! VFRT req timeout");
+                            INTR_TRAC_ERR("WOF Disabled! VFRT req timeout! state[%d] IPC idle?[%d]", g_wof->vfrt_state, l_idle);
+
+                            sensor_t *l_bce_sensor = getSensorByGsid(VFRT_BCEdur);
+                            sensor_t *l_ipc_sensor = getSensorByGsid(VFRT_IPCdur);
+                            INTR_TRAC_ERR("VFRT timeout! BCE max %dus  IPC max %dus",
+                                           l_bce_sensor->sample_max, l_ipc_sensor->sample_max);
                             set_clear_wof_disabled(SET,
                                                    WOF_RC_VFRT_REQ_TIMEOUT,
                                                    ERC_WOF_VFRT_REQ_TIMEOUT);
@@ -451,8 +463,8 @@ void call_wof_main( void )
                     {
                         if( L_vfrt_last_chance == 1 )
                         {
-                            INTR_TRAC_INFO("VFRT NOT idle. Last chance out of %d chances",
-                                            MAX_VFRT_CHANCES);
+                            INTR_TRAC_INFO("VFRT NOT complete state[%d] idle?[%d]. Last chance out of %d chances",
+                                            g_wof->vfrt_state, l_idle, MAX_VFRT_CHANCES);
                         }
                         L_vfrt_last_chance--;
                     }
@@ -664,6 +676,10 @@ uint32_t calc_vfrt_mainstore_addr( void )
  */
 void copy_vfrt_to_sram_callback( void )
 {
+    // save time BCE took in us
+    uint32_t l_time = (uint32_t)((G_vfrt_req.request.end_time - G_vfrt_req.request.start_time) / ( SSX_TIMEBASE_FREQUENCY_HZ / 1000000 ));
+    sensor_update( AMECSENSOR_PTR(VFRT_BCEdur), (uint16_t)l_time);
+
 /*
  *
  * find out which ping pong buffer to use
@@ -679,11 +695,7 @@ void copy_vfrt_to_sram_callback( void )
         // Switch to pong buffer
         l_buffer_address = G_sram_vfrt_pong_buffer;
     }
-    else
-    {
-        // Switch to ping buffer
-        l_buffer_address = G_sram_vfrt_ping_buffer;
-    }
+
     // Update global "next" ping pong buffer for callback function
     g_wof->next_ping_pong_buf = (uint32_t)l_buffer_address;
 
@@ -714,6 +726,10 @@ void copy_vfrt_to_sram_callback( void )
  */
 void wof_vfrt_callback( void )
 {
+    // save time IPC took in us
+    uint32_t l_time = (uint32_t)((G_wof_vfrt_req.request.end_time - G_wof_vfrt_req.request.start_time) / ( SSX_TIMEBASE_FREQUENCY_HZ / 1000000 ));
+    sensor_update( AMECSENSOR_PTR(VFRT_IPCdur), (uint16_t)l_time);
+
     // Update the VFRT state to indicate a new IPC message can be
     // scheduled regardless of the RC of the previous one.
     g_wof->vfrt_state = STANDBY;
@@ -2116,6 +2132,9 @@ bool enable_wof( void )
             // Set parameters for the GpeRequest
             G_wof_control_parms.action = PGPE_ACTION_WOF_ON;
 
+            // Set Init state
+            g_wof->wof_init_state = WOF_CONTROL_ON_SENT_WAITING;
+
             rc = pgpe_request_schedule( &G_wof_control_req );
 
             if( rc != 0 )
@@ -2137,8 +2156,6 @@ bool enable_wof( void )
             }
             else
             {
-                // Set Init state
-                g_wof->wof_init_state = WOF_CONTROL_ON_SENT_WAITING;
                 result = true;
             }
         }
@@ -2174,6 +2191,10 @@ bool enable_wof( void )
  */
 void wof_control_callback( void )
 {
+    // save time IPC took in us
+    uint32_t l_time = (uint32_t)((G_wof_control_req.request.end_time - G_wof_control_req.request.start_time) / ( SSX_TIMEBASE_FREQUENCY_HZ / 1000000 ));
+    sensor_update( AMECSENSOR_PTR(WOFC_IPCdur), (uint16_t)l_time);
+
     // Check to see if GpeRequest was successful
     if( G_wof_control_parms.msg_cb.rc == PGPE_WOF_RC_NOT_ENABLED )
     {
@@ -2214,6 +2235,9 @@ void schedule_vfrt_request( void )
     if( (g_wof->vfrt_state == NEED_TO_SCHEDULE ) &&
         (async_request_is_idle(&G_wof_vfrt_req.request)) )
     {
+        // must update vfrt state before doing the schedule to prevent callback
+        // function from executing and updating the state before we changed it here
+        g_wof->vfrt_state = SCHEDULED;
         g_wof->gpe_req_rc = pgpe_request_schedule(&G_wof_vfrt_req);
 
         // Check to make sure IPC request was scheduled correctly
@@ -2236,9 +2260,6 @@ void schedule_vfrt_request( void )
             // Reset the global return code after logging the error
             g_wof->gpe_req_rc = 0;
         }
-
-        // Update vfrt state
-        g_wof->vfrt_state = SCHEDULED;
     }
 }
 
@@ -2261,15 +2282,14 @@ void send_initial_vfrt_to_pgpe( void )
     // Calculate the address of the final vfrt
     g_wof->next_vfrt_main_mem_addr = calc_vfrt_mainstore_addr();
 
-    // Send the final vfrt to shared OCC-PGPE SRAM.
-    send_vfrt_to_pgpe( g_wof->next_vfrt_main_mem_addr );
-
     // Update Init state
     if(g_wof->wof_init_state < INITIAL_VFRT_SENT_WAITING)
     {
         g_wof->wof_init_state = INITIAL_VFRT_SENT_WAITING;
     }
 
+    // Send the final vfrt to shared OCC-PGPE SRAM.
+    send_vfrt_to_pgpe( g_wof->next_vfrt_main_mem_addr );
 }
 
 /**

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -67,7 +67,7 @@ typedef enum
 //  free = 0x0B,
 //  free = 0x0C,
     DBUG_DUMP_RAW_AD        = 0x0D,
-//  free = 0x0E,
+    DBUG_CLEAR_ERRH         = 0x0E,  // clear all error history counters
 //  free = 0x0F,
 //  free = 0x10,
 //  free = 0x11,

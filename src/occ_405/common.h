@@ -37,6 +37,9 @@
 #define ALLOW_WOF_OCS_TRACE    0x0040
 #define ALLOW_CEFF_RATIO_VDD_TRACE 0x0080
 #define ALLOW_PCAP_TRACE       0x0100
+#define ALLOW_24x7_TRACE       0x0200
+#define ALLOW_DCOM_TRACE       0x0400
+#define ALLOW_PBAX_TRACE       0x0800
 
 // Start of SRAM memory
 #define SRAM_START_ADDRESS_405      0xFFF40000

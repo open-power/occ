@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -49,6 +49,7 @@ extern uint32_t G_mainThreadLoopCounter;
 extern bool G_simics_environment;
 // bit mask of configured cores
 extern uint32_t G_present_cores;
+extern uint16_t G_allow_trace_flags;
 //*************************************************************************/
 // Macros
 //*************************************************************************/
@@ -334,11 +335,13 @@ void manage_mem_deadman_task(void)
         //First, check to see if the previous GPE request still running
         if( !(async_request_is_idle(&G_reset_mem_deadman_request.request)) )
         {
+            INCREMENT_ERR_HISTORY(ERRH_MEM_DEADMAN_NOT_IDLE);
             L_scom_timeout[mca]++;
             //This can happen due to variability in when the task runs
             if(!L_gpe_idle_traced && L_gpe_had_1_tick)
             {
-                TRAC_INFO("manage_mem_deadman_task: GPE is still running. mca[%d]", mca);
+                if(G_allow_trace_flags & ALLOW_MEM_TRACE)
+                    TRAC_INFO("manage_mem_deadman_task: GPE is still running. mca[%d]", mca);
                 L_gpe_idle_traced = true;
             }
             L_gpe_had_1_tick = true;
@@ -350,7 +353,8 @@ void manage_mem_deadman_task(void)
             L_gpe_had_1_tick = false;
             if(L_gpe_idle_traced)
             {
-                TRAC_INFO("manage_mem_deadman_task: GPE completed. mca[%d]", mca);
+                if(G_allow_trace_flags & ALLOW_MEM_TRACE)
+                    TRAC_INFO("manage_mem_deadman_task: GPE completed. mca[%d]", mca);
                 L_gpe_idle_traced = false;
             }
         }

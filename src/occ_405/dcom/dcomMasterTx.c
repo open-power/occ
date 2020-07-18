@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -37,6 +37,7 @@
 #include <proc_pstate.h>
 #include <amec_sys.h>
 #include <amec_master_smh.h>
+#include <common.h>
 
 extern bool G_epow_triggered;
 bool epow_gpio_asserted(const bool i_from_slave_inbox);
@@ -62,6 +63,8 @@ uint32_t G_pbax_packet = 0xffffffff;
 // Used to keep count of number of APSS data collection fails.
 uint16_t G_apss_fail_updown_count = 0x0000;
 
+extern uint16_t G_allow_trace_flags;
+
 #ifdef DEBUG_APSS_SEQ
 // used to keep track of the APSS complete sequence number
 extern uint32_t G_savedCompleteSeq;
@@ -84,7 +87,7 @@ uint32_t dcom_build_slv_inbox(void)
     uint32_t l_slv_idx = 0;
 
     static uint8_t      L_seq = 0xFF;
-    static bool         L_traced = FALSE;
+    static uint32_t     L_last_fail_pbax_rc = 0;
 
     L_seq++;
 
@@ -94,15 +97,13 @@ uint32_t dcom_build_slv_inbox(void)
     {
         INCREMENT_ERR_HISTORY(ERRH_DCOM_MASTER_PBAX_SEND_FAIL);
 
-        if (!L_traced)
+        // only trace if failure RC changed
+        if( (G_pbax_rc != L_last_fail_pbax_rc) ||
+            (G_allow_trace_flags & ALLOW_PBAX_TRACE) )
         {
             TRAC_INFO("PBAX Send Failure in transimitting multicast doorbell - RC[%08X], packet[%d]", G_pbax_rc, G_pbax_packet);
-            L_traced = TRUE;
+            L_last_fail_pbax_rc = G_pbax_rc;
         }
-    }
-    else
-    {
-        L_traced = FALSE;
     }
 
 

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2016,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2016,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -125,10 +125,10 @@ enum wof_init_states
 // Enumeration to define VFRT send state
 enum vfrt_send_states
 {
-    STANDBY,
-    SEND_INIT,
-    NEED_TO_SCHEDULE,
-    SCHEDULED,
+    STANDBY            = 0,
+    SEND_INIT          = 1,
+    NEED_TO_SCHEDULE   = 2,
+    SCHEDULED          = 3,
 };
 
 // Enumeration to define reasons (H)TMGT is disabling WOF

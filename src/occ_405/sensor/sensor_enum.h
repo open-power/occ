@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -50,15 +50,15 @@ enum e_gsid
     // Code/Firmware Sensors
     // ------------------------------------------------------
     AMEintdur    = 0,  // Combined duration of the AMEC Master & Slave Tasks
-
-    AMESSdur0,         // Combined duration of the AMEC Master & Slave 0
-    AMESSdur1,         // Combined duration of the AMEC Master & Slave 1
-    AMESSdur2,         // Combined duration of the AMEC Master & Slave 2
-    AMESSdur3,         // Combined duration of the AMEC Master & Slave 3
-    AMESSdur4,         // Combined duration of the AMEC Master & Slave 4
-    AMESSdur5,         // Combined duration of the AMEC Master & Slave 5
-    AMESSdur6,         // Combined duration of the AMEC Master & Slave 6
-    AMESSdur7,         // Combined duration of the AMEC Master & Slave 7
+    // NOTE:  WOF VFRT timeout includes time for VFRT BCE + VFRT IPC
+    VFRT_BCEdur,       // Duration of BCE for VFRT copy from memory to SRAM
+    VFRT_IPCdur,       // Duration of IPC VFRT command to PGPE
+    WOFC_IPCdur,       // Duration of IPC WOF Control command to PGPE
+    Sout_BCEdur,       // Duration of BCE for master to copy slave outbox
+    timer2dur,         // TBD
+    timer3dur,         // TBD
+    timer4dur,         // TBD
+    timer5dur,         // TBD
 
     GPEtickdur0,       // Duration on the GPE0 Engine
     GPEtickdur1,       // Duration on the GPE1 Engine

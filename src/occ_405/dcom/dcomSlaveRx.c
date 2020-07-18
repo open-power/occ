@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -36,6 +36,7 @@
 #include <trac.h>
 #include <proc_pstate.h>
 #include <amec_data.h>
+#include <common.h>
 
 // SSX Block Copy Request for the Slave Inbox Receive Queue
 BceRequest G_slv_inbox_rx_pba_request;
@@ -56,6 +57,8 @@ STATIC_ASSERT(  (NUM_BYTES_IN_SLAVE_INBOX != (sizeof(G_dcom_slv_inbox_rx)))  );
 
 // Indicate if we need to lower the Pmax_rail
 bool     G_apss_lower_pmax_rail = FALSE;
+
+extern uint16_t G_allow_trace_flags;
 
 // Function Specification
 //
@@ -103,6 +106,8 @@ void task_dcom_rx_slv_inbox( task_t *i_self)
     // Use a static local bool to track whether the BCE request used
     // here has ever been successfully created at least once
     static bool L_bce_slv_inbox_rx_request_created_once = FALSE;
+    static uint8_t L_trace_incomplete = 5;
+    static uint8_t L_trace_lost_connection = 5;
 
     DCOM_DBG("1. RX Slave Inbox\n");
 
@@ -302,7 +307,12 @@ void task_dcom_rx_slv_inbox( task_t *i_self)
         {
             if(l_bytes)
             {
-               TRAC_INFO("Only got %d bytes from master",l_bytes);
+               INCREMENT_ERR_HISTORY(ERRH_DCOM_RX_SLV_INBOX_INCOMPLETE);
+               if(L_trace_incomplete)
+               {
+                  TRAC_INFO("Only got %d bytes from master",l_bytes);
+                  L_trace_incomplete--;
+               }
             }
 
             // Check time and break out if we reached limit
@@ -320,7 +330,13 @@ void task_dcom_rx_slv_inbox( task_t *i_self)
                 // start task waiting for master to talk again.
                 rtl_start_task(TASK_ID_DCOM_WAIT_4_MSTR);
                 rtl_set_run_mask_deferred(RTL_FLAG_MSTR_READY);
-                TRAC_INFO("[%d]: Lost connection to master",(int) G_pbax_id.chip_id);
+
+                INCREMENT_ERR_HISTORY(ERRH_DCOM_RX_SLV_LOST_CONNECTION);
+                if(L_trace_lost_connection)
+                {
+                   TRAC_INFO("[%d]: Lost connection to master",(int) G_pbax_id.chip_id);
+                   L_trace_lost_connection--;
+                }
                 break;
             }
         }
@@ -354,6 +370,7 @@ uint32_t dcom_rx_slv_inbox_doorbell( void )
     uint32_t    l_read             = 0;
     uint32_t    l_bytes_so_far     = 0;
     uint64_t    l_start            = ssx_timebase_get();
+    static int  L_last_fail_pbax_rc = 0;
 
     G_dcomTime.slave.doorbellStartRx = l_start;
 
@@ -375,8 +392,13 @@ uint32_t dcom_rx_slv_inbox_doorbell( void )
             INCREMENT_ERR_HISTORY(ERRH_DCOM_SLAVE_PBAX_READ_FAIL);
             G_dcomTime.slave.doorbellErrorFlags |= DCOM_DOORBELL_HW_ERR;
             // Failure occurred
-            TRAC_ERR("Slave PBAX Read Failure in receiving multicast doorbell from master - RC[%08X]", l_pbarc);
-
+            // only trace if failure RC changed
+            if( (l_pbarc != L_last_fail_pbax_rc) ||
+                (G_allow_trace_flags & ALLOW_PBAX_TRACE) )
+            {
+                TRAC_ERR("Slave PBAX Read Failure in receiving multicast doorbell from master - RC[%08X]", l_pbarc);
+                L_last_fail_pbax_rc = l_pbarc;
+            }
             // Handle pbax read failure on queue 0
             dcom_pbax_error_handler(0);
             break;
@@ -417,8 +439,11 @@ uint32_t dcom_rx_slv_inbox_doorbell( void )
                 l_bytes_so_far = 0;
                 G_dcomTime.slave.doorbellErrorFlags |= DCOM_DOORBELL_PACKET_DROP_ERR;
 
-                TRAC_INFO("Slave Inbox - Start Magic Number Mismatch [0x%08X]",
-                          G_dcom_slv_inbox_doorbell_rx.magic1);
+                if(G_allow_trace_flags & ALLOW_DCOM_TRACE)
+                {
+                    TRAC_INFO("Slave Inbox - Start Magic Number Mismatch [0x%08X]",
+                               G_dcom_slv_inbox_doorbell_rx.magic1);
+                }
             }
         }
         // If this is the last packet, make sure the magic number matches
@@ -426,8 +451,11 @@ uint32_t dcom_rx_slv_inbox_doorbell( void )
         {
            if(PBAX_MAGIC_NUMBER_32B != G_dcom_slv_inbox_doorbell_rx.magic2)
            {
-               TRAC_INFO("Slave Inbox - End Magic Number Mismatch [0x%08X]",
-                         G_dcom_slv_inbox_doorbell_rx.magic2);
+               if(G_allow_trace_flags & ALLOW_DCOM_TRACE)
+               {
+                   TRAC_INFO("Slave Inbox - End Magic Number Mismatch [0x%08X]",
+                              G_dcom_slv_inbox_doorbell_rx.magic2);
+               }
                G_dcomTime.slave.doorbellErrorFlags |= DCOM_DOORBELL_BAD_MAGIC_NUM_ERR;
 
                // Decrement the number of bytes we return so it fails
@@ -507,9 +535,10 @@ void task_dcom_wait_for_master( task_t *i_self)
                 // counter
                 L_no_master_doorbell_cnt++;
 
-                if ((L_no_master_doorbell_cnt <= 10) || (L_no_master_doorbell_cnt % 10000 == 0))
+                // Don't trace first 3 times and limit to first 10 occurances and then every 10,000
+                if( (L_no_master_doorbell_cnt >= 4) &&
+                    ((L_no_master_doorbell_cnt <= 10) || (L_no_master_doorbell_cnt % 10000 == 0)) )
                 {
-                    // Trace first 10 occurances and then every 10,000
                     TRAC_INFO("task_dcom_wait_for_master: experiencing data collection problems! fail_count=%i",
                               L_no_master_doorbell_cnt);
                 }
@@ -719,8 +748,10 @@ void task_dcom_wait_for_master( task_t *i_self)
         }
         else
         {
-             TRAC_INFO("[%d] Restablished contact via doorbell from Master (after %d ticks)",
-                       (int) G_pbax_id.chip_id, L_no_master_doorbell_cnt);
+             // only trace if it took more than 4 ticks to recover or traces are enabled
+             if( (L_no_master_doorbell_cnt >= 4) || (G_allow_trace_flags & ALLOW_DCOM_TRACE) )
+                TRAC_INFO("[%d] Restablished contact via doorbell from Master (after %d ticks)",
+                           (int) G_pbax_id.chip_id, L_no_master_doorbell_cnt);
 
              // Inform AMEC that Pmax_rail doesn't need to be lowered and reset
              // the no_master_doorbell counter

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -278,14 +278,14 @@ const sensor_ptr_t G_amec_sensor_list[] =
   // Code/Firmware Sensors
   // ------------------------------------------------------
   SENSOR_PTR(     AMEintdur,        &g_amec_sys.fw.ameintdur),
-  SENSOR_PTR(     AMESSdur0,        &g_amec_sys.fw.amessdur[0]),
-  SENSOR_PTR(     AMESSdur1,        &g_amec_sys.fw.amessdur[1]),
-  SENSOR_PTR(     AMESSdur2,        &g_amec_sys.fw.amessdur[2]),
-  SENSOR_PTR(     AMESSdur3,        &g_amec_sys.fw.amessdur[3]),
-  SENSOR_PTR(     AMESSdur4,        &g_amec_sys.fw.amessdur[4]),
-  SENSOR_PTR(     AMESSdur5,        &g_amec_sys.fw.amessdur[5]),
-  SENSOR_PTR(     AMESSdur6,        &g_amec_sys.fw.amessdur[6]),
-  SENSOR_PTR(     AMESSdur7,        &g_amec_sys.fw.amessdur[7]),
+  SENSOR_PTR(     VFRT_BCEdur,      &g_amec_sys.fw.times[0]),
+  SENSOR_PTR(     VFRT_IPCdur,      &g_amec_sys.fw.times[1]),
+  SENSOR_PTR(     WOFC_IPCdur,      &g_amec_sys.fw.times[2]),
+  SENSOR_PTR(     Sout_BCEdur,      &g_amec_sys.fw.times[3]),
+  SENSOR_PTR(     timer2dur,        &g_amec_sys.fw.times[4]),
+  SENSOR_PTR(     timer3dur,        &g_amec_sys.fw.times[5]),
+  SENSOR_PTR(     timer4dur,        &g_amec_sys.fw.times[6]),
+  SENSOR_PTR(     timer5dur,        &g_amec_sys.fw.times[7]),
   SENSOR_PTR(   GPEtickdur0,        &g_amec_sys.fw.gpetickdur[0]),
   SENSOR_PTR(   GPEtickdur1,        &g_amec_sys.fw.gpetickdur[1]),
   SENSOR_PTR(    RTLtickdur,        &g_amec_sys.fw.prcdupdatedur),
@@ -436,14 +436,14 @@ const minisensor_ptr_t G_amec_mini_sensor_list[] INIT_SECTION =
   // Code/Firmware Sensors
   // ------------------------------------------------------
   MINI_SENSOR_PTR(      AMEintdur,  NULL),
-  MINI_SENSOR_PTR(      AMESSdur0,  NULL),
-  MINI_SENSOR_PTR(      AMESSdur1,  NULL),
-  MINI_SENSOR_PTR(      AMESSdur2,  NULL),
-  MINI_SENSOR_PTR(      AMESSdur3,  NULL),
-  MINI_SENSOR_PTR(      AMESSdur4,  NULL),
-  MINI_SENSOR_PTR(      AMESSdur5,  NULL),
-  MINI_SENSOR_PTR(      AMESSdur6,  NULL),
-  MINI_SENSOR_PTR(      AMESSdur7,  NULL),
+  MINI_SENSOR_PTR(    VFRT_BCEdur,  NULL),
+  MINI_SENSOR_PTR(    VFRT_IPCdur,  NULL),
+  MINI_SENSOR_PTR(    WOFC_IPCdur,  NULL),
+  MINI_SENSOR_PTR(    Sout_BCEdur,  NULL),
+  MINI_SENSOR_PTR(      timer2dur,  NULL),
+  MINI_SENSOR_PTR(      timer3dur,  NULL),
+  MINI_SENSOR_PTR(      timer4dur,  NULL),
+  MINI_SENSOR_PTR(      timer5dur,  NULL),
   MINI_SENSOR_PTR(    GPEtickdur0,  NULL),
   MINI_SENSOR_PTR(    GPEtickdur1,  NULL),
   MINI_SENSOR_PTR(     RTLtickdur,  NULL),

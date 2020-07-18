@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -40,9 +40,11 @@
 #include <amec_data.h>
 #include <amec_sys.h>
 #include "pss_constants.h"
+#include <common.h>
 
 extern uint8_t G_occ_interrupt_type;
 extern uint16_t G_proc_fmax_mhz;   // max(turbo,uturbo) frequencies
+extern uint16_t G_allow_trace_flags;
 
 dcom_timing_t G_dcomTime;
 
@@ -674,8 +676,12 @@ void dcom_pbax_error_handler(const uint8_t i_queue)
     xsndstat = in32(PBA_XSNDSTAT);
     xrcvstat = in32(PBA_XRCVSTAT);
 
-    TRAC_ERR("dcom_pbax_error_handler: Start error handler for queue %d PBA_XSHCS[0x%08x] PBA_XSNDSTAT[0x%08X] PBA_XRCVSTAT[0x%08X]",
-             i_queue, l_pba_shcs.words.high_order, xsndstat, xrcvstat);
+    if( (L_pba_reset_logged[i_queue] == FALSE) ||
+        (G_allow_trace_flags & ALLOW_PBAX_TRACE) )
+    {
+        TRAC_ERR("dcom_pbax_error_handler: Start error handler for queue %d PBA_XSHCS[0x%08x] PBA_XSNDSTAT[0x%08X] PBA_XRCVSTAT[0x%08X]",
+                 i_queue, l_pba_shcs.words.high_order, xsndstat, xrcvstat);
+    }
 
     do
     {
@@ -694,8 +700,12 @@ void dcom_pbax_error_handler(const uint8_t i_queue)
         l_pba_shcs.fields.push_enable = 1;
         out32(l_pba_shcs_addr, l_pba_shcs.words.high_order);
 
-        TRAC_INFO("dcom_pbax_error_handler: Success resetting queue %d PBA_XSHCS[0x%08x] PBA_XCFG[0x%08x]",
-                  i_queue, in32(l_pba_shcs_addr), in32(PBA_XCFG));
+        if( (L_pba_reset_logged[i_queue] == FALSE) ||
+            (G_allow_trace_flags & ALLOW_PBAX_TRACE) )
+        {
+            TRAC_INFO("dcom_pbax_error_handler: Success resetting queue %d PBA_XSHCS[0x%08x] PBA_XCFG[0x%08x]",
+                      i_queue, in32(l_pba_shcs_addr), in32(PBA_XCFG));
+        }
 
         if(L_pba_reset_logged[i_queue] == FALSE)
         {

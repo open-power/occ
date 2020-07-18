@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -332,11 +332,11 @@ typedef enum {
     ERRH_CORE_SMALL_DROOP            =  0x20,
     ERRH_CACHE_LARGE_DROOP           =  0x21,
     ERRH_OCS_DIRTY_BLOCK             =  0x22,  // P9 prime: OCS Dirty+type '0' (block)
-    ERRH_RESERVED23                  =  0x23,
-    ERRH_RESERVED24                  =  0x24,
-    ERRH_RESERVED25                  =  0x25,
-    ERRH_RESERVED26                  =  0x26,
-    ERRH_RESERVED27                  =  0x27,
+    ERRH_RTL_TIME_EXCEEDED           =  0x23,
+    ERRH_DCOM_RX_SLV_INBOX_INCOMPLETE =  0x24,
+    ERRH_DCOM_RX_SLV_LOST_CONNECTION =  0x25,
+    ERRH_24x7_NOT_IDLE               =  0x26,
+    ERRH_MEM_DEADMAN_NOT_IDLE        =  0x27,
     ERRH_RESERVED28                  =  0x28,
     ERRH_RESERVED29                  =  0x29,
     ERRH_RESERVED2A                  =  0x2A,

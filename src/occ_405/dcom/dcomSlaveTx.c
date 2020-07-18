@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -35,6 +35,7 @@
 #include <trac.h>
 #include <proc_pstate.h>
 #include <amec_sys.h>
+#include <common.h>
 
 // SSX Block Copy Request for the Slave Outbox Transmit Queue
 BceRequest G_slv_outbox_tx_pba_request;
@@ -53,6 +54,7 @@ uint32_t G_slave_pbax_rc = 0;
 
 // Access to the global error history count array
 extern uint8_t G_error_history[ERR_HISTORY_SIZE];
+extern uint16_t G_allow_trace_flags;
 
 // Function Specification
 //
@@ -177,6 +179,7 @@ void task_dcom_tx_slv_outbox( task_t *i_self)
     // Use a static local bool to track whether the BCE request used
     // here has ever been successfully created at least once
     static bool    L_bce_slv_outbox_tx_request_created_once = FALSE;
+    static uint32_t L_slave_last_fail_pbax_rc = 0;
 
     DCOM_DBG("3. TX Slave Outboxes\n");
 
@@ -186,7 +189,13 @@ void task_dcom_tx_slv_outbox( task_t *i_self)
         // interrupt context.
         if(G_slave_pbax_rc)
         {
-            TRAC_ERR("task_dcom_tx_slv_outbox: PBAX Send Failure in transimitting doorbell - RC[%08X]", G_slave_pbax_rc);
+            // only trace if failure RC changed
+            if( (G_slave_pbax_rc != L_slave_last_fail_pbax_rc) ||
+                (G_allow_trace_flags & ALLOW_PBAX_TRACE) )
+            {
+                TRAC_ERR("task_dcom_tx_slv_outbox: PBAX Send Failure in transimitting doorbell - RC[%08X]", G_slave_pbax_rc);
+                L_slave_last_fail_pbax_rc = G_slave_pbax_rc;
+            }
             INCREMENT_ERR_HISTORY(ERRH_DCOM_SLAVE_PBAX_SEND_FAIL);
         }
 

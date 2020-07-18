@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -38,6 +38,7 @@
 #include "cmdh_fsp.h"
 #include "sensor.h"
 #include "gpe_24x7_structs.h"
+#include "common.h"
 
 //Global array of core data buffers
 GPE_BUFFER(CoreData G_core_data[MAX_NUM_FW_CORES+NUM_CORE_DATA_DOUBLE_BUF+NUM_CORE_DATA_EMPTY_BUF]) = {{{0}}};
@@ -111,6 +112,7 @@ void print_core_status(uint8_t core);
 #endif
 
 extern bool G_smf_mode;
+extern uint16_t G_allow_trace_flags;
 
 // Function Specification
 //
@@ -725,7 +727,8 @@ void task_24x7(task_t * i_task)
         // Schedule 24x7 task if idle
         if (!async_request_is_idle(&G_24x7_request.request))
         {
-            if(!L_idle_trace)
+            INCREMENT_ERR_HISTORY(ERRH_24x7_NOT_IDLE);
+            if( (!L_idle_trace) && (G_allow_trace_flags & ALLOW_24x7_TRACE) )
             {
                 INTR_TRAC_ERR("task_24x7: request not idle");
                 L_idle_trace = TRUE;
@@ -734,7 +737,7 @@ void task_24x7(task_t * i_task)
         }
         else
         {
-            if(L_idle_trace)
+            if( (L_idle_trace) && (G_allow_trace_flags & ALLOW_24x7_TRACE) )
             {
                 INTR_TRAC_INFO("task_24x7: previously was not idle and is now idle after %d ticks", L_numTicks);
                 L_idle_trace = FALSE;
@@ -742,7 +745,7 @@ void task_24x7(task_t * i_task)
             // Clear errors and init parameters for GPE task
             G_24x7_parms.error.error = 0;
             G_24x7_parms.numTicksPassed = L_numTicks;
-            if (L_logged_disable)
+            if( (L_logged_disable) && (G_allow_trace_flags & ALLOW_24x7_TRACE) )
             {
                 INTR_TRAC_INFO("task_24x7: schedule re-enabled");
                 L_logged_disable = FALSE;
@@ -784,7 +787,7 @@ void task_24x7(task_t * i_task)
     }  // !G_24x7_disabled
     else
     {
-        if (! L_logged_disable)
+        if( (! L_logged_disable) && (G_allow_trace_flags & ALLOW_24x7_TRACE) )
         {
             INTR_TRAC_INFO("task_24x7: not scheduled due to disable");
             L_logged_disable = TRUE;

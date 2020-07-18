@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -62,6 +62,9 @@
 #define GPE_ENGINE_0        0
 #define GPE_ENGINE_1        1
 
+// Number of generic fw timing sensors
+#define NUM_TIME_SENSORS    8
+
 //*************************************************************************
 // Structures
 //*************************************************************************
@@ -73,7 +76,7 @@ typedef struct
 {
   // Sensors
   sensor_t ameintdur;
-  sensor_t amessdur[NUM_AMEC_SMH_STATES];
+  sensor_t times[NUM_TIME_SENSORS];    // generic timing sensors for various IPC, BCE cmds...
   sensor_t gpetickdur[NUM_GPE_ENGINES];
   sensor_t prcdupdatedur;
   sensor_t voltvddsense;

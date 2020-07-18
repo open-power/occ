@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -100,7 +100,7 @@
 #define MAX_WAIT_FOR_MASTER 400
 
 // number of consecutive times a BCE request is not idle before tracing
-#define DCOM_TRACE_NOT_IDLE_AFTER_CONSEC_TIMES 3
+#define DCOM_TRACE_NOT_IDLE_AFTER_CONSEC_TIMES 5
 
 // general defines
 #define TOD_SIZE                 6

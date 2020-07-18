@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -1113,6 +1113,33 @@ void dbug_apss_dump(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
 // Function Specification
 //
+// Name:  dbug_clear_errh
+//
+// Description: Clear all error history counters
+//
+// End Function Specification
+void dbug_clear_errh(const cmdh_fsp_cmd_t * i_cmd_ptr,
+                           cmdh_fsp_rsp_t * i_rsp_ptr)
+{
+    uint16_t l_datalen = sizeof(G_error_history);
+
+    // Copy the current error history counters to the response buffer befor clearing
+    memcpy((void *) &(i_rsp_ptr->data[0]),
+           (void *) &(G_error_history[0]),
+           l_datalen);
+
+    memset(G_error_history, 0x00, l_datalen);
+
+    // Fill out the rest of the response data
+    i_rsp_ptr->data_length[0] = CONVERT_UINT16_UINT8_HIGH(l_datalen);
+    i_rsp_ptr->data_length[1] = CONVERT_UINT16_UINT8_LOW(l_datalen);
+    G_rsp_status              = ERRL_RC_SUCCESS;
+
+    return;
+}
+
+// Function Specification
+//
 // Name:  dbug_proc_data_dump
 //
 // Description: Dumps the processor core data
@@ -1220,6 +1247,10 @@ void cmdh_dbug_cmd (const cmdh_fsp_cmd_t * i_cmd_ptr,
 
         case DBUG_DUMP_RAW_AD:
              dbug_apss_dump(i_cmd_ptr, o_rsp_ptr);
+             break;
+
+        case DBUG_CLEAR_ERRH:
+             dbug_clear_errh(i_cmd_ptr, o_rsp_ptr);
              break;
 
         case DBUG_INJECT_PGPE_ERRL:
