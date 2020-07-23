@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -55,13 +55,11 @@
 //*************************************************************************/
 extern PWR_READING_TYPE  G_pwr_reading_type;
 extern uint16_t G_allow_trace_flags;
-//Number of ticks to wait before dropping below nominal frequency
-#define PWR_SETTLED_TICKS   4
-//Number of watts power must be below the node power cap before raising
-//ppb_fmax
-#define PDROP_THRESH        0
+
+//Number of watts power must be below the node power cap before raising ppb_fmax
+// #define PDROP_THRESH        10 defined in amec_pcap.h
 //Number of MHz to raise the proc_pcap_vote for every watt of available power
-#define PROC_MHZ_PER_WATT   28
+#define PROC_MHZ_PER_WATT   7
 //Number of MHz to raise ppb_fmax per watt of available power. Depends on
 //number of procs in node.
 #define NODE_MHZ_PER_WATT()  \
@@ -73,8 +71,6 @@ extern uint16_t G_allow_trace_flags;
 
 //Frequency_step_khz (from global pstate table)/1000
 uint32_t    G_mhz_per_pstate=0;
-
-uint8_t     G_over_pcap_count=0;
 
 extern uint16_t G_proc_fmax_mhz;   // max(turbo,uturbo) frequencies
 extern uint32_t G_first_proc_gpu_config;
@@ -327,11 +323,12 @@ void amec_pcap_calc(const bool i_oversub_state)
     static bool L_trace_pcap_unthrottle = true;
 
     // Determine the active power cap.
-    // when in oversub (N mode) only use oversub pcap if lower than user set pcap
+    // when in oversub (N mode) only use oversub pcap if lower than user set pcap (if user cap is set)
     // OCC should allow N mode to be higher than N+1 (don't compare against norm_node_pcap)
     // N mode may be higher on some systems due to ps issue reporting higher power in N mode
     if( (TRUE == i_oversub_state) &&
-        (g_amec->pcap.ovs_node_pcap < G_sysConfigData.pcap.current_pcap) )
+        ( (G_sysConfigData.pcap.current_pcap == 0) ||
+          (g_amec->pcap.ovs_node_pcap < G_sysConfigData.pcap.current_pcap) ) )
     {
         g_amec->pcap.active_node_pcap = g_amec->pcap.ovs_node_pcap;
     }
@@ -532,62 +529,58 @@ void amec_ppb_fmax_calc(void)
     /*  Local Variables                                                       */
     /*------------------------------------------------------------------------*/
     int32_t     l_power_avail = 0;
-    bool        l_continue = TRUE;    //Used to break from code if needed.
+    int32_t     l_drop = 0;
+    static uint8_t L_num_chips = 0;
 
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
 
-    //Set the slaves local copy of ppb_fmax to that received from Master OCC.
-    g_amec->proc[0].pwr_votes.ppb_fmax = G_dcom_slv_inbox_doorbell_rx.ppb_fmax;
-
     //CALCULATION done by MASTER OCC only.
     if(OCC_MASTER == G_occ_role)
     {
-        //Power available is the ActiveNodePower - PowerDropThreshold - ActualPwr
-        l_power_avail = g_amec->pcap.active_node_pcap - PDROP_THRESH - AMECSENSOR_PTR(PWRSYS)->sample;
-
-        //Note: The PWRSYS value is read over the SPI bus, which has no error
-        //detection. In order to prevent a single bad SPI transfer from causing
-        //OCC to lower nominal core frequencies, we require the power to be over
-        //the pcap for PPB_NOM_DROP_DELAY ticks before lowering PPB Fmax below
-        //Fnom.
-        if((g_amec->proc[0].pwr_votes.ppb_fmax == G_sysConfigData.sys_mode_freq.table[OCC_MODE_NOMINAL])
-                && (l_power_avail <=0))
+        if(L_num_chips != G_sysConfigData.sys_num_proc_present)
         {
-            if(G_over_pcap_count < PPB_NOM_DROP_DELAY)
+            TRAC_INFO("amec_ppb_fmax_calc num chips changed from[%d] to[%d] NODE_MHZ_PER_WATT[%d]",
+                       L_num_chips, G_sysConfigData.sys_num_proc_present, NODE_MHZ_PER_WATT());
+            L_num_chips = G_sysConfigData.sys_num_proc_present;
+        }
+
+        //Power available is the ActiveNodePowerCap - ActualPwr
+        l_power_avail = g_amec->pcap.active_node_pcap - AMECSENSOR_PTR(PWRSYS)->sample;
+        if(l_power_avail <= 0)
+        {
+            // l_power_avail is negative, negate to make l_drop positive
+            l_drop = (int32_t)(NODE_MHZ_PER_WATT() * (-l_power_avail));
+            // Need to shed power, make sure we drop by at least 1 Pstate
+            if(l_drop < G_mhz_per_pstate)
             {
-                G_over_pcap_count++;
-                l_continue = FALSE;
+               l_drop = G_mhz_per_pstate;
             }
-        }
-        else
-        {
-            G_over_pcap_count = 0;
-        }
-
-        //Only run once every 4 ticks (1ms) to allow time for power hogging
-        //chips to drop power and power starved chips to raise power.
-        if(l_continue && (0 == (G_current_tick & 0x3)))
-        {
-            if(l_power_avail <= 0)
+            // prevent overflow
+            if(l_drop < G_sysConfigData.master_ppb_fmax)
             {
-                G_sysConfigData.master_ppb_fmax -= G_mhz_per_pstate;
+               G_sysConfigData.master_ppb_fmax -= l_drop;
             }
             else
             {
-                G_sysConfigData.master_ppb_fmax += NODE_MHZ_PER_WATT() * l_power_avail;
-            }
-
-            if(G_sysConfigData.master_ppb_fmax > G_proc_fmax_mhz)
-            {
-                G_sysConfigData.master_ppb_fmax = G_proc_fmax_mhz;
-            }
-
-            if(G_sysConfigData.master_ppb_fmax < G_sysConfigData.sys_mode_freq.table[OCC_MODE_MIN_FREQUENCY])
-            {
                 G_sysConfigData.master_ppb_fmax = G_sysConfigData.sys_mode_freq.table[OCC_MODE_MIN_FREQUENCY];
             }
+        }
+        else if(l_power_avail > PDROP_THRESH)
+        {
+            // extra power available go up slowly by only 1 Pstate
+            G_sysConfigData.master_ppb_fmax += G_mhz_per_pstate;
+        }
+
+        if(G_sysConfigData.master_ppb_fmax > G_proc_fmax_mhz)
+        {
+            G_sysConfigData.master_ppb_fmax = G_proc_fmax_mhz;
+        }
+
+        if(G_sysConfigData.master_ppb_fmax < G_sysConfigData.sys_mode_freq.table[OCC_MODE_MIN_FREQUENCY])
+        {
+            G_sysConfigData.master_ppb_fmax = G_sysConfigData.sys_mode_freq.table[OCC_MODE_MIN_FREQUENCY];
         }
     }//End of Master code
 }
@@ -634,16 +627,7 @@ void amec_power_control(void)
                 amec_ppb_fmax_calc();
             }
 
-            // Update the Processor and Memory Throttle due to power sensors
-            if(g_amec->proc[0].pwr_votes.proc_pcap_vote < G_proc_fmax_mhz)
-            {
-                // Frequency is being throttled due to power cap
-                sensor_update(AMECSENSOR_PTR(PROCPWRTHROT), 1);
-            }
-            else  // not currently throttled due to power
-            {
-                sensor_update(AMECSENSOR_PTR(PROCPWRTHROT), 0);
-            }
+            // Update the Memory Throttle due to power sensor
             if(g_amec->pcap.active_mem_level != 0)
             {
                 // Memory is being throttled due to power cap

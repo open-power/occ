@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -215,6 +215,7 @@ uint32_t amec_value_from_apss_adc(uint8_t i_chan)
 // End Function Specification
 bool amec_update_apss_sensors(void)
 {
+    static bool L_trace_time = TRUE;
     bool l_sensors_updated = TRUE;
     do
     {
@@ -440,6 +441,20 @@ bool amec_update_apss_sensors(void)
             }
             temp32 = ROUND_POWER(temp32);
             sensor_update(AMECSENSOR_PTR(PWRSYS), (uint16_t)temp32);
+
+            // Check if in oversubscription and trace time it took to get under cap
+            if( L_trace_time && (AMEC_INTF_GET_OVERSUBSCRIPTION()) &&
+               ((uint16_t)temp32 <= g_amec->pcap.ovs_node_pcap) )
+            {
+                L_trace_time = FALSE;
+                TRAC_ERR("Pwr[%d] now under Oversubscription power limit[%d]  PPB[%d]", temp32,
+                          g_amec->pcap.ovs_node_pcap, g_amec->proc[0].pwr_votes.ppb_fmax);
+                TRAC_ERR("Time to get under oversub power limit[%d us]",
+                          DURATION_IN_US_UNTIL_NOW_FROM(g_amec->oversub_status.oversubActiveTime));
+            }
+            else if(AMEC_INTF_GET_OVERSUBSCRIPTION() == FALSE)
+                L_trace_time = TRUE;
+
 
             // Calculate average frequency of all OCCs.
             uint32_t    l_allOccAvgFreqOver250us = 0;

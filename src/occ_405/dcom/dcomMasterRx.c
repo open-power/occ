@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -334,6 +334,8 @@ void task_dcom_rx_slv_outboxes( task_t *i_self)
 
         // Since we changed the mask, also update which ones are present.
         G_occ_num_present = __builtin_popcount(G_sysConfigData.is_occ_present);
+        G_sysConfigData.sys_num_proc_present = G_occ_num_present;
+
         TRAC_IMP("Updated OCCs Present -- OldMask: 0x%02x, NewMask: 0x%02x",
                 l_temp,
                 G_sysConfigData.is_occ_present);

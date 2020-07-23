@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -94,9 +94,8 @@ void amec_oversub_isr(void)
         // throttling only done if actually needed due to reaching power cap
         g_amec->oversub_status.oversubReasonLatchCount = OVERSUB_REASON_DELAY_4MS;
 
-        // Set oversubPinLive and oversubActiveTime
+        // Set oversubPinLive
         g_amec->oversub_status.oversubPinLive = 1;
-        g_amec->oversub_status.oversubActiveTime = ssx_timebase_get();
 
         // Setup the IRQ
         ssx_irq_setup(OCCHW_IRQ_EXTERNAL_TRAP,
@@ -147,8 +146,12 @@ void amec_oversub_check(void)
         if ( L_prev_ovs_state != TRUE)
         {
             L_prev_ovs_state = TRUE;
+            g_amec->oversub_status.oversubActiveTime = ssx_timebase_get();
 
-            TRAC_ERR("Oversubscription condition happened");
+            TRAC_ERR("Oversubscription condition happened current node pwr[%d] freq[%d] PPB[%d]",
+                      AMECSENSOR_PTR(PWRSYS)->sample,
+                      AMECSENSOR_PTR(FREQA)->sample,
+                      g_amec->proc[0].pwr_votes.ppb_fmax);
 
             /* @
              * @errortype
