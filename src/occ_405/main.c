@@ -459,27 +459,27 @@ void read_wof_header(void)
                 // Copy the data into Global WOF header struct
                 memcpy(&g_amec->static_wof_data.wof_header,
                        G_temp_bce_buff.data,
-                       sizeof(wof_header_data_t));
+                       sizeof(WofTablesHeader_t));
 
                 // verify the validity of the magic number
-                if( (WOF_TABLES_MAGIC_NUMBER != g_amec->static_wof_data.wof_header.magic_number) ||
-                    (WOF_TABLES_VERSION != g_amec->static_wof_data.wof_header.version) )
+                if( (WOF_TABLES_MAGIC_NUMBER != g_amec->static_wof_data.wof_header.magic_number.value) ||
+                    (WOF_TABLES_VERSION != g_amec->static_wof_data.wof_header.header_version) )
                 {
                     MAIN_TRAC_ERR("read_wof_header: Invalid WOF Magic number[0x%08X] or version[0x%02X]. Address[0x%08X]. WOF disabled",
-                                  g_amec->static_wof_data.wof_header.magic_number,
-                                  g_amec->static_wof_data.wof_header.version,
+                                  g_amec->static_wof_data.wof_header.magic_number.value,
+                                  g_amec->static_wof_data.wof_header.header_version,
                                   g_amec->static_wof_data.vrt_tbls_main_mem_addr);
                     l_error = TRUE;
                     break;
                 }
 
                 MAIN_TRAC_INFO("read_wof_header: valid WOF Magic No[0x%08X] and version[0x%02X]",
-                                g_amec->static_wof_data.wof_header.magic_number,
-                                g_amec->static_wof_data.wof_header.version);
+                                g_amec->static_wof_data.wof_header.magic_number.value,
+                                g_amec->static_wof_data.wof_header.header_version);
 
                 MAIN_TRAC_INFO("read_wof_header: VRT block size[%d] VRT Header size[%d]  VRT Data size[%d]",
                                 g_amec->static_wof_data.wof_header.vrt_block_size,
-                                g_amec->static_wof_data.wof_header.vrt_blck_hdr_sz,
+                                g_amec->static_wof_data.wof_header.vrt_block_header_size,
                                 g_amec->static_wof_data.wof_header.vrt_data_size);
 
                 MAIN_TRAC_INFO("read_wof_header: OCS Mode[%d] Core Count[%d]",

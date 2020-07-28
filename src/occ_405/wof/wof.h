@@ -147,52 +147,6 @@ enum wof_disabled_actions
 #define WOF_TABLES_MAGIC_NUMBER            0x57465448   // "WFTH"
 #define WOF_TABLES_VERSION 1
 
-// Structure to hold relevant data from the WOF header in Mainstore
-typedef struct __attribute__ ((packed))
-{
-    uint32_t magic_number;
-    uint8_t  reserved_1[3];
-    uint8_t  version;
-    uint16_t vrt_block_size;
-    uint16_t vrt_blck_hdr_sz;
-    uint16_t vrt_data_size;
-    uint8_t  ocs_mode;
-    uint8_t  core_count;
-    uint16_t vcs_start;
-    uint16_t vcs_step;
-    uint16_t vcs_size;
-    uint16_t vdd_start;
-    uint16_t vdd_step;
-    uint16_t vdd_size;
-    uint16_t vratio_start;
-    uint16_t vratio_step;
-    uint16_t vratio_size;
-    uint16_t io_pwr_start;
-    uint16_t io_pwr_step;
-    uint16_t io_pwr_size;
-    uint16_t ambient_start;
-    uint16_t ambient_step;
-    uint16_t ambient_size;
-    uint16_t reserved_2;
-    uint16_t socket_power_w;
-    uint16_t sort_pwr_target_freq_mhz;
-    uint16_t rdp_current_amps;
-    uint16_t boost_current_amps;
-    uint32_t wof_tbls_timestamp;
-    uint16_t wof_tbls_version;
-    uint16_t reserved_3;
-    uint8_t  tdp_vcs_ceff_idx;
-    uint8_t  tdp_vdd_ceff_idx;
-    uint8_t  tdp_io_pwr_idx;
-    uint8_t  tdp_ambient_idx;
-    uint8_t  io_full_pwr_watts;
-    uint8_t  io_disabled_pwr_watts;
-    uint16_t reserved_4;
-    uint64_t package_name_hi;
-    uint64_t package_name_lo;
-    uint8_t  reserved_5[40];
-} wof_header_data_t;
-
 // Structure used in g_amec to hold WOF data that changes
 typedef struct __attribute__ ((packed))
 {
@@ -251,7 +205,7 @@ typedef struct __attribute__ ((packed))
     // [373] Contains clip_state value last read from VRT, read from OCC-PGPE shared SRAM
     uint8_t  f_clip_ps;
     // [374]
-    uint8_t  reserved[4];
+    uint8_t  reserved1[4];
     // [378] Contains the calculated effective capacitance for tdp_vdd
     uint32_t ceff_tdp_vdd;
     // [382] Contains the calculated effective capacitance for vdd
@@ -397,7 +351,7 @@ typedef struct __attribute__ ((packed))
     // [630] Final adjusted CeffRatio from previous tick
     uint16_t vdd_ceff_ratio_adj_prev;
     // [632]
-    uint32_t vdd_avg_tdp_uv;
+    uint32_t reserved2;
     // [636] count of number of times not dirty (type 0)
     uint32_t ocs_not_dirty_count;
     // [640] count of not dirty (type 1) this counter should be 0
@@ -420,13 +374,15 @@ typedef struct __attribute__ ((packed))
     uint32_t vcs_avg_tdp_100uv;
     // [670] value of roundup(ics_ac_avg / ics_ac_tdp)
     uint32_t iac_vcs_tdp_ratio;
-} amec_wof_t;  // 674 bytes total
+    // [674] Stop state activity counters read from XGPE
+    iddq_activity_t  xgpe_activity_values;  // 128 bytes = 32 cores * 4 bytes
+} amec_wof_t;  // 802 bytes total
 
 // Structure used in g_amec to hold static WOF data
 typedef struct __attribute__ ((packed))
 {
-    // Data from wof table header
-    wof_header_data_t wof_header;
+    // Data from wof table header structure defined in /include/pstates_common.H
+    WofTablesHeader_t wof_header;
     // Main Memory address where the WOF VRT tables are located
     uint32_t vrt_tbls_main_mem_addr;
     // The length of the WOF VRT data in main memory

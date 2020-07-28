@@ -191,7 +191,6 @@ amec_parm_t g_amec_parm_list[] = {
     AMEC_PARM_UINT16(PARM_OCS_CEFF_DOWN_ADDR,"OcsFixedDownAmt", &g_amec_sys.wof.ocs_decrease_ceff),
     AMEC_PARM_UINT16(PARM_OCS_CALC_ADDR,"OCS_calc_addr", &g_amec_sys.wof.vdd_oc_ceff_add),
     AMEC_PARM_UINT16(PARM_CEFF_ADJ_PREV,"ceffAdjPrev", &g_amec_sys.wof.vdd_ceff_ratio_adj_prev),
-    AMEC_PARM_UINT32(PARM_VDD_TDP_UV,"VddTDPUV", &g_amec_sys.wof.vdd_avg_tdp_uv),
     AMEC_PARM_UINT32(PARM_OCS_NOT_DIRTY_TYPE0_CNT,"NotDirtyTyp0Cnt", &g_amec_sys.wof.ocs_not_dirty_count),
     AMEC_PARM_UINT32(PARM_OCS_NOT_DIRTY_TYPE1_CNT,"NotDirtyTyp1Cnt", &g_amec_sys.wof.ocs_not_dirty_type1_count),
     AMEC_PARM_UINT32(PARM_OCS_DIRTY_TYPE0_CNT,"DirtyTyp0Cnt", &g_amec_sys.wof.ocs_dirty_type0_count),

@@ -517,9 +517,9 @@ void wof_main( void )
     {
         g_wof->ambient_step_from_start =
                              calculate_step_from_start( g_wof->ambient_condition,
-                                                        g_amec_sys.static_wof_data.wof_header.ambient_step,
-                                                        g_amec_sys.static_wof_data.wof_header.ambient_start,
-                                                        g_amec_sys.static_wof_data.wof_header.ambient_size );
+                                                        g_amec_sys.static_wof_data.wof_header.amb_cond_step,
+                                                        g_amec_sys.static_wof_data.wof_header.amb_cond_start,
+                                                        g_amec_sys.static_wof_data.wof_header.amb_cond_size );
     }
     else
     {
@@ -621,11 +621,11 @@ uint32_t calc_vrt_mainstore_addr( void )
        // Calculate the VRT offset in main memory
        // tables are sorted by Vcs, then Vdd, then IO Pwr, then ambient
        // first determine number of VRT tables need to be skipped due to Vcs
-       l_vrt_mm_offset = g_wof->vcs_step_from_start * g_amec_sys.static_wof_data.wof_header.vdd_size * g_amec_sys.static_wof_data.wof_header.io_pwr_size * g_amec_sys.static_wof_data.wof_header.ambient_size;
+       l_vrt_mm_offset = g_wof->vcs_step_from_start * g_amec_sys.static_wof_data.wof_header.vdd_size * g_amec_sys.static_wof_data.wof_header.io_size * g_amec_sys.static_wof_data.wof_header.amb_cond_size;
        // next add number of tables skipped within this Vcs based on Vdd
-       l_vrt_mm_offset += (g_wof->vdd_step_from_start * g_amec_sys.static_wof_data.wof_header.io_pwr_size * g_amec_sys.static_wof_data.wof_header.ambient_size);
+       l_vrt_mm_offset += (g_wof->vdd_step_from_start * g_amec_sys.static_wof_data.wof_header.io_size * g_amec_sys.static_wof_data.wof_header.amb_cond_size);
        // now add number of tables skipped within this Vcs/Vdd based on IO power
-       l_vrt_mm_offset += (g_wof->io_pwr_step_from_start * g_amec_sys.static_wof_data.wof_header.ambient_size);
+       l_vrt_mm_offset += (g_wof->io_pwr_step_from_start * g_amec_sys.static_wof_data.wof_header.amb_cond_size);
        // now add number of tables skipped within this Vcs/Vdd/IO power based on ambient
        l_vrt_mm_offset += g_wof->ambient_step_from_start;
 
@@ -1009,10 +1009,10 @@ void read_pgpe_produced_wof_values( void )
 void read_xgpe_values( void )
 {
     xgpe_wof_values_t l_XgpeWofValues;
-    iddq_activity_t l_IDDQActivityValues;
     // maximum valid IO Power index
-    uint16_t l_max_io_index = g_amec_sys.static_wof_data.wof_header.io_pwr_size - 1;
+    uint16_t l_max_io_index = g_amec_sys.static_wof_data.wof_header.io_size - 1;
     int l_core = 0;
+    uint16_t l_sram_addr_offset = 0;
     // sum of vmin and off samples
     uint32_t l_core_vmin_off_samples = 0;
     // number of samples on
@@ -1044,13 +1044,15 @@ void read_xgpe_values( void )
     }
 
     // Read and process XGPE Produced WOF IDDQ Activity values
-    memcpy(&l_IDDQActivityValues,  // uint32_t array of 32 cores
-           (const void*)g_amec_sys.static_wof_data.xgpe_iddq_activity_sram_addr,
-           sizeof(iddq_activity_t));
     for(l_core = 0; l_core < MAX_NUM_CORES; l_core++)
     {
+       l_sram_addr_offset = l_core * ACT_CNT_IDX_MAX;
+
+       // single read to get the core data in one shot
+       g_wof->xgpe_activity_values.act_val_core[l_core] = in32(g_amec_sys.static_wof_data.xgpe_iddq_activity_sram_addr + l_sram_addr_offset);
+
        // convert values to percentage and store into g_wof
-       l_core_vmin_off_samples = l_IDDQActivityValues.core_off[l_core] + l_IDDQActivityValues.core_vmin[l_core];
+       l_core_vmin_off_samples = g_wof->xgpe_activity_values.act_val[l_core][ACT_CNT_IDX_CORECACHE_OFF] + g_wof->xgpe_activity_values.act_val[l_core][ACT_CNT_IDX_CORE_VMIN];
        // sanity check -- this should never happen (XGPE code bug)
        if(l_core_vmin_off_samples > g_amec_sys.static_wof_data.iddq_activity_sample_depth)
        {
@@ -1061,8 +1063,8 @@ void read_xgpe_values( void )
                L_trace_iddq_activity_invalid = FALSE;
                TRAC_ERR("read_xgpe_values: Core[%d] has invalid IDDQ activity samples off[%d] + vmin[%d] > depth[%d]",
                          l_core,
-                         l_IDDQActivityValues.core_off[l_core],
-                         l_IDDQActivityValues.core_vmin[l_core],
+                         g_wof->xgpe_activity_values.act_val[l_core][ACT_CNT_IDX_CORECACHE_OFF],
+                         g_wof->xgpe_activity_values.act_val[l_core][ACT_CNT_IDX_CORE_VMIN],
                          g_amec_sys.static_wof_data.iddq_activity_sample_depth);
 
                // if this core reached the max error count, log error and disable WOF
@@ -1075,9 +1077,9 @@ void read_xgpe_values( void )
            }
 
            // set samples to 0 to be conservative
-           l_core_samples_on = 0;
-           l_IDDQActivityValues.core_off[l_core] = 0;
-           l_IDDQActivityValues.core_vmin[l_core] = 0;
+           g_wof->p1pct_on[l_core] = 0;
+           g_wof->p1pct_off[l_core] = 0;
+           g_wof->p1pct_vmin[l_core] = 0;
        }
        else  // activity counts valid
        {
@@ -1085,15 +1087,18 @@ void read_xgpe_values( void )
            L_iddq_activity_invalid[l_core] = 0;
 
            l_core_samples_on = g_amec_sys.static_wof_data.iddq_activity_sample_depth - l_core_vmin_off_samples;
+
+           // store in 0.1% unit
+           g_wof->p1pct_on[l_core] = (uint16_t)( (l_core_samples_on * 1000) >>
+                                                g_amec_sys.static_wof_data.iddq_activity_divide_bit_shift );
+           g_wof->p1pct_off[l_core] = (uint16_t)( (g_wof->xgpe_activity_values.act_val[l_core][ACT_CNT_IDX_CORECACHE_OFF] * 1000) >>
+                                                 g_amec_sys.static_wof_data.iddq_activity_divide_bit_shift );
+           g_wof->p1pct_vmin[l_core] = (uint16_t)( (g_wof->xgpe_activity_values.act_val[l_core][ACT_CNT_IDX_CORE_VMIN] * 1000) >>
+                                                 g_amec_sys.static_wof_data.iddq_activity_divide_bit_shift );
        }
-       // store in 0.1% unit
-       g_wof->p1pct_on[l_core] = (uint16_t)( (l_core_samples_on * 1000) >>
-                                            g_amec_sys.static_wof_data.iddq_activity_divide_bit_shift );
-       g_wof->p1pct_off[l_core] = (uint16_t)( (l_IDDQActivityValues.core_off[l_core] * 1000) >>
-                                             g_amec_sys.static_wof_data.iddq_activity_divide_bit_shift );
-       g_wof->p1pct_vmin[l_core] = (uint16_t)( (l_IDDQActivityValues.core_vmin[l_core] * 1000) >>
-                                             g_amec_sys.static_wof_data.iddq_activity_divide_bit_shift );
-       g_wof->p1pct_mma_off[l_core] = (uint16_t)( (l_IDDQActivityValues.core_mma_off[l_core] * 1000) >>
+
+       // store MMA off in 0.1% unit
+       g_wof->p1pct_mma_off[l_core] = (uint16_t)( (g_wof->xgpe_activity_values.act_val[l_core][ACT_CNT_IDX_MMA_OFF] * 1000) >>
                                                 g_amec_sys.static_wof_data.iddq_activity_divide_bit_shift );
     } // for each core
 }
@@ -2373,8 +2378,8 @@ void send_initial_vrt_to_pgpe( void )
     // Set the steps for all VRT parms to the max value
     g_wof->vcs_step_from_start  = g_amec_sys.static_wof_data.wof_header.vcs_size - 1;
     g_wof->vdd_step_from_start  = g_amec_sys.static_wof_data.wof_header.vdd_size - 1;
-    g_wof->io_pwr_step_from_start  = g_amec_sys.static_wof_data.wof_header.io_pwr_size - 1;
-    g_wof->ambient_step_from_start  = g_amec_sys.static_wof_data.wof_header.ambient_size - 1;
+    g_wof->io_pwr_step_from_start  = g_amec_sys.static_wof_data.wof_header.io_size - 1;
+    g_wof->ambient_step_from_start  = g_amec_sys.static_wof_data.wof_header.amb_cond_size - 1;
 
     // Calculate the address of the final vrt
     g_wof->vrt_main_mem_addr = calc_vrt_mainstore_addr();
