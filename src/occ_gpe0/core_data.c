@@ -33,6 +33,44 @@
 #include "ppe42_scom.h"
 #include "pk.h"
 
+// Retry for CoreDataEmpath counts.
+// Work-around for HW539674
+uint32_t empath_retry(uint32_t core_base_address, uint32_t counter_offset, uint64_t * value)
+{
+    uint32_t rc = 0;
+    int retry_count = 0;
+    for(;retry_count < MAX_SCOMD_RETRY; ++retry_count)
+    {
+        uint64_t scom_data = (uint64_t)counter_offset;
+        rc = putscom(core_base_address, PC_OCC_SPRC, scom_data);
+        if (rc)
+        {
+            break;
+        }
+
+        scom_data = 0;
+        rc = getscom(core_base_address, PC_OCC_SPRD, &scom_data);
+        if (rc)
+        {
+            break;
+        }
+        if(scom_data != 0ull)
+        {
+            rc = 0;
+            *value = scom_data;
+            break;
+        }
+        rc = EMPATH_COUNTER_ZERO;
+    }
+
+    if (EMPATH_COUNTER_ZERO == rc)
+    {
+        PK_TRACE("EMPATH count zero for offset 0x%x",counter_offset);
+        rc = 0;
+    }
+    return rc;
+}
+
 uint32_t get_core_data(uint32_t i_core,
                        CoreData* o_data)
 {
@@ -95,7 +133,8 @@ uint32_t get_core_data(uint32_t i_core,
         // EMPATH
         // =============
         // Send command to select which emmpath counter to read
-        uint64_t empath_scom_data = CORE_RAW_CYCLES;
+        uint32_t empath_offset = CORE_RAW_CYCLES;
+        uint64_t empath_scom_data = (uint64_t)empath_offset;
 
         uint32_t empathSelect = quadSelect + CORE_REGION(i_core);
         rc = putscom(empathSelect, PC_OCC_SPRC, empath_scom_data);
@@ -113,61 +152,132 @@ uint32_t get_core_data(uint32_t i_core,
         {
             break;
         }
+        if(empath_scom_data == 0ull)
+        {
+            rc = empath_retry(empathSelect, empath_offset, &empath_scom_data);
+            if (rc)
+            {
+                break;
+            }
+        }
         o_data->empath.raw_cycles = (uint32_t)empath_scom_data;
 
         //CORE_RUN_CYCLES
+        empath_offset += 8;
         rc = getscom(empathSelect, PC_OCC_SPRD, &empath_scom_data);
         if (rc)
         {
             break;
+        }
+        if(empath_scom_data == 0ull)
+        {
+            rc = empath_retry(empathSelect, empath_offset, &empath_scom_data);
+            if (rc)
+            {
+                break;
+            }
         }
         o_data->empath.run_cycles = (uint32_t)empath_scom_data;
 
         // Core instruction Complete Utilization Counter
+        empath_offset += 8;
         rc = getscom(empathSelect, PC_OCC_SPRD, &empath_scom_data);
         if (rc)
         {
             break;
         }
+        if(empath_scom_data == 0ull)
+        {
+            rc = empath_retry(empathSelect, empath_offset, &empath_scom_data);
+            if (rc)
+            {
+                break;
+            }
+        }
         o_data->empath.complete = (uint32_t)empath_scom_data;
 
         //CORE_WORKRATE_BUSY
+        empath_offset += 8;
         rc = getscom(empathSelect, PC_OCC_SPRD,&empath_scom_data);
         if (rc)
         {
             break;
+        }
+        if(empath_scom_data == 0ull)
+        {
+            rc = empath_retry(empathSelect, empath_offset, &empath_scom_data);
+            if (rc)
+            {
+                break;
+            }
         }
         o_data->empath.freq_sens_busy = (uint32_t)empath_scom_data;
 
         //CORE_WORKRATE_FINISH
+        empath_offset += 8;
         rc = getscom(empathSelect, PC_OCC_SPRD,&empath_scom_data);
         if (rc)
         {
             break;
+        }
+        if(empath_scom_data == 0ull)
+        {
+            rc = empath_retry(empathSelect, empath_offset, &empath_scom_data);
+            if (rc)
+            {
+                break;
+            }
         }
         o_data->empath.freq_sens_finish = (uint32_t)empath_scom_data;
 
         //CORE_MEM_HIER_A_LATENCY
+        empath_offset += 8;
         rc = getscom(empathSelect, PC_OCC_SPRD,&empath_scom_data);
         if (rc)
         {
             break;
+        }
+        if(empath_scom_data == 0ull)
+        {
+            rc = empath_retry(empathSelect, empath_offset, &empath_scom_data);
+            if (rc)
+            {
+                break;
+            }
         }
         o_data->empath.mem_latency_a = (uint32_t)empath_scom_data;
 
         //CORE_MEM_HIER_B_LATENCY
+        empath_offset += 8;
         rc = getscom(empathSelect, PC_OCC_SPRD,&empath_scom_data);
         if (rc)
         {
             break;
         }
+        if(empath_scom_data == 0ull)
+        {
+            rc = empath_retry(empathSelect, empath_offset, &empath_scom_data);
+            if (rc)
+            {
+                break;
+            }
+        }
         o_data->empath.mem_latency_b = (uint32_t)empath_scom_data;
 
         //CORE_MEM_HIER_C_ACCESS
+        empath_offset += 8;
         rc = getscom(empathSelect, PC_OCC_SPRD,&empath_scom_data);
         if (rc)
         {
             break;
+        }
+        if(empath_scom_data == 0ull)
+        {
+            rc = empath_retry(empathSelect, empath_offset, &empath_scom_data);
+            if (rc)
+            {
+                break;
+            }
         }
         o_data->empath.mem_access_c = (uint32_t)empath_scom_data;
 

@@ -42,6 +42,8 @@
 
 #define CORE_RAW_CYCLES             0x200
 
+#define MAX_SCOMD_RETRY     2
+
 #define EMPATH_CORE_THREADS 4
 
 // return codes:
@@ -52,6 +54,7 @@
 #define SIBRC_CLOCK_ERROR       (5)
 #define SIBRC_PACKET_ERROR      (6)
 #define SIBRC_TIMEOUT           (7)
+#define EMPATH_COUNTER_ZERO     (0x10)
 
 #define EMPATH_VALID    (1)
 #define CORE_REGION(n) \
