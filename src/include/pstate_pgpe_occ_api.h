@@ -244,7 +244,10 @@ typedef struct
         struct
         {
             uint64_t ocs_avg_0p01pct            : 16;
-            uint64_t reserved                   : 48;
+            uint64_t vratio_vcs_roundup_avg     : 16;
+            uint64_t vratio_vdd_roundup_avg     : 16;
+            uint64_t uv_avg_0p1pct              :  8;
+            uint64_t ov_avg_0p1pct              :  8;
         } fields;
     } dw3;
 } pgpe_wof_values_t;
@@ -259,7 +262,8 @@ typedef union
     } words;
     struct
     {
-        uint64_t reserved0                      : 24;
+        uint64_t io_power_proxy_0p01w           : 16;
+        uint64_t reserved0                      : 8;
         uint64_t io_index                       : 8;
         uint64_t reserved1                      : 32;
     } fields;

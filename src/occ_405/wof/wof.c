@@ -985,12 +985,15 @@ void read_pgpe_produced_wof_values( void )
                       &g_wof->vpd_index1,
                       &g_wof->vpd_index2);
 
-
     g_wof->v_ratio = l_PgpeWofValues.dw0.fields.vratio_avg;
     sensor_update(AMECSENSOR_PTR(VRATIO), (uint16_t)g_wof->v_ratio);
 
     // clip Pstate is the last value read from VRT and used for debug only
     g_wof->f_clip_ps = l_PgpeWofValues.dw0.fields.wof_clip_pstate;
+
+    // save over/under volting percentages into sensors for debug
+    sensor_update(AMECSENSOR_PTR(UV_AVG), (uint16_t)l_PgpeWofValues.dw3.fields.uv_avg_0p1pct);
+    sensor_update(AMECSENSOR_PTR(OV_AVG), (uint16_t)l_PgpeWofValues.dw3.fields.ov_avg_0p1pct);
 
     // save the full PGPE WOF values for debug
     g_wof->pgpe_wof_values_dw0 = l_PgpeWofValues.dw0.value;
@@ -1027,8 +1030,11 @@ void read_xgpe_values( void )
     // Read and process XGPE Produced WOF values
     l_XgpeWofValues.value = in64(g_amec_sys.static_wof_data.xgpe_values_sram_addr);
 
-    // Set IO Power index
-    g_wof->io_pwr_step_from_start = (uint16_t)l_XgpeWofValues.fields.io_index;
+    // update IO Power Proxy sensor
+    sensor_update(AMECSENSOR_PTR(IO_PWR_PROXY), (uint16_t)l_XgpeWofValues.fields.io_power_proxy_0p01w);
+
+    // Set IO Power index bits 2:3 of io_index
+    g_wof->io_pwr_step_from_start = (uint16_t)((l_XgpeWofValues.fields.io_index & 0x30) >> 4);
 
     // make sure we didn't get something out of range
     if(g_wof->io_pwr_step_from_start > l_max_io_index)
@@ -1042,6 +1048,10 @@ void read_xgpe_values( void )
          }
          g_wof->io_pwr_step_from_start = l_max_io_index;
     }
+
+    // save the full XGPE WOF value for debug
+    g_wof->xgpe_wof_values_dw0 = l_XgpeWofValues.value;
+
 
     // Read and process XGPE Produced WOF IDDQ Activity values
     for(l_core = 0; l_core < MAX_NUM_CORES; l_core++)

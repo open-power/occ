@@ -205,23 +205,25 @@ typedef struct __attribute__ ((packed))
     // [373] Contains clip_state value last read from VRT, read from OCC-PGPE shared SRAM
     uint8_t  f_clip_ps;
     // [374]
-    uint8_t  reserved1[4];
-    // [378] Contains the calculated effective capacitance for tdp_vdd
+    uint16_t reserved1;
+    // [376] Contains the calculated effective capacitance for tdp_vdd
     uint32_t ceff_tdp_vdd;
-    // [382] Contains the calculated effective capacitance for vdd
+    // [380] Contains the calculated effective capacitance for vdd
     uint32_t ceff_vdd;
-    // [386] Contains the calculated effective capacitance ratio for vdd
+    // [384] Contains the calculated effective capacitance ratio for vdd
     uint32_t ceff_ratio_vdd;
-    // [390] Contains the calculated effective capacitance for tdp_vcs
+    // [388] Contains the calculated effective capacitance for tdp_vcs
     uint32_t ceff_tdp_vcs;
-    // [394] Contains the calculated effective capacitance for vcs
+    // [392] Contains the calculated effective capacitance for vcs
     uint32_t ceff_vcs;
-    // [398] Contains the calculated effective capacitance ratio for vcs
+    // [396] Contains the calculated effective capacitance ratio for vcs
     uint32_t ceff_ratio_vcs;
-    // [402]
+    // [400]
     uint8_t Vdd_chip_index;
-    // [403] Contains degrees C ambient is increased by to account for higher altitudes
+    // [401] Contains degrees C ambient is increased by to account for higher altitudes
     uint8_t ambient_adj_for_altitude;
+    // [402] Altitude in meters 0xffff indicates not available
+    uint16_t altitude;
     // [404]
     uint8_t Vcs_chip_index;
     // [405]
@@ -340,43 +342,44 @@ typedef struct __attribute__ ((packed))
     // [623] Overcurrent status dirty bits. Set by PGPE read from OCC Flag 0 register
     uint8_t  ocs_dirty;
 
+    // [624] XGPE Produced WOF Values
+    uint64_t xgpe_wof_values_dw0;
+
     // the following two vars can be changed via debug command
-    // [624] Fixed CeffRatio increase addr defined in attribute
+    // [632] Fixed CeffRatio increase addr defined in attribute
     uint16_t ocs_increase_ceff;
-    // [626] Fixed CeffRatio decrease addr defined in attribute
+    // [634] Fixed CeffRatio decrease addr defined in attribute
     uint16_t ocs_decrease_ceff;
 
-    // [628] OCC calculated CeffRatio Addr
+    // [636] OCC calculated CeffRatio Addr
     uint16_t vdd_oc_ceff_add;
-    // [630] Final adjusted CeffRatio from previous tick
+    // [638] Final adjusted CeffRatio from previous tick
     uint16_t vdd_ceff_ratio_adj_prev;
-    // [632]
-    uint32_t reserved2;
-    // [636] count of number of times not dirty (type 0)
+    // [640] count of number of times not dirty (type 0)
     uint32_t ocs_not_dirty_count;
-    // [640] count of not dirty (type 1) this counter should be 0
+    // [644] count of not dirty (type 1) this counter should be 0
     uint32_t ocs_not_dirty_type1_count;
-    // [644] count of number of times dirty with type hold (0)
+    // [648] count of number of times dirty with type hold (0)
     uint32_t ocs_dirty_type0_count;
-    // [648] count of number of times dirty with type act (1)
+    // [652] count of number of times dirty with type act (1)
     uint32_t ocs_dirty_type1_count;
-    // [652] Ambient condition used to determine VRT
+    // [656] Ambient condition used to determine VRT
     uint32_t ambient_condition;
-    // [656] #V index 1 used for ceff ratio frequency interpolation
+    // [660] #V index 1 used for ceff ratio frequency interpolation
     uint8_t  vpd_index1;
-    // [657] #V index 2 used for ceff ratio frequency interpolation
+    // [661] #V index 2 used for ceff ratio frequency interpolation
     uint8_t  vpd_index2;
-    // [658] Vdd voltage average TDP by interpolating #V voltage@(avg F)
+    // [662] Vdd voltage average TDP by interpolating #V voltage@(avg F)
     uint32_t vdd_avg_tdp_100uv;
-    // [662] value of roundup(idd_ac_avg / idd_ac_tdp)
+    // [666] value of roundup(idd_ac_avg / idd_ac_tdp)
     uint32_t iac_vdd_tdp_ratio;
-    // [666] Vcs voltage average TDP by interpolating #V voltage@(avg F)
+    // [670] Vcs voltage average TDP by interpolating #V voltage@(avg F)
     uint32_t vcs_avg_tdp_100uv;
-    // [670] value of roundup(ics_ac_avg / ics_ac_tdp)
+    // [674] value of roundup(ics_ac_avg / ics_ac_tdp)
     uint32_t iac_vcs_tdp_ratio;
-    // [674] Stop state activity counters read from XGPE
+    // [678] Stop state activity counters read from XGPE
     iddq_activity_t  xgpe_activity_values;  // 128 bytes = 32 cores * 4 bytes
-} amec_wof_t;  // 802 bytes total
+} amec_wof_t;  // 806 bytes total
 
 // Structure used in g_amec to hold static WOF data
 typedef struct __attribute__ ((packed))
@@ -417,6 +420,9 @@ typedef struct __attribute__ ((packed))
     sensor_t v_ratio_sensor;
     sensor_t ocs_addr_sensor;
     sensor_t ceff_ratio_vdd_adj_sensor; // final adjusted ratio should reflect amec_wof_t ceff_ratio_vdd
+    sensor_t io_proxy_sensor;
+    sensor_t uv_avg_sensor;
+    sensor_t ov_avg_sensor;
 } amec_wof_sensors_t;
 
 typedef struct __attribute__ ((packed))

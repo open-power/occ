@@ -1057,7 +1057,8 @@ bool read_oppb_params()
                                         ERC_WOF_OPPB_WOF_DISABLED );
                 break;
             }
-
+            // default altitude not available until receive valid value from FSP/BMC
+            g_amec->wof.altitude = ALTITUDE_NOT_AVAILABLE;
             g_amec->static_wof_data.altitude_temp_adj_degCpMm = G_oppb.altitude_temp_adj_degCpMm;
 
             MAIN_TRAC_INFO("OPPB has WOF enabled(%d) Vdd Vret[%d]100uv  Vdd Vret index[%d] altitude_temp_adj_degCpMm[%d] ",

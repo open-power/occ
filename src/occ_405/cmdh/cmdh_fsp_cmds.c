@@ -2024,7 +2024,7 @@ errlHndl_t cmdh_send_ambient_temp(const cmdh_fsp_cmd_t * i_cmd_ptr,
                 l_amb_adj++;
             // save final value to be used by WOF alg
             g_amec->wof.ambient_adj_for_altitude = l_amb_adj;
-
+            g_amec->wof.altitude = g_amec->sys.altitude;
             TRAC_INFO("cmdh_send_ambient_temp received altitude[%d] WOF ambient_adj_for_altitude[%d]",
                        g_amec->sys.altitude,
                        g_amec->wof.ambient_adj_for_altitude);

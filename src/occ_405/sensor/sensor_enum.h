@@ -629,6 +629,9 @@ enum e_gsid
     VRATIO,
     OCS_ADDR,
     CEFFVDDRATIOADJ,
+    IO_PWR_PROXY,
+    UV_AVG,
+    OV_AVG,
 
     // ------------------------------------------------------
     // END of Sensor List (this must be last entry)
