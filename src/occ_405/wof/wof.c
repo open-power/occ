@@ -1016,10 +1016,10 @@ void read_xgpe_values( void )
     uint16_t l_max_io_index = g_amec_sys.static_wof_data.wof_header.io_size - 1;
     int l_core = 0;
     uint16_t l_sram_addr_offset = 0;
-    // sum of vmin and off samples
-    uint32_t l_core_vmin_off_samples = 0;
-    // number of samples on
-    uint32_t l_core_samples_on = 0;
+    // sum of core cache off and core off samples
+    uint16_t l_core_total_off_samples = 0;
+    // l_core_total_off_samples converted to 0.1%
+    uint16_t l_core_total_off_p1pct = 0;
     // used to trace only once getting an invalid IO power index from XGPE
     static bool L_trace_io_index_invalid = TRUE;
     // used to trace only once getting invalid IDDQ activity from XGPE
@@ -1061,21 +1061,37 @@ void read_xgpe_values( void )
        // single read to get the core data in one shot
        g_wof->xgpe_activity_values.act_val_core[l_core] = in32(g_amec_sys.static_wof_data.xgpe_iddq_activity_sram_addr + l_sram_addr_offset);
 
-       // convert values to percentage and store into g_wof
-       l_core_vmin_off_samples = g_wof->xgpe_activity_values.act_val[l_core][ACT_CNT_IDX_CORECACHE_OFF] + g_wof->xgpe_activity_values.act_val[l_core][ACT_CNT_IDX_CORE_VMIN];
-       // sanity check -- this should never happen (XGPE code bug)
-       if(l_core_vmin_off_samples > g_amec_sys.static_wof_data.iddq_activity_sample_depth)
+       // convert values to percentage and store into g_wof in 0.1% unit
+       g_wof->p1pct_off[l_core] = (uint16_t)( (g_wof->xgpe_activity_values.act_val[l_core][ACT_CNT_IDX_CORECACHE_OFF] * 1000) >>
+                                                 g_amec_sys.static_wof_data.iddq_activity_divide_bit_shift );
+
+       g_wof->p1pct_vmin[l_core] = (uint16_t)( (g_wof->xgpe_activity_values.act_val[l_core][ACT_CNT_IDX_CORE_VMIN] * 1000) >>
+                                                 g_amec_sys.static_wof_data.iddq_activity_divide_bit_shift );
+
+       g_wof->p1pct_mma_off[l_core] = (uint16_t)( (g_wof->xgpe_activity_values.act_val[l_core][ACT_CNT_IDX_MMA_OFF] * 1000) >>
+                                                g_amec_sys.static_wof_data.iddq_activity_divide_bit_shift );
+
+       // calculate percentage on by subtracting off the total core off
+       l_core_total_off_samples = g_wof->xgpe_activity_values.act_val[l_core][ACT_CNT_IDX_CORECLK_OFF] + g_wof->xgpe_activity_values.act_val[l_core][ACT_CNT_IDX_CORECACHE_OFF];
+       l_core_total_off_p1pct = (1000 * l_core_total_off_samples) >> g_amec_sys.static_wof_data.iddq_activity_divide_bit_shift;
+       // prevent overflow
+       if(l_core_total_off_p1pct <= 1000)
        {
+           g_wof->p1pct_on[l_core] = (uint16_t)(1000 - l_core_total_off_p1pct);
+       }
+       else
+       {
+           // should never happen
+           g_wof->p1pct_on[l_core] = 0;
            L_iddq_activity_invalid[l_core]++;
            if( (L_trace_iddq_activity_invalid) ||
                (L_iddq_activity_invalid[l_core] == IDDQ_ACTIVITY_ERROR_COUNT) )
            {
                L_trace_iddq_activity_invalid = FALSE;
-               TRAC_ERR("read_xgpe_values: Core[%d] has invalid IDDQ activity samples off[%d] + vmin[%d] > depth[%d]",
+               TRAC_ERR("read_xgpe_values: Core[%d] has invalid counts CORECLK_OFF[%d] CORECACHE_OFF[%d]",
                          l_core,
-                         g_wof->xgpe_activity_values.act_val[l_core][ACT_CNT_IDX_CORECACHE_OFF],
-                         g_wof->xgpe_activity_values.act_val[l_core][ACT_CNT_IDX_CORE_VMIN],
-                         g_amec_sys.static_wof_data.iddq_activity_sample_depth);
+                         g_wof->xgpe_activity_values.act_val[l_core][ACT_CNT_IDX_CORECLK_OFF],
+                         g_wof->xgpe_activity_values.act_val[l_core][ACT_CNT_IDX_CORECACHE_OFF]);
 
                // if this core reached the max error count, log error and disable WOF
                if(L_iddq_activity_invalid[l_core] == IDDQ_ACTIVITY_ERROR_COUNT)
@@ -1085,31 +1101,8 @@ void read_xgpe_values( void )
                                            ERC_WOF_IDDQ_ACTIVITY_INVALID);
                }
            }
-
-           // set samples to 0 to be conservative
-           g_wof->p1pct_on[l_core] = 0;
-           g_wof->p1pct_off[l_core] = 0;
-           g_wof->p1pct_vmin[l_core] = 0;
-       }
-       else  // activity counts valid
-       {
-           // clear invalid counter
-           L_iddq_activity_invalid[l_core] = 0;
-
-           l_core_samples_on = g_amec_sys.static_wof_data.iddq_activity_sample_depth - l_core_vmin_off_samples;
-
-           // store in 0.1% unit
-           g_wof->p1pct_on[l_core] = (uint16_t)( (l_core_samples_on * 1000) >>
-                                                g_amec_sys.static_wof_data.iddq_activity_divide_bit_shift );
-           g_wof->p1pct_off[l_core] = (uint16_t)( (g_wof->xgpe_activity_values.act_val[l_core][ACT_CNT_IDX_CORECACHE_OFF] * 1000) >>
-                                                 g_amec_sys.static_wof_data.iddq_activity_divide_bit_shift );
-           g_wof->p1pct_vmin[l_core] = (uint16_t)( (g_wof->xgpe_activity_values.act_val[l_core][ACT_CNT_IDX_CORE_VMIN] * 1000) >>
-                                                 g_amec_sys.static_wof_data.iddq_activity_divide_bit_shift );
        }
 
-       // store MMA off in 0.1% unit
-       g_wof->p1pct_mma_off[l_core] = (uint16_t)( (g_wof->xgpe_activity_values.act_val[l_core][ACT_CNT_IDX_MMA_OFF] * 1000) >>
-                                                g_amec_sys.static_wof_data.iddq_activity_divide_bit_shift );
     } // for each core
 }
 
@@ -1184,7 +1177,7 @@ void calculate_core_leakage( void )
             // Get the core temperature from TEMPPROCTHRMC sensor
             l_temperature = AMECSENSOR_ARRAY_PTR(TEMPPROCTHRMC0, l_core_idx)->sample;
 
-            // If core temperature is 0 use quad i.e. one racetrack DTS
+            // If core temperature is 0 use quad i.e. Racetrack
             if(l_temperature == 0)
             {
                  l_temperature = AMECSENSOR_ARRAY_PTR(TEMPQ0, l_core_idx/4)->sample;
