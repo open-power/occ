@@ -178,9 +178,6 @@ void task_gpe_timings(task_t * i_task)
 
         if(l_gpe1_idle)
         {
-            //reset the consecutive trace count
-            L_consec_trace_count[1] = 0;
-
             //Now check if successful too.
             if( async_request_completed(&(G_fw_timing.gpe1_timing_request->request)) )
             {
@@ -324,22 +321,10 @@ void amec_update_fw_sensors(void)
     // ------------------------------------------------------
     // Update OCC Firmware Sensors from last tick
     // ------------------------------------------------------
-    int l_last_state = G_fw_timing.amess_state;
     // RTLtickdur    = duration of last tick's RTL ISR (max = 250us)
     sensor_update( AMECSENSOR_PTR(RTLtickdur), G_fw_timing.rtl_dur);
     // AMEintdur     = duration of last tick's AMEC portion of RTL ISR
     sensor_update( AMECSENSOR_PTR(AMEintdur), G_fw_timing.ameint_dur);
-    // AMESSdurX     = duration of last tick's AMEC state
-    if(l_last_state >= NUM_AMEC_SMH_STATES)
-    {
-        // Sanity check.  Trace this out, even though it should never happen.
-        TRAC_INFO("AMEC State Invalid, Sensor Not Updated");
-    }
-    else
-    {
-        // AMESSdurX = duration of last tick's AMEC state
-        sensor_update( AMECSENSOR_ARRAY_PTR(AMESSdur0, l_last_state),  G_fw_timing.amess_dur);
-    }
 }
 
 /*----------------------------------------------------------------------------*/

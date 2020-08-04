@@ -111,6 +111,7 @@ void call_wof_main( void )
     static uint8_t L_pstate_protocol_off = 0;
     // GpeRequest more than 1 extra time.
     bool enable_success = false;
+    bool l_idle = false;
     do
     {
         // If the init state says we just turned WOF on in pgpe, clear
@@ -232,13 +233,19 @@ void call_wof_main( void )
                     case INITIAL_VRT_SENT_WAITING:
                         // Check if request is still processing.
                         // Init state updated in wof_vrt_callback
-                        if( (!async_request_is_idle(&G_wof_vrt_req.request)) ||
-                             (g_wof->vrt_state != STANDBY) )
+                        l_idle = async_request_is_idle(&G_wof_vrt_req.request);
+                        if( (!l_idle) || (g_wof->vrt_state != STANDBY) )
                         {
                             if( (L_vrt_last_chance == 0) && (!ignore_pgpe_error()) )
                             {
-                                INTR_TRAC_ERR("WOF Disabled!"
-                                              " Init VRT request timeout");
+                                INTR_TRAC_ERR("WOF Disabled! Init VRT req timeout! state[%d] IPC idle?[%d]", g_wof->vrt_state, l_idle);
+                                // if state is SCHEDULED that means the BCE completed, trace time for BCE
+                                if( (!l_idle) && (g_wof->vrt_state == SCHEDULED) )
+                                {
+                                    sensor_t *l_bce_sensor = getSensorByGsid(VRT_BCEdur);
+                                    INTR_TRAC_ERR("Initial VRT timeout! BCE completed in %dus",
+                                                   l_bce_sensor->sample);
+                                }
                                 set_clear_wof_disabled( SET,
                                                         WOF_RC_VRT_REQ_TIMEOUT,
                                                         ERC_WOF_VRT_REQ_TIMEOUT );
@@ -247,8 +254,8 @@ void call_wof_main( void )
                             {
                                 if( L_vrt_last_chance == 1 )
                                 {
-                                    INTR_TRAC_INFO("initial VRT NOT idle. Last chance out of %d chances",
-                                                    MAX_VRT_CHANCES);
+                                    INTR_TRAC_INFO("Initial VRT NOT complete state[%d] idle?[%d]. Last chance out of %d chances",
+                                                    g_wof->vrt_state, l_idle, MAX_VRT_CHANCES);
                                 }
                                 L_vrt_last_chance--;
                             }
@@ -363,18 +370,25 @@ void call_wof_main( void )
                 !g_wof->wof_disabled )
             {
                 // Normal execution of wof algorithm
-                if( (!async_request_is_idle(&G_wof_vrt_req.request)) ||
-                    (g_wof->vrt_state != STANDBY) )
+                l_idle = async_request_is_idle(&G_wof_vrt_req.request);
+                if( (!l_idle) || (g_wof->vrt_state != STANDBY) )
                 {
                     if( L_vrt_last_chance == 0 )
                     {
                         // Treat as an error only if not currently ignoring PGPE failures
                         if(!ignore_pgpe_error())
                         {
-                            INTR_TRAC_ERR("WOF Disabled! VRT req timeout");
+                            INTR_TRAC_ERR("WOF Disabled! VRT req timeout! state[%d] IPC idle?[%d]", g_wof->vrt_state, l_idle);
+
+                            sensor_t *l_bce_sensor = getSensorByGsid(VRT_BCEdur);
+                            sensor_t *l_ipc_sensor = getSensorByGsid(VRT_IPCdur);
+                            INTR_TRAC_ERR("VRT timeout! BCE max %dus  IPC max %dus",
+                                           l_bce_sensor->sample_max, l_ipc_sensor->sample_max);
+
                             set_clear_wof_disabled(SET,
                                                    WOF_RC_VRT_REQ_TIMEOUT,
                                                    ERC_WOF_VRT_REQ_TIMEOUT);
+
                             if(G_allow_trace_flags & ALLOW_VRT_TRACE)
                             {
                                 INTR_TRAC_INFO("VRT TIMEOUT OTBR[0x%08X]",
@@ -396,8 +410,8 @@ void call_wof_main( void )
                     {
                         if( L_vrt_last_chance == 1 )
                         {
-                            INTR_TRAC_INFO("VRT NOT idle. Last chance out of %d chances",
-                                            MAX_VRT_CHANCES);
+                            INTR_TRAC_INFO("VRT NOT complete state[%d] idle?[%d]. Last chance out of %d chances",
+                                            g_wof->vrt_state, l_idle, MAX_VRT_CHANCES);
                         }
                         L_vrt_last_chance--;
                     }
@@ -668,6 +682,9 @@ uint32_t calc_vrt_mainstore_addr( void )
  */
 void copy_vrt_to_sram_callback( void )
 {
+    // save time BCE took in us
+    uint32_t l_time = (uint32_t)((G_vrt_req.request.end_time - G_vrt_req.request.start_time) / ( SSX_TIMEBASE_FREQUENCY_HZ / 1000000 ));
+    sensor_update( AMECSENSOR_PTR(VRT_BCEdur), (uint16_t)l_time);
 /*
  *
  * find out which ping pong buffer to use
@@ -750,6 +767,10 @@ void copy_vrt_to_sram_callback( void )
  */
 void wof_vrt_callback( void )
 {
+    // save time IPC took in us
+    uint32_t l_time = (uint32_t)((G_wof_vrt_req.request.end_time - G_wof_vrt_req.request.start_time) / ( SSX_TIMEBASE_FREQUENCY_HZ / 1000000 ));
+    sensor_update( AMECSENSOR_PTR(VRT_IPCdur), (uint16_t)l_time);
+
     // Update the VRT state to indicate a new IPC message can be
     // scheduled regardless of the RC of the previous one.
     g_wof->vrt_state = STANDBY;
@@ -2233,6 +2254,9 @@ bool enable_wof( void )
             // Set parameters for the GpeRequest
             G_wof_control_parms.action = PGPE_ACTION_WOF_ON;
 
+            // Set Init state
+            g_wof->wof_init_state = WOF_CONTROL_ON_SENT_WAITING;
+
             rc = pgpe_request_schedule( &G_wof_control_req );
 
             if( rc != 0 )
@@ -2254,8 +2278,6 @@ bool enable_wof( void )
             }
             else
             {
-                // Set Init state
-                g_wof->wof_init_state = WOF_CONTROL_ON_SENT_WAITING;
                 result = true;
             }
         }
@@ -2291,6 +2313,10 @@ bool enable_wof( void )
  */
 void wof_control_callback( void )
 {
+    // save time IPC took in us
+    uint32_t l_time = (uint32_t)((G_wof_control_req.request.end_time - G_wof_control_req.request.start_time) / ( SSX_TIMEBASE_FREQUENCY_HZ / 1000000 ));
+    sensor_update( AMECSENSOR_PTR(WOFC_IPCdur), (uint16_t)l_time);
+
     // Check to see if GpeRequest was successful
     if( G_wof_control_parms.msg_cb.rc == PGPE_WOF_RC_NOT_ENABLED )
     {

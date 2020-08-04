@@ -389,16 +389,19 @@ void rtl_do_tick( void *private, SsxIrqId irq, int priority )
     if(G_fw_timing.rtl_dur > MICS_PER_TICK)
     {
         // exceeded tick time!!!
-        TRAC_ERR("rtl_do_tick: tick seq %d took %dus AMEC slv/mst tasks took total of %dus",
-                  l_tick, G_fw_timing.rtl_dur, G_fw_timing.ameint_dur);
-        sensor_t *l_gpe0_sensor = getSensorByGsid(GPEtickdur0);
-        sensor_t *l_gpe1_sensor = getSensorByGsid(GPEtickdur1);
+        INCREMENT_ERR_HISTORY( ERRH_RTL_TIME_EXCEEDED );
 
-        TRAC_ERR("GPE TIMES: GPE0 = %dus, max %dus  GPE1 = %dus, max %dus",
-                  l_gpe0_sensor->sample, l_gpe0_sensor->sample_max, l_gpe1_sensor->sample, l_gpe1_sensor->sample_max);
-
+        // log one time informational, a reported error will be logged for any real problem this may cause
         if(!L_error_logged)
         {
+           TRAC_ERR("rtl_do_tick: tick seq %d took %dus AMEC slv/mst tasks took total of %dus",
+                     l_tick, G_fw_timing.rtl_dur, G_fw_timing.ameint_dur);
+           sensor_t *l_gpe0_sensor = getSensorByGsid(GPEtickdur0);
+           sensor_t *l_gpe1_sensor = getSensorByGsid(GPEtickdur1);
+
+           TRAC_ERR("GPE TIMES: GPE0 = %dus, max %dus  GPE1 = %dus, max %dus",
+                     l_gpe0_sensor->sample, l_gpe0_sensor->sample_max, l_gpe1_sensor->sample, l_gpe1_sensor->sample_max);
+
            /*
             * @errortype
             * @moduleid    RTLS_DO_TICK_MOD
@@ -411,7 +414,7 @@ void rtl_do_tick( void *private, SsxIrqId irq, int priority )
                 RTLS_DO_TICK_MOD,               //ModId
                 INTERNAL_FAILURE,               //Reasoncode
                 ERC_RTL_TIME_EXCEEDED,          //Extended reasoncode
-                ERRL_SEV_PREDICTIVE,            //Severity
+                ERRL_SEV_INFORMATIONAL,         //Severity
                 l_trace,                        //Trace Buf
                 DEFAULT_TRACE_SIZE,             //Trace Size
                 G_fw_timing.rtl_dur,            //Userdata1

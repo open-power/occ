@@ -122,10 +122,10 @@ enum wof_init_states
 // Enumeration to define VRT send state
 enum vrt_send_states
 {
-    STANDBY,
-    SEND_INIT,
-    NEED_TO_SCHEDULE,
-    SCHEDULED,
+    STANDBY            = 0,
+    SEND_INIT          = 1,
+    NEED_TO_SCHEDULE   = 2,
+    SCHEDULED          = 3,
 };
 
 // Enumeration to define reasons (H)TMGT is disabling WOF

@@ -184,6 +184,11 @@ void task_dcom_rx_slv_outboxes( task_t *i_self)
                 {
                     // Most likely case first.  The request was created
                     // and scheduled and has completed without error.  Proceed.
+
+                    // save time BCE took in us
+                    uint32_t l_time = (uint32_t)((G_slv_outbox_rx_pba_request[l_slv].request.end_time - G_slv_outbox_rx_pba_request[l_slv].request.start_time) / ( SSX_TIMEBASE_FREQUENCY_HZ / 1000000 ));
+                    sensor_update( AMECSENSOR_PTR(Sout_BCEdur), (uint16_t)l_time);
+
                     // Proceed with request create and schedule.
                     l_proceed_with_request_and_schedule = TRUE;
                 }

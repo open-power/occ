@@ -103,7 +103,7 @@ typedef enum {
     ERRH_GPE0_NOT_IDLE               =  0x16,
     ERRH_GPE1_NOT_IDLE               =  0x17,
     ERRH_24X7_DISABLED               =  0x18,
-    ERRH_CEFF_RATIO_VDD_EXCURSION    =  0x19,  // P9 prime: OCS Dirty+type '1' (Act)
+    ERRH_CEFF_RATIO_VDD_EXCURSION    =  0x19,  // OCS Dirty+type '1' (Act)
     ERRH_AVSBUS_VDD_TEMPERATURE      =  0x1A,
     ERRH_OVER_PCAP_IGNORED           =  0x1B,
     ERRH_VRT_TIMEOUT_IGNORED         =  0x1C,
@@ -112,11 +112,11 @@ typedef enum {
     ERRH_VDD_CURRENT_ROLLOVER_MAX    =  0x1F,
     ERRH_CORE_SMALL_DROOP            =  0x20,
     ERRH_CACHE_LARGE_DROOP           =  0x21,
-    ERRH_OCS_DIRTY_BLOCK             =  0x22,  // P9 prime: OCS Dirty+type '0' (block)
-    ERRH_RESERVED23                  =  0x23,
-    ERRH_RESERVED24                  =  0x24,
-    ERRH_RESERVED25                  =  0x25,
-    ERRH_RESERVED26                  =  0x26,
+    ERRH_OCS_DIRTY_BLOCK             =  0x22,  // OCS Dirty+type '0' (block)
+    ERRH_RTL_TIME_EXCEEDED           =  0x23,
+    ERRH_DCOM_RX_SLV_INBOX_INCOMPLETE =  0x24,
+    ERRH_DCOM_RX_SLV_LOST_CONNECTION =  0x25,
+    ERRH_24x7_NOT_IDLE               =  0x26,
     ERRH_RESERVED27                  =  0x27,
     ERRH_RESERVED28                  =  0x28,
     ERRH_RESERVED29                  =  0x29,
