@@ -191,31 +191,31 @@ typedef struct __attribute__ ((packed))
     // [287] read from XGPE IDDQ activity values converted to 0.1% unit
     uint16_t p1pct_mma_off[MAX_NUM_CORES];
     // [351] Contains the estimated core leakage based on temp, voltage, and vpd-leak
-    uint32_t iddq_ua;
+    uint32_t iddq_100ua;
     // [355] Contains the estimated cache leakage based on temp, voltage and vpd-leak
-    uint32_t icsq_ua;
+    uint32_t icsq_100ua;
     // [359] Contains the AC component of the workload for the core
-    uint32_t iac_vdd_ua;
+    uint32_t iac_vdd_100ua;
     // [363] Contains the AC component of the workload for the cache
-    uint32_t iac_vcs_ua;
+    uint32_t iac_vcs_100ua;
     // [367] Contains iac_tdp_vdd(@avg F) interpolated from OPPB operating points
-    uint32_t iac_tdp_vdd_10ma;
-    // [371] Contains Vratio, read from OCC-PGPE shared SRAM
-    uint16_t v_ratio;
+    uint32_t iac_tdp_vdd_100ua;
+    // [371] Contains Vdd Vratio average roundup, read from OCC-PGPE shared SRAM
+    uint16_t v_ratio_vdd;
     // [373] Contains clip_state value last read from VRT, read from OCC-PGPE shared SRAM
     uint8_t  f_clip_ps;
-    // [374]
-    uint16_t reserved1;
-    // [376] Contains the calculated effective capacitance for tdp_vdd
-    uint32_t ceff_tdp_vdd;
-    // [380] Contains the calculated effective capacitance for vdd
-    uint32_t ceff_vdd;
+    // [374] Contains Vcs Vratio average roundup, read from OCC-PGPE shared SRAM
+    uint16_t v_ratio_vcs;
+    // [376] Contains the numerator for calculating ceff_ratio_vdd
+    uint32_t ceff_ratio_vdd_numerator;
+    // [380] Contains the denominator for calculating ceff_ratio_vdd
+    uint32_t ceff_ratio_vdd_denominator;
     // [384] Contains the calculated effective capacitance ratio for vdd
     uint32_t ceff_ratio_vdd;
-    // [388] Contains the calculated effective capacitance for tdp_vcs
-    uint32_t ceff_tdp_vcs;
-    // [392] Contains the calculated effective capacitance for vcs
-    uint32_t ceff_vcs;
+    // [388] Contains the numerator for calculating ceff_ratio_vcs
+    uint32_t ceff_ratio_vcs_numerator;
+    // [392] Contains the denominator for calculating ceff_ratio_vcs
+    uint32_t ceff_ratio_vcs_denominator;
     // [396] Contains the calculated effective capacitance ratio for vcs
     uint32_t ceff_ratio_vcs;
     // [400]
@@ -320,14 +320,14 @@ typedef struct __attribute__ ((packed))
     uint32_t vrt_mm_offset;
     // [573] Return code returned from a bad VRT request
     uint8_t wof_vrt_req_rc;
-    // [574] Voltage used in ceff_ratio_vdd calc
-    uint32_t c_ratio_vdd_volt;
+    // [574] scaled Vdd TDP AC current to the number of active cores represented by v_ratio_vdd
+    uint32_t c_ratio_iac_tdp_vddp1ma;
     // [578] Average frequency (read from PGPE) used in ceff ratio vdd and vcs calculations
     uint32_t avg_freq_mhz;
-    // [582] Voltage used in ceff_ratio_vcs calc
-    uint32_t c_ratio_vcs_volt;
+    // [582] scaled Vcs TDP AC current to the number of active cores represented by v_ratio_vcs
+    uint32_t c_ratio_iac_tdp_vcsp1ma;
     // [586] Contains iac_tdp_vcs(@avg F) interpolated from OPPB operating points
-    uint32_t iac_tdp_vcs_10ma;
+    uint32_t iac_tdp_vcs_100ua;
     // [590] Holds the state of various async operations relating to sending a VRT
     uint8_t vrt_state;
 
@@ -371,15 +371,22 @@ typedef struct __attribute__ ((packed))
     uint8_t  vpd_index2;
     // [662] Vdd voltage average TDP by interpolating #V voltage@(avg F)
     uint32_t vdd_avg_tdp_100uv;
-    // [666] value of roundup(idd_ac_avg / idd_ac_tdp)
-    uint32_t iac_vdd_tdp_ratio;
+    // [666] Racetrack AC current average TDP by interpolating VPD current@(avg F)
+    uint32_t tdp_idd_rt_ac_100ua;
     // [670] Vcs voltage average TDP by interpolating #V voltage@(avg F)
     uint32_t vcs_avg_tdp_100uv;
-    // [674] value of roundup(ics_ac_avg / ics_ac_tdp)
-    uint32_t iac_vcs_tdp_ratio;
-    // [678] Stop state activity counters read from XGPE
+    // [674] value of Vdd_chip_p1mv^1.3
+    uint32_t vddp1mv_exp1p3;
+    // [678] value of Vcs_chip_p1mv^1.3
+    uint32_t vcsp1mv_exp1p3;
+    // [682] value of vcs_avg_tdp_100uv^1.3
+    uint32_t tdpvcsp1mv_exp1p3;
+    // [686] value of vdd_avg_tdp_100uv^1.3
+    uint32_t tdpvddp1mv_exp1p3;
+
+    // [690] Stop state activity counters read from XGPE
     iddq_activity_t  xgpe_activity_values;  // 128 bytes = 32 cores * 4 bytes
-} amec_wof_t;  // 806 bytes total
+} amec_wof_t;  // 818 bytes total
 
 // Structure used in g_amec to hold static WOF data
 typedef struct __attribute__ ((packed))
@@ -476,7 +483,7 @@ void calculate_ceff_ratio_vcs( void );
 
 void calculate_ceff_ratio_vdd( void );
 
-uint32_t multiply_v_ratio( uint32_t i_value );
+uint32_t multiply_v_ratio( uint32_t i_value, bool i_vcs );
 
 void calculate_AC_currents( void );
 

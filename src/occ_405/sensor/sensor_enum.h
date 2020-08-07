@@ -627,7 +627,7 @@ enum e_gsid
     // ------------------------------------------------------
     CEFFVDDRATIO,
     CEFFVCSRATIO,
-    VRATIO,
+    VRATIO_VDD,
     OCS_ADDR,
     CEFFVDDRATIOADJ,
     IO_PWR_PROXY,

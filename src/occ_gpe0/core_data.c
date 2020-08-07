@@ -39,6 +39,8 @@ uint32_t empath_retry(uint32_t core_base_address, uint32_t counter_offset, uint6
 {
     uint32_t rc = 0;
     int retry_count = 0;
+    static uint32_t L_trace = 5;
+
     for(;retry_count < MAX_SCOMD_RETRY; ++retry_count)
     {
         uint64_t scom_data = (uint64_t)counter_offset;
@@ -65,7 +67,11 @@ uint32_t empath_retry(uint32_t core_base_address, uint32_t counter_offset, uint6
 
     if (EMPATH_COUNTER_ZERO == rc)
     {
-        PK_TRACE("EMPATH count zero for offset 0x%x",counter_offset);
+        if(L_trace)
+        {
+            L_trace--;
+            PK_TRACE("EMPATH count zero for offset 0x%x",counter_offset);
+        }
         rc = 0;
     }
     return rc;
