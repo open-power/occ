@@ -365,6 +365,8 @@ void amec_data_write_pcap(void)
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
+    //Set the slaves local copy of ppb_fmax to that received from Master OCC.
+    g_amec->proc[0].pwr_votes.ppb_fmax = G_dcom_slv_inbox_doorbell_rx.ppb_fmax;
 
     //Check if Master sent a new packet of data.
     if(L_pcap_data_count != G_dcom_slv_inbox_doorbell_rx.pcap.pcap_data_count)

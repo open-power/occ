@@ -434,6 +434,9 @@ void amec_slv_proc_voting_box(void)
                 }
             }
 
+// Ignore proc pcap vote in order to keep frequency same across all processors in a
+// node power cap will be handled via the ppb_fmax that is calculated by master OCC
+#ifdef POWER_CAP_VOTE
             if(CURRENT_MODE() == OCC_MODE_DISABLED)
             {
                 // PROC_PCAP_NOM_VOTE
@@ -462,6 +465,7 @@ void amec_slv_proc_voting_box(void)
                     }
                 }
             }
+#endif
 
             // Check IPS frequency request sent by Master OCC
             if(g_amec->slv_ips_freq_request != 0)
@@ -585,6 +589,19 @@ void amec_slv_proc_voting_box(void)
             ssx_semaphore_post(&G_dcomThreadWakeupSem);
         }
     }
+
+    // Update the Processor Throttle due to power sensor
+    if( (l_kvm_throt_reason == PCAP_EXCEED_REPORT) ||
+        (l_kvm_throt_reason == POWERCAP) )
+    {
+         // Frequency is being throttled due to power cap
+         sensor_update(AMECSENSOR_PTR(PROCPWRTHROT), 1);
+    }
+    else  // not currently throttled due to power
+    {
+         sensor_update(AMECSENSOR_PTR(PROCPWRTHROT), 0);
+    }
+
     // For debug... if lower than max update vars returned in poll response to give clipping reason
     g_amec->proc[0].core_min_freq = l_core_freq_min;
     if(l_core_freq_min < g_amec->sys.fmax)

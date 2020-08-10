@@ -319,9 +319,13 @@ void amec_mst_check_pcaps_match(void)
                     G_pcaps_mismatch_count++;
                     l_pcap_mismatch = TRUE;
 
-                    TRAC_INFO("Mismatch in OCC power cap values: mismatch cnt=%d pcap=%d vs compared pcap[%d]=%d(%d)",
-                        G_pcaps_mismatch_count, l_prev_pcap, l_chip_id, G_slave_active_pcaps[l_chip_id].active_pcap,
-                        G_slave_active_pcaps[l_chip_id].pcap_valid);
+                    // don't trace first mismatch
+                    if(G_pcaps_mismatch_count > 1)
+                    {
+                       TRAC_INFO("Mismatch in OCC power cap values: mismatch cnt=%d pcap=%d vs compared pcap[%d]=%d(%d)",
+                           G_pcaps_mismatch_count, l_prev_pcap, l_chip_id, G_slave_active_pcaps[l_chip_id].active_pcap,
+                           G_slave_active_pcaps[l_chip_id].pcap_valid);
+                    }
 
                     //If mismatch occurs for 8 consecutive ticks then reset occ
                     if(G_pcaps_mismatch_count >= PCAPS_MISMATCH_THRESHOLD)
