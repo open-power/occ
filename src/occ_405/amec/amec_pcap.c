@@ -43,9 +43,6 @@
 //*************************************************************************/
 #define PPB_NOM_DROP_DELAY 4    //ticks
 
-//Number of consecutive ticks with power available to wait before un-throttling memory
-#define UNTHROTTLE_MEMORY_DELAY   2   // ticks
-
 //*************************************************************************/
 // Structures
 //*************************************************************************/
@@ -57,7 +54,7 @@ extern PWR_READING_TYPE  G_pwr_reading_type;
 extern uint16_t G_allow_trace_flags;
 //Number of watts power must be below the node power cap before raising ppb_fmax
 // #define PDROP_THRESH     10 defined in amec_pcap.h
-//Number of MHz to raise the proc_pcap_vote for every watt of available power
+//Number of MHz to change 1 processor for every watt of available power
 #define PROC_MHZ_PER_WATT   7
 //Number of MHz to raise ppb_fmax per watt of available power. Depends on
 //number of procs in node.
@@ -122,7 +119,7 @@ void amec_gpu_pcap(bool i_oversubscription, bool i_active_pcap_changed, int32_t 
        {
            // Take all non-GPU power away from the oversubscription power cap
            L_n_mode_gpu_total_pcap = g_amec->pcap.ovs_node_pcap - G_sysConfigData.total_non_gpu_max_pwr_watts;
-           // Add back in the power that will be dropped by processor DVFS and memory throttling and give to GPUs
+           // Add back in the power that will be dropped by processor DVFS and give to GPUs
            L_n_mode_gpu_total_pcap += G_sysConfigData.total_proc_mem_pwr_drop_watts;
        }
        else
@@ -302,7 +299,7 @@ void amec_gpu_pcap(bool i_oversubscription, bool i_active_pcap_changed, int32_t 
 //
 // Name: amec_pcap_calc
 //
-// Description: Calculate the node, memory and processor power caps.
+// Description: Calculate the node power cap
 //
 // Thread: Real Time Loop
 //
@@ -311,15 +308,8 @@ void amec_pcap_calc(const bool i_oversub_state)
 {
     bool l_active_pcap_changed = FALSE;
     uint16_t l_node_pwr = AMECSENSOR_PTR(PWRSYS)->sample;
-    uint16_t l_p0_pwr   = AMECSENSOR_PTR(PWRPROC)->sample;
     int32_t l_avail_power = 0;
-    uint16_t mem_pwr_diff = 0;
-    uint32_t l_proc_fraction = 0;
     static uint32_t L_prev_node_pcap = 0;
-    static bool L_apss_error_traced = FALSE;
-    static uint32_t L_ticks_mem_pwr_available = 0;
-    static bool L_trace_pcap_throttle = true;
-    static bool L_trace_pcap_unthrottle = true;
 
     // Determine the active power cap.
     // when in oversub (N mode) only use oversub pcap if lower than user set pcap (if user cap is set)
@@ -357,172 +347,6 @@ void amec_pcap_calc(const bool i_oversub_state)
     {
        amec_gpu_pcap(i_oversub_state, l_active_pcap_changed, l_avail_power);
     }
-
-    if(l_node_pwr != 0)
-    {
-        l_proc_fraction = ((uint32_t)(l_p0_pwr) << 16)/l_node_pwr;
-        if(L_apss_error_traced)
-        {
-            TRAC_ERR("PCAP: PWRSYS sensor is no longer 0.");
-            L_apss_error_traced = FALSE;
-        }
-
-        // check if allowed to increase power AND memory throttled due to pcap
-        if((l_avail_power > 0) && (g_amec->pcap.active_mem_level != 0))
-        {
-            // un-throttle memory if there is enough available power between
-            // current and new throttles
-            if (CURRENT_MODE() == OCC_MODE_DISABLED)
-            {
-                mem_pwr_diff = g_amec->pcap.nominal_mem_pwr;
-            }
-            else
-            {
-                mem_pwr_diff = g_amec->pcap.turbo_mem_pwr;
-            }
-
-            // currently there's only 1 mem pcap throt level so must be pcap1
-            mem_pwr_diff -= g_amec->pcap.pcap1_mem_pwr;
-
-            if(l_avail_power >= mem_pwr_diff)
-            {
-                L_ticks_mem_pwr_available++;
-
-                if( L_ticks_mem_pwr_available == UNTHROTTLE_MEMORY_DELAY )
-                {
-                    if( L_trace_pcap_unthrottle ||
-                       (G_allow_trace_flags & ALLOW_MEM_TRACE) )
-                    {
-                        TRAC_IMP("PCAP: Un-Throttling memory");
-                        L_trace_pcap_unthrottle = false;
-                    }
-                    g_amec->pcap.active_mem_level = 0;
-                    L_ticks_mem_pwr_available = 0;
-                    // don't let the proc have any available power this tick
-                    l_avail_power = 0;
-                }
-            }
-        }
-        // check if need to reduce power and frequency is already at the min
-        else if(l_avail_power < 0)
-        {
-            L_ticks_mem_pwr_available = 0;
-
-            // if memory is not throttled and frequency is at min shed additional power
-            // by throttling memory
-            if( (g_amec->pcap.active_mem_level == 0) &&
-                (g_amec->proc[0].pwr_votes.ppb_fmax == g_amec->sys.fmin_max_throttled) )
-            {
-                if( L_trace_pcap_throttle ||
-                   (G_allow_trace_flags & ALLOW_MEM_TRACE) )
-                {
-                    TRAC_IMP("PCAP: Throttling memory");
-                    L_trace_pcap_throttle = false;
-                }
-                g_amec->pcap.active_mem_level = 1;
-            }
-        }
-        else
-        {
-            // no changes to memory throttles due to power
-        }
-    }
-    else
-    {
-        if(!L_apss_error_traced)
-        {
-            TRAC_ERR("PCAP: PWRSYS sensor is showing a value of 0.");
-            L_apss_error_traced = TRUE;
-        }
-    }
-
-    // skip processor changes until memory is un-capped
-    if(!g_amec->pcap.active_mem_level)
-    {
-        g_amec->pcap.active_proc_pcap = l_p0_pwr + ((l_proc_fraction * l_avail_power) >> 16);
-
-        //NOTE: Power capping will not affect nominal cores unless a customer pcap
-        //      is set below the max pcap or oversubscription occurs.  However,
-        //      nominal cores will drop below nominal if ppb_fmax drops below nominal
-        if(g_amec->pcap.active_node_pcap < G_sysConfigData.pcap.max_pcap)
-        {
-           g_amec->proc[0].pwr_votes.nom_pcap_fmin = g_amec->sys.fmin_max_throttled;
-        }
-        else
-        {
-           g_amec->proc[0].pwr_votes.nom_pcap_fmin = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_DISABLED];
-        }
-    }
-}
-
-//////////////////////////
-// Function Specification
-//
-// Name: amec_pcap_controller
-//
-// Description: Execute the processor Pcap control loop.
-//
-// Thread: Real Time Loop
-//
-// End Function Specification
-void amec_pcap_controller(void)
-{
-    /*------------------------------------------------------------------------*/
-    /*  Local Variables                                                       */
-    /*------------------------------------------------------------------------*/
-    int32_t     l_power_avail = 0;
-    int32_t     l_proc_pcap_vote = g_amec->proc[0].pwr_votes.proc_pcap_vote;
-    uint16_t    l_p0_pwr   = AMECSENSOR_PTR(PWRPROC)->sample;
-
-    /*------------------------------------------------------------------------*/
-    /*  Code                                                                  */
-    /*------------------------------------------------------------------------*/
-
-    l_power_avail = g_amec->pcap.active_proc_pcap - l_p0_pwr;
-
-    if(l_proc_pcap_vote > g_amec->proc[0].pwr_votes.nom_pcap_fmin)
-    {
-        l_proc_pcap_vote = g_amec->proc[0].core_max_freq +
-                                                  (PROC_MHZ_PER_WATT * l_power_avail);
-    }
-    else
-    {
-        l_proc_pcap_vote += (PROC_MHZ_PER_WATT * l_power_avail);
-    }
-
-    if(l_proc_pcap_vote > G_proc_fmax_mhz)
-    {
-        l_proc_pcap_vote = G_proc_fmax_mhz;
-    }
-
-    if(l_proc_pcap_vote < g_amec->sys.fmin_max_throttled)
-    {
-        l_proc_pcap_vote = g_amec->sys.fmin_max_throttled;
-    }
-
-    //Power capping for nominal cores is not allowed to drop frequency below nom_pcap_fmin
-    if(l_proc_pcap_vote <  g_amec->proc[0].pwr_votes.nom_pcap_fmin)
-    {
-        g_amec->proc[0].pwr_votes.proc_pcap_nom_vote = g_amec->proc[0].pwr_votes.nom_pcap_fmin;
-    }
-    else
-    {
-        g_amec->proc[0].pwr_votes.proc_pcap_nom_vote = l_proc_pcap_vote;
-    }
-
-    g_amec->proc[0].pwr_votes.proc_pcap_vote = l_proc_pcap_vote;
-
-#ifdef POWER_CAP_VOTE
-   if(G_allow_trace_flags & ALLOW_PCAP_TRACE)
-   {
-       TRAC_INFO("amec_pcap_controller: proc_pcap_vote[%d] core_max_freq[%d] max_reason[0x%08X]",
-                  g_amec->proc[0].pwr_votes.proc_pcap_vote, g_amec->proc[0].core_max_freq,
-                  g_amec->proc[0].f_reason);
-       TRAC_INFO("amec_pcap_controller: p0_pwr[%d] power_avail[%d]",
-                  l_p0_pwr, l_power_avail);
-   }
-#endif
-
 }
 
 //////////////////////////
@@ -548,7 +372,7 @@ void amec_ppb_fmax_calc(void)
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
 
-    //CALCULATION done by MASTER OCC only.
+    // This is node power cap CALCULATION done by MASTER OCC only.
     if(OCC_MASTER == G_occ_role)
     {
         if(L_num_chips != G_sysConfigData.sys_num_proc_present)
@@ -630,27 +454,17 @@ void amec_power_control(void)
         if ((G_sysConfigData.system_type.non_redund_ps == FALSE) ||
             (l_oversub_state == FALSE))
         {
-            // Calculate the pcap for the proc, memory and the power capping limit
-            // for nominal cores.
+            // Calculate the active pcap for the node
             amec_pcap_calc(l_oversub_state);
 
-            // skip processor changes until memory is un-capped
-            if(!g_amec->pcap.active_mem_level)
-            {
-                // Calculate voting box input freq for staying with the current pcap
-                amec_pcap_controller();
-
-                // Calculate the performance preserving bounds voting box input freq
-                amec_ppb_fmax_calc();
-            }
+            // Calculate the power capping performance preserving bounds voting box input freq
+            amec_ppb_fmax_calc();
         }
         // else, dont run pcap algorithm while: oversubscription AND non-redundant ps
     }
     else
     {
         // No system power reading for power capping set pcap frequency votes to max
-        g_amec->proc[0].pwr_votes.proc_pcap_nom_vote = G_proc_fmax_mhz;
-        g_amec->proc[0].pwr_votes.proc_pcap_vote = G_proc_fmax_mhz;
         g_amec->proc[0].pwr_votes.ppb_fmax = G_proc_fmax_mhz;
     }
 }

@@ -60,6 +60,7 @@
 #define DATA_MEM_CFG_VERSION_21    0x21
 
 #define DATA_MEM_THROT_VERSION_30  0x30
+#define DATA_MEM_THROT_VERSION_40  0x40
 
 #define DATA_VRM_FAULT_VERSION     0x01
 
@@ -1993,9 +1994,6 @@ errlHndl_t data_store_mem_throt(const cmdh_fsp_cmd_t * i_cmd_ptr,
     uint8_t                         i;
     uint16_t                        l_configured_membufs = 0;
     bool                            l_invalid_input = TRUE; //Assume bad input
-    uint32_t                        l_total_wof_mem_power = 0;
-    uint32_t                        l_total_fmax_mem_power = 0;
-    uint32_t                        l_total_pcap_mem_power = 0;
 
     do
     {
@@ -2004,15 +2002,27 @@ errlHndl_t data_store_mem_throt(const cmdh_fsp_cmd_t * i_cmd_ptr,
         // Sanity checks on input data, break if:
         //  * the version doesn't match what we expect,  OR
         //  * the actual data length does not match the expected data length.
-        if(l_cmd_ptr->header.version == DATA_MEM_THROT_VERSION_30)
+        if(l_cmd_ptr->header.version == DATA_MEM_THROT_VERSION_40)
         {
             l_exp_data_length = sizeof(cmdh_mem_throt_header_t) - sizeof(cmdh_fsp_cmd_header_t) +
-                (l_cmd_ptr->header.num_data_sets * sizeof(cmdh_mem_throt_data_set_t));
+                (l_cmd_ptr->header.num_data_sets * sizeof(cmdh_mem_throt_data_set_v40_t));
 
             if(l_exp_data_length == l_data_length)
             {
                 l_invalid_input = FALSE;
             }
+        }
+        // TODO RTC: 258705 Accept (but don't process) old version 0x30 until (H)TMGT supports new version 0x40
+        else if(l_cmd_ptr->header.version == DATA_MEM_THROT_VERSION_30)
+        {
+            l_exp_data_length = sizeof(cmdh_mem_throt_header_t) - sizeof(cmdh_fsp_cmd_header_t) +
+                (l_cmd_ptr->header.num_data_sets * sizeof(cmdh_mem_throt_data_set_v30_t));
+
+            if(l_exp_data_length == l_data_length)
+            {
+                l_invalid_input = FALSE;
+            }
+
         }
 
         if(l_invalid_input)
@@ -2026,65 +2036,89 @@ errlHndl_t data_store_mem_throt(const cmdh_fsp_cmd_t * i_cmd_ptr,
             cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
             break;
         }
-
-        if (G_internal_flags & INT_FLAG_ENABLE_MEMORY_CONFIG)
+// TODO RTC 258705 don't process v30 data remove check for v40
+        if( (G_internal_flags & INT_FLAG_ENABLE_MEMORY_CONFIG) &&
+            (l_cmd_ptr->header.version == DATA_MEM_THROT_VERSION_40) )
         {
             // Store the memory throttle settings
             for(i=0; i<l_cmd_ptr->header.num_data_sets; i++)
             {
-                mem_throt_config_data_t    l_temp_set;
-                cmdh_mem_throt_data_set_t* l_data_set = &l_cmd_ptr->data_set[i];
-                uint16_t * l_n_ptr;
-
                 uint8_t mem_buf = 0xFF; // membuf Info Parameters
 
-                if (MEM_TYPE_OCM == G_sysConfigData.mem_type)
+                mem_buf = l_cmd_ptr->data_set[i].mem_throt_info.membuf_num;
+
+                // Validate parameters
+                if(mem_buf >= MAX_NUM_OCMBS)
                 {
-                    mem_buf = l_data_set->mem_throt_info.membuf_num;
-
-                    // Validate parameters
-                    if(mem_buf >= MAX_NUM_OCMBS)
-                    {
-                        CMDH_TRAC_ERR("data_store_mem_throt: Invalid memory data for type 0x%02X "
-                                      "(entry %d: mem_buf[%d]",
-                                      G_sysConfigData.mem_type, i, mem_buf);
-                        cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
-                        break;
-                    }
-                }
-
-                // Copy into a temporary buffer while we check for N values of 0
-                memcpy(&l_temp_set, &(l_data_set->min_n_per_mba), sizeof(mem_throt_config_data_t));
-
-                // A 0 for any power or N value is an error
-                for(l_n_ptr = &l_temp_set.min_n_per_mba; l_n_ptr <= &l_temp_set.fmax_mem_power; l_n_ptr++)
-                {
-                    if(!(*l_n_ptr))
-                    {
-                        CMDH_TRAC_ERR("data_store_mem_throt: DIMM Throttle N value is 0! mem_buf[%d]", mem_buf);
-                        cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
-                        break;
-                    }
-                }
-
-                if(l_err)  // zero N Value?
-                {
+                    CMDH_TRAC_ERR("data_store_mem_throt: Invalid memory data for type 0x%02X "
+                                  "(entry %d: mem_buf[%d]",
+                                  G_sysConfigData.mem_type, i, mem_buf);
+                    cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
                     break;
                 }
 
-                if (MEM_TYPE_OCM == G_sysConfigData.mem_type)
+                // Save throttles, a 0 for any N value is an error
+                if(l_cmd_ptr->data_set[i].min_n_per_mba == 0)
                 {
-                    memcpy(&G_sysConfigData.mem_throt_limits[mem_buf],
-                           &(l_data_set->min_n_per_mba),
-                           sizeof(mem_throt_config_data_t));
-
-                    l_configured_membufs |= (0x1 << mem_buf);
+                    CMDH_TRAC_ERR("data_store_mem_throt: Min N per MBA is 0! mem_buf[%d]", mem_buf);
+                    cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
+                    break;
                 }
+                G_sysConfigData.mem_throt_limits[mem_buf].min_n_per_mba = l_cmd_ptr->data_set[i].min_n_per_mba;
 
-                // Add memory power
-                l_total_wof_mem_power += l_data_set->wof_mem_power;
-                l_total_fmax_mem_power += l_data_set->fmax_mem_power;
-                l_total_pcap_mem_power += l_data_set->pcap_mem_power;
+                if( (l_cmd_ptr->data_set[i].fmax_n_per_mba == 0) ||
+                    (l_cmd_ptr->data_set[i].fmax_n_per_chip == 0) )
+                {
+                    CMDH_TRAC_ERR("data_store_mem_throt: 0 N value found for Fmax per_mba[%d] per_chip[%d] mem_buf[%d]",
+                                   l_cmd_ptr->data_set[i].fmax_n_per_mba,
+                                   l_cmd_ptr->data_set[i].fmax_n_per_chip,
+                                   mem_buf);
+                    cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
+                    break;
+                }
+                G_sysConfigData.mem_throt_limits[mem_buf].fmax_n_per_mba = l_cmd_ptr->data_set[i].fmax_n_per_mba;
+                G_sysConfigData.mem_throt_limits[mem_buf].fmax_n_per_chip = l_cmd_ptr->data_set[i].fmax_n_per_chip;
+
+                if( (l_cmd_ptr->data_set[i].mode_disabled_n_per_mba == 0) ||
+                    (l_cmd_ptr->data_set[i].mode_disabled_n_per_chip == 0) )
+                {
+                    CMDH_TRAC_ERR("data_store_mem_throt: 0 N value found for Mode Disabled per_mba[%d] per_chip[%d] mem_buf[%d]",
+                                   l_cmd_ptr->data_set[i].mode_disabled_n_per_mba,
+                                   l_cmd_ptr->data_set[i].mode_disabled_n_per_chip,
+                                   mem_buf);
+                    cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
+                    break;
+                }
+                G_sysConfigData.mem_throt_limits[mem_buf].mode_disabled_n_per_mba = l_cmd_ptr->data_set[i].mode_disabled_n_per_mba;
+                G_sysConfigData.mem_throt_limits[mem_buf].mode_disabled_n_per_chip = l_cmd_ptr->data_set[i].mode_disabled_n_per_chip;
+
+                if( (l_cmd_ptr->data_set[i].ut_n_per_mba == 0) ||
+                    (l_cmd_ptr->data_set[i].ut_n_per_chip == 0) )
+                {
+                    CMDH_TRAC_ERR("data_store_mem_throt: 0 N value found for Ultra Turbo per_mba[%d] per_chip[%d] mem_buf[%d]",
+                                   l_cmd_ptr->data_set[i].ut_n_per_mba,
+                                   l_cmd_ptr->data_set[i].ut_n_per_chip,
+                                   mem_buf);
+                    cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
+                    break;
+                }
+                G_sysConfigData.mem_throt_limits[mem_buf].ut_n_per_mba = l_cmd_ptr->data_set[i].ut_n_per_mba;
+                G_sysConfigData.mem_throt_limits[mem_buf].ut_n_per_chip = l_cmd_ptr->data_set[i].ut_n_per_chip;
+
+                if( (l_cmd_ptr->data_set[i].oversub_n_per_mba == 0) ||
+                    (l_cmd_ptr->data_set[i].oversub_n_per_chip == 0) )
+                {
+                    CMDH_TRAC_ERR("data_store_mem_throt: 0 N value found for Oversubscription per_mba[%d] per_chip[%d] mem_buf[%d]",
+                                   l_cmd_ptr->data_set[i].oversub_n_per_mba,
+                                   l_cmd_ptr->data_set[i].oversub_n_per_chip,
+                                   mem_buf);
+                    cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
+                    break;
+                }
+                G_sysConfigData.mem_throt_limits[mem_buf].oversub_n_per_mba = l_cmd_ptr->data_set[i].oversub_n_per_mba;
+                G_sysConfigData.mem_throt_limits[mem_buf].oversub_n_per_chip = l_cmd_ptr->data_set[i].oversub_n_per_chip;
+
+                l_configured_membufs |= (0x1 << mem_buf);
 
             } // data_sets for loop
         }
@@ -2102,13 +2136,8 @@ errlHndl_t data_store_mem_throt(const cmdh_fsp_cmd_t * i_cmd_ptr,
         CMDH_TRAC_IMP("data_store_mem_throt: Got valid mem throt packet. configured_mba_bitmap=0x%04x",
                  l_configured_membufs);
 
-        // Update the configured mba bitmap and save the total memory powers
+        // Update the configured mba bitmap
         G_configured_mbas = l_configured_membufs;
-
-        // g_amec is in Watts, config data is in cW
-        g_amec->pcap.nominal_mem_pwr = l_total_fmax_mem_power / 100;
-        g_amec->pcap.turbo_mem_pwr = l_total_wof_mem_power / 100;
-        g_amec->pcap.pcap1_mem_pwr = l_total_pcap_mem_power / 100;
     }
 
     return l_err;

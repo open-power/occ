@@ -378,15 +378,36 @@ typedef struct __attribute__ ((packed))
     uint16_t              reserved1;             // reserved
     uint16_t              reserved2;             // reserved
     uint16_t              reserved3;             // reserved
-} cmdh_mem_throt_data_set_t;
+} cmdh_mem_throt_data_set_v30_t;
+
+typedef struct __attribute__ ((packed))
+{
+    cmdh_mem_throt_info_t mem_throt_info; // membuf information header
+
+    uint16_t    min_n_per_mba;            // Lowest per MBA allowed numerator
+
+    uint16_t    mode_disabled_n_per_mba;  // Static per MBA numerator when modes are disabled
+    uint16_t    mode_disabled_n_per_chip; // Static per chip numerator when modes are disabled
+
+    uint16_t    ut_n_per_mba;             // Static per MBA numerator for ultra turbo modes
+    uint16_t    ut_n_per_chip;            // Static per chip numerator for ultra turbo modes
+
+    uint16_t    fmax_n_per_mba;           // Static per MBA N for fmax mode
+    uint16_t    fmax_n_per_chip;          // Static per chip N for fmax mode
+
+    uint16_t    oversub_n_per_mba;        // Static per MBA N when in oversubscription
+    uint16_t    oversub_n_per_chip;       // Static per chip N when in oversubscription
+
+    uint16_t    reserved1;                // reserved
+} cmdh_mem_throt_data_set_v40_t;
 
 
 // Config packet definition used by TMGT to
 // send mem throttle min/max settings.
 typedef struct __attribute__ ((packed))
 {
-    cmdh_mem_throt_header_t      header;
-    cmdh_mem_throt_data_set_t    data_set[1];
+    cmdh_mem_throt_header_t          header;
+    cmdh_mem_throt_data_set_v40_t    data_set[1];
 } cmdh_mem_throt_t;
 
 // Used to mark present the config data TMGT has sent us.

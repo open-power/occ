@@ -2894,12 +2894,15 @@ def occ_to_active(flg_nopgpe, flg_run, flg_verbose):
     RC = send_occ_cmd(0x21, "0720011F012C07E907C2", flg_verbose);
 
     print("\n#### SET MEMORY THROTTLE #################################################################################");
-    cmdData="123004"
-    #                            WOF-BASE    PCAP        FMAX        reserved
-    cmdData=cmdData+"000044440100233334440120233334440110233334440130EEEEEEEEEEEE"
-    cmdData=cmdData+"010044440101455556660121233334440111677778880131EEEEEEEEEEEE"
-    cmdData=cmdData+"020044440102455556660122233334440112677778880132EEEEEEEEEEEE"
-    cmdData=cmdData+"030044440103455556660123233334440113677778880133EEEEEEEEEEEE"
+    cmdData="124004"
+    #                        DISABLE UT      FMAX    OVERS   reserve
+    cmdData=cmdData+"0000444423333444233334442333344423333444EEEE"
+    cmdData=cmdData+"0100444445555666233334446777788823333444EEEE"
+    cmdData=cmdData+"0200444445555666233334446777788823333444EEEE"
+    cmdData=cmdData+"0300444445555666233334446777788823333444EEEE"
+
+
+
     RC = send_occ_cmd(0x21, cmdData, flg_verbose);
 
     print("\n#### SET GPU CONFIG ######################################################################################");

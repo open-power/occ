@@ -53,11 +53,6 @@ typedef struct amec_pcap
     uint16_t ovs_node_pcap;     //Oversub node power cap in 1W units
     uint16_t norm_node_pcap;    //Normal node power cap in 1W units
     uint16_t active_node_pcap;  //Currently active node power cap in 1W units
-    uint16_t active_proc_pcap;  //Currently active proc power cap in 1W units
-    uint16_t nominal_mem_pwr;   //Memory power in 1W units for nominal throttles
-    uint16_t turbo_mem_pwr;     //Memory power in 1W units for turbo throttles
-    uint16_t pcap1_mem_pwr;     //Memory power in 1W units for power capping level 1 throttles
-    uint8_t active_mem_level;   //Currently active memory throttles pcap level 0=no active mem pcap
 } amec_pcap_t;
 
 //*************************************************************************

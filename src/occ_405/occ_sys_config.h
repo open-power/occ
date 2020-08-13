@@ -292,7 +292,26 @@ typedef struct
     uint16_t    reserved1;               //reserved
     uint16_t    reserved2;               //reserved
     uint16_t    reserved3;               //reserved
-} mem_throt_config_data_t;
+} mem_throt_config_data_v30_t;
+
+typedef struct
+{
+    uint16_t    min_n_per_mba;            // Lowest per MBA allowed numerator
+
+    uint16_t    mode_disabled_n_per_mba;  // Static per MBA numerator when modes are disabled
+    uint16_t    mode_disabled_n_per_chip; // Static per chip numerator when modes are disabled
+
+    uint16_t    ut_n_per_mba;             // Static per MBA numerator for ultra turbo modes
+    uint16_t    ut_n_per_chip;            // Static per chip numerator for ultra turbo modes
+
+    uint16_t    fmax_n_per_mba;           // Static per MBA N for fmax mode
+    uint16_t    fmax_n_per_chip;          // Static per chip N for fmax mode
+
+    uint16_t    oversub_n_per_mba;        // Static per MBA N when in oversubscription
+    uint16_t    oversub_n_per_chip;       // Static per chip N when in oversubscription
+
+    uint16_t    reserved1;                // reserved
+} mem_throt_config_data_v40_t;
 
 // Per GPU I2C Info
 typedef struct
@@ -423,12 +442,7 @@ typedef struct
   // Memory Throttle limits
   // --------------------------------------
   // This array holds throttle configuration parameters for memory
-
-  // Throttle limits are layout:
-  //   mem_throt_limits[membuf][mba]
-  //           membuf=0-8, mba = 0/1 for mba01/mba23
-  //              (only first two columns populated)
-  mem_throt_config_data_t mem_throt_limits[MAX_NUM_MEM_CONTROLLERS];
+  mem_throt_config_data_v40_t mem_throt_limits[MAX_NUM_MEM_CONTROLLERS];
 
   // --------------------------------------
   // GPU Information for error callout and GPU power capping

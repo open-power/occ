@@ -733,6 +733,12 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
     l_extnSensorList[l_sensorHeader.count].data[1] = CONVERT_UINT16_UINT8_HIGH(freq);
     l_extnSensorList[l_sensorHeader.count].data[2] = CONVERT_UINT16_UINT8_LOW(freq);
     l_sensorHeader.count++;
+    l_extnSensorList[l_sensorHeader.count].name = EXTN_NAME_FDIS;
+    freq = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_DISABLED];
+    l_extnSensorList[l_sensorHeader.count].data[0] = proc_freq2pstate(freq, &l_steps);
+    l_extnSensorList[l_sensorHeader.count].data[1] = CONVERT_UINT16_UINT8_HIGH(freq);
+    l_extnSensorList[l_sensorHeader.count].data[2] = CONVERT_UINT16_UINT8_LOW(freq);
+    l_sensorHeader.count++;
     l_extnSensorList[l_sensorHeader.count].name = EXTN_NAME_FBAS;
     freq = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_WOF_BASE];
     l_extnSensorList[l_sensorHeader.count].data[0] = proc_freq2pstate(freq, &l_steps);

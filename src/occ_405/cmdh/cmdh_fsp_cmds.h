@@ -66,6 +66,7 @@ typedef enum
 #define SENSOR_CAPS "CAPS"
 #define SENSOR_EXTN "EXTN"
 #define EXTN_NAME_FMIN    0x464D494E // "FMIN"
+#define EXTN_NAME_FDIS    0x46444953 // "FDIS"
 #define EXTN_NAME_FBAS    0x46424153 // "FBAS"
 #define EXTN_NAME_FUTURBO 0x46555400 // "FUT"
 #define EXTN_NAME_FMAX    0x464D4158 // "FMAX"

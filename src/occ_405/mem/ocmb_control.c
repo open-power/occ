@@ -266,36 +266,43 @@ void update_nlimits(uint32_t i_membuf)
         memory_throttle_t* l_active_limits23 =
             &G_memoryThrottleLimits[i_membuf][1];
 
-        mem_throt_config_data_t* l_state_limits01 =
+        mem_throt_config_data_v40_t* l_state_limits01 =
             &G_sysConfigData.mem_throt_limits[i_membuf];
-        mem_throt_config_data_t* l_state_limits23 =
+        mem_throt_config_data_v40_t* l_state_limits23 =
             &G_sysConfigData.mem_throt_limits[i_membuf];
 
         //Minimum N value is not state dependent
         l_active_limits01->min_n_per_mba = l_state_limits01->min_n_per_mba;
         l_active_limits23->min_n_per_mba = l_state_limits23->min_n_per_mba;
 
-        //Power Capping memory?
-        if(g_amec->pcap.active_mem_level == 1)
+        //oversubscription?
+        if(AMEC_INTF_GET_OVERSUBSCRIPTION())
         {
-            l_mba01_mba_maxn = l_state_limits01->pcap_n_per_mba;
-            l_mba01_chip_maxn = l_state_limits01->pcap_n_per_chip;
-            l_mba23_mba_maxn = l_state_limits23->pcap_n_per_mba;
-            l_mba23_chip_maxn = l_state_limits23->pcap_n_per_chip;
+            l_mba01_mba_maxn = l_state_limits01->oversub_n_per_mba;
+            l_mba01_chip_maxn = l_state_limits01->oversub_n_per_chip;
+            l_mba23_mba_maxn = l_state_limits23->oversub_n_per_mba;
+            l_mba23_chip_maxn = l_state_limits23->oversub_n_per_chip;
         }
         else if(CURRENT_MODE() == OCC_MODE_DISABLED)
+        {
+            l_mba01_mba_maxn = l_state_limits01->mode_disabled_n_per_mba;
+            l_mba01_chip_maxn = l_state_limits01->mode_disabled_n_per_chip;
+            l_mba23_mba_maxn = l_state_limits23->mode_disabled_n_per_mba;
+            l_mba23_chip_maxn = l_state_limits23->mode_disabled_n_per_chip;
+        }
+        else if(CURRENT_MODE() == OCC_MODE_FMAX)
         {
             l_mba01_mba_maxn = l_state_limits01->fmax_n_per_mba;
             l_mba01_chip_maxn = l_state_limits01->fmax_n_per_chip;
             l_mba23_mba_maxn = l_state_limits23->fmax_n_per_mba;
             l_mba23_chip_maxn = l_state_limits23->fmax_n_per_chip;
         }
-        else //all other modes will use turbo settings
+        else //all other modes will use ultra turbo settings
         {
-            l_mba01_mba_maxn = l_state_limits01->wof_n_per_mba;
-            l_mba01_chip_maxn = l_state_limits01->wof_n_per_chip;
-            l_mba23_mba_maxn = l_state_limits23->wof_n_per_mba;
-            l_mba23_chip_maxn = l_state_limits23->wof_n_per_chip;
+            l_mba01_mba_maxn = l_state_limits01->ut_n_per_mba;
+            l_mba01_chip_maxn = l_state_limits01->ut_n_per_chip;
+            l_mba23_mba_maxn = l_state_limits23->ut_n_per_mba;
+            l_mba23_chip_maxn = l_state_limits23->ut_n_per_chip;
         }
 
         l_active_limits01->max_n_per_chip = l_mba01_chip_maxn;

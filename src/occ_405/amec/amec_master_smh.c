@@ -408,11 +408,10 @@ void amec_mst_check_under_pcap(void)
     {
         // Check if done everything possible to shed power and power still above a hard power cap
         // ppb_fmax = Fmin@MaxThrottle and PWRSYS > Node power cap and
-        // Node power cap >=  hard_min_pcap AND memory is throttled
+        // Node power cap >=  hard_min_pcap
         if((g_amec->proc[0].pwr_votes.ppb_fmax == g_amec->sys.fmin_max_throttled) &&
            (AMECSENSOR_PTR(PWRSYS)->sample > g_amec->pcap.active_node_pcap) &&
-           (g_amec->pcap.active_node_pcap >= G_sysConfigData.pcap.hard_min_pcap) &&
-           (g_amec->pcap.active_mem_level != 0) )
+           (g_amec->pcap.active_node_pcap >= G_sysConfigData.pcap.hard_min_pcap) )
         {
             // Check if we are to ignore pgpe errors meaning the PGPE cannot set frequency which could
             // cause this over power event.  This will not cover if a different OCC is not able to shed

@@ -316,7 +316,7 @@ void amec_slv_proc_voting_box(void)
     // This function implements the voting box to decide which input gets the right
     // to actuate the system.
 
-    // PPB_FMAX
+    // PPB_FMAX -- node power capping
     if(g_amec->proc[0].pwr_votes.ppb_fmax < l_chip_fmax)
     {
         l_chip_fmax = g_amec->proc[0].pwr_votes.ppb_fmax;
@@ -433,39 +433,6 @@ void amec_slv_proc_voting_box(void)
                     }
                 }
             }
-
-// Ignore proc pcap vote in order to keep frequency same across all processors in a
-// node power cap will be handled via the ppb_fmax that is calculated by master OCC
-#ifdef POWER_CAP_VOTE
-            if(CURRENT_MODE() == OCC_MODE_DISABLED)
-            {
-                // PROC_PCAP_NOM_VOTE
-                if(g_amec->proc[0].pwr_votes.proc_pcap_nom_vote < l_core_freq)
-                {
-                    l_core_freq = g_amec->proc[0].pwr_votes.proc_pcap_nom_vote;
-                    l_core_reason = AMEC_VOTING_REASON_PWR;
-                    l_kvm_throt_reason = POWERCAP;
-                }
-            }
-            else
-            {
-                // PROC_PCAP_VOTE
-                if(g_amec->proc[0].pwr_votes.proc_pcap_vote < l_core_freq)
-                {
-                    l_core_freq = g_amec->proc[0].pwr_votes.proc_pcap_vote;
-                    l_core_reason = AMEC_VOTING_REASON_PWR;
-
-                    if(l_report_throttle_freq <= l_core_freq)
-                    {
-                        l_kvm_throt_reason = PCAP_EXCEED_REPORT;
-                    }
-                    else
-                    {
-                        l_kvm_throt_reason = POWERCAP;
-                    }
-                }
-            }
-#endif
 
             // Check IPS frequency request sent by Master OCC
             if(g_amec->slv_ips_freq_request != 0)
@@ -718,13 +685,6 @@ void amec_slv_mem_voting_box(void)
     l_vote     = AMEC_MEMORY_MAX_STEP;
     l_reason   = AMEC_MEM_VOTING_REASON_INIT;
     kvm_reason = NO_THROTTLE;
-
-    // Memory throttled due to power cap.  if also throttled due to
-    // over temp, report over-temp as the reason to OPAL.
-    if (g_amec->pcap.active_mem_level != 0)
-    {
-        kvm_reason = POWER_CAP;
-    }
 
     // Check vote from membuf thermal control loop
     if (l_vote > g_amec->thermalmembuf.speed_request)

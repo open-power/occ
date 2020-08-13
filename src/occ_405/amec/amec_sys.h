@@ -327,25 +327,13 @@ typedef struct
 
 typedef struct
 {
-  //Maximum frequency allowed on this chip by the
+  //Maximum frequency allowed on this chip by the power capping and
   //performance preserving boundary algorithm. Set by amec_ppb_fmax_calc
   uint16_t  ppb_fmax;
 
   //Maximum frequency allowed on this chip by the Pmax_clip register.
   //Set by amec_pmax_clip_controller.
   uint16_t  pmax_clip_freq;
-
-  //Maximum frequency allowed on this chip by the power capping algorithm for
-  //non-nominal cores. Set by amec_pcap_controller.
-  uint16_t  proc_pcap_vote;
-
-  //Minimum frequency that power capping is allowed to lower a nominal
-  //core to.  Set by amec_pcap_calc.
-  uint16_t  nom_pcap_fmin;
-
-  //Maximum frequency allowed on this chip by the power capping algorithm for
-  //nominal cores.  Set by amec_pcpa_controller.
-  uint16_t  proc_pcap_nom_vote;
 
   //Maximum frequency allowed on this chip by the Pmax_clip register.
   //Set by amec_slv_check_apss_fail
