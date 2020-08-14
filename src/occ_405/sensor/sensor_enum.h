@@ -106,9 +106,11 @@ enum e_gsid
     PWRMEM,
     TEMPPROCAVG,    // Average of all TEMPPROCTHRMC core temperatures
     TEMPPROCTHRM,   // Maximum of all TEMPPROCTHRMC core temperatures
+    TEMPPROCIOTHRM, // Maximum of all proc PAU temperatures
     UTIL,
     TEMPRTAVG,      // Average of all TEMPQ race track temperatures
-    TEMPNEST,       // average temperature of nest DTS sensors
+    TEMPNEST0,      // Nest N0 DTS
+    TEMPNEST1,      // Nest N1 DTS
     VOLTVDDSENSE,   // chip voltage (remote sense adjusted for loadline)
     VOLTVDNSENSE,   // chip voltage (remote sense adjusted for loadline)
     VOLTVCSSENSE,   // chip voltage (remote sense adjusted for loadline)
@@ -119,6 +121,10 @@ enum e_gsid
     PWRVIO,         // calculated from AVSBUS data
     PROCPWRTHROT,
     PROCOTTHROT,
+    TEMPPROCIO00,   // SE PAU DTS
+    TEMPPROCIO01,   // NE PAU DTS
+    TEMPPROCIO10,   // SW PAU DTS
+    TEMPPROCIO11,   // NW PAU DTS
     TEMPQ0,         // Temperature of the racetrack DTS for this specific quad
     TEMPQ1,
     TEMPQ2,

@@ -64,6 +64,9 @@
 // Number of generic fw timing sensors
 #define NUM_TIME_SENSORS    8
 
+// Number of processor io sensors
+#define NUM_PROCIO_SENSORS  4
+
 //*************************************************************************
 // Structures
 //*************************************************************************
@@ -349,6 +352,11 @@ typedef struct
     sensor_t tempq;
 } amec_quad_t;
 
+typedef struct
+{
+    sensor_t tempprocio;
+} amec_procio_t;
+
 //-------------------------------------------------------------
 // GPU Structures
 //-------------------------------------------------------------
@@ -414,6 +422,7 @@ typedef struct
   amec_memctl_t  memctl[MAX_NUM_MEM_CONTROLLERS];
   amec_proc_pwr_votes_t pwr_votes;
   amec_quad_t    quad[MAXIMUM_QUADS];
+  amec_procio_t io[NUM_PROCIO_SENSORS];
 
   // Processor Sensors
   sensor_t freqa;
@@ -429,8 +438,11 @@ typedef struct
   sensor_t tempprocthermal;
   vectorSensor_t tempprocthermal_vector;
   sensor_t util;
-  sensor_t tempnest;
   vectorSensor_t util_vector;
+  sensor_t tempnest0;
+  sensor_t tempnest1;
+  sensor_t tempprociothermal;
+  vectorSensor_t tempprociothermal_vector;
   sensor_t curvdd;
   sensor_t curvdn;
   sensor_t curvcs;

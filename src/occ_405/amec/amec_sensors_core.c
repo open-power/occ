@@ -183,7 +183,19 @@ void amec_update_proc_core_sensors(uint8_t i_core)
     }
     else
     {
-       l_core_temp = getSensorByGsid(TEMPNEST)->sample;
+       uint16_t l_core_temp2 = getSensorByGsid(TEMPNEST1)->sample;
+       l_core_temp = getSensorByGsid(TEMPNEST0)->sample;
+       if(l_core_temp)
+       {
+           if(l_core_temp2)
+           {
+               l_core_temp = (l_core_temp + l_core_temp2)/2;
+           }
+       }
+       else
+       {
+           l_core_temp = l_core_temp2;
+       }
     }
     if(l_core_temp)
     {

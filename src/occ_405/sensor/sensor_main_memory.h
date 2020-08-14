@@ -268,7 +268,7 @@ extern bool G_main_mem_sensors_initialized;
 extern bool G_smf_mode;
 
 //  Sensor Count: 28 Individual + 10 Core + 1 Quad + 5 MemBuff + 1 APSS
-#define MAIN_MEM_NUM_SENSORS (28 + 10*24 + 1*6 + 5*16 + 1*16)
+#define MAIN_MEM_NUM_SENSORS (30 + 10*24 + 1*6 + 5*16 + 1*16)
 extern main_mem_sensor_t G_main_mem_sensors[MAIN_MEM_NUM_SENSORS];
 
 /**

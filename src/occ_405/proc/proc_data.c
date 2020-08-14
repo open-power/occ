@@ -77,9 +77,6 @@ bulk_core_data_task_t G_high_cores = {
             MAX_CORES - 1,               // High core to end with
             &G_core_data[MAX_CORES+1] }; // Pointer to holding area for high coredata
 
-//Keeps track of if Nest DTS data has been collected in last 4ms
-bool G_nest_dts_data_valid = FALSE;
-
 //AMEC needs to know when data for a core has been collected.
 uint32_t G_updated_core_mask = 0;
 
@@ -515,11 +512,10 @@ void task_nest_dts( task_t * i_task )
     errlHndl_t  l_err = NULL;  // Error handler
     int         l_rc = 0;      // Return code
     ipc_nest_dts_parms_t * l_parms = (ipc_nest_dts_parms_t*)(G_nest_dts_gpe_req.cmd_data);
-    uint16_t    l_avg = 0;
     uint16_t    l_nestDtsTemp = 0;
-    uint8_t     l_nestDtsCnt = 0;  // Number of valid Nest DTSs
-    uint8_t     k = 0;
+    uint16_t    l_pauDtsTemp = 0;
     bool        l_nestDtsValid = FALSE;
+    bool        l_pauDtsValid  = FALSE;
     static bool L_scheduled = FALSE;
     static bool L_idle_trace = FALSE;
     static bool L_incomplete_trace = FALSE;
@@ -547,44 +543,51 @@ void task_nest_dts( task_t * i_task )
             if ((ASYNC_REQUEST_STATE_COMPLETE == G_nest_dts_gpe_req.request.completion_state) &&
                 (0 == G_nest_dts_parms.error.error))
             {
-                for (k = 0; k < NEST_DTS_COUNT; k++)
+                l_nestDtsTemp = l_parms->data.sensor[N0_DTS].fields.reading;
+                l_nestDtsValid = l_parms->data.sensor[N0_DTS].fields.valid;
+                if(l_nestDtsValid && l_nestDtsTemp && l_nestDtsTemp < DTS_INVALID_MASK)
                 {
-                    // check valid and temperature for current nest DTS being processed
-                    l_nestDtsValid = l_parms->data.sensor[k].fields.valid;
-                    // temperature is only 8 bits of reading field
-                    l_nestDtsTemp = (l_parms->data.sensor[k].fields.reading & 0xFF);
-
-                    //Hardware bug workaround:  Module test will detect bad DTS and write coefficients
-                    //to force a reading of 0 or negative to indicate the DTS is bad.
-                    //Ignore any DTS that is not valid or marked bad
-                    if( (l_nestDtsValid) && ( (l_nestDtsTemp & DTS_INVALID_MASK) != DTS_INVALID_MASK) &&
-                        (l_nestDtsTemp != 0) )
-                    {
-                        l_avg += l_nestDtsTemp;
-                        l_nestDtsCnt++;
-                    }
-                } //for loop
-
-                if(l_nestDtsCnt)
-                {
-                    // Calculate the average of the valid Nest DTS temps
-                    l_avg = l_avg / l_nestDtsCnt;
-
-                    // Mark the data as valid and update sensor
-                    G_nest_dts_data_valid = TRUE;
-                    sensor_update(AMECSENSOR_PTR(TEMPNEST), l_avg);
+                    sensor_update(AMECSENSOR_PTR(TEMPNEST0), l_nestDtsTemp);
                 }
-                else
+
+                l_nestDtsTemp = l_parms->data.sensor[N1_DTS].fields.reading;
+                l_nestDtsValid = l_parms->data.sensor[N1_DTS].fields.valid;
+                if(l_nestDtsValid && l_nestDtsTemp && l_nestDtsTemp < DTS_INVALID_MASK)
                 {
-                    // No valid nest DTS, Mark the data as invalid
-                    G_nest_dts_data_valid = FALSE;
+                    sensor_update(AMECSENSOR_PTR(TEMPNEST1), l_nestDtsTemp);
                 }
+
+                l_pauDtsTemp = l_parms->data.sensor[SE_PAU_DTS].fields.reading;
+                l_pauDtsValid = l_parms->data.sensor[SE_PAU_DTS].fields.valid;
+                if(l_pauDtsValid && l_pauDtsTemp && l_pauDtsTemp < DTS_INVALID_MASK)
+                {
+                    sensor_update(AMECSENSOR_PTR(TEMPPROCIO00), l_pauDtsTemp);
+                }
+
+                l_pauDtsTemp = l_parms->data.sensor[NE_PAU_DTS].fields.reading;
+                l_pauDtsValid = l_parms->data.sensor[NE_PAU_DTS].fields.valid;
+                if(l_pauDtsValid && l_pauDtsTemp && l_pauDtsTemp < DTS_INVALID_MASK)
+                {
+                    sensor_update(AMECSENSOR_PTR(TEMPPROCIO01), l_pauDtsTemp);
+                }
+
+                l_pauDtsTemp = l_parms->data.sensor[SW_PAU_DTS].fields.reading;
+                l_pauDtsValid = l_parms->data.sensor[SW_PAU_DTS].fields.valid;
+                if(l_pauDtsValid && l_pauDtsTemp && l_pauDtsTemp < DTS_INVALID_MASK)
+                {
+                    sensor_update(AMECSENSOR_PTR(TEMPPROCIO10), l_pauDtsTemp);
+                }
+
+                l_pauDtsTemp = l_parms->data.sensor[NW_PAU_DTS].fields.reading;
+                l_pauDtsValid = l_parms->data.sensor[NW_PAU_DTS].fields.valid;
+                if(l_pauDtsValid && l_pauDtsTemp && l_pauDtsTemp < DTS_INVALID_MASK)
+                {
+                    sensor_update(AMECSENSOR_PTR(TEMPPROCIO11), l_pauDtsTemp);
+                }
+
             } // if request completed without error
             else
             {
-                // Async request not finished, mark data invalid
-                G_nest_dts_data_valid = FALSE;
-
                 // Trace only once
                 if (!L_incomplete_trace)
                 {

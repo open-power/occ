@@ -77,6 +77,11 @@ enum
     CHOMTEMPPROC1,
     CHOMTEMPPROC2,
     CHOMTEMPPROC3,
+    // Proc io temperature accross all nodes
+    CHOMTEMPIOP0,
+    CHOMTEMPIOP1,
+    CHOMTEMPIOP2,
+    CHOMTEMPIOP3,
     // Membuf temperature for all membufs in the node
     CHOMTEMPMEMBUFP0,
     CHOMTEMPMEMBUFP1,

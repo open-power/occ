@@ -119,7 +119,6 @@ extern uint32_t G_core_offline_mask;
 // External reference to empath error mask
 extern uint32_t G_empath_error_core_mask;
 
-extern bool G_nest_dts_data_valid;
 
 //Returns 0 if the specified core is not updated. Otherwise, returns none-zero.
 #define CORE_UPDATED(occ_core_id) \

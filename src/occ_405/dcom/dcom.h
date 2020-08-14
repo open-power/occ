@@ -214,7 +214,7 @@ typedef struct __attribute__ ((packed))
     uint16_t pwrproc;                                            // [228]
     uint16_t pwr250usmemp0;                                      // [230]
     uint16_t reserved0;                                          // [232]
-    uint16_t reserved1;                                          // [234]
+    uint16_t tempprociothermal;                                  // [234]
     uint16_t tempprocavg;                                        // [236]
     uint16_t tempprocthermal;                                    // [238]
     uint16_t utilcy[MAX_CORES];                                  // [240]

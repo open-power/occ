@@ -85,6 +85,11 @@ const uint16_t * g_chom_sensor_table[CHOM_NUM_OF_SENSORS] =
     &G_dcom_slv_outbox_rx[1].tempprocthermal,
     &G_dcom_slv_outbox_rx[2].tempprocthermal,
     &G_dcom_slv_outbox_rx[3].tempprocthermal,
+    // Processor IO temperature sensors
+    &G_dcom_slv_outbox_rx[0].tempprociothermal,
+    &G_dcom_slv_outbox_rx[1].tempprociothermal,
+    &G_dcom_slv_outbox_rx[2].tempprociothermal,
+    &G_dcom_slv_outbox_rx[3].tempprociothermal,
     // Membuf temperature sensors
     &G_dcom_slv_outbox_rx[0].tempmembufthrm,
     &G_dcom_slv_outbox_rx[1].tempmembufthrm,
