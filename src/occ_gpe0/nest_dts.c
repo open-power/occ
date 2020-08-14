@@ -98,49 +98,4 @@ uint32_t get_nest_dts(NestDts_t* o_data)
 
 }
 
-int encode2response(uint32_t v)
-{
-    switch(v)
-    {
-        case 0:  return 0; break;
-        case 4:  return 1; break;
-        case 6:  return 2; break;
-        case 7:  return 3; break;
-        default: return -1; break;
-    };
-    return -1;
-}
 
-uint32_t get_nest_droop_sensors(NestDdsData * o_ddsData)
-{
-    uint32_t rc = 0;
-    dpll_echar_reg_t dpll_echar;
-
-    o_ddsData->value = 0;
-
-    rc = getscom_abs(NEST_DPLL_ECHAR,&(dpll_echar.value));
-    if(rc == 0)
-    {
-        int response = encode2response(dpll_echar.fields.encode);
-        if(response > 0)
-        {
-            o_ddsData->fields.dds_reading = response;
-            o_ddsData->fields.dds_valid = 1;
-        }
-
-        response = encode2response(dpll_echar.fields.encode_min);
-        if(response > 0)
-        {
-            o_ddsData->fields.dds_min = response;
-            o_ddsData->fields.dds_min_valid = 1;
-        }
-
-        response = encode2response(dpll_echar.fields.encode_max);
-        if(response > 0)
-        {
-            o_ddsData->fields.dds_max = response;
-            o_ddsData->fields.dds_max_valid = 1;
-        }
-    }
-    return rc;
-}

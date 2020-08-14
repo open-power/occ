@@ -29,6 +29,7 @@
 
 #define NEST_DTS_COUNT 6
 
+#define NEST_DPLL_OCHAR (0x1060056)
 #define NEST_DPLL_ECHAR 0x1060058
 
 #define N0_DTS 0
@@ -45,25 +46,7 @@ typedef struct
     uint32_t  reserved;
 } NestDts_t;
 
-typedef struct
-{
-    uint64_t value;
-    struct
-    {
-        uint64_t dds_valid : 1;
-        uint64_t dds_reading : 15;
-        uint64_t dds_min_valid : 1;
-        uint64_t dds_min : 15;
-        uint64_t dds_max_valid : 1;
-        uint64_t dds_max : 15;
-        uint16_t reserved : 16;
-    } fields;
-} NestDdsData;
-
-
-
 uint32_t get_nest_dts(NestDts_t* o_data);
-uint32_t get_nest_droop_sensors(NestDdsData * o_ddsData);
 
 #endif
 

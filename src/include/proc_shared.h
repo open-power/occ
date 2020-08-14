@@ -44,17 +44,11 @@ typedef struct ipc_nest_dts_parms
     NestDts_t       data;
 } ipc_nest_dts_parms_t;
 
-typedef struct ipc_core_dds_parms
+typedef struct ipc_quad_data_parms
 {
     GpeErrorStruct   error;
-    DdsData*  data;
-    uint32_t   core_num;
-} ipc_core_dds_parms_t;
-
-typedef struct ipc_nest_dds_parms
-{
-    GpeErrorStruct  error;
-    NestDdsData *   data;
-} ipc_nest_dds_parms_t;
+    QuadData*  data;
+    uint32_t   quad_mask;
+} ipc_quad_data_parms_t;
 
 #endif // _PROC_SHARED_H

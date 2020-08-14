@@ -34,9 +34,8 @@ void apss_continue_pwr_meas_read(ipc_msg_t* cmd, void* arg);
 void apss_complete_pwr_meas_read(ipc_msg_t* cmd, void* arg);
 void apss_toggle_hw_reset(ipc_msg_t* cmd, void* arg);
 void gpe_get_core_data(ipc_msg_t* cmd, void* arg);
-void gpe_get_core_dds(ipc_msg_t* cmd, void* arg);
+void gpe_get_quad_data(ipc_msg_t* cmd, void* arg);
 void gpe_get_nest_dts(ipc_msg_t* cmd, void* arg);
-void gpe_get_nest_dds(ipc_msg_t* cmd, void* arg);
 void gpe_get_tod(ipc_msg_t* cmd, void* arg);
 
 void ipc_scom_operation(ipc_msg_t* cmd, void* arg);
@@ -77,8 +76,8 @@ IPC_HANDLER(gpe0_nop, 0)                     // 8 - IPC_ST_GPE0_NOP
 IPC_HANDLER(gpe_get_nest_dts, 0)             // 9 - IPC_ST_GET_NEST_DTS_FUNCID
 IPC_HANDLER(gpe_get_tod, 0)                  // 10 - IPC_ST_GET_TOD_FUNCID
 IPC_HANDLER(apss_toggle_hw_reset, 0)         // 11 - IPC_ST_APSS_RESET_FUNCID
-IPC_HANDLER(gpe_get_core_dds, 0)             // 12 - IPC_ST_GET_CORE_DDS_FUNCID
-IPC_HANDLER(gpe_get_nest_dds, 0)             // 13 - IPC_ST_GET_NEST_DDS_FUNCID
+IPC_HANDLER(gpe_get_quad_data, 0)            // 12 - IPC_ST_GET_QUAD_DATA_FUNCID
+IPC_HANDLER_DEFAULT                          // 13 -
 IPC_HANDLER_DEFAULT                          // 14
 IPC_HANDLER_DEFAULT                          // 15
 IPC_ST_FUNC_TABLE_END

@@ -38,6 +38,7 @@
 #define PC_OCC_SPRD             0x00020411
 #define TOD_VALUE_REG           0x00040020
 #define CPMS_SDSR               0x000e0e68
+#define QME_FTXR                0x000e0178
 #define STOP_STATE_HIST_OCC_REG 0x000F0112 // TODO RTC 213673 Exist on P10?
 
 #define CORE_RAW_CYCLES             0x200
@@ -97,21 +98,6 @@ typedef struct
     sensor_result_t racetrack;
 } CoreDataDts;
 
-//
-// The instance of this data object must be 8 byte aligned and
-// size must be muliple of 8
-//
-typedef struct // 136 bytes
-{
-    CoreDataEmpath             empath;          //32
-    CoreDataThrottle           throttle;        //20
-    CoreDataDroop              droop;           //12
-    CoreDataDts                dts;             // 8
-    uint64_t                   stop_state_hist; // 8
-    uint32_t                   tod_2mhz;        // 4
-    uint32_t                   empathValid;     // 4
-} CoreData;
-
 typedef union
 {
     uint64_t value;
@@ -123,9 +109,30 @@ typedef union
         uint64_t dds_min : 15;
         uint64_t dds_max_valid : 1;
         uint64_t dds_max : 15;
-        uint16_t reserved : 16;
+        uint64_t not_used : 16;
     } fields;
 } DdsData;
+
+//
+// The instance of this data object must be 8 byte aligned and
+// size must be muliple of 8
+//
+typedef struct
+{
+    CoreDataEmpath             empath;          //32
+    CoreDataThrottle           throttle;        //20
+    CoreDataDroop              droop;           //12
+    CoreDataDts                dts;             // 8
+    uint64_t                   stop_state_hist; // 8
+    uint32_t                   tod_2mhz;        // 4
+    uint32_t                   empathValid;     // 4
+    DdsData                    dds;             // 8
+} CoreData;
+
+typedef struct
+{
+    uint32_t ftxr[MAX_NUM_QUADS];
+} QuadData;
 
 #ifdef __cplusplus
 extern "C"
@@ -139,8 +146,7 @@ extern "C"
  * @return result of scom operation
  */
 uint32_t  get_core_data(uint32_t i_core, CoreData* o_data);
-uint32_t  get_core_droop_sensors(uint32_t i_core, DdsData* o_data);
-
+uint32_t get_quad_data(uint32_t i_quad_mask, QuadData * o_data);
 #ifdef __cplusplus
 };
 #endif

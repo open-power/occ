@@ -86,6 +86,8 @@ uint32_t get_core_data(uint32_t i_core,
     uint32_t quadSelect = CHIPLET_QUAD_BASE((i_core / CORES_PER_QUAD));
     uint32_t dtsCoreSelect = DTS_CHIPLET_CORE_OFFSET(i_core % CORES_PER_QUAD) + quadSelect;
     uint32_t raceTrackSelect = quadSelect + EQ_DTS_RACETRACK_OFFSET;
+    uint32_t coreSelect = quadSelect + CORE_REGION(i_core);
+    uint32_t data32 = 0;
 
     uint32_t i;
 
@@ -108,11 +110,11 @@ uint32_t get_core_data(uint32_t i_core,
     // mask off SIB errors as machine checks, return rc instead
     mtmsr((mfmsr() & ~(MSR_SIBRC | MSR_SIBRCA)) | MSR_SEM);
 
-    // ==============
-    // DTS
-    // ==============
     do
     {
+        // ==============
+        // DTS
+        // ==============
         dts_sensor_result_reg_t dts_scom_data;
 
         rc = getscom(raceTrackSelect,THERM_DTS_RESULT, &(dts_scom_data.value));
@@ -142,8 +144,7 @@ uint32_t get_core_data(uint32_t i_core,
         uint32_t empath_offset = CORE_RAW_CYCLES;
         uint64_t empath_scom_data = (uint64_t)empath_offset;
 
-        uint32_t empathSelect = quadSelect + CORE_REGION(i_core);
-        rc = putscom(empathSelect, PC_OCC_SPRC, empath_scom_data);
+        rc = putscom(coreSelect, PC_OCC_SPRC, empath_scom_data);
         if (rc)
         {
             break;
@@ -153,14 +154,14 @@ uint32_t get_core_data(uint32_t i_core,
         //  Counter selected auto increments to the next counter after each read.
 
         //CORE_RAW_CYCLES
-        rc = getscom(empathSelect, PC_OCC_SPRD, &empath_scom_data);
+        rc = getscom(coreSelect, PC_OCC_SPRD, &empath_scom_data);
         if (rc)
         {
             break;
         }
         if(empath_scom_data == 0ull)
         {
-            rc = empath_retry(empathSelect, empath_offset, &empath_scom_data);
+            rc = empath_retry(coreSelect, empath_offset, &empath_scom_data);
             if (rc)
             {
                 break;
@@ -170,14 +171,14 @@ uint32_t get_core_data(uint32_t i_core,
 
         //CORE_RUN_CYCLES
         empath_offset += 8;
-        rc = getscom(empathSelect, PC_OCC_SPRD, &empath_scom_data);
+        rc = getscom(coreSelect, PC_OCC_SPRD, &empath_scom_data);
         if (rc)
         {
             break;
         }
         if(empath_scom_data == 0ull)
         {
-            rc = empath_retry(empathSelect, empath_offset, &empath_scom_data);
+            rc = empath_retry(coreSelect, empath_offset, &empath_scom_data);
             if (rc)
             {
                 break;
@@ -187,14 +188,14 @@ uint32_t get_core_data(uint32_t i_core,
 
         // Core instruction Complete Utilization Counter
         empath_offset += 8;
-        rc = getscom(empathSelect, PC_OCC_SPRD, &empath_scom_data);
+        rc = getscom(coreSelect, PC_OCC_SPRD, &empath_scom_data);
         if (rc)
         {
             break;
         }
         if(empath_scom_data == 0ull)
         {
-            rc = empath_retry(empathSelect, empath_offset, &empath_scom_data);
+            rc = empath_retry(coreSelect, empath_offset, &empath_scom_data);
             if (rc)
             {
                 break;
@@ -204,14 +205,14 @@ uint32_t get_core_data(uint32_t i_core,
 
         //CORE_WORKRATE_BUSY
         empath_offset += 8;
-        rc = getscom(empathSelect, PC_OCC_SPRD,&empath_scom_data);
+        rc = getscom(coreSelect, PC_OCC_SPRD,&empath_scom_data);
         if (rc)
         {
             break;
         }
         if(empath_scom_data == 0ull)
         {
-            rc = empath_retry(empathSelect, empath_offset, &empath_scom_data);
+            rc = empath_retry(coreSelect, empath_offset, &empath_scom_data);
             if (rc)
             {
                 break;
@@ -221,14 +222,14 @@ uint32_t get_core_data(uint32_t i_core,
 
         //CORE_WORKRATE_FINISH
         empath_offset += 8;
-        rc = getscom(empathSelect, PC_OCC_SPRD,&empath_scom_data);
+        rc = getscom(coreSelect, PC_OCC_SPRD,&empath_scom_data);
         if (rc)
         {
             break;
         }
         if(empath_scom_data == 0ull)
         {
-            rc = empath_retry(empathSelect, empath_offset, &empath_scom_data);
+            rc = empath_retry(coreSelect, empath_offset, &empath_scom_data);
             if (rc)
             {
                 break;
@@ -238,14 +239,14 @@ uint32_t get_core_data(uint32_t i_core,
 
         //CORE_MEM_HIER_A_LATENCY
         empath_offset += 8;
-        rc = getscom(empathSelect, PC_OCC_SPRD,&empath_scom_data);
+        rc = getscom(coreSelect, PC_OCC_SPRD,&empath_scom_data);
         if (rc)
         {
             break;
         }
         if(empath_scom_data == 0ull)
         {
-            rc = empath_retry(empathSelect, empath_offset, &empath_scom_data);
+            rc = empath_retry(coreSelect, empath_offset, &empath_scom_data);
             if (rc)
             {
                 break;
@@ -255,14 +256,14 @@ uint32_t get_core_data(uint32_t i_core,
 
         //CORE_MEM_HIER_B_LATENCY
         empath_offset += 8;
-        rc = getscom(empathSelect, PC_OCC_SPRD,&empath_scom_data);
+        rc = getscom(coreSelect, PC_OCC_SPRD,&empath_scom_data);
         if (rc)
         {
             break;
         }
         if(empath_scom_data == 0ull)
         {
-            rc = empath_retry(empathSelect, empath_offset, &empath_scom_data);
+            rc = empath_retry(coreSelect, empath_offset, &empath_scom_data);
             if (rc)
             {
                 break;
@@ -272,14 +273,14 @@ uint32_t get_core_data(uint32_t i_core,
 
         //CORE_MEM_HIER_C_ACCESS
         empath_offset += 8;
-        rc = getscom(empathSelect, PC_OCC_SPRD,&empath_scom_data);
+        rc = getscom(coreSelect, PC_OCC_SPRD,&empath_scom_data);
         if (rc)
         {
             break;
         }
         if(empath_scom_data == 0ull)
         {
-            rc = empath_retry(empathSelect, empath_offset, &empath_scom_data);
+            rc = empath_retry(coreSelect, empath_offset, &empath_scom_data);
             if (rc)
             {
                 break;
@@ -288,7 +289,7 @@ uint32_t get_core_data(uint32_t i_core,
         o_data->empath.mem_access_c = (uint32_t)empath_scom_data;
 
         //IFU_THROTTLE_BLOCK_FETCH
-        rc = getscom(empathSelect, PC_OCC_SPRD,&empath_scom_data);
+        rc = getscom(coreSelect, PC_OCC_SPRD,&empath_scom_data);
         if (rc)
         {
             break;
@@ -296,7 +297,7 @@ uint32_t get_core_data(uint32_t i_core,
         o_data->throttle.ifu_throttle = (uint32_t)empath_scom_data;
 
         //IFU_THROTTLE_ACTIVE
-        rc = getscom(empathSelect, PC_OCC_SPRD,&empath_scom_data);
+        rc = getscom(coreSelect, PC_OCC_SPRD,&empath_scom_data);
         if (rc)
         {
             break;
@@ -304,7 +305,7 @@ uint32_t get_core_data(uint32_t i_core,
         o_data->throttle.ifu_active = (uint32_t)empath_scom_data;
 
         // Power Proxy
-        rc = getscom(empathSelect, PC_OCC_SPRD,&empath_scom_data);
+        rc = getscom(coreSelect, PC_OCC_SPRD,&empath_scom_data);
         if (rc)
         {
             break;
@@ -312,7 +313,7 @@ uint32_t get_core_data(uint32_t i_core,
         o_data->throttle.pwr_proxy = (uint32_t)empath_scom_data;
 
         // Fine Throttle Blocked
-        rc = getscom(empathSelect, PC_OCC_SPRD,&empath_scom_data);
+        rc = getscom(coreSelect, PC_OCC_SPRD,&empath_scom_data);
         if (rc)
         {
             break;
@@ -320,7 +321,7 @@ uint32_t get_core_data(uint32_t i_core,
         o_data->throttle.fine_throttle = (uint32_t)empath_scom_data;
 
         // Harsh Throttle Active
-        rc = getscom(empathSelect, PC_OCC_SPRD,&empath_scom_data);
+        rc = getscom(coreSelect, PC_OCC_SPRD,&empath_scom_data);
         if (rc)
         {
             break;
@@ -328,7 +329,7 @@ uint32_t get_core_data(uint32_t i_core,
         o_data->throttle.harsh_throttle = (uint32_t)empath_scom_data;
 
         // Small Droop Present
-        rc = getscom(empathSelect, PC_OCC_SPRD,&empath_scom_data);
+        rc = getscom(coreSelect, PC_OCC_SPRD,&empath_scom_data);
         if (rc)
         {
             break;
@@ -336,7 +337,7 @@ uint32_t get_core_data(uint32_t i_core,
         o_data->droop.v_droop_small = (uint32_t)empath_scom_data;
 
         // Large Droop Present
-        rc = getscom(empathSelect, PC_OCC_SPRD,&empath_scom_data);
+        rc = getscom(coreSelect, PC_OCC_SPRD,&empath_scom_data);
         if (rc)
         {
             break;
@@ -344,7 +345,7 @@ uint32_t get_core_data(uint32_t i_core,
         o_data->droop.v_droop_large = (uint32_t)empath_scom_data;
 
         // MMA Activer
-        rc = getscom(empathSelect, PC_OCC_SPRD,&empath_scom_data);
+        rc = getscom(coreSelect, PC_OCC_SPRD,&empath_scom_data);
         if (rc)
         {
             break;
@@ -360,7 +361,7 @@ uint32_t get_core_data(uint32_t i_core,
         o_data->tod_2mhz = (uint32_t)(empath_scom_data >> 8); //[24..56]
 
         // STOP_STATE_HIST_OCC_REG TODO 213673 P10 exist?
-        //rc = getscom(empathSelect, STOP_STATE_HIST_OCC_REG, &empath_scom_data);
+        //rc = getscom(coreSelect, STOP_STATE_HIST_OCC_REG, &empath_scom_data);
         //if (rc)
         //{
         //    break;
@@ -368,6 +369,37 @@ uint32_t get_core_data(uint32_t i_core,
         //o_data->stop_state_hist = empath_scom_data;
 
         o_data->empathValid = EMPATH_VALID;
+
+        // ==============
+        // DDS
+        // ==============
+        cpms_sdsr_t sdsr;
+        rc = getscom(coreSelect, CPMS_SDSR, &(sdsr.value));
+        if (rc)
+        {
+            break;
+        }
+        data32 = sdsr.fields.data;
+        o_data->dds.fields.dds_reading = data32;
+        if(data32 <= 24)
+        {
+            o_data->dds.fields.dds_valid = 1;
+        }
+
+        data32 = sdsr.fields.data_min;
+        o_data->dds.fields.dds_min  = data32;
+        if(data32 <= 24)
+        {
+            o_data->dds.fields.dds_min_valid = 1;
+        }
+
+        data32 = sdsr.fields.data_max;
+        o_data->dds.fields.dds_max = data32;
+        if((data32 <= 24) && (data32 != 0))
+        {
+            o_data->dds.fields.dds_max_valid = 1;
+        }
+
     } while(0);
 
     // Clear masks SIB masks (MSR_SEM)
@@ -379,41 +411,28 @@ uint32_t get_core_data(uint32_t i_core,
     return rc;
 }
 
-uint32_t get_core_droop_sensors(uint32_t i_core,
-                                DdsData* o_data)
+uint32_t get_quad_data(uint32_t i_quad_mask,
+                       QuadData * o_data)
 {
-    //DPLL_ECHAR offset 0x01060058(PAU) 0x01060158(NEST)
-    //[1:3] DATA (000b,100b,110b, 111b are valid, otherwise discard)
-    //[5:7] MIN_DATA
-    //[9:11] MAX_DATA
-
     uint32_t rc = 0;
-    uint32_t coreSelect = CHIPLET_QUAD_BASE((i_core / CORES_PER_QUAD)) +
-                          CORE_REGION(i_core);
+    uint32_t mask = 0x80000000ul;
+    int quad;
 
-    cpms_sdsr_t sdsr;
-
-    o_data->value = 0;
-
-    rc = getscom(coreSelect, CPMS_SDSR, &(sdsr.value));
-
-    if(rc == 0)
+    for(quad = 0; quad < MAX_NUM_QUADS; ++quad)
     {
-        uint32_t data = sdsr.fields.data;
-        o_data->fields.dds_reading = data;
-        if(data <= 24)
+        o_data->ftxr[quad] = 0;
+        if((mask & i_quad_mask) != 0)
         {
-            o_data->fields.dds_valid = 1;
-        }
-        o_data->fields.dds_min  = sdsr.fields.data_min;
-        o_data->fields.dds_min_valid = 1;
+            uint32_t quadSelect = CHIPLET_QUAD_BASE(quad);
+            uint64_t qme_ftxr = 0;
 
-        data = sdsr.fields.data_max;
-        o_data->fields.dds_max  = data;
-        if(data <= 24)
-        {
-            o_data->fields.dds_max_valid = 1;
+            rc = getscom(quadSelect, QME_FTXR, &qme_ftxr);
+            if(rc == 0)
+            {
+                o_data->ftxr[quad] = (qme_ftxr >> 32);
+            }
         }
+        mask >>=1;
     }
     return rc;
 }
