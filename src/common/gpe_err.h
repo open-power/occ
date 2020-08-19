@@ -63,4 +63,10 @@
 #define GPE_RC_GPU_INIT_FAILED       0x84     // Failed to init GPU
 #define GPE_RC_GPU_BUSY              0x85
 
+// 24x7 Nest Performance Monitoring Errors
+#define GPE_RC_24x7_INVALID_CMD      0xE0     // Unsupported command requested to GPE1 24x7
+#define GPE_RC_24x7_INVALID_SPEED    0xE1     // Unsupported speed change requested to GPE1 24x7
+#define GPE_RC_24x7_INVALID_STATE    0xE2     // GPE24x7 got into an invalid state
+#define GPE_RC_24x7_INVALID_GROUP    0xE3     // GPE24x7 processing an invalid event group
+
 #endif //_GPE_ERR_H

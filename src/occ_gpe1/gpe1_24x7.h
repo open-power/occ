@@ -28,363 +28,355 @@
 
 //PMU config table defined below.
 //------------------------------
-#define TOTAL_CONFIGS 61
-#define TOTAL_POSTINGS 238
-#define INC_UPD_COUNT 1
+#define TOTAL_CONFIGS  120
+#define TOTAL_POSTINGS 442
+#define INC_UPD_COUNT  1
 
-#define TOTAL_CONFIG_SCOMS 61
-#define TOTAL_COUNTER_SCOMS 71
+#define TOTAL_CONFIG_SCOMS  120
+#define TOTAL_COUNTER_SCOMS 82
 
 #define MAX_32 4294967295ULL
 #define MAX_48 281474976710655ULL
 
-static volatile uint64_t  G_CUR_UAV = 0;
-static volatile uint64_t  G_CUR_MODE = 0;
-static volatile uint64_t  G_MBA_pmulets[24];
-static volatile uint64_t  G_PHB_pmulets[24];
+#define UNDEF 0xFF
+static volatile uint64_t  G_CUR_UAV   = 0;
+static volatile uint64_t  G_CUR_MODE  = 0;
 
+//Config/pre-scaler: CNPM-10 bit + MCS-12bit + All other units - 16 bit
 uint64_t G_PMU_CONFIGS_8[][2] = 
 {
 //cnpm//
-    {0x5011c13, 0x92aaaaaaac000bf8},//0
-    {0x5011c14, 0x92a8aaaaac000bf8},//1
-    {0x5011c15, 0xaaaaaaaaaaaaaaaa},//2
-    {0x5011c16, 0x0400c0ff00ff0000},//3
-//MC23//
-    {0x3010829, 0x0500000000000000},//port0//4
-    {0x3010839, 0x0500000000000000},//port1//5
-    {0x30108a9, 0x0500000000000000},//port2//6
-    {0x30108b9, 0x0500000000000000},//port3//7
-    {0x301083c, 0x0000000000000000},//port0,1//8
-    {0x301083d, 0x000000005345755b},//port0,1//9
-    {0x301083e, 0x6471000000000000},//port0,1//10
-    {0x301083f, 0x00f0800000000000},//port0,1//11
-    {0x30108bc, 0x0000000000000000},//port2,3//12
-    {0x30108bd, 0x0000000000000000},//port2,3//13
-    {0x30108be, 0x00005345755b6000},//port2,3//14
-    {0x30108bf, 0x000e800000000000},//port2,3//15
-//MC01//
-    {0x5010829, 0x0500000000000000},//port0//16
-    {0x5010839, 0x0500000000000000},//port1//17
-    {0x50108a9, 0x0500000000000000},//port2//18
-    {0x50108b9, 0x0500000000000000},//port3//19
-    {0x501083c, 0x0000000000000000},//port0,1//20
-    {0x501083d, 0x000000005345755b},//port0,1//21
-    {0x501083e, 0x6471000000000000},//port0,1//22
-    {0x501083f, 0x00f0800000000000},//port0,1//23
-    {0x50108bc, 0x0000000000000000},//port2,3//24
-    {0x50108bd, 0x0000000000000000},//port2,3//25
-    {0x50108be, 0x00005345755b6000},//port2,3//26
-    {0x50108bf, 0x000e800000000000},//port2,3//27
-//xlinks//
-    {0x501341a, 0xff115daa15555000},//all xlinks//28
-//nx//
-    {0x20110a6, 0xcaa0000080000000},//29
-    {0x20110a9, 0xcaa0492480000000},//30
-    {0x2011054, 0x0000000000000000},//31
-    {0x2011055, 0x00000000600002aa},//32
-//nvlinks-NTL,ATS,XTS//
-    {0x501111e, 0xb0aa0144868a0000},//NTL0//33
-    {0x501113e, 0xb0aa0144868a0000},//NTL1//34
-    {0x501131e, 0xb0aa0144868a0000},//NTL2//35
-    {0x501133e, 0xb0aa0144868a0000},//NTL3//36
-    {0x501151e, 0xb0aa0144868a0000},//NTL4//37
-    {0x501153e, 0xb0aa0144868a0000},//NTL5//38
-    {0x5011600, 0xb0aa420000000000},//ATS//39
-    {0x5011645, 0xb0aa03050d0e0000},//XTS//40
-//PHB
-    {0xd010917, 0x8000011516190000},//PHB0//41
-    {0xe010917, 0x8000011516190000},//PHB1//42
-    {0xe010957, 0x8000011516190000},//PHB2//43
-    {0xf010917, 0x8000011516190000},//PHB3//44
-    {0xf010957, 0x8000011516190000},//PHB4//45
-    {0xf010997, 0x8000011516190000},//PHB5//46
-//nvlinks-NPCQ//
-    {0x50110C7, 0x90aa1012181a0000},//NPCQ01//47
-    {0x50112C7, 0x90aa1012181a0000},//NPCQ02//48
-    {0x50114C7, 0x90aa1012181a0000},//NPCQ03//49
-//CAPP
-    {0x2010814, 0x8058812200000000},//CAPP01//50
-    {0x2010816, 0x6000000000000000},//CAPP01//51
-    {0x2010824, 0x8058914202000000},//CAPP01//52
-    {0x2010822, 0x1000000000000000},//CAPP01//53
-    {0x2010817, 0x0000000000000000},//CAPP01//54
-    {0x4010814, 0x8058812200000000},//CAPP02//55
-    {0x4010816, 0x6000000000000000},//CAPP02//56
-    {0x4010824, 0x8058914202000000},//CAPP02//57
-    {0x4010822, 0x1000000000000000},//CAPP02//58
-    {0x4010817, 0x0000000000000000},//CAPP02//59
-//alinks//
-    {0x501381a, 0xff115daa05555000}//all alinks//60
-};
+    {0x1001181f, 0x93abaffffc000000},//scom10//0
+    {0x1101181f, 0x93abaffffc000000},//scom23//1
+    {0x1201181f, 0x90aa7eaaa8000000},//scom45//2
+    {0x1301181f, 0x92aaabebfc000000},//scom67//3
+    {0x10011820, 0xaaaaaaaa55555555},//scom10//4
+    {0x11011820, 0xaaaaaaaa55555555},//scom23//5
+    {0x12011820, 0xaaaaaaaa55555555},//scom45//6
+    {0x13011820, 0xaaaaaaaa55555555},//scom67//7
 
-uint64_t G_PMU_CONFIGS_16[][2] = 
-{
-//cnpm
-    {0x5011c13, 0x92aaaaaaac000bf8},//0
-    {0x5011c14, 0x92a8aaaaac000bf8},//1
-    {0x5011c15, 0x5555555555555555},//2
-    {0x5011c16, 0x0400c0ff00ff0000},//3
-//MC23//	                        
-    {0x3010829, 0x0500000000000000},//port0//4
-    {0x3010839, 0x0500000000000000},//port1//5
-    {0x30108a9, 0x0500000000000000},//port2//6
-    {0x30108b9, 0x0500000000000000},//port3//7
-    {0x301083c, 0x0000000000000000},//port0,1//8
-    {0x301083d, 0x000000005345755b},//port0,1//9
-    {0x301083e, 0x6471000000000000},//port0,1//10
-    {0x301083f, 0x00f0800000000000},//port0,1//11
-    {0x30108bc, 0x0000000000000000},//port2,3//12
-    {0x30108bd, 0x0000000000000000},//port2,3//13
-    {0x30108be, 0x00005345755b6000},//port2,3//14
-    {0x30108bf, 0x000e800000000000},//port2,3//15
-//MC01//                            
-    {0x5010829, 0x0500000000000000},//port0//16
-    {0x5010839, 0x0500000000000000},//port1//17
-    {0x50108a9, 0x0500000000000000},//port2//18
-    {0x50108b9, 0x0500000000000000},//port3//19
-    {0x501083c, 0x0000000000000000},//port0,1//20
-    {0x501083d, 0x000000005345755b},//port0,1//21
-    {0x501083e, 0x6471000000000000},//port0,1//22
-    {0x501083f, 0x00f0800000000000},//port0,1//23
-    {0x50108bc, 0x0000000000000000},//port2,3//24
-    {0x50108bd, 0x0000000000000000},//port2,3//25
-    {0x50108be, 0x00005345755b6000},//port2,3//26
-    {0x50108bf, 0x000e800000000000},//port2,3//27
-//xlinks                            
-    {0x501341a, 0xff115d5515555000},//all xlinks//28
-//nx                                
-    {0x20110a6, 0xc550000080000000},//29
-    {0x20110a9, 0xc550492480000000},//30
-    {0x2011054, 0x0000000000000000},//31
-    {0x2011055, 0x00000000600002aa},//32
-//nvlinks-NTL,ATS,XTS//             
-    {0x501111e, 0xb0550144868a0000},//NTL0//33
-    {0x501113e, 0xb0550144868a0000},//NTL1//34
-    {0x501131e, 0xb0550144868a0000},//NTL2//35
-    {0x501133e, 0xb0550144868a0000},//NTL3//36
-    {0x501151e, 0xb0550144868a0000},//NTL4//37
-    {0x501153e, 0xb0550144868a0000},//NTL5//38
-    {0x5011600, 0xb055420000000000},//ATS//39
-    {0x5011645, 0xb05503050d0e0000},//XTS//40
-//PHB                               
-    {0xd010917, 0x8000011516190000},//PHB0//41
-    {0xe010917, 0x8000011516190000},//PHB1//42
-    {0xe010957, 0x8000011516190000},//PHB2//43
-    {0xf010917, 0x8000011516190000},//PHB3//44
-    {0xf010957, 0x8000011516190000},//PHB4//45
-    {0xf010997, 0x8000011516190000},//PHB5//46
-//nvlinks-NPCQ//                    
-    {0x50110C7, 0x90551012181a0000},//NPCQ01//47
-    {0x50112C7, 0x90551012181a0000},//NPCQ02//48
-    {0x50114C7, 0x90551012181a0000},//NPCQ03//49
-//CAPP                              
-    {0x2010814, 0x803840a100000000},//CAPP01//50
-    {0x2010816, 0x6000000000000000},//CAPP01//51
-    {0x2010824, 0x803850c102000000},//CAPP01//52
-    {0x2010822, 0x1000000000000000},//CAPP01//53
-    {0x2010817, 0x0000000000000000},//CAPP01//54
-    {0x4010814, 0x803840a100000000},//CAPP02//55
-    {0x4010816, 0x6000000000000000},//CAPP02//56
-    {0x4010824, 0x803850c102000000},//CAPP02//57
-    {0x4010822, 0x1000000000000000},//CAPP02//58
-    {0x4010817, 0x0000000000000000},//CAPP02//59
-//alinks//
-    {0x501381a, 0xff115d5505555000}//all alinks//60
+    {0x301121a, 0x000058ffffffff06},//scom_en1//8
+    {0x301125a, 0x000058ffffffff06},//scom_en2//9
+    {0x301129a, 0x000058ffffffff06},//scom_en3//10
+    {0x30112da, 0x000058ffffffff06},//scom_en4//11
+    {0x301131a, 0x000701ffffffff86},//scom_es1//12
+    {0x301135a, 0x000701ffffffff86},//scom_es2//13
+    {0x301139a, 0x000701ffffffff86},//scom_es3//14
+    {0x30113da, 0x000701ffffffff86},//scom_es4//15
+    {0x301101a, 0x000701ffffffff86},//scom_eq0//16
+    {0x301105a, 0x000701ffffffff86},//scom_eq1//17
+    {0x301109a, 0x000701ffffffff86},//scom_eq2//18
+    {0x30110da, 0x000701ffffffff86},//scom_eq3//19
+    {0x301111a, 0x000701ffffffff86},//scom_eq4//20
+    {0x301115a, 0x000701ffffffff86},//scom_eq5//21
+    {0x301119a, 0x000701ffffffff86},//scom_eq6//22
+    {0x30111da, 0x000701ffffffff86},//scom_eq7//23
+
+    {0x301101f, 0x0000000600000000},//trace_eq0//24
+    {0x301105f, 0x0000000600000000},//trace_eq1//25
+    {0x301109f, 0x0000000600000000},//trace_eq2//26
+    {0x30110df, 0x0000000600000000},//trace_eq3//27
+    {0x301111f, 0x0000000600000000},//trace_eq4//28
+    {0x301115f, 0x0000000600000000},//trace_eq5//29
+    {0x301119f, 0x0000000600000000},//trace_eq6//30
+    {0x30111df, 0x0000000600000000},//trace_eq7//31
+    {0x301121f, 0x0000000600000000},//trace_en1//32
+    {0x301125f, 0x0000000600000000},//trace_en2//33
+    {0x301129f, 0x0000000600000000},//trace_en3//34
+    {0x30112df, 0x0000000600000000},//trace_en4//35
+    {0x301131f, 0x0000000600000000},//trace_es1//36
+    {0x301135f, 0x0000000600000000},//trace_es2//37
+    {0x301139f, 0x0000000600000000},//trace_es3//38
+    {0x30113df, 0x0000000600000000},//trace_es4//39
+
+//MC0-7//
+    {0xc010fa4, 0x0005755b60000000},//MC0/1-mc0-scom-en0//40
+    {0xc010fa5, 0x0000000000000000},//MC0/1-mc0-scom-en1//41
+    {0xc010fa6, 0x0000000000000000},//MC0/1-mc0-scom-en2//42
+    {0xc010fa7, 0x6000800000000000},//MC0/1-mc0-scom-en3//43
+    {0xc010c29, 0xf800000000000000},//MC0-mc0-chan-en0//44
+    {0xc010c39, 0xf800000000000000},//MC1-mc0-chan-en1//45
+    
+    {0xd010fa4, 0x0000000000000005},//MC2/3-mc1-scom-en0//46
+    {0xd010fa5, 0x755b600000000000},//MC2/3-mc1-scom-en1//47
+    {0xd010fa6, 0x0000000000000000},//MC2/3-mc1-scom-en2//48
+    {0xd010fa7, 0x0600800000000000},//MC2/3-mc1-scom-en3//49
+    {0xd010c29, 0xf800000000000000},//MC2-mc1-chan-en0//50
+    {0xd010c39, 0xf800000000000000},//MC3-mc1-chan-en1//51
+    
+    {0xe010fa4, 0x0005755b60000000},//MC4/5-mc2-scom-en0//52
+    {0xe010fa5, 0x0000000000000000},//MC4/5-mc2-scom-en1//53
+    {0xe010fa6, 0x0000000000000000},//MC4/5-mc2-scom-en2//54
+    {0xe010fa7, 0x6000800000000000},//MC4/5-mc2-scom-en3//55
+    {0xe010c29, 0xf800000000000000},//MC4-mc2-chan-en0//56
+    {0xe010c39, 0xf800000000000000},//MC5-mc2-chan-en1//57
+    
+    {0xf010fa4, 0x0000000000000005},//MC6/7-mc3-scom-en0//58
+    {0xf010fa5, 0x755b600000000000},//MC6/7-mc3-scom-en1//59
+    {0xf010fa6, 0x0000000000000000},//MC6/7-mc3-scom-en2//60
+    {0xf010fa7, 0x0600800000000000},//MC6/7-mc3-scom-en3//61
+    {0xf010c29, 0xf800000000000000},//MC6-mc3-chan-en0//62
+    {0xf010c39, 0xf800000000000000},//MC7-mc3-chan-en1//63
+
+//PEC0-1//
+    {0x3011804, 0xff00780000000000},//pec0//64
+    {0x2011804, 0xff00780000000000},//pec1//65
+
+//TLPM0-7:Xlink/Alink//
+    {0x1001181a, 0x9003015754000000},//tl-0-scom10//66
+    {0x10011820, 0xaaaaaaaa55555555},//tl-0-scom10//67
+    {0x1001182c, 0x1c0428d00852ad1c},//tl-0-scom10//68
+    {0x1001182d, 0x0214680429568000},//tl-0-scom10//69
+    {0x1101181a, 0x9003015754000000},//tl-1-scom23//70
+    {0x11011820, 0xaaaaaaaa55555555},//tl-1-scom23//71
+    {0x1101182c, 0x1c0428d00852ad1c},//tl-1-scom23//72
+    {0x1101182d, 0x0214680429568000},//tl-1-scom23//73
+    {0x1201181a, 0x9003015754000000},//tl-2-scom45//74
+    {0x12011820, 0xaaaaaaaa55555555},//tl-2-scom45//75
+    {0x1201182c, 0x1c0428d00852ad1c},//tl-2-scom45//76
+    {0x1201182d, 0x0214680429568000},//tl-2-scom45//77
+    {0x1301181a, 0x9003015754000000},//tl-3-scom67//78
+    {0x13011820, 0xaaaaaaaa55555555},//tl-3-scom67//79
+    {0x1301182c, 0x1c0428d00852ad1c},//tl-3-scom67//80
+    {0x1301182d, 0x0214680429568000},//tl-3-scom67//81
+
+//TMPM0-7:OCAPI//
+    {0x10010a22, 0xb055d08081128100},//tl-0-ocapi//82
+    {0x10010a23, 0x0000000000000000},//tl-0-ocapi//83
+    {0x10010a52, 0xb055d08081128100},//tl-0-ocapi//84
+    {0x10010a53, 0x0000000000000000},//tl-0-ocapi//85
+    {0x11010a22, 0xb055d08081128100},//tl-3-ocapi//86
+    {0x11010a23, 0x0000000000000000},//tl-3-ocapi//87
+    {0x11010a52, 0xb055d08081128100},//tl-3-ocapi//88
+    {0x11010a53, 0x0000000000000000},//tl-3-ocapi//89
+    {0x12010a22, 0xb055d08081128100},//tl-4-ocapi//90
+    {0x12010a23, 0x0000000000000000},//tl-4-ocapi//91
+    {0x12010a52, 0xb055d08081128100},//tl-4-ocapi//92
+    {0x12010a53, 0x0000000000000000},//tl-4-ocapi//93
+    {0x12011222, 0xb055d08081128100},//tl-5-ocapi//94
+    {0x12011223, 0x0000000000000000},//tl-5-ocapi//95
+    {0x12011252, 0xb055d08081128100},//tl-5-ocapi//96
+    {0x12011253, 0x0000000000000000},//tl-5-ocapi//97
+    {0x13010a22, 0xb055d08081128100},//tl-6-ocapi//98
+    {0x13010a23, 0x0000000000000000},//tl-6-ocapi//99
+    {0x13010a52, 0xb055d08081128100},//tl-6-ocapi//100
+    {0x13010a53, 0x0000000000000000},//tl-6-ocapi//101
+    {0x13011222, 0xb055d08081128100},//tl-7-ocapi//102
+    {0x13011223, 0x0000000000000000},//tl-7-ocapi//103
+    {0x13011252, 0xa055d08081128100},//tl-7-ocapi//104
+    {0x13011253, 0x0000000000000000},//tl-7-ocapi//105
+
+//PHB0-5//
+    {0x8010918, 0x1616010119190101},//phb-0//106
+    {0x8010917, 0x8000550000000000},//phb-0//107
+    {0x8010958, 0x1616010119190101},//phb-1//108
+    {0x8010957, 0x8000550000000000},//phb-1//109
+    {0x8010998, 0x1616010119190101},//phb-2//110
+    {0x8010997, 0x8000550000000000},//phb-2//111
+    {0x9010918, 0x1616010119190101},//phb-3//112
+    {0x9010917, 0x8000550000000000},//phb-3//113
+    {0x9010958, 0x1616010119190101},//phb-4//114
+    {0x9010957, 0x8000550000000000},//phb-4//115
+    {0x9010998, 0x1616010119190101},//phb-5//116
+    {0x9010997, 0x8000550000000000},//phb-5//117
+
+//OCMB//
+    {0x8011440, 0x0451805515000000},//ocmb//118
+    {0x8011441, 0x0000000000000000} //ocmb//119
 };
 
 
+//------------------
 //PMU counters below
 //------------------
-uint64_t G_PMULETS_1[] =
+//------------------------- CNPM ---------------------------//
+uint64_t G_PMULETS_1A[] =
 {
-//CNPM counters (4 east and 4 west)
-    0x5011c1a,//0//0
-    0x5011c1b,//1//1
-    0x5011c1c,//2//2
-    0x5011c1d,//3//3
-    0x5011c1e,//4//4
-    0x5011c1f,//5//5
-    0x5011c20,//6//6
-    0x5011c21 //7//7
+//Group 1A
+//CNPM counters (4 SE and 4 NE)
+    0x10011821,//0//0
+    0x10011822,//1//1
+    0x10011823,//2//2
+    0x10011824,//3//3
+    0x11011821,//4//4
+    0x11011822,//5//5
+    0x11011823,//6//6
+    0x11011824,//7//7
 };
 
-uint64_t G_PMULETS_2[] =
+uint64_t G_PMULETS_1B[] =
 {
-//x1
-    0x501341b,//0//8
-    0x501341c,//1//9
-//x0
-    0x501341d,//2//10
-    0x501341e,//3//11
-//x2
-    0x501341f,//4//12
-    0x5013420,//5//13
-//nx
-    0x20110a7,//6//14
-    0x20110aa //7//15
+//Group 1B
+//CNPM counters (4 SW and 4 NW)
+    0x12011821,//0//0
+    0x12011822,//1//1
+    0x12011823,//2//2
+    0x12011824,//3//3
+    0x13011821,//4//4
+    0x13011822,//5//5
+    0x13011823,//6//6
+    0x13011824,//7//7
 };
 
-uint64_t G_PMULETS_3[] =
+//------------------------- Xlink/Alink ---------------------------//
+uint64_t G_PMULETS_2A[] =
 {
-//NTL0
-    0x501111f,//0//16
-//NTL1
-    0x501113f,//1//17
-//NTL2
-    0x501131f,//2//18
-//NTL3
-    0x501133f,//3//19
-//NTL4
-    0x501151f,//4//20
-//NTL5
-    0x501153f,//5//21
-//ATS
-    0x5011601,//6//22
-//XTS
-    0x5011648 //7//23
+//Group 2A
+//Xlink/Alink counters (4 SE and 4 NE)
+    0x1001181b,//0//0
+    0x1001181c,//0//1
+    0x1001181d,//1//2
+    0x1001181e,//1//3
+    0x1101181b,//2//4
+    0x1101181c,//2//5
+    0x1101181d,//3//6
+    0x1101181e,//3//7
 };
 
-uint64_t G_PMULETS_4a[] =
-{//PHB0
-    0xd010918,//0//24
-    0xd010919,//1//25
-    0xd01091a,//2//26
-    0xd01091b //3//27
-};
-
-uint64_t G_PMULETS_4b[] =
-{//PHB1
-    0xe010918,//0//28
-    0xe010919,//1//29
-    0xe01091a,//2//30
-    0xe01091b //3//31
-};
-
-uint64_t G_PMULETS_4c[] =
-{//PHB2
-    0xe010958,//0//32
-    0xe010959,//1//33
-    0xe01095a,//2//34
-    0xe01095b //3//35
-};
-
-uint64_t G_PMULETS_4d[] =
-{//PHB3
-    0xf010918,//0//36
-    0xf010919,//1//37
-    0xf01091a,//2//38
-    0xf01091b //3//39
-};
-
-uint64_t G_PMULETS_4e[] =
-{//PHB4
-    0xf010958,//0//40
-    0xf010959,//1//41
-    0xf01095a,//2//42
-    0xf01095b //3//43
-};
-
-uint64_t G_PMULETS_4f[] =
-{//PHB5
-    0xf010998,//0//44
-    0xf010999,//1//45
-    0xf01099a,//2//46
-    0xf01099b //3//47
-};
-
-uint64_t G_PMULETS_5[] =
+uint64_t G_PMULETS_2B[] =
 {
-//MBA0
-    0x7010937,//0//48
-    0x7010939,//1//49
-//MBA1
-    0x7010977,//2//50
-    0x7010979,//3//51
-//MBA2
-    0x70109b7,//4//52
-    0x70109b9,//5//53
-//MBA3
-    0x70109f7,//6//54
-    0x70109f9 //7//55
+//Group 2B
+//Xlink/Alink counters (4 SW and 4 NW)
+    0x1201181b,//4//0
+    0x1201181c,//4//1
+    0x1201181d,//5//2
+    0x1201181e,//5//3
+    0x1301181b,//6//4
+    0x1301181c,//6//5
+    0x1301181d,//7//6
+    0x1301181e,//7//7
 };
 
-uint64_t G_PMULETS_6[] =
+//------------------------- OCAPI ---------------------------//
+uint64_t G_PMULETS_3A[] =
 {
-//MBA4
-    0x8010937,//0//56
-    0x8010939,//1//57
-//MBA5
-    0x8010977,//2//58
-    0x8010979,//3//59
-//MBA6
-    0x80109b7,//4//60
-    0x80109b9,//5//61
-//MBA7
-    0x80109f7,//6//62
-    0x80109f9 //7//63
+//Group 3A
+//OCAPI counters - [0:3]
+    0x10010a25,//OTL0_0
+    0x10010a55,//OTL0_1
+    0x11010a25,//OTL3_0
+    0x11010a55,//OTL3_1
+    0x12010a25,//OTL4_0
+    0x12010a55,//OTL4_1
+    0x12011225,//OTL5_0
+    0x12011255,//OTL5_1
 };
 
-uint64_t G_PMULETS_7[] =
+uint64_t G_PMULETS_3B[] =
 {
-//NPCQ01
-    0x50110c6,//0//64
-//NPCQ02
-    0x50112c6,//1//65
-//NPCQ03
-    0x50114c6,//2//66
-//CAPP01
-    0x2010815,//3//67
-    0x2010825,//4//68
-//CAPP02
-    0x4010815,//5//69
-    0x4010825//6//70
+//Group 3B
+//OCAPI counters - [4:5]
+    0x13010a25,//OTL6_0
+    0x13010a55,//OTL6_1
+    0x13011225,//OTL7_0
+    0x13011255,//OTL7_1
 };
 
-//Alink - fips920
-uint64_t G_PMULETS_2_2a[] =
-{//Alink0
-    0x501381b,//0-even
-    0x501381c,//1-odd
+//------------------------- PHB ---------------------------//
+uint64_t G_PMULETS_4[] =
+{
+    0x8010919,//PHB0//
+    0x8010959,//PHB1//
+    0x8010999,//PHB2//
+    0x9010919,//PHB3//
+    0x9010959,//PHB4//
+    0x9010999,//PHB5/
 };
 
-uint64_t G_PMULETS_2_2b[] =
-{//Alink1
-    0x501381d,//2-even
-    0x501381e,//3-odd
+//------------------------- OCMB ---------------------------//
+uint64_t G_PMULETS_5a[] =
+{//OCMB0
+    0x801143f,//0
 };
 
-uint64_t G_PMULETS_2_2c[] =
-{//Alink2
-    0x501381f,//4-even
-    0x5013820,//5-odd
+uint64_t G_PMULETS_5b[] =
+{//OCMB1
+    0x801143f,//1
 };
 
-uint64_t G_PMULETS_2_2d[] =
-{//Alink3
-    0x5013821,//6-even
-    0x5013822,//7-odd
+uint64_t G_PMULETS_5c[] =
+{//OCMB2
+    0x801143f,//2
 };
+
+uint64_t G_PMULETS_5d[] =
+{//OCMB3
+    0x801143f,//3
+};
+
+uint64_t G_PMULETS_6a[] =
+{//OCMB4
+    0x801143f,//4
+};
+
+uint64_t G_PMULETS_6b[] =
+{//OCMB5
+    0x801143f,//5
+};
+
+uint64_t G_PMULETS_6c[] =
+{//OCMB6
+    0x801143f,//6
+};
+
+uint64_t G_PMULETS_6d[] =
+{//OCMB7
+    0x801143f,//7
+};
+
+uint64_t G_PMULETS_7a[] =
+{//OCMB8
+    0x801143f,//8
+};
+
+uint64_t G_PMULETS_7b[] =
+{//OCMB9
+    0x801143f,//9
+};
+
+uint64_t G_PMULETS_7c[] =
+{//OCMB10
+    0x801143f,//10
+};
+
+uint64_t G_PMULETS_7d[] =
+{//OCMB11
+    0x801143f,//11
+};
+
+uint64_t G_PMULETS_8a[] =
+{//OCMB12
+    0x801143f,//12
+};
+
+uint64_t G_PMULETS_8b[] =
+{//OCMB13
+    0x801143f,//13
+};
+
+uint64_t G_PMULETS_8c[] =
+{//OCMB14
+    0x801143f,//14
+};
+
+uint64_t G_PMULETS_8d[] =
+{//OCMB15
+    0x801143f,//15
+};
+
+
 
 /**
  * Groups 
  **/
-enum groups {G1=1,G2=2,G3=3,G4=4,G5=5,G6=6,G7=7};
+enum groups {G1A=1,G1B=2,G2A=3,G2B=4,G3A=5,G3B=6,G4=7,G5=8,G6=9,G7=10,G8A=11,G8B=12};
 
 enum
 {
-    TOD_VALUE_REG               = 0x00040020,
     ZERO                        = 0,
     PBA_ENABLE                  = 0x80000000,
-    SGPE_24x7_OFFSET            = 0x00180000,//1MB + 512KB
     TEST_ADDR                   = 0x00180110,
-    PB_PMU_CNPME_05011C13       = 0x05011C13,
-    PB_PMU_CNPME_05011C14       = 0x05011C14,
-    PB_PMU_CNPME_05011C13_CONF  = 0x92aaaa82ac002bf8,
-    PB_PMU_CNPME_05011C13_CONF1 = 0x92aaaa82ac002bf8,
-    PB_PMU_CNPME_05011C14_CONF  = 0x92a8aaaaac002bf8,
-    PB_PMU_CNPME_05011C14_CONF1 = 0x92a8aaaaac002bf8,
-    PBASLVCTL3_C0040030         = 0xC0040030,
+    PBASLVCTL2_C0040030         = 0xC0040030,
     PBASLV_SET_DMA              = 0x97005EC000000000,
     PBASLV_SET_ATOMIC           = 0x97405EC060000000,
 
@@ -392,78 +384,114 @@ enum
     //--------------------------
     POSTING_START               = 0x00180000,//1MB + 512KB
 
-    // Group G1 - CNPM counters
-    POST_OFFSET_G1H             = 0x00180000,
-    POST_OFFSET_G1T             = 0x00180108,
+    //------------------------- CNPM ---------------------------//
+    // Group G1A - CNPM counters
+    POST_OFFSET_G1AH             = 0x00180000,
+    POST_OFFSET_G1AT             = 0x00180108,
 
-    // Group G2 - XLINK
-    POST_OFFSET_G2H             = 0x00180110,
-    POST_OFFSET_G2_1            = 0x00180118,
-    POST_OFFSET_G2_2            = 0x00180158,
-    POST_OFFSET_G2_3            = 0x00180198,
-    POST_OFFSET_G2_4            = 0x001801D8,
-    POST_OFFSET_G2T             = 0x00180218,
+    // Group G1B - CNPM counters 
+    POST_OFFSET_G1BH             = 0x00180110,
+    POST_OFFSET_G1BT             = 0x00180218,
 
-    // Group G3 - NTL
-    POST_OFFSET_G3H             = 0x00180220,
-    POST_OFFSET_G3_1            = 0x00180228,
-    POST_OFFSET_G3_2            = 0x00180248,
-    POST_OFFSET_G3_3            = 0x00180268,
-    POST_OFFSET_G3_4            = 0x00180288,
-    POST_OFFSET_G3_5            = 0x001802A8,
-    POST_OFFSET_G3_6            = 0x001802C8,
-    POST_OFFSET_G3_7            = 0x001802E8,
-    POST_OFFSET_G3T             = 0x00180328,
+    //------------------------- Xlink ---------------------------//
+    // Group G2A - Xlink
+    POST_OFFSET_G2A_X_H         = 0x00180220,
+    POST_OFFSET_G2A_X_0         = 0x00180228,
+    POST_OFFSET_G2A_X_1         = 0x00180268,
+    POST_OFFSET_G2A_X_2         = 0x001802a8,
+    POST_OFFSET_G2A_X_3         = 0x001802e8,
+    POST_OFFSET_G2A_X_T         = 0x00180328,
+    // Group G2B - Xlink
+    POST_OFFSET_G2B_X_H         = 0x00180330,
+    POST_OFFSET_G2B_X_4         = 0x00180338,
+    POST_OFFSET_G2B_X_5         = 0x00180378,
+    POST_OFFSET_G2B_X_6         = 0x001803b8,
+    POST_OFFSET_G2B_X_7         = 0x001803f8,
+    POST_OFFSET_G2B_X_T         = 0x00180438,
 
+    //------------------------- Alink ---------------------------//
+    // Group G2A - Alink
+    POST_OFFSET_G2A_A_H         = 0x00180440,
+    POST_OFFSET_G2A_A_0         = 0x00180448,
+    POST_OFFSET_G2A_A_1         = 0x00180488,
+    POST_OFFSET_G2A_A_2         = 0x001804c8,
+    POST_OFFSET_G2A_A_3         = 0x00180508,
+    POST_OFFSET_G2A_A_T         = 0x00180548,
+    // Group G2B - Alink
+    POST_OFFSET_G2B_A_H         = 0x00180550,
+    POST_OFFSET_G2B_A_4         = 0x00180558,
+    POST_OFFSET_G2B_A_5         = 0x00180598,
+    POST_OFFSET_G2B_A_6         = 0x001805d8,
+    POST_OFFSET_G2B_A_7         = 0x00180618,
+    POST_OFFSET_G2B_A_T         = 0x00180658,
+
+    //------------------------- OCAPI ---------------------------//
+    // Group G3A - OCAPI
+    POST_OFFSET_G3A_O_H         = 0x00180660,
+    POST_OFFSET_G3A_O_0         = 0x00180668,
+    POST_OFFSET_G3A_O_3         = 0x001806a8,
+    POST_OFFSET_G3A_O_4         = 0x001806e8,
+    POST_OFFSET_G3A_O_5         = 0x00180728,
+    POST_OFFSET_G3A_O_T         = 0x00180768,
+    // Group G3B - OCAPI
+    POST_OFFSET_G3B_O_H         = 0x00180770,
+    POST_OFFSET_G3B_O_6         = 0x00180778,
+    POST_OFFSET_G3B_O_7         = 0x001807b8,
+    POST_OFFSET_G3B_O_T         = 0x00180878,
+
+    //------------------------- PHB ---------------------------//
     // Group G4 - PHB 0-5
-    POST_OFFSET_G4H             = 0x00180330,
-    POST_OFFSET_G4a             = 0x00180338,
-    POST_OFFSET_G4b             = 0x00180358,
-    POST_OFFSET_G4c             = 0x00180378,
-    POST_OFFSET_G4d             = 0x00180398,
-    POST_OFFSET_G4e             = 0x001803B8,
-    POST_OFFSET_G4f             = 0x001803D8,
-    POST_OFFSET_G4T             = 0x00180438,
+    POST_OFFSET_G4H             = 0x00180880,
+    POST_OFFSET_G4_0            = 0x00180888,
+    POST_OFFSET_G4_1            = 0x001808a8,
+    POST_OFFSET_G4_2            = 0x001808c8,
+    POST_OFFSET_G4_3            = 0x001808e8,
+    POST_OFFSET_G4_4            = 0x00180908,
+    POST_OFFSET_G4_5            = 0x00180928,
+    POST_OFFSET_G4T             = 0x00180988,
 
-    // Group G5 - MBA 0-3
-    POST_OFFSET_G5H             = 0x00180440,
-    POST_OFFSET_G5_1            = 0x00180448,
-    POST_OFFSET_G5_2            = 0x00180460,
-    POST_OFFSET_G5_3            = 0x00180478,
-    POST_OFFSET_G5_4            = 0x00180490,
-    POST_OFFSET_G5T             = 0x00180548,
+    //------------------------- OCMB ---------------------------//
+    // Group G5 - OCMB 0-3
+    POST_OFFSET_G5H             = 0x00180990,
+    POST_OFFSET_G5_0            = 0x00180998,
+    POST_OFFSET_G5_1            = 0x001809b8,
+    POST_OFFSET_G5_2            = 0x001809d8,
+    POST_OFFSET_G5_3            = 0x001809f8,
+    POST_OFFSET_G5T             = 0x00180a98,
 
-    // Group G2 - ALINK 0-1 - part of G5 MBA0-3
-    POST_OFFSET_G2_A0           = 0x001804A8,
-    POST_OFFSET_G2_A1           = 0x001804E8,
+    // Group G6 - OCMB 4-7
+    POST_OFFSET_G6H             = 0x00180aa0,
+    POST_OFFSET_G6_4            = 0x00180aa8,
+    POST_OFFSET_G6_5            = 0x00180ac8,
+    POST_OFFSET_G6_6            = 0x00180ae8,
+    POST_OFFSET_G6_7            = 0x00180b08,
+    POST_OFFSET_G6T             = 0x00180ba8,
 
-    // Group G6 - MBA 4-7
-    POST_OFFSET_G6H             = 0x00180550,
-    POST_OFFSET_G6_1            = 0x00180558,
-    POST_OFFSET_G6_2            = 0x00180570,
-    POST_OFFSET_G6_3            = 0x00180588,
-    POST_OFFSET_G6_4            = 0x001805A0,
-    POST_OFFSET_G6T             = 0x00180658,
+    // Group G7 - OCMB 8-11
+    POST_OFFSET_G7H             = 0x00180bb0,
+    POST_OFFSET_G7_8            = 0x00180bb8,
+    POST_OFFSET_G7_9            = 0x00180bd8,
+    POST_OFFSET_G7_10           = 0x00180bf8,
+    POST_OFFSET_G7_11           = 0x00180c18,
+    POST_OFFSET_G7T             = 0x00180cb8,
 
-    // Group G2 - ALINK 2-3 - part of G5 MBA4-7
-    POST_OFFSET_G2_A2           = 0x001805B8,
-    POST_OFFSET_G2_A3           = 0x001805F8,
+    // Group G8 - OCMB 12-15
+    POST_OFFSET_G8H             = 0x00180cc0,
+    POST_OFFSET_G8_12           = 0x00180cc8,
+    POST_OFFSET_G8_13           = 0x00180ce8,
+    POST_OFFSET_G8_14           = 0x00180d08,
+    POST_OFFSET_G8_15           = 0x00180d28,
+    POST_OFFSET_G8T             = 0x00180dc8,
 
-    // Group G7 - NPCQ/CAPP
-    POST_OFFSET_G7H             = 0x00180660,
-    POST_OFFSET_G7_1            = 0x00180668,
-    POST_OFFSET_G7_2            = 0x00180688,
-    POST_OFFSET_G7_3            = 0x001806A8,
-    POST_OFFSET_G7_4            = 0x001806C8,
-    POST_OFFSET_G7_5            = 0x00180708,
-    POST_OFFSET_G7_6            = 0x00180748,
-    POST_OFFSET_G7T             = 0x00180768,
-
+    //------------------------- Debug ---------------------------//
     //DEBUG mode offsets start here
     POSTING_START_DBG           = 0x00190000,
-    POST_OFFSET_DBG1H           = 0x00190000,
-    POST_OFFSET_DBG1T           = 0x00190108,
+    POST_OFFSET_DBG1AH          = 0x00190000,
+    POST_OFFSET_DBG1AT          = 0x00190108,
+    POST_OFFSET_DBG1BH          = 0x00190110,
+    POST_OFFSET_DBG1BT          = 0x00190218,
 
+    //------------------------ Control Block ---------------------//
     //CONTROL BLOCK FIELD OFFSETS
     //cntl block @ last 1k of 24x7 space
     CNTL_STATUS_OFFSET          = 0x001BFC00,
@@ -521,7 +549,6 @@ enum
     CNTL_SPEED_512MS            = 0x9,
     CNTL_SPEED_1024MS           = 0xA,
     CNTL_SPEED_2048MS           = 0xB,
-    CNTL_UAV_TEMP               = 0xFFFF8073F007E000,
     MARKER1                     = 0xCAFEBABEFA11DEA1,
     MARKER2                     = 0xCAFEBABEFA11DEA2,
     MARKER3                     = 0xCAFEBABEFA11DEA3,
@@ -538,68 +565,83 @@ enum
 //MASKS used to identify individual units from Unit availability vector (UAV)
 enum MASKS
 {
-    MASK_PB     = 0x8000000000000000,
-    MASK_MCS0   = 0x4000000000000000,
-    MASK_MCS1   = 0x2000000000000000,
-    MASK_MCS2   = 0x1000000000000000,
-    MASK_MCS3   = 0x800000000000000,
-    MASK_MCS4   = 0x400000000000000,
-    MASK_MCS5   = 0x200000000000000,
-    MASK_MCS6   = 0x100000000000000,
-    MASK_MCS7   = 0x80000000000000,
-    MASK_MBA0   = 0x40000000000000,
-    MASK_MBA1   = 0x20000000000000,
-    MASK_MBA2   = 0x10000000000000,
-    MASK_MBA3   = 0x8000000000000,
-    MASK_MBA4   = 0x4000000000000,
-    MASK_MBA5   = 0x2000000000000,
-    MASK_MBA6   = 0x1000000000000,
-    MASK_MBA7   = 0x800000000000,
-    MASK_Cen1   = 0x400000000000,
-    MASK_Cen2   = 0x200000000000,
-    MASK_Cen0   = 0x100000000000,
-    MASK_Cen3   = 0x80000000000,
-    MASK_Cen4   = 0x40000000000,
-    MASK_Cen5   = 0x20000000000,
-    MASK_Cen6   = 0x10000000000,
-    MASK_Cen7   = 0x8000000000,
-    MASK_XLNK0  = 0x4000000000,
-    MASK_XLNK1  = 0x2000000000,
-    MASK_XLNK2  = 0x1000000000,
-    MASK_MCD0   = 0x800000000,
-    MASK_MCD1   = 0x400000000,
-    MASK_PHB0   = 0x200000000,
-    MASK_PHB1   = 0x100000000,
-    MASK_PHB2   = 0x80000000,
-    MASK_PHB3   = 0x40000000,
-    MASK_PHB4   = 0x20000000,
-    MASK_PHB5   = 0x10000000,
-    MASK_NX     = 0x8000000,
-    MASK_CAPP0  = 0x4000000,
-    MASK_CAPP1  = 0x2000000,
-    MASK_VAS    = 0x1000000,
-    MASK_INT    = 0x800000,
-    MASK_ALNK0  = 0x400000,
-    MASK_ALNK1  = 0x200000,
-    MASK_ALNK2  = 0x100000,
-    MASK_ALNK3  = 0x80000,
-    MASK_NVLNK0 = 0x40000,
-    MASK_NVLNK1 = 0x20000,
-    MASK_NVLNK2 = 0x10000,
-    MASK_NVLNK3 = 0x8000,
-    MASK_NVLNK4 = 0x4000,
-    MASK_NVLNK5 = 0x2000
+    MASK_PB      = 0x8000000000000000,
+    MASK_MC0     = 0x4000000000000000,
+    MASK_MC1     = 0x2000000000000000,
+    MASK_MC2     = 0x1000000000000000,
+    MASK_MC3     = 0x0800000000000000,
+    MASK_MC4     = 0x0400000000000000,
+    MASK_MC5     = 0x0200000000000000,
+    MASK_MC6     = 0x0100000000000000,
+    MASK_MC7     = 0x0080000000000000,
+    MASK_PEC0    = 0x0040000000000000,
+    MASK_PEC1    = 0x0020000000000000,
+    MASK_TLPM0   = 0x001C000000000000,
+    MASK_TLPM1   = 0x0003800000000000,
+    MASK_TLPM2   = 0x0000700000000000,
+    MASK_TLPM3   = 0x00000E0000000000,
+    MASK_TLPM4   = 0x000001C000000000,
+    MASK_TLPM5   = 0x0000003800000000,
+    MASK_TLPM6   = 0x0000000700000000,
+    MASK_TLPM7   = 0x00000000E0000000,
+    MASK_XLINK0  = 0x0014000000000000,
+    MASK_XLINK1  = 0x0002800000000000,
+    MASK_XLINK2  = 0x0000500000000000,
+    MASK_XLINK3  = 0x00000A0000000000,
+    MASK_XLINK4  = 0x0000014000000000,
+    MASK_XLINK5  = 0x0000002800000000,
+    MASK_XLINK6  = 0x0000000500000000,
+    MASK_XLINK7  = 0x00000000A0000000,
+    MASK_ALINK0  = 0x0018000000000000,
+    MASK_ALINK1  = 0x0003000000000000,
+    MASK_ALINK2  = 0x0000600000000000,
+    MASK_ALINK3  = 0x00000C0000000000,
+    MASK_ALINK4  = 0x0000018000000000,
+    MASK_ALINK5  = 0x0000003000000000,
+    MASK_ALINK6  = 0x0000000600000000,
+    MASK_ALINK7  = 0x00000000C0000000,
+    MASK_OCAPI0  = 0x001C000000000000,
+    MASK_OCAPI1  = 0x0003800000000000,
+    MASK_OCAPI2  = 0x0000700000000000,
+    MASK_OCAPI3  = 0x00000E0000000000,
+    MASK_OCAPI4  = 0x000001C000000000,
+    MASK_OCAPI5  = 0x0000003800000000,
+    MASK_OCAPI6  = 0x0000000700000000,
+    MASK_OCAPI7  = 0x00000000E0000000,
+    MASK_PHB0    = 0x0000000010000000,
+    MASK_PHB1    = 0x0000000008000000,
+    MASK_PHB2    = 0x0000000004000000,
+    MASK_PHB3    = 0x0000000002000000,
+    MASK_PHB4    = 0x0000000001000000,
+    MASK_PHB5    = 0x0000000000800000,
+    MASK_OCMB0   = 0x0000000000400000,
+    MASK_OCMB1   = 0x0000000000200000,
+    MASK_OCMB2   = 0x0000000000100000,
+    MASK_OCMB3   = 0x0000000000080000,
+    MASK_OCMB4   = 0x0000000000040000,
+    MASK_OCMB5   = 0x0000000000020000,
+    MASK_OCMB6   = 0x0000000000010000,
+    MASK_OCMB7   = 0x0000000000008000,
+    MASK_OCMB8   = 0x0000000000004000,
+    MASK_OCMB9   = 0x0000000000002000,
+    MASK_OCMB10  = 0x0000000000001000,
+    MASK_OCMB11  = 0x0000000000000800,
+    MASK_OCMB12  = 0x0000000000000400,
+    MASK_OCMB13  = 0x0000000000000200,
+    MASK_OCMB14  = 0x0000000000000100,
+    MASK_OCMB15  = 0x0000000000000080
 };
 
 
 //
 //function declarations below.
 //
-void configure_pmu (uint8_t, uint64_t);
-void post_pmu_events (int);
-void initialize_postings();
-void set_speed(uint64_t*, uint8_t*, volatile uint64_t*);
-uint64_t get_mba_event(uint64_t, uint64_t);
-uint64_t get_phb_event(uint64_t, uint64_t);
+uint32_t getScom (const uint32_t i_addr, uint64_t* o_data, GpeErrorStruct* o_err);
+uint32_t putScom (const uint32_t i_addr, uint64_t i_data, GpeErrorStruct* o_err);
+uint32_t configure_pmu (uint8_t i_state, uint64_t i_speed, GpeErrorStruct* o_err);
+uint32_t post_pmu_events (int group, GpeErrorStruct* o_err);
+uint32_t initialize_postings (GpeErrorStruct* o_err);
+uint32_t set_speed (uint64_t* i_speed, uint8_t* i_delay, volatile uint64_t* o_status,
+                    GpeErrorStruct* o_err);
 
 #endif //_GPE1_24x7_H

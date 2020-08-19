@@ -34,6 +34,7 @@
 #include "gpe1_24x7.h"
 #include "string.h"
 
+
 /*
  * Function Specifications:
  *
@@ -51,49 +52,50 @@ void gpe_24x7(ipc_msg_t* cmd, void* arg)
     // the ipc arguments passed through the ipc_msg_t structure, has a pointer
     // to the gpe_24x7_args_t struct.
    
-    int      rc = 0;
-    int      iter = 0;
+    uint32_t rc                     = 0;
     ipc_async_cmd_t *async_cmd = (ipc_async_cmd_t*)cmd;
-    gpe_24x7_args_t *args = (gpe_24x7_args_t*)async_cmd->cmd_data;
+    gpe_24x7_args_t *args      = (gpe_24x7_args_t*)async_cmd->cmd_data;
+    GpeErrorStruct *pError      = &(args->error);
 
     uint8_t ticks = args->numTicksPassed; // number of 500us ticks since last call
     static uint8_t  L_current_state = 1;  // 24x7 collection "state" to execute when called
 
-    static uint8_t  L_DELAY_1 = 0;  
-    static uint8_t  L_DELAY_2 = 0;  
-    static uint8_t  L_DELAY_3 = 0;  
-    static uint8_t  L_DELAY_4 = 0;  
-    static uint8_t  L_DELAY_5 = 0;  
-    static uint8_t  L_DELAY_6 = 0;  
-    static uint8_t  L_DELAY_7 = 0;  
-    static uint8_t  L_CUR_DELAY = 0;  
-    static uint64_t  L_cur_speed = 0;  
+    PK_TRACE (">> gpe_24x7: Called in with ticks %d", ticks);
+
+    static uint8_t   L_DELAY_1     = 0;  
+    static uint8_t   L_DELAY_2     = 0;  
+    static uint8_t   L_DELAY_3     = 0;  
+    static uint8_t   L_DELAY_4     = 0;  
+    static uint8_t   L_DELAY_5     = 0;  
+    static uint8_t   L_DELAY_6     = 0;  
+    static uint8_t   L_DELAY_7     = 0;  
+    static uint8_t   L_CUR_DELAY   = 0;  
+    static uint64_t  L_cur_speed   = 0;  
     static uint64_t  L_prev_status = 0;  
 
-    static bool L_configure = false;
-    static bool L_DONT_RUN = false;
-    static bool L_INIT = false;
-    static bool L_PART_INIT = false;
+    static bool L_configure        = false;
+    static bool L_DONT_RUN         = false;
+    static bool L_INIT             = false;
+    static bool L_PART_INIT        = false;
 
     //
     //control block memory area.
     //
-    static volatile uint64_t* L_status = (uint64_t*) (CNTL_STATUS_OFFSET | PBA_ENABLE);
-    static volatile uint64_t* L_cmd = (uint64_t*) (CNTL_CMD_OFFSET | PBA_ENABLE);
-    static volatile uint64_t* L_speed = (uint64_t*) (CNTL_SPEED_OFFSET | PBA_ENABLE);
-    static volatile uint64_t* L_uav = (uint64_t*) (CNTL_UAV_OFFSET | PBA_ENABLE);
-    static volatile uint64_t* L_mode = (uint64_t*) (CNTL_MODE_OFFSET | PBA_ENABLE);
+    static volatile uint64_t* L_status     = (uint64_t*) (CNTL_STATUS_OFFSET | PBA_ENABLE);
+    static volatile uint64_t* L_cmd        = (uint64_t*) (CNTL_CMD_OFFSET    | PBA_ENABLE);
+    static volatile uint64_t* L_speed      = (uint64_t*) (CNTL_SPEED_OFFSET  | PBA_ENABLE);
+    static volatile uint64_t* L_uav        = (uint64_t*) (CNTL_UAV_OFFSET    | PBA_ENABLE);
+    static volatile uint64_t* L_mode       = (uint64_t*) (CNTL_MODE_OFFSET   | PBA_ENABLE);
     static volatile uint64_t* L_mode_state = (uint64_t*) (CNTL_MODE_STATE_OFFSET | PBA_ENABLE);
 
-    static volatile uint64_t* L_version = (uint64_t*) (DBG_VER_OFFSET | PBA_ENABLE);
+    static volatile uint64_t* L_version      = (uint64_t*) (DBG_VER_OFFSET  | PBA_ENABLE);
     static volatile uint64_t* L_tics_exceded = (uint64_t*) (DBG_TICS_OFFSET | PBA_ENABLE);
-    static volatile uint64_t* L_marker = (uint64_t*) (DBG_MARK | PBA_ENABLE);
-    static volatile uint64_t* L_DBG_ITER = (uint64_t*) (DBG_ITER | PBA_ENABLE);
-    volatile uint8_t* L_DBG_STATE = (uint8_t*) (DBG_STATE | PBA_ENABLE);
+    static volatile uint64_t* L_marker       = (uint64_t*) (DBG_MARK        | PBA_ENABLE);
+    static volatile uint64_t* L_DBG_ITER     = (uint64_t*) (DBG_ITER        | PBA_ENABLE);
+    volatile uint8_t* L_DBG_STATE            = (uint8_t*)  (DBG_STATE       | PBA_ENABLE);
 
-    //uint64_t temp;
-    args->error.error = 0; // default success
-    args->error.ffdc = 0;
+    pError->error = 0; // default success
+    pError->ffdc = 0;
 
     //Populate version details
     //------------------------
@@ -108,12 +110,12 @@ void gpe_24x7(ipc_msg_t* cmd, void* arg)
      * [48:63] - Reserved
      **/
     uint64_t VERSION = 0;
-    static uint64_t ver_major  = 0x2;
+    static uint64_t ver_major  = 0x1;
     static uint64_t ver_minor  = 0x0;
     static uint64_t ver_bugfix = 0x0;
-    static uint64_t ver_day    = 0x31;   // Day: 27
-    static uint64_t ver_month  = 0x05;   // Month: 04
-    static uint64_t ver_year   = 0x2018; // Year:2018
+    static uint64_t ver_day    = 0x15;   // Day: 27
+    static uint64_t ver_month  = 0x08;   // Month: 04
+    static uint64_t ver_year   = 0x2020; // Year:2018
 
     VERSION |= (ver_major  << 60);
     VERSION |= (ver_minor  << 52);
@@ -122,345 +124,552 @@ void gpe_24x7(ipc_msg_t* cmd, void* arg)
     VERSION |= (ver_month  << 32);
     VERSION |= (ver_year   << 16);
 
-
-    //PBA Slave setup. Do this each time you enter this loop to be safe.
-    gpe_pba_reset();
-    if(ticks == 0)  // First time 24x7 called since OCC started?
+    do
     {
-//1. read and update the control block 
-//------------------------------------
-        PK_TRACE("gpe_24x7: First call since OCC started. ticks = 0");
-        //set configure to true
-        L_configure = true;
-        L_INIT = true;
-        //initialize posting area
-        initialize_postings();
-
-        putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_DMA);
-        //set code version
-        *L_version = VERSION;
-        //set status as initializing
-        *L_status = CNTL_STATUS_INIT;
-        //initialize cmd to NOP
-        *L_cmd = CNTL_CMD_NOP;
-        //UAV - currently filled with system dependent static value. Need to be replaced with value from reading HDAT.
-        if (*L_uav == 0)
-            *L_uav = CNTL_UAV_TEMP;
-        //get speed of collection and set delays accordingly.
-        L_cur_speed = *L_speed;
-        set_speed(&L_cur_speed,&L_CUR_DELAY,L_status);
-        //check if mode is set to monitor
-        //support for debug modes (flexible IMA) not present currently.
-        if((*L_mode != CNTL_MODE_MONITOR)&&(*L_mode != CNTL_MODE_DEBUG1))
-            *L_status = CNTL_STATUS_ERR2;
-        //set Dont run if the speed and mode info is not set to legal values.
-        if( (*L_status == CNTL_STATUS_ERR1)||(*L_status == CNTL_STATUS_ERR2) )
-            L_DONT_RUN = true;
-    }
-    else if(ticks > 1)  // longer than 500us since last call?
-    {
-       // It has been ticks*500us since last call
-        PK_TRACE("gpe_24x7: It has been 0x%02X ticks since last call", ticks);
-        putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_DMA);
-        *L_tics_exceded ++;
-    }
-
-//2. get any new command
-//----------------------
-    if (*L_cmd != CNTL_CMD_NOP)
-    {
-       putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_DMA);
-       switch(*L_cmd)
-       {
-           case CNTL_CMD_PAUSE:
-               L_DONT_RUN = true;
-               *L_status = CNTL_STATUS_PAUSE;
-               *L_cmd = CNTL_CMD_NOP;
-               PK_TRACE("gpe_24x7: in CNTL_CMD_PAUSE");
-               for(iter = 0;iter < 24;iter++)
-               {
-                   G_PHB_pmulets[iter] = 0;
-                   G_MBA_pmulets[iter] = 0;
-               }
-               break;
-           case CNTL_CMD_RESUME:
-               L_DONT_RUN = false;
-               *L_status = CNTL_STATUS_RUN;
-               *L_cmd = CNTL_CMD_NOP;
-               PK_TRACE("gpe_24x7: in CNTL_CMD_RESUME");
-               break;
-           case CNTL_CMD_CLEAR:
-               L_DONT_RUN = false;
-               L_INIT = true;
-               PK_TRACE("gpe_24x7: in CNTL_CMD_CLEAR, L_INIT set to true");
-               *L_cmd = CNTL_CMD_NOP;
-               break;
-       }
-    }
-
-//3.get any new speed setting
-//---------------------------
-    if (*L_speed != L_cur_speed)
-    {
-        L_INIT = true;
-        PK_TRACE("gpe_24x7: speed change, L_INIT set to true");
-        set_speed(&L_cur_speed,&L_CUR_DELAY,L_status);
-    }
-
-//4.check for any system config changes via uav
-//---------------------------------------------
-    if (*L_uav != G_CUR_UAV)
-    {
-        L_INIT = true;
-        L_PART_INIT = true;
-    }
-
-//5.check for mode change
-//-----------------------
-    if (*L_mode != G_CUR_MODE)
-    {
-        L_INIT = true;
-        L_prev_status = *L_status;
-        L_PART_INIT = true;
-        L_DONT_RUN = false;
-        PK_TRACE("gpe_24x7: mode change, L_INIT set to true");
-    }
-    //if(*L_mode != CNTL_MODE_MONITOR)//&&(*L_mode != CNTL_MODE_DEBUG1))
-    if((*L_mode != CNTL_MODE_MONITOR)&&(*L_mode != CNTL_MODE_DEBUG1))
-        *L_status = CNTL_STATUS_ERR2;
-    //set Dont run if the speed and mode info is not set to legal values.
-    if( (*L_status == CNTL_STATUS_ERR1)||(*L_status == CNTL_STATUS_ERR2) )
-        L_DONT_RUN = true;
-    //initialize postings if required from new cmd or change of speed or UAV change.
-    if (L_INIT)
-    {
-        putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_DMA);
-        *L_status = CNTL_STATUS_INIT;
-        //need not initialize postings for UAV change.
-        if (L_PART_INIT)
-            L_PART_INIT = false;
-        else
-            initialize_postings();
-
-        L_configure = true;
-        L_cur_speed = *L_speed;
-        G_CUR_UAV = *L_uav;
-        G_CUR_MODE = *L_mode;
-//SW399904 patch until HWP output for UAV is debugged.
-        //G_CUR_UAV = CNTL_UAV_TEMP;
-        *L_marker = MARKER1;
-
-        set_speed(&L_cur_speed,&L_CUR_DELAY,L_status);
-        //set the state to 1 if reconfig is required. config scoms are split across multiple states starting from 1.
-        L_current_state = 1;
-        PK_TRACE("gpe_24x7: in L_INIT L_current_state set to 1");
-        L_INIT = false;
-    }
-
-//5. Based on the current entry state number, appropriate group posting is done.
-//G1,G2(states 1,3,5,7), 
-//G3(states 2,4,6,8) G4(state 2), G5(state 4), G6(state 6), G7(state 8).
-//during first time entry or a re-init is trigered, the current run is used for pmu configuration.
-//configuration will continue across multiple re-entry slots till all configuration scoms are done.
-//scoms are generally kept at 16 per slot, to prevent from exceeding 50us runtime buget.
-    if (L_DONT_RUN == false)
-    {
-        putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_DMA);
-        //PK_TRACE("gpe_24x7: begin state = %d",(int)L_current_state);
-        *L_DBG_STATE = L_current_state;
-        switch(L_current_state)
+        //PBA Slave setup. Do this each time you enter this loop to be safe.
+        gpe_pba_reset();
+        if( ticks == 0 )  // First time 24x7 called since OCC started?
         {
-            case 1:
-                if(L_configure)
-                {
-                    configure_pmu(L_current_state, L_cur_speed);
-                }
-                else
-                {
-                    if(L_DELAY_1 == 0)
-                    {
-                        post_pmu_events(G1);
-                        L_DELAY_1 = L_CUR_DELAY;
-                    }
-                    else
-                        L_DELAY_1--;
+            //1. read and update the control block 
+            //------------------------------------
+            PK_TRACE("gpe_24x7: First call since OCC started. ticks = 0");
 
-                    if(L_DELAY_2 == 0)
-                    {
-                        post_pmu_events(G2);
-                        L_DELAY_2 = L_CUR_DELAY;
-                    }
-                    else
-                        L_DELAY_2--;
-                }
+            //set configure to true
+            L_configure = true;
+            L_INIT = true;
+
+            //initialize posting area
+            rc = initialize_postings (pError);
+            if ( rc )
+            {
                 break;
-            case 2:
-                if(L_configure)
-                {
-                    configure_pmu(L_current_state, L_cur_speed);
-                }
-                else
-                {
-                    if(L_DELAY_3 == 0)
-                    {
-                        post_pmu_events(G3);
-                        L_DELAY_3 = L_CUR_DELAY;
-                    }
-                    else
-                        L_DELAY_3--;
-                
-      		    if(L_DELAY_4 == 0)
-      		    {
-      		        post_pmu_events(G4);
-//for groups 4,5,6,7 8ms is the fastest possible collection speed.
-      		        L_DELAY_4 = L_CUR_DELAY/8;
-      		    }
-      		    else
-      		        L_DELAY_4--;
-                }
+            }
+
+            //set DMA
+            rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_DMA, pError);
+            if ( rc )
+            {
+                PK_TRACE("ERR>> gpe_24x7: PBASLVCTL2_C0040030 ticks=0");
                 break;
-            case 3:
-                if(L_configure)
-                {
-                    configure_pmu(L_current_state, L_cur_speed);
-                }
-                else
-                {
-    		    if(L_DELAY_1 == 0)
-    		    {
-    		        post_pmu_events(G1);
-    		        L_DELAY_1 = L_CUR_DELAY;
-    		    }
-    		    else
-    		        L_DELAY_1--;
-                
-                    if(L_DELAY_2 == 0)
-                    {
-                        post_pmu_events(G2);
-                        L_DELAY_2 = L_CUR_DELAY;
-                    }
-                    else
-                        L_DELAY_2--;
-                }
+            }
+
+            //set code version
+            *L_version = VERSION;
+
+            //set status as initializing
+            *L_status = CNTL_STATUS_INIT;
+
+            //initialize cmd to NOP
+            *L_cmd = CNTL_CMD_NOP;
+
+            //get speed of collection and set delays accordingly.
+            L_cur_speed = *L_speed;
+            rc = set_speed (&L_cur_speed,&L_CUR_DELAY,L_status, pError);
+            if ( rc )
+            {
+                PK_TRACE("ERR>> gpe_24x7: set_speed failed!");
                 break;
-            case 4:
-                if(L_configure)
-                {
-                    configure_pmu(L_current_state, L_cur_speed);
-                    L_configure = false;
+            }
+
+            // @TODO check if below is still needed
+            //check if mode is set to monitor
+            //support for debug modes (flexible IMA) not present currently.
+            if(( *L_mode != CNTL_MODE_MONITOR ) && ( *L_mode != CNTL_MODE_DEBUG1 ))
+                *L_status = CNTL_STATUS_ERR2;
+
+            //set Dont run if the speed and mode info is not set to legal values.
+            if( ( *L_status == CNTL_STATUS_ERR1 ) || ( *L_status == CNTL_STATUS_ERR2 ) )
+                L_DONT_RUN = true;
+        }
+        else if(ticks > 1)  // longer than 500us since last call?
+        {
+            // It has been ticks*500us since last call
+            PK_TRACE("gpe_24x7: It has been 0x%02X ticks since last call", ticks);
+            rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_DMA, pError);
+            if ( rc )
+            {
+                PK_TRACE("ERR>> gpe_24x7: PBASLVCTL2_C0040030, ticks > 1");
+                break;
+            }
+
+            *L_tics_exceded ++;
+        }
+
+        //2. get any new command
+        //----------------------
+        if ( *L_cmd != CNTL_CMD_NOP )
+        {
+            rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_DMA, pError);
+            if ( rc )
+            {
+                PK_TRACE("ERR>> gpe_24x7: PBASLVCTL2_C0040030 New Cmd");
+                break;
+            }
+
+            switch(*L_cmd)
+            {
+                case CNTL_CMD_PAUSE:
+                    L_DONT_RUN = true;
+                    *L_status = CNTL_STATUS_PAUSE;
+                    *L_cmd = CNTL_CMD_NOP;
+                    PK_TRACE("gpe_24x7: in CNTL_CMD_PAUSE");
+                    break;
+                case CNTL_CMD_RESUME:
+                    L_DONT_RUN = false;
                     *L_status = CNTL_STATUS_RUN;
-                    //*L_status = L_prev_status;
-                    if(L_prev_status == CNTL_STATUS_PAUSE)
-                    {    
-                        L_DONT_RUN = true;
-                        *L_status = L_prev_status;
-                    }
-                    *L_mode_state = G_CUR_MODE;
-                    //*L_mode = 0;
-                    L_prev_status = 0;
-                }
-                else
-                {
-                    if(L_DELAY_3 == 0)
-                    {
-                        post_pmu_events(G3);
-                        L_DELAY_3 = L_CUR_DELAY;
-                    }
-                    else
-                        L_DELAY_3--;
-                
-                    if(L_DELAY_5 == 0)
-                    {
-                        post_pmu_events(G5);
-//for groups 4,5,6,7 8ms is the fastest possible collection speed.
-                        L_DELAY_5 = L_CUR_DELAY/8;
-                    }
-                    else
-                        L_DELAY_5--;
-                }
-                break;
-            case 5:
-                if(L_DELAY_1 == 0)
-                {
-                    post_pmu_events(G1);
-                    L_DELAY_1 = L_CUR_DELAY;
-                }
-                else
-                    L_DELAY_1--;
-            
-                if(L_DELAY_2 == 0)
-                {
-                    post_pmu_events(G2);
-                    L_DELAY_2 = L_CUR_DELAY;
-                }
-                else
-                    L_DELAY_2--;
-                break;
-            case 6:
-                if(L_DELAY_3 == 0)
-                {
-                    post_pmu_events(G3);
-                    L_DELAY_3 = L_CUR_DELAY;
-                }
-                else
-                    L_DELAY_3--;
-            
-                if(L_DELAY_6 == 0)
-                {
-                    post_pmu_events(G6);
-//for groups 4,5,6,7 8ms is the fastest possible collection speed.
-                    L_DELAY_6 = L_CUR_DELAY/8;
-                }
-                else
-                    L_DELAY_6--;
-                break;
-            case 7:
-                if(L_DELAY_1 == 0)
-                {
-                    post_pmu_events(G1);
-                    L_DELAY_1 = L_CUR_DELAY;
-                }
-                else
-                    L_DELAY_1--;
-            
-                if(L_DELAY_2 == 0)
-                {
-                    post_pmu_events(G2);
-                    L_DELAY_2 = L_CUR_DELAY;
-                }
-                else
-                    L_DELAY_2--;
-                break;
-            case 8:
-                if(L_DELAY_3 == 0)
-                {
-                    post_pmu_events(G3);
-                    L_DELAY_3 = L_CUR_DELAY;
-                }
-                else
-                    L_DELAY_3--;
-            
-                if(L_DELAY_7 == 0)
-                {
-                    post_pmu_events(G7);
-//for groups 4,5,6,7 8ms is the fastest possible collection speed.
-                    L_DELAY_7 = L_CUR_DELAY/8;
-                }
-                else
-                    L_DELAY_7--;
-                break;
-    
-            default:
-                PK_TRACE("gpe_24x7: Invalid collection state: 0x%02X", L_current_state);
+                    *L_cmd = CNTL_CMD_NOP;
+                    PK_TRACE("gpe_24x7: in CNTL_CMD_RESUME");
+                    break;
+                case CNTL_CMD_CLEAR:
+                    L_DONT_RUN = false;
+                    L_INIT = true;
+                    PK_TRACE("gpe_24x7: in CNTL_CMD_CLEAR, L_INIT set to true");
+                    *L_cmd = CNTL_CMD_NOP;
+                    break;
+                default:
+                    PK_TRACE ("ERR>> gpe_24x7: Invalid New Command 0x%X",
+                              (uint32_t)(*L_cmd&0xffffffff));
+                    L_DONT_RUN = true;
+                    *L_status = CNTL_STATUS_PAUSE;
+                    rc = GPE_RC_24x7_INVALID_CMD;
+                    gpe_set_ffdc(pError, 0, GPE_RC_24x7_INVALID_CMD, *L_cmd);
+                    break;
+            }
+
+            if ( rc )
                 break;
         }
-    }
-    // Setup state to run on next call
-    if(L_current_state == MAX_24x7_STATES)
-        L_current_state = 1;
-    else
-        L_current_state++;
-    //PK_TRACE("gpe_24x7: end state = %d",(int)L_current_state);
+
+        //3.get any new speed setting
+        //---------------------------
+        if ( *L_speed != L_cur_speed )
+        {
+            L_INIT = true;
+            PK_TRACE("gpe_24x7: speed change, L_INIT set to true");
+            rc = set_speed(&L_cur_speed,&L_CUR_DELAY,L_status,pError);
+            if ( rc )
+            {
+                PK_TRACE("ERR>> gpe_24x7: set_speed failed!");
+                break;
+            }
+        }
+
+        //4.check for any system config changes via uav
+        //---------------------------------------------
+        if ( *L_uav != G_CUR_UAV )
+        {
+            L_INIT = true;
+            L_PART_INIT = true;
+            PK_TRACE("gpe_24x7: UAV[0:31] 0x%08X UAV[32:63] 0x%08X",  (G_CUR_UAV>>32),
+                                                 (uint32_t)(G_CUR_UAV & 0xFFFFFFFF));
+        }
+
+        //5.check for mode change
+        //-----------------------
+        if ( *L_mode != G_CUR_MODE )
+        {
+            L_INIT = true;
+            L_prev_status = *L_status;
+            L_PART_INIT = true;
+            L_DONT_RUN = false;
+            PK_TRACE("gpe_24x7: mode change, L_INIT set to true");
+        }
+
+        if(( *L_mode != CNTL_MODE_MONITOR ) && ( *L_mode != CNTL_MODE_DEBUG1 ))
+        {
+            *L_status = CNTL_STATUS_ERR2;
+        }
+
+        //set Dont run if the speed and mode info is not set to legal values.
+        if( ( *L_status == CNTL_STATUS_ERR1 ) || ( *L_status == CNTL_STATUS_ERR2 ) )
+        {
+            PK_TRACE ("ERR>> gpe_24x7: Speed & Mode not set to legal values! Don't Run");
+            L_DONT_RUN = true;
+        }
+
+        //initialize postings if required from new cmd or change of speed or UAV change.
+        if ( L_INIT )
+        {
+            rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_DMA, pError);
+            if ( rc )
+            {
+                PK_TRACE("ERR>> gpe_24x7 PBASLVCTL2_C0040030 L_INIT");
+                break;
+            }
+
+            *L_status = CNTL_STATUS_INIT;
+
+            //need not initialize postings for UAV change.
+            if ( L_PART_INIT )
+                L_PART_INIT = false;
+            else
+            {
+                rc = initialize_postings (pError);
+                if ( rc )
+                {
+                    PK_TRACE ("ERR>> gpe_24x7: New Cmd/Speed/UAV initialize_posting failed!");
+                    break;
+                }
+            }
+
+            L_configure = true;
+            L_cur_speed = *L_speed;
+            G_CUR_UAV   = *L_uav;
+            G_CUR_MODE  = *L_mode;
+
+            *L_marker = MARKER1;
+
+            rc = set_speed(&L_cur_speed,&L_CUR_DELAY,L_status,pError);
+            if ( rc )
+            {
+                PK_TRACE("ERR>> gpe_24x7: set_speed failed!");
+                break;
+            }
+
+            //set the state to 1 if reconfig is required. config scoms are split across multiple states starting from 1.
+            L_current_state = 1;
+
+            PK_TRACE("gpe_24x7: in L_INIT L_current_state set to 1");
+            L_INIT = false;
+        }
+
+        //5. Based on the current entry state number, appropriate group posting is done.
+        //G1A,G2A (states 1,5)
+        //G1B,G2B (states 3,7)
+        //G3A     (states 2,6)
+        //G3B     (states 4,8)
+        //G4      (state  2)
+        //G8A,G5  (state  4)
+        //G6      (state  6)
+        //G7      (state  8)
+        //G8B     (state  8)
+        //
+        //during first time entry or a re-init is triggered, the current run is used for pmu configuration.
+        //configuration will continue across multiple re-entry slots till all configuration scoms are done.
+        //scoms are generally kept at 16 per slot, to prevent from exceeding 50us runtime buget.
+        if ( L_DONT_RUN == false )
+        {
+            rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_DMA, pError);
+            if ( rc )
+            {
+                PK_TRACE("ERR>> gpe_24x7: PBASLVCTL2_C0040030 L_DONT_RUN==false");
+                break;
+            }
+
+
+            PK_TRACE("gpe_24x7: state = %d",(int)L_current_state);
+            *L_DBG_STATE = L_current_state;
+            switch (L_current_state)
+            {
+                case 1:
+                    if(L_configure)
+                    {
+                        rc = configure_pmu(L_current_state, L_cur_speed, pError);
+                    }
+                    else
+                    {
+                        if(L_DELAY_1 == 0)
+                        {
+                            rc = post_pmu_events(G1A, pError);
+                            if ( rc )
+                            {
+                                break;
+                            }
+                            L_DELAY_1 = L_CUR_DELAY;
+                        }
+                        else
+                            L_DELAY_1--;
+
+                        if(L_DELAY_2 == 0)
+                        {
+                            rc = post_pmu_events(G2A, pError);
+                            if ( rc )
+                            {
+                                break;
+                            }
+                            L_DELAY_2 = L_CUR_DELAY;
+                        }
+                        else
+                            L_DELAY_2--;
+                    }
+                    break;
+                case 2:
+                    if(L_configure)
+                    {
+                        rc = configure_pmu(L_current_state, L_cur_speed, pError);
+                    }
+                    else
+                    {
+                        if(L_DELAY_3 == 0)
+                        {
+                            rc = post_pmu_events(G3A, pError);
+                            if ( rc )
+                            {
+                                break;
+                            }
+                            L_DELAY_3 = L_CUR_DELAY;
+                        }
+                        else
+                            L_DELAY_3--;
+
+                        if(L_DELAY_4 == 0)
+                        {
+                            rc = post_pmu_events(G4, pError);
+                            if ( rc )
+                            {
+                                break;
+                            }
+                            //for groups 4,5,6,7 8ms is the fastest possible collection speed.
+                            L_DELAY_4 = L_CUR_DELAY/8;
+                        }
+                        else
+                            L_DELAY_4--;
+                    }
+                    break;
+                case 3:
+                    if(L_configure)
+                    {
+                        rc = configure_pmu(L_current_state, L_cur_speed, pError);
+                    }
+                    else
+                    {
+                        if(L_DELAY_1 == 0)
+                        {
+                            rc = post_pmu_events(G1B, pError);
+                            if ( rc )
+                            {
+                                break;
+                            }
+                            L_DELAY_1 = L_CUR_DELAY;
+                        }
+                        else
+                            L_DELAY_1--;
+
+                        if(L_DELAY_2 == 0)
+                        {
+                            rc = post_pmu_events(G2B, pError);
+                            if ( rc )
+                            {
+                                break;
+                            }
+                            L_DELAY_2 = L_CUR_DELAY;
+                        }
+                        else
+                            L_DELAY_2--;
+                    }
+                    break;
+                case 4:
+                    if(L_configure)
+                    {
+                        rc = configure_pmu(L_current_state, L_cur_speed, pError);
+                    }
+                    else
+                    {
+                        if(L_DELAY_3 == 0)
+                        {
+                            rc = post_pmu_events(G3B, pError);
+                            if ( rc )
+                            {
+                                break;
+                            }
+
+                            rc = post_pmu_events(G8A, pError);
+                            if ( rc )
+                            {
+                                break;
+                            }
+                            L_DELAY_3 = L_CUR_DELAY;
+                        }
+                        else
+                            L_DELAY_3--;
+
+                        if(L_DELAY_5 == 0)
+                        {
+                            rc = post_pmu_events(G5, pError);
+                            if ( rc )
+                            {
+                                break;
+                            }
+
+                            //for groups 4,5,6,7 8ms is the fastest possible collection speed.
+                            L_DELAY_5 = L_CUR_DELAY/8;
+                        }
+                        else
+                            L_DELAY_5--;
+                    }
+                    break;
+                case 5:
+                    if(L_configure)
+                    {
+                        rc = configure_pmu(L_current_state, L_cur_speed, pError);
+                    }
+                    else
+                    {
+                        if(L_DELAY_1 == 0)
+                        {
+                            rc = post_pmu_events(G1A, pError);
+                            if ( rc )
+                            {
+                                break;
+                            }
+                            L_DELAY_1 = L_CUR_DELAY;
+                        }
+                        else
+                            L_DELAY_1--;
+
+                        if(L_DELAY_2 == 0)
+                        {
+                            rc = post_pmu_events(G2A, pError);
+                            if ( rc )
+                            {
+                                break;
+                            }
+                            L_DELAY_2 = L_CUR_DELAY;
+                        }
+                        else
+                            L_DELAY_2--;
+                    }
+                    break;
+                case 6:
+                    if(L_configure)
+                    {
+                        rc = configure_pmu(L_current_state, L_cur_speed, pError);
+                    }
+                    else
+                    {
+                        if(L_DELAY_3 == 0)
+                        {
+                            rc = post_pmu_events(G3A, pError);
+                            if ( rc )
+                            {
+                                break;
+                            }
+                            L_DELAY_3 = L_CUR_DELAY;
+                        }
+                        else
+                            L_DELAY_3--;
+
+                        if(L_DELAY_6 == 0)
+                        {
+                            rc = post_pmu_events(G6, pError);
+                            if ( rc )
+                            {
+                                break;
+                            }
+                            //for groups 4,5,6,7 8ms is the fastest possible collection speed.
+                            L_DELAY_6 = L_CUR_DELAY/8;
+                        }
+                        else
+                            L_DELAY_6--;
+                    }
+                    break;
+                case 7:
+                    if(L_configure)
+                    {
+                        rc = configure_pmu(L_current_state, L_cur_speed, pError);
+                    }
+                    else
+                    {
+                        if(L_DELAY_1 == 0)
+                        {
+                            rc = post_pmu_events(G1B, pError);
+                            if ( rc )
+                            {
+                                break;
+                            }
+                            L_DELAY_1 = L_CUR_DELAY;
+                        }
+                        else
+                            L_DELAY_1--;
+
+                        if(L_DELAY_2 == 0)
+                        {
+                            rc = post_pmu_events(G2B, pError);
+                            if ( rc )
+                            {
+                                break;
+                            }
+                            L_DELAY_2 = L_CUR_DELAY;
+                        }
+                        else
+                            L_DELAY_2--;
+                    }
+                    break;
+                case 8:
+                    if(L_configure)
+                    {
+                        rc = configure_pmu(L_current_state, L_cur_speed, pError);
+                        L_configure = false;
+                        *L_status = CNTL_STATUS_RUN;
+                        //*L_status = L_prev_status;
+                        if(L_prev_status == CNTL_STATUS_PAUSE)
+                        {    
+                            L_DONT_RUN = true;
+                            *L_status = L_prev_status;
+                        }
+                        *L_mode_state = G_CUR_MODE;
+                        //*L_mode = 0;
+                        L_prev_status = 0;
+                    }
+                    else
+                    {
+                        if(L_DELAY_3 == 0)
+                        {
+                            rc = post_pmu_events(G3B, pError);
+                            if ( rc )
+                            {
+                                break;
+                            }
+
+                            rc = post_pmu_events(G8B, pError);
+                            if ( rc )
+                            {
+                                break;
+                            }
+                            L_DELAY_3 = L_CUR_DELAY;
+                        }
+                        else
+                            L_DELAY_3--;
+
+                        if(L_DELAY_7 == 0)
+                        {
+                            rc = post_pmu_events(G7, pError);
+                            if ( rc )
+                            {
+                                break;
+                            }
+
+                            //for groups 4,5,6,7 8ms is the fastest possible collection speed.
+                            L_DELAY_7 = L_CUR_DELAY/8;
+                        }
+                        else
+                            L_DELAY_7--;
+                    }
+                    break;
+
+                default:
+                    PK_TRACE("gpe_24x7: Invalid collection state: 0x%02X", L_current_state);
+                    rc = GPE_RC_24x7_INVALID_STATE;
+                    gpe_set_ffdc(pError, 0, GPE_RC_24x7_INVALID_STATE, L_current_state);
+                    break;
+            }
+
+            if ( rc )
+                break;
+        }
+        // Setup state to run on next call
+        if(L_current_state == MAX_24x7_STATES)
+            L_current_state = 1;
+        else
+            L_current_state++;
+        //PK_TRACE("gpe_24x7: end state = %d",(int)L_current_state);
+
+    } while(0);
+
+    // @TODO: Check if we can sent back a IPC_RC_CMD_FAILED on bad path
+#if 0
+    // uint32_t ipc_rc = ( rc ) ? IPC_RC_CMD_FAILED:IPC_RC_SUCCESS;
+#endif
 
     // send back a response, IPC success even if ffdc/rc are non zeros
     rc = ipc_send_rsp(cmd, IPC_RC_SUCCESS);
@@ -469,7 +678,7 @@ void gpe_24x7(ipc_msg_t* cmd, void* arg)
     {
         *L_DBG_ITER = MARKER2;
         PK_TRACE("gpe_24x7: Failed to send response back. Halting GPE1");
-        gpe_set_ffdc(&(args->error), 0x00, GPE_RC_IPC_SEND_FAILED, rc);
+        gpe_set_ffdc(pError, 0x00, GPE_RC_IPC_SEND_FAILED, rc);
         pk_halt();
     }
 }
@@ -477,156 +686,154 @@ void gpe_24x7(ipc_msg_t* cmd, void* arg)
 /**
  * Function: configure_pmu
  **/
-void configure_pmu(uint8_t state, uint64_t speed)
-{//write the configuration SCOMs for all pmus.
-    uint64_t temp;
+uint32_t configure_pmu(uint8_t state, uint64_t speed, GpeErrorStruct* o_err)
+{
+    uint32_t rc = 0;
+    //write the configuration SCOMs for all pmus.
     int i,start = (state - 1) * 16,end = state * 16;
     static volatile uint64_t* L_conf_last = (uint64_t*) (DBG_CONF_OFFSET | PBA_ENABLE);
-    static volatile uint64_t* L_DBG_0 = (uint64_t*) (DBG_0 | PBA_ENABLE);
-    static volatile uint64_t* L_DBG_1 = (uint64_t*) (DBG_1 | PBA_ENABLE);
-    static volatile uint64_t* L_DBG_2 = (uint64_t*) (DBG_2 | PBA_ENABLE);
-    static volatile uint64_t* L_DBG_3 = (uint64_t*) (DBG_3 | PBA_ENABLE);
-    static volatile uint64_t* L_DBG_UAV = (uint64_t*) (DBG_UAV | PBA_ENABLE);
-    putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_DMA);
-    
-    *L_DBG_UAV = G_CUR_UAV;
-    *L_DBG_3 = MARKER3;
-    *L_DBG_0 = (!(G_CUR_UAV & MASK_XLNK0));
-    *L_DBG_1 = (!(G_CUR_UAV & MASK_XLNK1));
-    *L_DBG_2 = (!(G_CUR_UAV & MASK_XLNK2));
-    if(end > TOTAL_CONFIGS)
-        end = TOTAL_CONFIGS;
-    for(i = start; i < end; i++)
+    static volatile uint64_t* L_DBG_UAV   = (uint64_t*) (DBG_UAV | PBA_ENABLE);
+
+    PK_TRACE (">> gpe_24x7: configure_pmu: state: 0x%02X", state);
+
+    do
     {
+        rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_DMA, o_err);
+        if ( rc )
+        {
+            PK_TRACE("configure_pmu: 0x%08x putscom failed. rc = 0x%x", PBASLVCTL2_C0040030, rc);
+            break;
+        }
+
+        *L_DBG_UAV = G_CUR_UAV;
+        if(end > TOTAL_CONFIGS)
+            end = TOTAL_CONFIGS;
+        for(i = start; i < end; i++)
+        {
 //check the availability of unit before writing the configurations to the config scoms.
 //use the unit wise masks to acertain availability of a unit.
-//in Nimbus, MCA is present instead of MBAs and they are updated at the location for MBAs.
-//MBAs need to be checked to see which MC poerts are configured.
-        if( (i==4) && !(G_CUR_UAV & MASK_MBA4) )
-            continue;
-        else if( (i==5) && !(G_CUR_UAV & MASK_MBA5) )
-            continue;
-        else if( (i==6) && !(G_CUR_UAV & MASK_MBA6) )
-            continue;
-        else if( (i==7) && !(G_CUR_UAV & MASK_MBA7) )
-            continue;
-        else if( ((i==8)||(i==9)||(i==10)||(i==11)) && (!(G_CUR_UAV & MASK_MBA4)) && (!(G_CUR_UAV & MASK_MBA5)) )
-            continue;
-        else if( ((i==12)||(i==13)||(i==14)||(i==15)) && (!(G_CUR_UAV & MASK_MBA6)) && (!(G_CUR_UAV & MASK_MBA7)) )
-            continue;
-        else if( (i==16) && !(G_CUR_UAV & MASK_MBA0) )
-            continue;
-        else if( (i==17) && !(G_CUR_UAV & MASK_MBA1) )
-            continue;
-        else if( (i==18) && !(G_CUR_UAV & MASK_MBA2) )
-            continue;
-        else if( (i==19) && !(G_CUR_UAV & MASK_MBA3) )
-            continue;
-        else if( ((i==20)||(i==21)||(i==22)||(i==23)) && (!(G_CUR_UAV & MASK_MBA0)) && (!(G_CUR_UAV & MASK_MBA1)) )
-            continue;
-        else if( ((i==24)||(i==25)||(i==26)||(i==27)) && (!(G_CUR_UAV & MASK_MBA2)) && (!(G_CUR_UAV & MASK_MBA3)) ) 
-            continue;
-        else if( (i==28) && ((!(G_CUR_UAV & MASK_XLNK0)) && (!(G_CUR_UAV & MASK_XLNK1)) && (!(G_CUR_UAV & MASK_XLNK2))) )
-            continue;
-        else if( ((i==29)||(i==30)||(i==31)||(i==32)) && !(G_CUR_UAV & MASK_NX) )
-            continue;
-        else if( (i==33) && !(G_CUR_UAV & MASK_NVLNK0) )
-            continue;
-        else if( (i==34) && !(G_CUR_UAV & MASK_NVLNK1) )
-            continue;
-        else if( (i==35) && !(G_CUR_UAV & MASK_NVLNK2) )
-            continue;
-        else if( (i==36) && !(G_CUR_UAV & MASK_NVLNK3) )
-            continue;
-        else if( (i==37) && !(G_CUR_UAV & MASK_NVLNK4) )
-            continue;
-        else if( (i==38) && !(G_CUR_UAV & MASK_NVLNK5) )
-            continue;
-        else if( ((i==39)||(i==40)) && (!(G_CUR_UAV & MASK_NVLNK5)) && (!(G_CUR_UAV & MASK_NVLNK4)) && (!(G_CUR_UAV & MASK_NVLNK3)) &&
-                             (!(G_CUR_UAV & MASK_NVLNK2)) && (!(G_CUR_UAV & MASK_NVLNK1)) && (!(G_CUR_UAV & MASK_NVLNK0)) )
-            continue;
-        else if( (i==41) && !(G_CUR_UAV & MASK_PHB0) )
-            continue;
-        else if( (i==42) && !(G_CUR_UAV & MASK_PHB1) )
-            continue;
-        else if( (i==43) && !(G_CUR_UAV & MASK_PHB2) )
-            continue;
-        else if( (i==44) && !(G_CUR_UAV & MASK_PHB3) )
-            continue;
-        else if( (i==45) && !(G_CUR_UAV & MASK_PHB4) )
-            continue;
-        else if( (i==46) && !(G_CUR_UAV & MASK_PHB5) )
-            continue;
-        else if( (i==47) && (!(G_CUR_UAV & MASK_NVLNK1)) && (!(G_CUR_UAV & MASK_NVLNK0)) )
-            continue;
-        else if( (i==48) && (!(G_CUR_UAV & MASK_NVLNK3)) && (!(G_CUR_UAV & MASK_NVLNK2)) )
-            continue;
-        else if( (i==49) && (!(G_CUR_UAV & MASK_NVLNK5)) && (!(G_CUR_UAV & MASK_NVLNK4)) )
-            continue;
-        else if( ((i==50)||(i==51)||(i==52)||(i==53)) && !(G_CUR_UAV & MASK_CAPP0) )
-            continue;
-        else if( ((i==54)||(i==55)||(i==56)||(i==57)) && !(G_CUR_UAV & MASK_CAPP1) )
-            continue;
-        else
-        {
-            //Two sets of configurations. 
-            //1.for speeds till 8ms- 8 bit prescale
-            if((speed == CNTL_SPEED_1MS)||(speed == CNTL_SPEED_2MS)||(speed == CNTL_SPEED_4MS)||(speed == CNTL_SPEED_8MS))
-            {
-                // Fix for defect SW430218 - 24x7 to touch only XTS Config2 bits [0:47]
-                if ( G_PMU_CONFIGS_8[i][0] == 0x5011645 )
-                {
-                    getscom_abs(G_PMU_CONFIGS_8[i][0], &temp);
-                    temp &= (0xFFFF);
-                    temp |= G_PMU_CONFIGS_8[i][1];
-                    putscom_abs(G_PMU_CONFIGS_8[i][0], temp);
-                }
-                else
-                {
-                    putscom_abs(G_PMU_CONFIGS_8[i][0], G_PMU_CONFIGS_8[i][1]);
-                }
-                *L_conf_last = (uint64_t)i;            
-            }
-            //2.for all speeds above 8 ms till 2s - 16bit prescale
+            if( ((i>=0) && (i<40)) && (!(G_CUR_UAV & MASK_PB)) )
+                continue;
+            else if( ((i>=40) && (i<=43)) && (!(G_CUR_UAV & MASK_MC0) || (!(G_CUR_UAV & MASK_MC1)) ) )
+                continue;
+            else if( (i==44) && (!(G_CUR_UAV & MASK_MC0)) )
+                continue;
+            else if( (i==45) && (!(G_CUR_UAV & MASK_MC1)) )
+                continue;
+            else if( ((i>=46) && (i<=49)) && (!(G_CUR_UAV & MASK_MC2) || (!(G_CUR_UAV & MASK_MC3)) ) )
+                continue;
+            else if( (i==50) && (!(G_CUR_UAV & MASK_MC2)) )
+                continue;
+            else if( (i==51) && (!(G_CUR_UAV & MASK_MC3)) )
+                continue;
+            else if( ((i>=52) && (i<=55)) && (!(G_CUR_UAV & MASK_MC4) || (!(G_CUR_UAV & MASK_MC5)) ) )
+                continue;
+            else if( (i==56) && (!(G_CUR_UAV & MASK_MC4)) )
+                continue;
+            else if( (i==57) && (!(G_CUR_UAV & MASK_MC5)) )
+                continue;
+            else if( ((i>=58) && (i<=61)) && (!(G_CUR_UAV & MASK_MC6) || (!(G_CUR_UAV & MASK_MC7)) ) )
+                continue;
+            else if( (i==62) && (!(G_CUR_UAV & MASK_MC6)) )
+                continue;
+            else if( (i==63) && (!(G_CUR_UAV & MASK_MC7)) )
+                continue;
+            else if( ((i==64) || (i==65)) && (!(G_CUR_UAV & MASK_PEC0)) && (!(G_CUR_UAV & MASK_PEC1)) )
+                continue;
+            else if( ((i==66) || (i==67)) && (!((G_CUR_UAV & MASK_TLPM0) == MASK_XLINK0)) && (!((G_CUR_UAV & MASK_TLPM0) == MASK_ALINK0)) )
+                continue;
+            else if( ((i==68) || (i==69)) && (!((G_CUR_UAV & MASK_TLPM1) == MASK_XLINK1)) && (!((G_CUR_UAV & MASK_TLPM1) == MASK_ALINK1)) )
+                continue;
+            else if( ((i==70) || (i==71)) && (!((G_CUR_UAV & MASK_TLPM2) == MASK_XLINK2)) && (!((G_CUR_UAV & MASK_TLPM2) == MASK_ALINK2)) )
+                continue;
+            else if( ((i==72) || (i==73)) && (!((G_CUR_UAV & MASK_TLPM3) == MASK_XLINK3)) && (!((G_CUR_UAV & MASK_TLPM3) == MASK_ALINK3)) )
+                continue;
+            else if( ((i==74) || (i==75)) && (!((G_CUR_UAV & MASK_TLPM4) == MASK_XLINK4)) && (!((G_CUR_UAV & MASK_TLPM4) == MASK_ALINK4)) )
+                continue;
+            else if( ((i==76) || (i==77)) && (!((G_CUR_UAV & MASK_TLPM5) == MASK_XLINK5)) && (!((G_CUR_UAV & MASK_TLPM5) == MASK_ALINK5)) )
+                continue;
+            else if( ((i==78) || (i==79)) && (!((G_CUR_UAV & MASK_TLPM6) == MASK_XLINK6)) && (!((G_CUR_UAV & MASK_TLPM6) == MASK_ALINK6)) )
+                continue;
+            else if( ((i==80) || (i==81)) && (!((G_CUR_UAV & MASK_TLPM7) == MASK_XLINK7)) && (!((G_CUR_UAV & MASK_TLPM7) == MASK_ALINK7)) )
+                continue;
+            else if( ((i>=82) && (i<=85)) && (!((G_CUR_UAV & MASK_TLPM0) == MASK_OCAPI0)) )
+                continue;
+            else if( ((i>=86) && (i<=89)) && (!((G_CUR_UAV & MASK_TLPM3) == MASK_OCAPI3)) )
+                continue;
+            else if( ((i>=90) && (i<=93)) && (!((G_CUR_UAV & MASK_TLPM4) == MASK_OCAPI4)) )
+                continue;
+            else if( ((i>=94) && (i<=97)) && (!((G_CUR_UAV & MASK_TLPM5) == MASK_OCAPI5)) )
+                continue;
+            else if( ((i>=98) && (i<=101)) && (!((G_CUR_UAV & MASK_TLPM6) == MASK_OCAPI6)) )
+                continue;
+            else if( ((i>=102) && (i<=105)) && (!((G_CUR_UAV & MASK_TLPM7) == MASK_OCAPI7)) )
+                continue;
+            else if( ((i==106) || (i==107)) && !(G_CUR_UAV & MASK_PHB0) )
+                continue;
+            else if( ((i==108) || (i==109)) && !(G_CUR_UAV & MASK_PHB1) )
+                continue;
+            else if( ((i==110) || (i==111)) && !(G_CUR_UAV & MASK_PHB2) )
+                continue;
+            else if( ((i==112) || (i==113)) && !(G_CUR_UAV & MASK_PHB3) )
+                continue;
+            else if( ((i==114) || (i==115)) && !(G_CUR_UAV & MASK_PHB4) )
+                continue;
+            else if( ((i==116) || (i==117)) && !(G_CUR_UAV & MASK_PHB5) )
+                continue;
+
+            else if( (i==118) || (i==119) ) //This to be removed later
+                continue;
+#if 0
+//OCMB disabled
+            else if( ((i==118) || (i==119)) && 
+                     (!(G_CUR_UAV & MASK_OCMB0) && !(G_CUR_UAV & MASK_OCMB1) && !(G_CUR_UAV & MASK_OCMB2) && 
+                      !(G_CUR_UAV & MASK_OCMB3) && !(G_CUR_UAV & MASK_OCMB4) && !(G_CUR_UAV & MASK_OCMB5) && 
+                      !(G_CUR_UAV & MASK_OCMB6) && !(G_CUR_UAV & MASK_OCMB7) && !(G_CUR_UAV & MASK_OCMB8) && 
+                      !(G_CUR_UAV & MASK_OCMB9) && !(G_CUR_UAV & MASK_OCMB10) && !(G_CUR_UAV & MASK_OCMB11) && 
+                      !(G_CUR_UAV & MASK_OCMB12) && !(G_CUR_UAV & MASK_OCMB13) && !(G_CUR_UAV & MASK_OCMB14) && 
+                      !(G_CUR_UAV & MASK_OCMB15)) )
+                continue;
+#endif
+            else if( i>=120 && i<=128 ) //Not supported
+                continue;
             else
             {
-                // Fix for defect SW430218 - 24x7 to touch only XTS Config2 bits [0:47]
-                if ( G_PMU_CONFIGS_16[i][0] == 0x5011645 )
+                //Only single set of configuration(pre-scaler):CNPM-10 bit + MCS-12bit + All other units - 16 bit
+                //for speeds >=1MS && <=2048MS
+                if((speed >= CNTL_SPEED_1MS) && (speed <= CNTL_SPEED_2048MS))
                 {
-                    getscom_abs(G_PMU_CONFIGS_16[i][0], &temp);
-                    temp &= (0xFFFF);
-                    temp |= G_PMU_CONFIGS_16[i][1];
-                    putscom_abs(G_PMU_CONFIGS_16[i][0], temp);
+                    rc = putScom (G_PMU_CONFIGS_8[i][0], G_PMU_CONFIGS_8[i][1], o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("configure_pmu: 0x%08x putscom failed. rc = 0x%x", G_PMU_CONFIGS_8[i][0], rc);
+                        break;
+                    }
+
+                    *L_conf_last = (uint64_t)i;            
                 }
-                else
-                {
-                    putscom_abs(G_PMU_CONFIGS_16[i][0], G_PMU_CONFIGS_16[i][1]);
-                }
-                *L_conf_last = (uint64_t)i;            
             }
-        }
-    }
+ 
+        } //for(i = start; i < end; i++)
+    }while(0);
+
+    PK_TRACE ("<< configure_pmu");
+    return rc;
 }
 
 /**
  * function: post_pmu_events
  **/
-void post_pmu_events(int grp)
-{//read the scom pmulets. split/extract the counters.accumulate to main memory.
+uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
+{
+    PK_TRACE (">> post_pmu_events: Group %d", grp);
+
+    uint32_t rc = 0;
+    //read the scom pmulets. split/extract the counters.accumulate to main memory.
     volatile uint64_t* post_addr;
-    static int L_phb_events =0;    
     static volatile uint64_t* L_DBG_GRP = (uint64_t*) (DBG_GRP_OFFSET | PBA_ENABLE);
     static volatile uint64_t* L_DBG_UNIT = (uint64_t*) (DBG_UNIT_OFFSET | PBA_ENABLE);
-    static bool L_X_A_LINKS_flag = false;
-    //static volatile uint64_t* L_DBG_4 = (uint64_t*) (DBG_4 | PBA_ENABLE);
-    //static volatile uint64_t* L_DBG_5 = (uint64_t*) (DBG_5 | PBA_ENABLE);
-    //static volatile uint64_t* L_DBG_6 = (uint64_t*) (DBG_6 | PBA_ENABLE);
-    //static volatile uint64_t* L_DBG_7 = (uint64_t*) (DBG_7 | PBA_ENABLE);
-    //static uint64_t L_PHB_pmulets[24];
-    //static uint64_t L_MBA_pmulets[24];
-    uint64_t temp;
-    volatile uint64_t temp1;
-//union to split a pmulet containg 4 counters into its constituents.
+
+    //union to split a pmulet containg 4 counters into its constituents.
     union u1
     { 
         struct event
@@ -636,914 +843,1309 @@ void post_pmu_events(int grp)
         uint64_t pmulet;
     } u3;
    
-    union u_mba
-    { 
-        struct event_mba
-        {
-            uint32_t e[2];
-        } ev;
-        uint64_t pmulet;
-    } u3_mba;
-     
-    int i=0,j=0,phb_epoch=0;
-    uint64_t TOD;
-    int iter=0, ev_count=0;
-    post_addr = (uint64_t*) (POSTING_START | PBA_ENABLE);
-    putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_DMA);
-    //FIXME:restricting groups for test on witherspoon
-    //remove once done.
-    //int test_grp = G1;
-    //
-    switch(grp)
-    //switch(test_grp)
+    //initialize local vars
+    int i=0,j=0;
+
+
+    do
     {
-        case G1://cnpm group - always written
-            if(G_CUR_MODE == CNTL_MODE_MONITOR) 
-                post_addr = (uint64_t*) (POST_OFFSET_G1H | PBA_ENABLE);
-            else if(G_CUR_MODE == CNTL_MODE_DEBUG1) 
-                post_addr = (uint64_t*) (POST_OFFSET_DBG1H | PBA_ENABLE);
-            *L_DBG_GRP = 1;
-            *L_DBG_UNIT = 1;
-            putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_ATOMIC);
-            *post_addr = INC_UPD_COUNT;
-            post_addr++;
-            for(i=0; i<8; i++)
-            {   
-                getscom_abs(G_PMULETS_1[i], &u3.pmulet);
-                for(j=0; j<4; j++)
-                {
-                    *post_addr = (uint64_t)u3.ev.e[j];
-                    post_addr++;
-                }
-            }
-            if(G_CUR_MODE == CNTL_MODE_MONITOR) 
-                post_addr = (uint64_t*) (POST_OFFSET_G1T | PBA_ENABLE);
-            else if(G_CUR_MODE == CNTL_MODE_DEBUG1) 
-                post_addr = (uint64_t*) (POST_OFFSET_DBG1T | PBA_ENABLE);
-            *post_addr = INC_UPD_COUNT;
+        //set the PBA
+        post_addr = (uint64_t*) (POSTING_START | PBA_ENABLE);
+        rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_DMA, o_err);
+        if ( rc )
+        {
+            PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
             break;
-        case G2://XLINKS,NX and ALINKS. Read scoms based on availability.
-            if (L_X_A_LINKS_flag)   //Here do xlink-[0:2] and nx
-            {
-                L_X_A_LINKS_flag = false;
+        }
 
-            *L_DBG_GRP = 2;
-            post_addr = (uint64_t*) (POST_OFFSET_G2H | PBA_ENABLE);
-            putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_ATOMIC);
-            *post_addr = INC_UPD_COUNT;
-            post_addr++;
-            if ((G_CUR_UAV & MASK_XLNK0) > 0)
-            {
-                putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_DMA);
+        switch (grp)
+        {
+            case G1A://cnpm group - always written
+                if(G_CUR_MODE == CNTL_MODE_MONITOR) 
+                    post_addr = (uint64_t*) (POST_OFFSET_G1AH | PBA_ENABLE);
+                else if(G_CUR_MODE == CNTL_MODE_DEBUG1) 
+                    post_addr = (uint64_t*) (POST_OFFSET_DBG1AH | PBA_ENABLE);
+                *L_DBG_GRP = G1A;
                 *L_DBG_UNIT = 1;
-                post_addr = (uint64_t*) (POST_OFFSET_G2_1 | PBA_ENABLE);
-                putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_ATOMIC);
-                getscom_abs(G_PMULETS_2[0], &u3.pmulet);
-                for(j=0; j<4; j++)
+                rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_ATOMIC, o_err);
+                if ( rc )
                 {
-                    *post_addr = (uint64_t)u3.ev.e[j];
-                    post_addr++;
-                }
-                getscom_abs(G_PMULETS_2[1], &u3.pmulet);
-                for(j=0; j<4; j++)
-                {
-                    *post_addr = (uint64_t)u3.ev.e[j];
-                    post_addr++;
-                }
-            }
-            if ((G_CUR_UAV & MASK_XLNK1) > 0)
-            {
-                putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_DMA);
-                *L_DBG_UNIT = 2;
-                post_addr = (uint64_t*) (POST_OFFSET_G2_2 | PBA_ENABLE);
-                putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_ATOMIC);
-                getscom_abs(G_PMULETS_2[2], &u3.pmulet);
-                for(j=0; j<4; j++)
-                {
-                    *post_addr = (uint64_t)u3.ev.e[j];
-                    post_addr++;
-                }
-                getscom_abs(G_PMULETS_2[3], &u3.pmulet);
-                for(j=0; j<4; j++)
-                {
-                    *post_addr = (uint64_t)u3.ev.e[j];
-                    post_addr++;
-                }
-            }
-            if ((G_CUR_UAV & MASK_XLNK2) > 0)
-            {
-                putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_DMA);
-                *L_DBG_UNIT = 3;
-                post_addr = (uint64_t*) (POST_OFFSET_G2_3 | PBA_ENABLE);
-                putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_ATOMIC);
-                getscom_abs(G_PMULETS_2[4], &u3.pmulet);
-                for(j=0; j<4; j++)
-                {
-                    *post_addr = (uint64_t)u3.ev.e[j];
-                    post_addr++;
-                }
-                getscom_abs(G_PMULETS_2[5], &u3.pmulet);
-                for(j=0; j<4; j++)
-                {
-                    *post_addr = (uint64_t)u3.ev.e[j];
-                    post_addr++;
-                }
-            }
-            if ((G_CUR_UAV & MASK_NX) > 0)
-            {
-                putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_DMA);
-                *L_DBG_UNIT = 4;
-                post_addr = (uint64_t*) (POST_OFFSET_G2_4 | PBA_ENABLE);
-                putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_ATOMIC);
-                getscom_abs(G_PMULETS_2[6], &u3.pmulet);
-                for(j=0; j<4; j++)
-                {
-                    *post_addr = (uint64_t)u3.ev.e[j];
-                    post_addr++;
-                }
-                getscom_abs(G_PMULETS_2[7], &u3.pmulet);
-                for(j=0; j<4; j++)
-                {
-                    *post_addr = (uint64_t)u3.ev.e[j];
-                    post_addr++;
-                }
-            }
-            post_addr = (uint64_t*) (POST_OFFSET_G2T | PBA_ENABLE);
-            *post_addr = INC_UPD_COUNT;
-            }
-            else    //Here do alink [0:3]
-            {
-                L_X_A_LINKS_flag = true;
-
-            if ((G_CUR_UAV & MASK_ALNK0) > 0)
-            {
-                putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_DMA);
-                *L_DBG_UNIT = 1;
-                post_addr = (uint64_t*) (POST_OFFSET_G2_A0 | PBA_ENABLE);
-                putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_ATOMIC);
-                getscom_abs(G_PMULETS_2_2a[0], &u3.pmulet);
-                for(j=0; j<4; j++)
-                {
-                    *post_addr = (uint64_t)u3.ev.e[j];
-                    post_addr++;
-                }
-                getscom_abs(G_PMULETS_2_2a[1], &u3.pmulet);
-                for(j=0; j<4; j++)
-                {
-                    *post_addr = (uint64_t)u3.ev.e[j];
-                    post_addr++;
-                }
-            }
-            if ((G_CUR_UAV & MASK_ALNK1) > 0)
-            {
-                putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_DMA);
-                *L_DBG_UNIT = 1;
-                post_addr = (uint64_t*) (POST_OFFSET_G2_A1 | PBA_ENABLE);
-                putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_ATOMIC);
-                getscom_abs(G_PMULETS_2_2b[0], &u3.pmulet);
-                for(j=0; j<4; j++)
-                {
-                    *post_addr = (uint64_t)u3.ev.e[j];
-                    post_addr++;
-                }
-                getscom_abs(G_PMULETS_2_2b[1], &u3.pmulet);
-                for(j=0; j<4; j++)
-                {
-                    *post_addr = (uint64_t)u3.ev.e[j];
-                    post_addr++;
-                }
-            }
-
-            if ((G_CUR_UAV & MASK_ALNK2) > 0)
-            {
-                putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_DMA);
-                *L_DBG_UNIT = 1;
-                post_addr = (uint64_t*) (POST_OFFSET_G2_A2 | PBA_ENABLE);
-                putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_ATOMIC);
-                getscom_abs(G_PMULETS_2_2c[0], &u3.pmulet);
-                for(j=0; j<4; j++)
-                {
-                    *post_addr = (uint64_t)u3.ev.e[j];
-                    post_addr++;
-                }
-                getscom_abs(G_PMULETS_2_2c[1], &u3.pmulet);
-                for(j=0; j<4; j++)
-                {
-                    *post_addr = (uint64_t)u3.ev.e[j];
-                    post_addr++;
-                }
-            }
-            if ((G_CUR_UAV & MASK_ALNK3) > 0)
-            {
-                putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_DMA);
-                *L_DBG_UNIT = 1;
-                post_addr = (uint64_t*) (POST_OFFSET_G2_A3 | PBA_ENABLE);
-                putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_ATOMIC);
-                getscom_abs(G_PMULETS_2_2d[0], &u3.pmulet);
-                for(j=0; j<4; j++)
-                {
-                    *post_addr = (uint64_t)u3.ev.e[j];
-                    post_addr++;
-                }
-                getscom_abs(G_PMULETS_2_2d[1], &u3.pmulet);
-                for(j=0; j<4; j++)
-                {
-                    *post_addr = (uint64_t)u3.ev.e[j];
-                    post_addr++;
-                }
-            }
-            }
-            break;
-        case G3://NVLINKS -NTL,ATS,XTS
-            *L_DBG_GRP = 3;
-            post_addr = (uint64_t*) (POST_OFFSET_G3H | PBA_ENABLE);
-            putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_ATOMIC);
-            *post_addr = INC_UPD_COUNT;
-            post_addr++;
-            if ((G_CUR_UAV & MASK_NVLNK0) > 0)
-            {
-                putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_DMA);
-                *L_DBG_UNIT = 1;
-                getscom_abs(G_PMULETS_3[0], &u3.pmulet);
-                post_addr = (uint64_t*) (POST_OFFSET_G3_1 | PBA_ENABLE);
-                putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_ATOMIC);
-                for(j=0; j<4; j++)
-                {
-                    *post_addr = (uint64_t)u3.ev.e[j];
-                    post_addr++;
-                }
-            }
-            if ((G_CUR_UAV & MASK_NVLNK1) > 0)
-            {
-                putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_DMA);
-                *L_DBG_UNIT = 2;
-                getscom_abs(G_PMULETS_3[1], &u3.pmulet);
-                post_addr = (uint64_t*) (POST_OFFSET_G3_2 | PBA_ENABLE);
-                putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_ATOMIC);
-                for(j=0; j<4; j++)
-                {
-                    *post_addr = (uint64_t)u3.ev.e[j];
-                    post_addr++;
-                }
-            }
-            if ((G_CUR_UAV & MASK_NVLNK2) > 0)
-            {
-                putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_DMA);
-                *L_DBG_UNIT = 3;
-                getscom_abs(G_PMULETS_3[2], &u3.pmulet);
-                post_addr = (uint64_t*) (POST_OFFSET_G3_3 | PBA_ENABLE);
-                putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_ATOMIC);
-                for(j=0; j<4; j++)
-                {
-                    *post_addr = (uint64_t)u3.ev.e[j];
-                    post_addr++;
-                }
-            }
-            if ((G_CUR_UAV & MASK_NVLNK3) > 0)
-            {
-                putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_DMA);
-                *L_DBG_UNIT = 4;
-                getscom_abs(G_PMULETS_3[3], &u3.pmulet);
-                post_addr = (uint64_t*) (POST_OFFSET_G3_4 | PBA_ENABLE);
-                putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_ATOMIC);
-                for(j=0; j<4; j++)
-                {
-                    *post_addr = (uint64_t)u3.ev.e[j];
-                    post_addr++;
-                }
-            }
-            if ((G_CUR_UAV & MASK_NVLNK4) > 0)
-            {
-                putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_DMA);
-                *L_DBG_UNIT = 5;
-                getscom_abs(G_PMULETS_3[4], &u3.pmulet);
-                post_addr = (uint64_t*) (POST_OFFSET_G3_5 | PBA_ENABLE);
-                putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_ATOMIC);
-                for(j=0; j<4; j++)
-                {
-                    *post_addr = (uint64_t)u3.ev.e[j];
-                    post_addr++;
-                }
-            }
-            if ((G_CUR_UAV & MASK_NVLNK5) > 0)
-            {
-                putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_DMA);
-                *L_DBG_UNIT = 6;
-                getscom_abs(G_PMULETS_3[5], &u3.pmulet);
-                post_addr = (uint64_t*) (POST_OFFSET_G3_6 | PBA_ENABLE);
-                putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_ATOMIC);
-                for(j=0; j<4; j++)
-                {
-                    *post_addr = (uint64_t)u3.ev.e[j];
-                    post_addr++;
-                }
-            }
-            if ( ((G_CUR_UAV & MASK_NVLNK0) > 0) || ((G_CUR_UAV & MASK_NVLNK1) > 0) || ((G_CUR_UAV & MASK_NVLNK2) > 0)||
-                 ((G_CUR_UAV & MASK_NVLNK3) > 0) || ((G_CUR_UAV & MASK_NVLNK4) > 0) || ((G_CUR_UAV & MASK_NVLNK5) > 0)  )
-            {
-                putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_DMA);
-                *L_DBG_UNIT = 7;
-                getscom_abs(G_PMULETS_3[6], &u3.pmulet);
-                post_addr = (uint64_t*) (POST_OFFSET_G3_7 | PBA_ENABLE);
-                putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_ATOMIC);
-                for(j=0; j<4; j++)
-                {
-                    *post_addr = (uint64_t)u3.ev.e[j];
-                    post_addr++;
-                }
-                *L_DBG_UNIT = 8;
-                getscom_abs(G_PMULETS_3[7], &u3.pmulet);
-                for(j=0; j<4; j++)
-                {
-                    *post_addr = (uint64_t)u3.ev.e[j];
-                    post_addr++;
-                }
-            }
-            post_addr = (uint64_t*) (POST_OFFSET_G3T | PBA_ENABLE);
-            *post_addr = INC_UPD_COUNT;
-            break;
-        case G4:
-//PHB events are present on separate 48-bit SCOM registers. They dont clear on read.
-//But wrap around. After each read, the value is subtracted from the prvious value to 
-//get current increment which is then atomically added to the main memory.
-//Totally 24 scoms of the PHB are split across 3 epochs for the same group.
-// Only 8 scoms are read and updated to memory in an epoch to abide the 25us run time restriction.
-            *L_DBG_GRP = 4;
-            post_addr = (uint64_t*) (POST_OFFSET_G4H | PBA_ENABLE);
-            putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_ATOMIC);
-            *post_addr = INC_UPD_COUNT;
-            post_addr++;
-            if(L_phb_events > 23)
-                L_phb_events = 0;  
-            phb_epoch = L_phb_events/8;
-            switch(phb_epoch)
-            {
-                case 0:
-                    if ((G_CUR_UAV & MASK_PHB0) > 0)
-                    {
-                        putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_DMA);
-                        *L_DBG_UNIT = 1;
-                        putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_ATOMIC);
-                        post_addr = (uint64_t*) (POST_OFFSET_G4a | PBA_ENABLE);
-                        for(i=0; i<4; i++)
-                        {
-                            getscom_abs(G_PMULETS_4a[i], &temp);
-                            temp >>=16;
-                            temp1 = temp;
-                            temp = get_phb_event(temp, G_PHB_pmulets[L_phb_events] );
-                            if(G_PHB_pmulets[L_phb_events] != 0)
-                                *post_addr = temp;
-                            G_PHB_pmulets[L_phb_events] = temp1;
-                            post_addr++;
-                            L_phb_events++;
-                        }
-                    }
-                    else
-                        L_phb_events += 4;
-                    
-              
-                    if ((G_CUR_UAV & MASK_PHB1) > 0)
-                    {
-                        putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_DMA);
-                        *L_DBG_UNIT = 2;
-                        putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_ATOMIC);
-                        post_addr = (uint64_t*) (POST_OFFSET_G4b | PBA_ENABLE);
-                        for(i=0; i<4; i++)
-                        {
-                            getscom_abs(G_PMULETS_4b[i], &temp);
-                            temp >>=16;
-                            temp1 = temp;
-                            temp = get_phb_event(temp, G_PHB_pmulets[L_phb_events] );
-                            if(G_PHB_pmulets[L_phb_events] != 0)
-                                *post_addr = temp;
-                            G_PHB_pmulets[L_phb_events] = temp1;
-                            post_addr++;
-                            L_phb_events++;
-                        }
-                    }
-                    else
-                        L_phb_events += 4;
-                    
+                    PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
                     break;
-                 case 1:
-                    if ((G_CUR_UAV & MASK_PHB2) > 0)
-                    {
-                        putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_DMA);
-                        *L_DBG_UNIT = 3;
-                        putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_ATOMIC);
-                        post_addr = (uint64_t*) (POST_OFFSET_G4c | PBA_ENABLE);
-                        for(i=0; i<4; i++)
-                        {
-                            getscom_abs(G_PMULETS_4c[i], &temp);
-                            temp >>=16;
-                            temp1 = temp;
-                            temp = get_phb_event(temp, G_PHB_pmulets[L_phb_events] );
-                            if(G_PHB_pmulets[L_phb_events] != 0)
-                                *post_addr = temp;
-                            G_PHB_pmulets[L_phb_events] = temp1;
-                            post_addr++;
-                            L_phb_events++;
-                        }
-                    }
-                    else
-                        L_phb_events += 4;
-                    
-                    if ((G_CUR_UAV & MASK_PHB3) > 0)
-                    {
-                        putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_DMA);
-                        *L_DBG_UNIT = 4;
-                        putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_ATOMIC);
-                        post_addr = (uint64_t*) (POST_OFFSET_G4d | PBA_ENABLE);
-                        for(i=0; i<4; i++)
-                        {
-                            getscom_abs(G_PMULETS_4d[i], &temp);
-                            temp >>=16;
-                            temp1 = temp;
-                            temp = get_phb_event(temp, G_PHB_pmulets[L_phb_events] );
-                            if(G_PHB_pmulets[L_phb_events] != 0)
-                                *post_addr = temp;
-                            G_PHB_pmulets[L_phb_events] = temp1;
-                            post_addr++;
-                            L_phb_events++;
-                        }
-                    }
-                    else
-                        L_phb_events += 4;
+                }
 
-                    break; 
-                 case 2:
-                    if ((G_CUR_UAV & MASK_PHB4) > 0)
+                *post_addr = INC_UPD_COUNT;
+                post_addr++;
+                for(i=0; i<8; i++)
+                {   
+                    rc = getScom (G_PMULETS_1A[i], &u3.pmulet, o_err);
+                    if ( rc )
                     {
-                        putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_DMA);
-                        *L_DBG_UNIT = 5;
-                        putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_ATOMIC);
-                        post_addr = (uint64_t*) (POST_OFFSET_G4e | PBA_ENABLE);
-                        for(i=0; i<4; i++)
-                        {
-                            getscom_abs(G_PMULETS_4e[i], &temp);
-                            temp >>=16;
-                            temp1 = temp;
-                            temp = get_phb_event(temp, G_PHB_pmulets[L_phb_events] );
-                            if(G_PHB_pmulets[L_phb_events] != 0)
-                                *post_addr = temp;
-                            G_PHB_pmulets[L_phb_events] = temp1;
-                            post_addr++;
-                            L_phb_events++;
-                        }
+                        PK_TRACE("post_pmu_events: 0x%08x getscom failed. rc = 0x%x", G_PMULETS_1A[i], rc);
+                        break;
+                    }
+
+                    for(j=0; j<4; j++)
+                    {
+                        *post_addr = (uint64_t)u3.ev.e[j];
+                        post_addr++;
+                    }
+                }
+                if ( rc )
+                {
+                    break;
+                }
+
+                if(G_CUR_MODE == CNTL_MODE_MONITOR) 
+                    post_addr = (uint64_t*) (POST_OFFSET_G1AT | PBA_ENABLE);
+                else if(G_CUR_MODE == CNTL_MODE_DEBUG1) 
+                    post_addr = (uint64_t*) (POST_OFFSET_DBG1AT | PBA_ENABLE);
+                *post_addr = INC_UPD_COUNT;
+                break;
+
+            case G1B://cnpm group - always written
+                if(G_CUR_MODE == CNTL_MODE_MONITOR) 
+                    post_addr = (uint64_t*) (POST_OFFSET_G1BH | PBA_ENABLE);
+                else if(G_CUR_MODE == CNTL_MODE_DEBUG1) 
+                    post_addr = (uint64_t*) (POST_OFFSET_DBG1BH | PBA_ENABLE);
+                *L_DBG_GRP = G1B;
+                *L_DBG_UNIT = 1;
+                rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_ATOMIC, o_err);
+                if ( rc )
+                {
+                    PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                    break;
+                }
+
+                *post_addr = INC_UPD_COUNT;
+                post_addr++;
+                for(i=0; i<8; i++)
+                {   
+                    rc = getScom (G_PMULETS_1B[i], &u3.pmulet, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: 0x%08x getscom failed. rc = 0x%x", G_PMULETS_1B[i], rc);
+                        break;
+                    }
+
+                    for(j=0; j<4; j++)
+                    {
+                        *post_addr = (uint64_t)u3.ev.e[j];
+                        post_addr++;
+                    }
+                }
+                if ( rc )
+                {
+                    break;
+                }
+
+                if(G_CUR_MODE == CNTL_MODE_MONITOR) 
+                    post_addr = (uint64_t*) (POST_OFFSET_G1BT | PBA_ENABLE);
+                else if(G_CUR_MODE == CNTL_MODE_DEBUG1) 
+                    post_addr = (uint64_t*) (POST_OFFSET_DBG1BT | PBA_ENABLE);
+                *post_addr = INC_UPD_COUNT;
+                break;
+
+            case G2A://XLINKS and ALINKS - [0:3]. Read scoms based on availability.
+                *L_DBG_GRP = G2A;
+                if ( ((G_CUR_UAV & MASK_TLPM0) == MASK_XLINK0) || 
+                     ((G_CUR_UAV & MASK_TLPM1) == MASK_XLINK1) || 
+                     ((G_CUR_UAV & MASK_TLPM2) == MASK_XLINK2) || 
+                     ((G_CUR_UAV & MASK_TLPM3) == MASK_XLINK3) )
+                {
+                    post_addr = (uint64_t*) (POST_OFFSET_G2A_X_H | PBA_ENABLE);
+                }
+                else
+                {
+                    post_addr = (uint64_t*) (POST_OFFSET_G2A_A_H | PBA_ENABLE);
+                }
+                rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_ATOMIC, o_err);
+                if ( rc )
+                {
+                    PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                    break;
+                }
+
+                *post_addr = INC_UPD_COUNT;
+                post_addr++;
+
+                if ( ((G_CUR_UAV & MASK_TLPM0) == MASK_XLINK0) || 
+                     ((G_CUR_UAV & MASK_TLPM0) == MASK_ALINK0) )
+                {
+                    rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_DMA, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                        break;
+                    }
+
+                    *L_DBG_UNIT = 1;
+                    if ( (G_CUR_UAV & MASK_TLPM0) == MASK_XLINK0 )
+                    {
+                        post_addr = (uint64_t*) (POST_OFFSET_G2A_X_0 | PBA_ENABLE);
                     }
                     else
-                        L_phb_events += 4;
-                    if ((G_CUR_UAV & MASK_PHB5) > 0)
                     {
-                        putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_DMA);
-                        *L_DBG_UNIT = 6;
-                        putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_ATOMIC);
-                        post_addr = (uint64_t*) (POST_OFFSET_G4f | PBA_ENABLE);
-                        for(i=0; i<4; i++)
-                        {
-                            getscom_abs(G_PMULETS_4f[i], &temp);
-                            temp >>=16;
-                            temp1 = temp;
-                            temp = get_phb_event(temp, G_PHB_pmulets[L_phb_events] );
-                            if(G_PHB_pmulets[L_phb_events] != 0)
-                                *post_addr = temp;
-                            G_PHB_pmulets[L_phb_events] = temp1;
-                            post_addr++;
-                            L_phb_events++;
-                        }
+                        post_addr = (uint64_t*) (POST_OFFSET_G2A_A_0 | PBA_ENABLE);
+                    }
+                    rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_ATOMIC, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                        break;
+                    }
+
+                    rc = getScom (G_PMULETS_2A[0], &u3.pmulet, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: 0x%08x getscom failed. rc = 0x%x", G_PMULETS_2A[0], rc);
+                        break;
+                    }
+
+                    for(j=0; j<4; j++)
+                    {
+                        *post_addr = (uint64_t)u3.ev.e[j];
+                        post_addr++;
+                    }
+
+                    rc = getScom (G_PMULETS_2A[1], &u3.pmulet, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: 0x%08x getscom failed. rc = 0x%x", G_PMULETS_2A[1], rc);
+                        break;
+                    }
+
+                    for(j=0; j<4; j++)
+                    {
+                        *post_addr = (uint64_t)u3.ev.e[j];
+                        post_addr++;
+                    }
+                }
+
+                if ( ((G_CUR_UAV & MASK_TLPM1) == MASK_XLINK1) || 
+                     ((G_CUR_UAV & MASK_TLPM1) == MASK_ALINK1) )
+                {
+                    rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_DMA, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                        break;
+                    }
+
+                    *L_DBG_UNIT = 2;
+                    if ( (G_CUR_UAV & MASK_TLPM1) == MASK_XLINK1 )
+                    {
+                        post_addr = (uint64_t*) (POST_OFFSET_G2A_X_1 | PBA_ENABLE);
                     }
                     else
-                        L_phb_events += 4;
-                    break;  
-            }
-            post_addr = (uint64_t*) (POST_OFFSET_G4T | PBA_ENABLE);
-            *post_addr = INC_UPD_COUNT;
-            break;
-        case G5://MBAs - 8 fixed counters  for MBA0-3 that dont clear on read but wraparound on overflow.
-            *L_DBG_GRP = 5;
-            post_addr = (uint64_t*) (POST_OFFSET_G5H | PBA_ENABLE);
-            putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_ATOMIC);
-            *post_addr = INC_UPD_COUNT;
-            post_addr++;
-            if ((G_CUR_UAV & MASK_MBA0) > 0)
-            {
-                putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_DMA);
-                *L_DBG_UNIT = 1;
-                post_addr = (uint64_t*) (POST_OFFSET_G5_1 | PBA_ENABLE);
-                putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_ATOMIC);
-                getscom_abs(G_PMULETS_5[0], &u3_mba.pmulet);
-                ev_count = 0;
-                for(iter=0;iter<2;iter++)
-                {
-                    temp = u3_mba.ev.e[ev_count];
-                    temp1 = temp;
-                    temp = get_mba_event(temp,  G_MBA_pmulets[iter]);
-                    if(G_MBA_pmulets[iter] != 0)
-                        *post_addr = temp;
-                    G_MBA_pmulets[iter] = temp1;
-                    post_addr++;
-                    ev_count++;
+                    {
+                        post_addr = (uint64_t*) (POST_OFFSET_G2A_A_1 | PBA_ENABLE);
+                    }
+                    rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_ATOMIC, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                        break;
+                    }
+
+                    rc = getScom (G_PMULETS_2A[2], &u3.pmulet, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: 0x%08x getscom failed. rc = 0x%x", G_PMULETS_2A[2], rc);
+                        break;
+                    }
+
+                    for(j=0; j<4; j++)
+                    {
+                        *post_addr = (uint64_t)u3.ev.e[j];
+                        post_addr++;
+                    }
+
+                    rc = getScom (G_PMULETS_2A[3], &u3.pmulet, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: 0x%08x getscom failed. rc = 0x%x", G_PMULETS_2A[3], rc);
+                        break;
+                    }
+
+                    for(j=0; j<4; j++)
+                    {
+                        *post_addr = (uint64_t)u3.ev.e[j];
+                        post_addr++;
+                    }
                 }
-                //only first 32-bit counter is used to get cycles.
-                getscom_abs(G_PMULETS_5[1], &u3_mba.pmulet);
-                temp = u3_mba.ev.e[0];
-                temp1 = temp;
-                temp =  get_mba_event(temp,  G_MBA_pmulets[2]);
-                if(G_MBA_pmulets[2] != 0)
-                    *post_addr = temp<<1;//needs scaling by 2;
-                G_MBA_pmulets[2] = temp1;
-            }
-            if ((G_CUR_UAV & MASK_MBA1) > 0)
-            {
-                putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_DMA);
-                *L_DBG_UNIT = 2;
-                post_addr = (uint64_t*) (POST_OFFSET_G5_2 | PBA_ENABLE);
-                putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_ATOMIC);
-                getscom_abs(G_PMULETS_5[2], &u3_mba.pmulet);
-                ev_count = 0;
-                for(iter=3;iter<5;iter++)
+
+                if ( ((G_CUR_UAV & MASK_TLPM2) == MASK_XLINK2) || 
+                        ((G_CUR_UAV & MASK_TLPM2) == MASK_ALINK2) )
                 {
-                    temp = u3_mba.ev.e[ev_count];
-                    temp1 = temp;
-                    temp = get_mba_event(temp,  G_MBA_pmulets[iter]);
-                    if(G_MBA_pmulets[iter] != 0)
-                        *post_addr = temp;
-                    G_MBA_pmulets[iter] = temp1;
-                    post_addr++;
-                    ev_count++;
+                    rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_DMA, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                        break;
+                    }
+
+                    *L_DBG_UNIT = 3;
+                    if ( (G_CUR_UAV & MASK_TLPM2) == MASK_XLINK2 )
+                    {
+                        post_addr = (uint64_t*) (POST_OFFSET_G2A_X_2 | PBA_ENABLE);
+                    }
+                    else
+                    {
+                        post_addr = (uint64_t*) (POST_OFFSET_G2A_A_2 | PBA_ENABLE);
+                    }
+                    rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_ATOMIC, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                        break;
+                    }
+
+                    rc = getScom (G_PMULETS_2A[4], &u3.pmulet, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: 0x%08x getscom failed. rc = 0x%x", G_PMULETS_2A[4], rc);
+                        break;
+                    }
+
+                    for(j=0; j<4; j++)
+                    {
+                        *post_addr = (uint64_t)u3.ev.e[j];
+                        post_addr++;
+                    }
+
+                    rc = getScom (G_PMULETS_2A[5], &u3.pmulet, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: 0x%08x getscom failed. rc = 0x%x", G_PMULETS_2A[5], rc);
+                        break;
+                    }
+
+                    for(j=0; j<4; j++)
+                    {
+                        *post_addr = (uint64_t)u3.ev.e[j];
+                        post_addr++;
+                    }
                 }
-                //only first 32-bit counter is used to get cycles.
-                getscom_abs(G_PMULETS_5[3], &u3_mba.pmulet);
-                temp = u3_mba.ev.e[0];
-                temp1 = temp;
-                temp =  get_mba_event(temp,  G_MBA_pmulets[5]);
-                if(G_MBA_pmulets[5] != 0)
-                    *post_addr = temp<<1;//needs scaling by 2;
-                G_MBA_pmulets[5] = temp1;
-            }
-            if ((G_CUR_UAV & MASK_MBA2) > 0)
-            {
-                putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_DMA);
-                *L_DBG_UNIT = 3;
-                post_addr = (uint64_t*) (POST_OFFSET_G5_3 | PBA_ENABLE);
-                putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_ATOMIC);
-                getscom_abs(G_PMULETS_5[4], &u3_mba.pmulet);
-                ev_count = 0;
-                for(iter=6;iter<8;iter++)
+
+                if ( ((G_CUR_UAV & MASK_TLPM3) == MASK_XLINK3) || 
+                        ((G_CUR_UAV & MASK_TLPM3) == MASK_ALINK3) )
                 {
-                    temp = u3_mba.ev.e[ev_count];
-                    temp1 = temp;
-                    temp = get_mba_event(temp,  G_MBA_pmulets[iter]);
-                    if(G_MBA_pmulets[iter] != 0)
-                        *post_addr = temp;
-                    G_MBA_pmulets[iter] = temp1;
-                    post_addr++;
-                    ev_count++;
+                    rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_DMA, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                        break;
+                    }
+
+                    *L_DBG_UNIT = 4;
+                    if ( (G_CUR_UAV & MASK_TLPM3) == MASK_XLINK3 )
+                    {
+                        post_addr = (uint64_t*) (POST_OFFSET_G2A_X_3 | PBA_ENABLE);
+                    }
+                    else
+                    {
+                        post_addr = (uint64_t*) (POST_OFFSET_G2A_A_3 | PBA_ENABLE);
+                    }
+                    rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_ATOMIC, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                        break;
+                    }
+
+                    rc = getScom (G_PMULETS_2A[6], &u3.pmulet, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: 0x%08x getscom failed. rc = 0x%x", G_PMULETS_2A[6], rc);
+                        break;
+                    }
+
+                    for(j=0; j<4; j++)
+                    {
+                        *post_addr = (uint64_t)u3.ev.e[j];
+                        post_addr++;
+                    }
+
+                    rc = getScom (G_PMULETS_2A[7], &u3.pmulet, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: 0x%08x getscom failed. rc = 0x%x", G_PMULETS_2A[7], rc);
+                        break;
+                    }
+
+                    for(j=0; j<4; j++)
+                    {
+                        *post_addr = (uint64_t)u3.ev.e[j];
+                        post_addr++;
+                    }
                 }
-                //only first 32-bit counter is used to get cycles.
-                getscom_abs(G_PMULETS_5[5], &u3_mba.pmulet);
-                temp = u3_mba.ev.e[0];
-                temp1 = temp;
-                temp =  get_mba_event(temp,  G_MBA_pmulets[8]);
-                if(G_MBA_pmulets[8] != 0)
-                    *post_addr = temp<<1;//needs scaling by 2;
-                G_MBA_pmulets[8] = temp1;
-            }
-            if ((G_CUR_UAV & MASK_MBA3) > 0)
-            {
-                putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_DMA);
-                *L_DBG_UNIT = 4;
-                post_addr = (uint64_t*) (POST_OFFSET_G5_4 | PBA_ENABLE);
-                putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_ATOMIC);
-                getscom_abs(G_PMULETS_5[6], &u3_mba.pmulet);
-                ev_count = 0;
-                for(iter=9;iter<11;iter++)
+
+                if ( ((G_CUR_UAV & MASK_TLPM0) == MASK_XLINK0) || 
+                        ((G_CUR_UAV & MASK_TLPM1) == MASK_XLINK1) || 
+                        ((G_CUR_UAV & MASK_TLPM2) == MASK_XLINK2) || 
+                        ((G_CUR_UAV & MASK_TLPM3) == MASK_XLINK3) )
                 {
-                    temp = u3_mba.ev.e[ev_count];
-                    temp1 = temp;
-                    temp = get_mba_event(temp,  G_MBA_pmulets[iter]);
-                    if(G_MBA_pmulets[iter] != 0)
-                        *post_addr = temp;
-                    G_MBA_pmulets[iter] = temp1;
-                    post_addr++;
-                    ev_count++;
+                    post_addr = (uint64_t*) (POST_OFFSET_G2A_X_T | PBA_ENABLE);
                 }
-                //only first 32-bit counter is used to get cycles.
-                getscom_abs(G_PMULETS_5[7], &u3_mba.pmulet);
-                temp = u3_mba.ev.e[0];
-                temp1 = temp;
-                temp =  get_mba_event(temp,  G_MBA_pmulets[11]);
-                if(G_MBA_pmulets[11] != 0)
-                    *post_addr = temp<<1;//needs scaling by 2;
-                G_MBA_pmulets[11] = temp1;
-            }
-            post_addr = (uint64_t*) (POST_OFFSET_G5T | PBA_ENABLE);
-            *post_addr = INC_UPD_COUNT;
-            break;
-        case G6://8 more fixed scoms for MBA4-7. no clear on read.wraparound.
-            *L_DBG_GRP = 6;
-            post_addr = (uint64_t*) (POST_OFFSET_G6H | PBA_ENABLE);
-            putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_ATOMIC);
-            *post_addr = INC_UPD_COUNT;
-            post_addr++;
-            if ((G_CUR_UAV & MASK_MBA4) > 0)
-            {
-                putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_DMA);
-                *L_DBG_UNIT = 1;
-                post_addr = (uint64_t*) (POST_OFFSET_G6_1 | PBA_ENABLE);
-                putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_ATOMIC);
-                getscom_abs(G_PMULETS_6[0], &u3_mba.pmulet);
-                ev_count = 0;
-                for(iter=12;iter<14;iter++)
+                else
                 {
-                    temp = u3_mba.ev.e[ev_count];
-                    temp1 = temp;
-                    temp = get_mba_event(temp,  G_MBA_pmulets[iter]);
-                    if(G_MBA_pmulets[iter] != 0)
-                        *post_addr = temp;
-                    G_MBA_pmulets[iter] = temp1;
-                    post_addr++;
-                    ev_count++;
+                    post_addr = (uint64_t*) (POST_OFFSET_G2A_A_T | PBA_ENABLE);
                 }
-                //only first 32-bit counter is used to get cycles.
-                getscom_abs(G_PMULETS_6[1], &u3_mba.pmulet);
-                temp = u3_mba.ev.e[0];
-                temp1 = temp;
-                temp =  get_mba_event(temp,  G_MBA_pmulets[14]);
-                if(G_MBA_pmulets[14] != 0)
-                    *post_addr = temp<<1;//needs scaling by 2;
-                G_MBA_pmulets[14] = temp1;
-            }
-            if ((G_CUR_UAV & MASK_MBA5) > 0)
-            {
-                putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_DMA);
-                *L_DBG_UNIT = 2;
-                post_addr = (uint64_t*) (POST_OFFSET_G6_2 | PBA_ENABLE);
-                putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_ATOMIC);
-                getscom_abs(G_PMULETS_6[2], &u3_mba.pmulet);
-                ev_count = 0;
-                for(iter=15;iter<17;iter++)
+                *post_addr = INC_UPD_COUNT;
+                break;
+
+            case G2B://XLINKS and ALINKS - [4:7]. Read scoms based on availability.
+                *L_DBG_GRP = G2B;
+                if ( ((G_CUR_UAV & MASK_TLPM4) == MASK_XLINK4) || 
+                        ((G_CUR_UAV & MASK_TLPM5) == MASK_XLINK5) || 
+                        ((G_CUR_UAV & MASK_TLPM6) == MASK_XLINK6) || 
+                        ((G_CUR_UAV & MASK_TLPM7) == MASK_XLINK7) )
                 {
-                    temp = u3_mba.ev.e[ev_count];
-                    temp1 = temp;
-                    temp = get_mba_event(temp,  G_MBA_pmulets[iter]);
-                    if(G_MBA_pmulets[iter] != 0)
-                        *post_addr = temp;
-                    G_MBA_pmulets[iter] = temp1;
-                    post_addr++;
-                    ev_count++;
+                    post_addr = (uint64_t*) (POST_OFFSET_G2B_X_H | PBA_ENABLE);
                 }
-                //only first 32-bit counter is used to get cycles.
-                getscom_abs(G_PMULETS_6[3], &u3_mba.pmulet);
-                temp = u3_mba.ev.e[0];
-                temp1 = temp;
-                temp =  get_mba_event(temp,  G_MBA_pmulets[17]);
-                if(G_MBA_pmulets[17] != 0)
-                    *post_addr = temp<<1;//needs scaling by 2
-                G_MBA_pmulets[17] = temp1;
-            }
-            if ((G_CUR_UAV & MASK_MBA6) > 0)
-            {
-                putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_DMA);
-                *L_DBG_UNIT = 3;
-                post_addr = (uint64_t*) (POST_OFFSET_G6_3 | PBA_ENABLE);
-                putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_ATOMIC);
-                getscom_abs(G_PMULETS_6[4], &u3_mba.pmulet);
-                ev_count = 0;
-                for(iter=18;iter<20;iter++)
+                else
                 {
-                    temp = u3_mba.ev.e[ev_count];
-                    temp1 = temp;
-                    temp = get_mba_event(temp,  G_MBA_pmulets[iter]);
-                    if(G_MBA_pmulets[iter] != 0)
-                        *post_addr = temp;
-                    G_MBA_pmulets[iter] = temp1;
-                    post_addr++;
-                    ev_count++;
+                    post_addr = (uint64_t*) (POST_OFFSET_G2B_A_H | PBA_ENABLE);
                 }
-                //only first 32-bit counter is used to get cycles.
-                getscom_abs(G_PMULETS_6[5], &u3_mba.pmulet);
-                temp = u3_mba.ev.e[0];
-                temp1 = temp;
-                temp =  get_mba_event(temp,  G_MBA_pmulets[20]);
-                if(G_MBA_pmulets[20] != 0)
-                    *post_addr = temp<<1;//needs scaling by 2
-                G_MBA_pmulets[20] = temp1;
-            }
-            if ((G_CUR_UAV & MASK_MBA7) > 0)
-            {
-                putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_DMA);
-                *L_DBG_UNIT = 4;
-                post_addr = (uint64_t*) (POST_OFFSET_G6_4 | PBA_ENABLE);
-                putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_ATOMIC);
-                getscom_abs(G_PMULETS_6[6], &u3_mba.pmulet);
-                ev_count = 0;
-                for(iter=21;iter<23;iter++)
+                rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_ATOMIC, o_err);
+                if ( rc )
                 {
-                    temp = u3_mba.ev.e[ev_count];
-                    temp1 = temp;
-                    temp = get_mba_event(temp,  G_MBA_pmulets[iter]);
-                    if(G_MBA_pmulets[iter] != 0)
-                        *post_addr = temp;
-                    G_MBA_pmulets[iter] = temp1;
-                    post_addr++;
-                    ev_count++;
+                    PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                    break;
                 }
-                //only first 32-bit counter is used to get cycles.
-                getscom_abs(G_PMULETS_6[7], &u3_mba.pmulet);
-                temp = u3_mba.ev.e[0];
-                temp1 = temp;
-                temp =  get_mba_event(temp,  G_MBA_pmulets[23]);
-                if(G_MBA_pmulets[23] != 0)
-                    *post_addr = temp<<1;//needs scaling by 2
-                G_MBA_pmulets[23] = temp1;
-            }
-            post_addr = (uint64_t*) (POST_OFFSET_G6T | PBA_ENABLE);
-            *post_addr = INC_UPD_COUNT;
-            break;
-        case G7://3 NVLINK-NPCQ's and 2 CAPP pmulets each with 4 counters.TOD present here.
-            *L_DBG_GRP = 7;
-            post_addr = (uint64_t*) (POST_OFFSET_G6H | PBA_ENABLE);
-            putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_ATOMIC);
-            *post_addr = INC_UPD_COUNT;
-            post_addr++;
-            if ( ((G_CUR_UAV & MASK_NVLNK0) > 0) || ((G_CUR_UAV & MASK_NVLNK1) > 0) )
-            {
-                putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_DMA);
-                *L_DBG_UNIT = 1;
-                post_addr = (uint64_t*) (POST_OFFSET_G7_1 | PBA_ENABLE);
-                putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_ATOMIC);
-                getscom_abs(G_PMULETS_7[0], &u3.pmulet);
-                for(j=0; j<4; j++)
+
+                *post_addr = INC_UPD_COUNT;
+                post_addr++;
+
+                if ( ((G_CUR_UAV & MASK_TLPM4) == MASK_XLINK4) || 
+                        ((G_CUR_UAV & MASK_TLPM4) == MASK_ALINK4) )
                 {
-                    *post_addr = (uint64_t)u3.ev.e[j];
-                    post_addr++;
+                    rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_DMA, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                        break;
+                    }
+
+                    *L_DBG_UNIT = 1;
+                    if ( (G_CUR_UAV & MASK_TLPM4) == MASK_XLINK4 )
+                    {
+                        post_addr = (uint64_t*) (POST_OFFSET_G2B_X_4 | PBA_ENABLE);
+                    }
+                    else
+                    {
+                        post_addr = (uint64_t*) (POST_OFFSET_G2B_A_4 | PBA_ENABLE);
+                    }
+                    rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_ATOMIC, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                        break;
+                    }
+
+                    rc = getScom (G_PMULETS_2B[0], &u3.pmulet, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: 0x%08x getscom failed. rc = 0x%x", G_PMULETS_2B[0], rc);
+                        break;
+                    }
+
+                    for(j=0; j<4; j++)
+                    {
+                        *post_addr = (uint64_t)u3.ev.e[j];
+                        post_addr++;
+                    }
+
+                    rc = getScom (G_PMULETS_2B[1], &u3.pmulet, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: 0x%08x getscom failed. rc = 0x%x", G_PMULETS_2B[1], rc);
+                        break;
+                    }
+
+                    for(j=0; j<4; j++)
+                    {
+                        *post_addr = (uint64_t)u3.ev.e[j];
+                        post_addr++;
+                    }
                 }
-            }
-            if ( ((G_CUR_UAV & MASK_NVLNK2) > 0) || ((G_CUR_UAV & MASK_NVLNK3) > 0) )
-            {
-                putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_DMA);
-                *L_DBG_UNIT = 2;
-                post_addr = (uint64_t*) (POST_OFFSET_G7_2 | PBA_ENABLE);
-                putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_ATOMIC);
-                getscom_abs(G_PMULETS_7[1], &u3.pmulet);
-                for(j=0; j<4; j++)
+
+                if ( ((G_CUR_UAV & MASK_TLPM5) == MASK_XLINK5) || 
+                        ((G_CUR_UAV & MASK_TLPM5) == MASK_ALINK5) )
                 {
-                    *post_addr = (uint64_t)u3.ev.e[j];
-                    post_addr++;
+                    rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_DMA, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                        break;
+                    }
+
+                    *L_DBG_UNIT = 2;
+                    if ( (G_CUR_UAV & MASK_TLPM5) == MASK_XLINK5 )
+                    {
+                        post_addr = (uint64_t*) (POST_OFFSET_G2B_X_5 | PBA_ENABLE);
+                    }
+                    else
+                    {
+                        post_addr = (uint64_t*) (POST_OFFSET_G2B_A_5 | PBA_ENABLE);
+                    }
+                    rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_ATOMIC, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                        break;
+                    }
+
+                    rc = getScom (G_PMULETS_2B[2], &u3.pmulet, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: 0x%08x getscom failed. rc = 0x%x", G_PMULETS_2B[2], rc);
+                        break;
+                    }
+
+                    for(j=0; j<4; j++)
+                    {
+                        *post_addr = (uint64_t)u3.ev.e[j];
+                        post_addr++;
+                    }
+
+                    rc = getScom (G_PMULETS_2B[3], &u3.pmulet, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: 0x%08x getscom failed. rc = 0x%x", G_PMULETS_2B[3], rc);
+                        break;
+                    }
+
+                    for(j=0; j<4; j++)
+                    {
+                        *post_addr = (uint64_t)u3.ev.e[j];
+                        post_addr++;
+                    }
                 }
-            }
-            if ( ((G_CUR_UAV & MASK_NVLNK4) > 0) || ((G_CUR_UAV & MASK_NVLNK5) > 0) )
-            {
-                putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_DMA);
-                *L_DBG_UNIT = 3;
-                post_addr = (uint64_t*) (POST_OFFSET_G7_3 | PBA_ENABLE);
-                putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_ATOMIC);
-                getscom_abs(G_PMULETS_7[2], &u3.pmulet);
-                for(j=0; j<4; j++)
+
+                if ( ((G_CUR_UAV & MASK_TLPM6) == MASK_XLINK6) || 
+                        ((G_CUR_UAV & MASK_TLPM6) == MASK_ALINK6) )
                 {
-                    *post_addr = (uint64_t)u3.ev.e[j];
-                    post_addr++;
+                    rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_DMA, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                        break;
+                    }
+
+                    *L_DBG_UNIT = 3;
+                    if ( (G_CUR_UAV & MASK_TLPM6) == MASK_XLINK6 )
+                    {
+                        post_addr = (uint64_t*) (POST_OFFSET_G2B_X_6 | PBA_ENABLE);
+                    }
+                    else
+                    {
+                        post_addr = (uint64_t*) (POST_OFFSET_G2B_A_6 | PBA_ENABLE);
+                    }
+                    rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_ATOMIC, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                        break;
+                    }
+
+                    rc = getScom (G_PMULETS_2B[4], &u3.pmulet, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: 0x%08x getscom failed. rc = 0x%x", G_PMULETS_2B[4], rc);
+                        break;
+                    }
+
+                    for(j=0; j<4; j++)
+                    {
+                        *post_addr = (uint64_t)u3.ev.e[j];
+                        post_addr++;
+                    }
+
+                    rc = getScom (G_PMULETS_2B[5], &u3.pmulet, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: 0x%08x getscom failed. rc = 0x%x", G_PMULETS_2B[5], rc);
+                        break;
+                    }
+
+                    for(j=0; j<4; j++)
+                    {
+                        *post_addr = (uint64_t)u3.ev.e[j];
+                        post_addr++;
+                    }
                 }
-            }
-            if ((G_CUR_UAV & MASK_CAPP0) > 0)
-            {
-                putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_DMA);
-                *L_DBG_UNIT = 4;
-                post_addr = (uint64_t*) (POST_OFFSET_G7_4 | PBA_ENABLE);
-                putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_ATOMIC);
-                getscom_abs(G_PMULETS_7[3], &u3.pmulet);
-                for(j=0; j<4; j++)
+
+                if ( ((G_CUR_UAV & MASK_TLPM7) == MASK_XLINK7) || 
+                        ((G_CUR_UAV & MASK_TLPM7) == MASK_ALINK7) )
                 {
-                    *post_addr = (uint64_t)u3.ev.e[j];
-                    post_addr++;
+                    rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_DMA, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                        break;
+                    }
+
+                    *L_DBG_UNIT = 4;
+                    if ( (G_CUR_UAV & MASK_TLPM7) == MASK_XLINK7 )
+                    {
+                        post_addr = (uint64_t*) (POST_OFFSET_G2B_X_7 | PBA_ENABLE);
+                    }
+                    else
+                    {
+                        post_addr = (uint64_t*) (POST_OFFSET_G2B_A_7 | PBA_ENABLE);
+                    }
+                    rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_ATOMIC, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                        break;
+                    }
+
+                    rc = getScom (G_PMULETS_2B[6], &u3.pmulet, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: 0x%08x getscom failed. rc = 0x%x", G_PMULETS_2B[6], rc);
+                        break;
+                    }
+
+                    for(j=0; j<4; j++)
+                    {
+                        *post_addr = (uint64_t)u3.ev.e[j];
+                        post_addr++;
+                    }
+
+                    rc = getScom (G_PMULETS_2B[7], &u3.pmulet, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: 0x%08x getscom failed. rc = 0x%x", G_PMULETS_2B[7], rc);
+                        break;
+                    }
+
+                    for(j=0; j<4; j++)
+                    {
+                        *post_addr = (uint64_t)u3.ev.e[j];
+                        post_addr++;
+                    }
                 }
-                getscom_abs(G_PMULETS_7[4], &u3.pmulet);
-                for(j=0; j<4; j++)
+
+                if ( ((G_CUR_UAV & MASK_TLPM4) == MASK_XLINK4) || 
+                        ((G_CUR_UAV & MASK_TLPM5) == MASK_XLINK5) || 
+                        ((G_CUR_UAV & MASK_TLPM6) == MASK_XLINK6) || 
+                        ((G_CUR_UAV & MASK_TLPM7) == MASK_XLINK7) )
                 {
-                    *post_addr = (uint64_t)u3.ev.e[j];
-                    post_addr++;
+                    post_addr = (uint64_t*) (POST_OFFSET_G2B_X_T | PBA_ENABLE);
                 }
-            }
-            if ((G_CUR_UAV & MASK_CAPP1) > 0)
-            {
-                putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_DMA);
-                *L_DBG_UNIT = 5;
-                post_addr = (uint64_t*) (POST_OFFSET_G7_5 | PBA_ENABLE);
-                putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_ATOMIC);
-                getscom_abs(G_PMULETS_7[5], &u3.pmulet);
-                for(j=0; j<4; j++)
+                else
                 {
-                    *post_addr = (uint64_t)u3.ev.e[j];
-                    post_addr++;
+                    post_addr = (uint64_t*) (POST_OFFSET_G2B_A_T | PBA_ENABLE);
                 }
-                getscom_abs(G_PMULETS_7[6], &u3.pmulet);
-                for(j=0; j<4; j++)
+                *post_addr = INC_UPD_COUNT;
+                break;
+
+            case G3A://OCAPI - [0,3,4,5]
+                *L_DBG_GRP = G3A;
+                post_addr = (uint64_t*) (POST_OFFSET_G3A_O_H | PBA_ENABLE);
+                rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_ATOMIC, o_err);
+                if ( rc )
                 {
-                    *post_addr = (uint64_t)u3.ev.e[j];
-                    post_addr++;
+                    PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                    break;
                 }
-            }
-            getscom_abs(TOD_VALUE_REG,&TOD);
-            post_addr = (uint64_t*) (POST_OFFSET_G7_6 | PBA_ENABLE);
-            putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_DMA);
-            *post_addr = TOD;
-            post_addr = (uint64_t*) (POST_OFFSET_G7T | PBA_ENABLE);
-            putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_ATOMIC);
-            *post_addr = INC_UPD_COUNT;
-            break;
-        default:
-            PK_TRACE("gpe_24x7: Invalid Group:%d",grp);
-            break;
-    }
+
+                *post_addr = INC_UPD_COUNT;
+                post_addr++;
+                if ( (G_CUR_UAV & MASK_TLPM0) == MASK_OCAPI0 )
+                {
+                    rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_DMA, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                        break;
+                    }
+
+                    *L_DBG_UNIT = 1;
+                    post_addr = (uint64_t*) (POST_OFFSET_G3A_O_0 | PBA_ENABLE);
+                    rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_ATOMIC, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                        break;
+                    }
+
+                    rc = getScom (G_PMULETS_3A[0], &u3.pmulet, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: 0x%08x getscom failed. rc = 0x%x", G_PMULETS_3A[0], rc);
+                        break;
+                    }
+
+                    for(j=0; j<4; j++)
+                    {
+                        *post_addr = (uint64_t)u3.ev.e[j];
+                        post_addr++;
+                    }
+
+                    rc = getScom (G_PMULETS_3A[1], &u3.pmulet, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: 0x%08x getscom failed. rc = 0x%x", G_PMULETS_3A[1], rc);
+                        break;
+                    }
+
+                    for(j=0; j<4; j++)
+                    {
+                        *post_addr = (uint64_t)u3.ev.e[j];
+                        post_addr++;
+                    }
+                }
+
+                if ( (G_CUR_UAV & MASK_TLPM3) == MASK_OCAPI3 )
+                {
+                    rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_DMA, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                        break;
+                    }
+
+                    *L_DBG_UNIT = 2;
+                    post_addr = (uint64_t*) (POST_OFFSET_G3A_O_3 | PBA_ENABLE);
+                    rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_ATOMIC, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                        break;
+                    }
+
+                    rc = getScom (G_PMULETS_3A[2], &u3.pmulet, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: 0x%08x getscom failed. rc = 0x%x", G_PMULETS_3A[2], rc);
+                        break;
+                    }
+
+                    for(j=0; j<4; j++)
+                    {
+                        *post_addr = (uint64_t)u3.ev.e[j];
+                        post_addr++;
+                    }
+
+                    rc = getScom (G_PMULETS_3A[3], &u3.pmulet, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: 0x%08x getscom failed. rc = 0x%x", G_PMULETS_3A[3], rc);
+                        break;
+                    }
+
+                    for(j=0; j<4; j++)
+                    {
+                        *post_addr = (uint64_t)u3.ev.e[j];
+                        post_addr++;
+                    }
+                }
+
+                if ( (G_CUR_UAV & MASK_TLPM4) == MASK_OCAPI4 )
+                {
+                    rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_DMA, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                        break;
+                    }
+
+                    *L_DBG_UNIT = 3;
+                    post_addr = (uint64_t*) (POST_OFFSET_G3A_O_4 | PBA_ENABLE);
+                    rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_ATOMIC, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                        break;
+                    }
+
+                    rc = getScom (G_PMULETS_3A[4], &u3.pmulet, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: 0x%08x getscom failed. rc = 0x%x", G_PMULETS_3A[4], rc);
+                        break;
+                    }
+
+                    for(j=0; j<4; j++)
+                    {
+                        *post_addr = (uint64_t)u3.ev.e[j];
+                        post_addr++;
+                    }
+
+                    rc = getScom (G_PMULETS_3A[5], &u3.pmulet, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: 0x%08x getscom failed. rc = 0x%x", G_PMULETS_3A[5], rc);
+                        break;
+                    }
+
+                    for(j=0; j<4; j++)
+                    {
+                        *post_addr = (uint64_t)u3.ev.e[j];
+                        post_addr++;
+                    }
+                }
+
+                if ( (G_CUR_UAV & MASK_TLPM5) == MASK_OCAPI5 )
+                {
+                    rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_DMA, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                        break;
+                    }
+
+                    *L_DBG_UNIT = 4;
+                    post_addr = (uint64_t*) (POST_OFFSET_G3A_O_5 | PBA_ENABLE);
+                    rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_ATOMIC, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                        break;
+                    }
+
+                    rc = getScom (G_PMULETS_3A[6], &u3.pmulet, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: 0x%08x getscom failed. rc = 0x%x", G_PMULETS_3A[6], rc);
+                        break;
+                    }
+
+                    for(j=0; j<4; j++)
+                    {
+                        *post_addr = (uint64_t)u3.ev.e[j];
+                        post_addr++;
+                    }
+
+                    rc = getScom (G_PMULETS_3A[7], &u3.pmulet, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: 0x%08x getscom failed. rc = 0x%x", G_PMULETS_3A[7], rc);
+                        break;
+                    }
+
+                    for(j=0; j<4; j++)
+                    {
+                        *post_addr = (uint64_t)u3.ev.e[j];
+                        post_addr++;
+                    }
+                }
+
+                post_addr = (uint64_t*) (POST_OFFSET_G3A_O_T | PBA_ENABLE);
+                *post_addr = INC_UPD_COUNT;
+                break;
+
+            case G3B://OCAPI - [6,7]
+                *L_DBG_GRP = G3B;
+                post_addr = (uint64_t*) (POST_OFFSET_G3B_O_H | PBA_ENABLE);
+                rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_ATOMIC, o_err);
+                if ( rc )
+                {
+                    PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                    break;
+                }
+
+                *post_addr = INC_UPD_COUNT;
+                post_addr++;
+                if ( (G_CUR_UAV & MASK_TLPM6) == MASK_OCAPI6 )
+                {
+                    rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_DMA, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                        break;
+                    }
+
+                    *L_DBG_UNIT = 1;
+                    post_addr = (uint64_t*) (POST_OFFSET_G3B_O_6 | PBA_ENABLE);
+                    rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_ATOMIC, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                        break;
+                    }
+
+                    rc = getScom (G_PMULETS_3B[0], &u3.pmulet, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: 0x%08x getscom failed. rc = 0x%x", G_PMULETS_3B[0], rc);
+                        break;
+                    }
+
+                    for(j=0; j<4; j++)
+                    {
+                        *post_addr = (uint64_t)u3.ev.e[j];
+                        post_addr++;
+                    }
+
+                    rc = getScom (G_PMULETS_3B[1], &u3.pmulet, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: 0x%08x getscom failed. rc = 0x%x", G_PMULETS_3B[1], rc);
+                        break;
+                    }
+
+                    for(j=0; j<4; j++)
+                    {
+                        *post_addr = (uint64_t)u3.ev.e[j];
+                        post_addr++;
+                    }
+                }
+
+                if ( (G_CUR_UAV & MASK_TLPM7) == MASK_OCAPI7 ) 
+                {
+                    rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_DMA, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                        break;
+                    }
+
+                    *L_DBG_UNIT = 2;
+                    post_addr = (uint64_t*) (POST_OFFSET_G3B_O_7 | PBA_ENABLE);
+                    rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_ATOMIC, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                        break;
+                    }
+
+                    rc = getScom (G_PMULETS_3B[2], &u3.pmulet, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: 0x%08x getscom failed. rc = 0x%x", G_PMULETS_3B[2], rc);
+                        break;
+                    }
+
+                    for(j=0; j<4; j++)
+                    {
+                        *post_addr = (uint64_t)u3.ev.e[j];
+                        post_addr++;
+                    }
+
+                    rc = getScom (G_PMULETS_3B[3], &u3.pmulet, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: 0x%08x getscom failed. rc = 0x%x", G_PMULETS_3B[3], rc);
+                        break;
+                    }
+
+                    for(j=0; j<4; j++)
+                    {
+                        *post_addr = (uint64_t)u3.ev.e[j];
+                        post_addr++;
+                    }
+                }
+
+                post_addr = (uint64_t*) (POST_OFFSET_G3B_O_T | PBA_ENABLE);
+                *post_addr = INC_UPD_COUNT;
+                break;
+
+            case G4:
+                *L_DBG_GRP = 4;
+                post_addr = (uint64_t*) (POST_OFFSET_G4H | PBA_ENABLE);
+                rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_ATOMIC, o_err);
+                if ( rc )
+                {
+                    PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                    break;
+                }
+
+                *post_addr = INC_UPD_COUNT;
+                post_addr++;
+                if (G_CUR_UAV & MASK_PHB0)
+                {
+                    rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_DMA, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                        break;
+                    }
+
+                    *L_DBG_UNIT = 1;
+                    rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_ATOMIC, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                        break;
+                    }
+
+                    post_addr = (uint64_t*) (POST_OFFSET_G4_0 | PBA_ENABLE);
+                    rc = getScom (G_PMULETS_4[0], &u3.pmulet, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: 0x%08x getscom failed. rc = 0x%x", G_PMULETS_4[0], rc);
+                        break;
+                    }
+
+                    for(i=0; i<4; i++)
+                    {
+                        *post_addr = (uint64_t)u3.ev.e[i];
+                        post_addr++;
+                    }
+                }
+
+                if (G_CUR_UAV & MASK_PHB1)
+                {
+                    rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_DMA, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                        break;
+                    }
+
+                    *L_DBG_UNIT = 2;
+                    rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_ATOMIC, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                        break;
+                    }
+
+                    post_addr = (uint64_t*) (POST_OFFSET_G4_1 | PBA_ENABLE);
+                    rc = getScom (G_PMULETS_4[1], &u3.pmulet, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: 0x%08x getscom failed. rc = 0x%x", G_PMULETS_4[1], rc);
+                        break;
+                    }
+
+                    for(i=0; i<4; i++)
+                    {
+                        *post_addr = (uint64_t)u3.ev.e[i];
+                        post_addr++;
+                    }
+                }
+
+                if (G_CUR_UAV & MASK_PHB2)
+                {
+                    rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_DMA, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                        break;
+                    }
+
+                    *L_DBG_UNIT = 3;
+                    rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_ATOMIC, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                        break;
+                    }
+
+                    post_addr = (uint64_t*) (POST_OFFSET_G4_2 | PBA_ENABLE);
+                    rc = getScom (G_PMULETS_4[2], &u3.pmulet, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: 0x%08x getscom failed. rc = 0x%x", G_PMULETS_4[2], rc);
+                        break;
+                    }
+
+                    for(i=0; i<4; i++)
+                    {
+                        *post_addr = (uint64_t)u3.ev.e[i];
+                        post_addr++;
+                    }
+                }
+
+                if (G_CUR_UAV & MASK_PHB3)
+                {
+                    rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_DMA, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                        break;
+                    }
+
+                    *L_DBG_UNIT = 4;
+                    rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_ATOMIC, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                        break;
+                    }
+
+                    post_addr = (uint64_t*) (POST_OFFSET_G4_3 | PBA_ENABLE);
+                    rc = getScom (G_PMULETS_4[3], &u3.pmulet, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: 0x%08x getscom failed. rc = 0x%x", G_PMULETS_4[3], rc);
+                        break;
+                    }
+
+                    for(i=0; i<4; i++)
+                    {
+                        *post_addr = (uint64_t)u3.ev.e[i];
+                        post_addr++;
+                    }
+                }
+
+                if (G_CUR_UAV & MASK_PHB4)
+                {
+                    rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_DMA, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                        break;
+                    }
+
+                    *L_DBG_UNIT = 5;
+                    rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_ATOMIC, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                        break;
+                    }
+
+                    post_addr = (uint64_t*) (POST_OFFSET_G4_4 | PBA_ENABLE);
+                    rc = getScom (G_PMULETS_4[4], &u3.pmulet, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: 0x%08x getscom failed. rc = 0x%x", G_PMULETS_4[4], rc);
+                        break;
+                    }
+
+                    for(i=0; i<4; i++)
+                    {
+                        *post_addr = (uint64_t)u3.ev.e[i];
+                        post_addr++;
+                    }
+                }
+
+                if (G_CUR_UAV & MASK_PHB5)
+                {
+                    rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_DMA, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                        break;
+                    }
+
+                    *L_DBG_UNIT = 6;
+                    rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_ATOMIC, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                        break;
+                    }
+
+                    post_addr = (uint64_t*) (POST_OFFSET_G4_5 | PBA_ENABLE);
+                    rc = getScom (G_PMULETS_4[5], &u3.pmulet, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: 0x%08x getscom failed. rc = 0x%x", G_PMULETS_4[5], rc);
+                        break;
+                    }
+
+                    for(i=0; i<4; i++)
+                    {
+                        *post_addr = (uint64_t)u3.ev.e[i];
+                        post_addr++;
+                    }
+                }
+
+                post_addr = (uint64_t*) (POST_OFFSET_G4T | PBA_ENABLE);
+                *post_addr = INC_UPD_COUNT;
+                break;
+
+            case G5://OCMB - [0:3]- TODO:NOT READY YET
+            case G6:
+            case G7:
+            case G8A:
+            case G8B:
+                break; //OCMB disabled
+#if 0           // @TODO Enabled OCMB via different settings and scom APIs
+                *L_DBG_GRP = 5;
+                post_addr = (uint64_t*) (POST_OFFSET_G5H | PBA_ENABLE);
+                rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_ATOMIC, o_err);
+                if ( rc )
+                {
+                    PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                    break;
+                }
+
+                *post_addr = INC_UPD_COUNT;
+                post_addr++;
+                if (G_CUR_UAV & MASK_OCMB0)
+                {
+                    rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_DMA, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                        break;
+                    }
+
+                    *L_DBG_UNIT = 1;
+                    post_addr = (uint64_t*) (POST_OFFSET_G5_0 | PBA_ENABLE);
+                    rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_ATOMIC, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                        break;
+                    }
+
+                    rc = getScom (G_PMULETS_5a[0], &u3.pmulet, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: 0x%08x getscom failed. rc = 0x%x", G_PMULETS_5a[0], rc);
+                        break;
+                    }
+
+                    for(i=0; i<4; i++)
+                    {
+                        *post_addr = (uint64_t)u3.ev.e[i];
+                        post_addr++;
+                    }
+                }
+
+                post_addr = (uint64_t*) (POST_OFFSET_G5T | PBA_ENABLE);
+                *post_addr = INC_UPD_COUNT;
+                break;
+#endif
+
+            default:
+                PK_TRACE("gpe_24x7: Invalid Group: %d", grp);
+                rc = GPE_RC_24x7_INVALID_GROUP;
+                gpe_set_ffdc(o_err, 0, GPE_RC_24x7_INVALID_GROUP, grp);
+                break;
+        }
+
+        if ( rc )
+            break; 
+    } while (0);
+
+    PK_TRACE ("<< post_pmu_events %d rc: 0x%08X", grp, rc);
+
+    return rc;
 }
 
 /**
  * function: initialize_postings
  **/
-void initialize_postings()
+uint32_t initialize_postings (GpeErrorStruct* o_err)
 {//initialize posting area.
-    volatile uint64_t* post_addr;
-    int i;
-    putscom_abs(PBASLVCTL3_C0040030, PBASLV_SET_DMA);
+    volatile uint64_t* post_addr = NULL;
+    int i=0;
+    uint32_t rc = 0;
+
+    PK_TRACE (">> initialize_postings");
+
+    rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_DMA, o_err);
+    if ( rc )
+    {
+        PK_TRACE("initialize_postings: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+        return rc;
+    }
+
+    // @TODO check if this be improvised
     post_addr = (uint64_t*) (POSTING_START | PBA_ENABLE);
     for(i=0; i<TOTAL_POSTINGS; i++)
     {
         *post_addr = (uint64_t)0x0;
         post_addr++;
     }
+    PK_TRACE ("<< initialize_postings");
+
+    return rc;
 }
 
 /**
  * function: set_speed
  **/
-void set_speed(uint64_t* speed, uint8_t* delay, volatile uint64_t* status)
-{//set counter-scom read delay according to speed setting.
+uint32_t set_speed (uint64_t* speed, uint8_t* delay, volatile uint64_t* status, GpeErrorStruct* o_err)
+{
+    uint32_t rc = GPE_RC_SUCCESS;
+
+    //set counter-scom read delay according to speed setting.
+    PK_TRACE (">> set_speed 0x%08X", (uint32_t)(*speed & 0xffffffff));
+
     switch(*speed)
     {
-        case CNTL_SPEED_1MS: 
-           *delay = 0;
-           break;
-        case CNTL_SPEED_2MS: 
-           *delay = 1;
-           break;
-        case CNTL_SPEED_4MS: 
-           *delay = 2;
-           break;
-        case CNTL_SPEED_8MS: 
-           *delay = 3;
-           break;
-        case CNTL_SPEED_16MS: 
-           *delay = 4;
-           break;
-        case CNTL_SPEED_32MS: 
-           *delay = 5;
-           break;
-        case CNTL_SPEED_64MS: 
-           *delay = 6;
-           break;
-        case CNTL_SPEED_128MS: 
-           *delay = 7;
-           break;
-        case CNTL_SPEED_256MS: 
-           *delay = 8;
-           break;
-        case CNTL_SPEED_512MS: 
-           *delay = 9;
-           break;
-        case CNTL_SPEED_1024MS: 
-           *delay = 10;
-           break;
-        case CNTL_SPEED_2048MS: 
-           *delay = 11;
-           break;
+        case CNTL_SPEED_1MS:
+            *delay = 0;
+            break;
+        case CNTL_SPEED_2MS:
+            *delay = 1;
+            break;
+        case CNTL_SPEED_4MS:
+            *delay = 2;
+            break;
+        case CNTL_SPEED_8MS:
+            *delay = 3;
+            break;
+        case CNTL_SPEED_16MS:
+            *delay = 4;
+            break;
+        case CNTL_SPEED_32MS:
+            *delay = 5;
+            break;
+        case CNTL_SPEED_64MS:
+            *delay = 6;
+            break;
+        case CNTL_SPEED_128MS:
+            *delay = 7;
+            break;
+        case CNTL_SPEED_256MS:
+            *delay = 8;
+            break;
+        case CNTL_SPEED_512MS:
+            *delay = 9;
+            break;
+        case CNTL_SPEED_1024MS:
+            *delay = 10;
+            break;
+        case CNTL_SPEED_2048MS:
+            *delay = 11;
+            break;
         default:
-          *status = CNTL_STATUS_ERR1;
-        break;
-     }
+            *status = CNTL_STATUS_ERR1;
+            rc = GPE_RC_24x7_INVALID_SPEED;
+            gpe_set_ffdc(o_err, 0, GPE_RC_24x7_INVALID_SPEED, *speed);
+            break;
+    }
+
+    PK_TRACE ("<< set_speed: delay %d rc %d", *delay, rc);
+
+    return rc;
 }
 
 /**
- * function: get_mba_event
+ * function: getScom wrapper
  **/
-uint64_t get_mba_event(uint64_t cur, uint64_t prev)
+uint32_t getScom (const uint32_t i_addr, uint64_t* o_data, GpeErrorStruct* o_err)
 {
-    if(cur >= prev)
-        prev = cur - prev;
-    else
-        prev = (MAX_32 - prev) + cur;
-    return prev;
+    uint32_t rc = GPE_RC_SUCCESS;
+
+    rc = getscom_abs (i_addr, o_data);
+    if (rc != 0)
+    {
+        PK_TRACE ("ERR>> getScom: i_addr: 0x%08X rc: 0x%08X", i_addr, rc);
+        gpe_set_ffdc(o_err, i_addr, rc, GPE_RC_SCOM_GET_FAILED);
+    }
+
+    return rc;
 }
 
 /**
- * function: get_phb_event
+ * function: putScom wrapper
  **/
-uint64_t get_phb_event(uint64_t cur, uint64_t prev)
+uint32_t putScom (const uint32_t i_addr, uint64_t i_data, GpeErrorStruct* o_err)
 {
-    if(cur >= prev)
-        prev = cur - prev;
-    else
-        prev = (MAX_48 - prev) + cur;
-    return prev;
+    uint32_t rc = GPE_RC_SUCCESS;
+
+    rc = putscom_abs (i_addr, i_data);
+    if (rc != 0)
+    {
+        PK_TRACE ("ERR>> putScom: i_addr: 0x%08X rc: 0x%08X", i_addr, rc);
+        gpe_set_ffdc(o_err, i_addr, rc, GPE_RC_SCOM_PUT_FAILED);
+    }
+
+    return rc;
 }
 

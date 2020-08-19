@@ -56,7 +56,7 @@ GPE_BUFFER(ipc_core_data_parms_t G_high_cores_data_parms);
 //Globals for 24x7 collection
 GPE_BUFFER(gpe_24x7_args_t G_24x7_parms);
 GpeRequest G_24x7_request;
-bool G_24x7_disabled = TRUE;
+bool G_24x7_disabled = FALSE;
 
 // IPC Gpe request structure for gathering nest dts temps
 GpeRequest G_nest_dts_gpe_req;
@@ -861,8 +861,7 @@ void task_24x7(task_t * i_task)
 
     // Schedule 24x7 task if it hasn't been disabled
     if ( (!G_24x7_disabled) &&
-         !(G_internal_flags & INT_FLAG_DISABLE_24X7) &&
-         (!G_simics_environment) ) // TODO: RTC 207919
+         !(G_internal_flags & INT_FLAG_DISABLE_24X7) ) // TODO: RTC 207919
     {
         // Schedule 24x7 task if idle
         if (!async_request_is_idle(&G_24x7_request.request))
