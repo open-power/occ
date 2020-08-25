@@ -845,6 +845,56 @@ void amec_calc_droop_sensors(CoreData * i_core_data_ptr, uint8_t i_core)
     {
        INCREMENT_ERR_HISTORY(ERRH_CORE_SMALL_DROOP);
     }
+
+    // Handle Digitial Droop Sensor (DDS) data
+    // save data to calculate average of DDS_DATA across all cores
+    if(i_core_data_ptr->dds.fields.dds_valid)
+    {
+        G_chip_dds.sum += i_core_data_ptr->dds.fields.dds_reading;
+        G_chip_dds.sum_num_cores++;
+    }
+
+    // check if this core has the new minimum DDS_MIN
+    if( (i_core_data_ptr->dds.fields.dds_min_valid) &&
+        (i_core_data_ptr->dds.fields.dds_min < G_chip_dds.min) )
+    {
+        G_chip_dds.min = i_core_data_ptr->dds.fields.dds_min;
+        G_chip_dds.min_core = i_core;
+    }
+}
+
+// Function Specification
+//
+// Name: amec_update_proc_level_sensors
+//
+// Description: combine core data into processor level sensors
+//
+// Thread: RealTime Loop
+//
+// End Function Specification
+void amec_update_proc_level_sensors(void)
+{
+  uint16_t  l_avg = 0;
+
+  // Update Digital Droop sensor average
+  if(G_chip_dds.sum_num_cores)
+  {
+    l_avg = G_chip_dds.sum / G_chip_dds.sum_num_cores;
+    if(l_avg)
+        sensor_update( AMECSENSOR_PTR(DDSAVG), l_avg);
+  }
+  // Digitial Droop sensor minimum
+  if( (G_chip_dds.min != 0xffff) && (G_chip_dds.min_core != 0xff) )
+  {
+    sensor_update( AMECSENSOR_PTR(DDSMIN), G_chip_dds.min);
+    // save the core that was minimum into sensor status
+    AMECSENSOR_PTR(DDSMIN)->status.sample_info = G_chip_dds.min_core;
+  }
+  // reset fields for new core readings
+  G_chip_dds.sum = 0;
+  G_chip_dds.sum_num_cores = 0;
+  G_chip_dds.min_core = 0xff;
+  G_chip_dds.min = 0xffff;
 }
 
 /*----------------------------------------------------------------------------*/

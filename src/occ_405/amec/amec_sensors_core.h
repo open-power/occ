@@ -57,5 +57,6 @@
 /*----------------------------------------------------------------------------*/
 
 void amec_update_proc_core_sensors(uint8_t i_core);
+void amec_update_proc_level_sensors(void);
 
 #endif // _AMEC_SENSORS_CORE_H

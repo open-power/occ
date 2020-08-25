@@ -103,6 +103,18 @@ struct bulk_core_data_task {
 } __attribute__ ((__packed__));
 typedef struct bulk_core_data_task bulk_core_data_task_t;
 
+// Processor chip level Digital Droop Sensors (DDS) summary across all valid cores
+struct proc_chip_dds {
+        uint16_t sum;             // summation of DDS_DATA across all valid cores
+        uint8_t  sum_num_cores;   // number of cores in the sum
+        uint16_t min;             // minimum of DDS_MIN across all cores
+        uint8_t  min_core;        // core number for min
+} __attribute__ ((__packed__));
+typedef struct proc_chip_dds proc_chip_dds_t;
+
+// Chip level summary for one time thru tick table i.e. one SDSR SCOM register reading per core
+extern proc_chip_dds_t G_chip_dds;
+
 //Global low and high cores structures used for task data pointers
 extern bulk_core_data_task_t G_low_cores;
 extern bulk_core_data_task_t G_high_cores;

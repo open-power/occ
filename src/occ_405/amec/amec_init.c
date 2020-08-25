@@ -70,6 +70,9 @@ amec_sys_t * g_amec = &g_amec_sys;
 // GPE Request Structure that is used to measure the worst case GPE timings
 GpeRequest G_gpe_nop_request[NUM_GPE_ENGINES];
 
+// Chip level Digital Droop Sensor data
+proc_chip_dds_t G_chip_dds;
+
 extern void amec_slv_update_gpe_sensors(uint8_t i_gpe_engine);
 extern void amec_slv_update_gpe_sensors(uint8_t i_gpe_engine);
 
@@ -569,6 +572,12 @@ void amec_slave_init()
     G_fw_timing.gpe0_timing_request = &G_gpe_nop_request[0];
     G_fw_timing.gpe1_timing_request = &G_gpe_nop_request[1];
   }
+
+  // Initialize Processor chip level Digital Droop Sensors
+  G_chip_dds.sum = 0;
+  G_chip_dds.sum_num_cores = 0;
+  G_chip_dds.min_core = 0xff;
+  G_chip_dds.min = 0xffff;
 
   // Initialize Vector Sensors for AMEC use
   amec_init_vector_sensors();

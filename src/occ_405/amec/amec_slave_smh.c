@@ -188,14 +188,14 @@ const smh_tbl_t amec_slv_state_5_substate_table[AMEC_SMH_STATES_PER_LVL] =
 //
 const smh_tbl_t amec_slv_state_6_substate_table[AMEC_SMH_STATES_PER_LVL] =
 {
-  {amec_slv_substate_6_all, NULL},  // Substate 6.0
-  {amec_slv_substate_6_all, NULL},  // Substate 6.1
-  {amec_slv_substate_6_all, NULL},  // Substate 6.2
-  {amec_slv_substate_6_all, NULL},  // Substate 6.3
-  {amec_slv_substate_6_all, NULL},  // Substate 6.4
-  {amec_slv_substate_6_all, NULL},  // Substate 6.5
-  {amec_slv_substate_6_all, NULL},  // Substate 6.6
-  {amec_slv_substate_6_all, NULL},  // Substate 6.7
+  {amec_slv_substate_6_even, NULL}, // Substate 6.0
+  {NULL,                     NULL}, // Substate 6.1 (not used)
+  {amec_slv_substate_6_even, NULL}, // Substate 6.2
+  {NULL,                     NULL}, // Substate 6.3 (not used)
+  {amec_slv_substate_6_even, NULL}, // Substate 6.4
+  {NULL,                     NULL}, // Substate 6.5 (not used)
+  {amec_slv_substate_6_even, NULL}, // Substate 6.6
+  {NULL,                     NULL}, // Substate 6.7 (not used)
 };
 
 // --------------------------------------------------------
@@ -690,6 +690,8 @@ void amec_slv_state_6(void)
       else
           L_membuf_addr = 8;
   }
+
+  inband_command_check();
 }
 
 
@@ -1312,17 +1314,18 @@ void amec_slv_substate_5_7(void)
 
 // Function Specification
 //
-// Name: amec_slv_substate_6_all
+// Name: amec_slv_substate_6_even
 //
-// Description: Called for every substate of state 6
-//              gives state 6 substate function to be called every 8th tick
-//              Time = 8 * MICS_PER_TICK
+// Description: even numbered slave substates
+//              gives state 6 substate function to be called every 16th tick
+//              Time = 16 * MICS_PER_TICK
+//              odd substates of state 6 are not currently used
 //
 // End Function Specification
-void amec_slv_substate_6_all(void)
+void amec_slv_substate_6_even(void)
 {
-    AMEC_DBG("\tAMEC Slave State 6 substate\n");
-    inband_command_check();
+    AMEC_DBG("\tAMEC Slave State 6 even substate\n");
+    amec_update_proc_level_sensors();
 }
 
 // Function Specification

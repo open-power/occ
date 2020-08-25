@@ -86,7 +86,15 @@
     MAIN_MEM_SENSOR(gsid_prefix##20 , smf_mode, master_only) , \
     MAIN_MEM_SENSOR(gsid_prefix##21 , smf_mode, master_only) , \
     MAIN_MEM_SENSOR(gsid_prefix##22 , smf_mode, master_only) , \
-    MAIN_MEM_SENSOR(gsid_prefix##23 , smf_mode, master_only)
+    MAIN_MEM_SENSOR(gsid_prefix##23 , smf_mode, master_only) , \
+    MAIN_MEM_SENSOR(gsid_prefix##24 , smf_mode, master_only) , \
+    MAIN_MEM_SENSOR(gsid_prefix##25 , smf_mode, master_only) , \
+    MAIN_MEM_SENSOR(gsid_prefix##26 , smf_mode, master_only) , \
+    MAIN_MEM_SENSOR(gsid_prefix##27 , smf_mode, master_only) , \
+    MAIN_MEM_SENSOR(gsid_prefix##28 , smf_mode, master_only) , \
+    MAIN_MEM_SENSOR(gsid_prefix##29 , smf_mode, master_only) , \
+    MAIN_MEM_SENSOR(gsid_prefix##30 , smf_mode, master_only) , \
+    MAIN_MEM_SENSOR(gsid_prefix##31 , smf_mode, master_only)
 
 /**
  * Macro to build main_mem_sensor_t instance for all quads
@@ -97,7 +105,9 @@
     MAIN_MEM_SENSOR(gsid_prefix##2 , smf_mode, master_only) , \
     MAIN_MEM_SENSOR(gsid_prefix##3 , smf_mode, master_only) , \
     MAIN_MEM_SENSOR(gsid_prefix##4 , smf_mode, master_only) , \
-    MAIN_MEM_SENSOR(gsid_prefix##5 , smf_mode, master_only)
+    MAIN_MEM_SENSOR(gsid_prefix##5 , smf_mode, master_only) , \
+    MAIN_MEM_SENSOR(gsid_prefix##6 , smf_mode, master_only) , \
+    MAIN_MEM_SENSOR(gsid_prefix##7 , smf_mode, master_only)
 
 /**
  * Macro to build main_mem_sensor_t instances for all memory controllers.
@@ -213,12 +223,13 @@ main_mem_sensor_t G_main_mem_sensors[] =
     MAIN_MEM_CORE_SENSORS        (NOTFINC,        false,    false),
     MAIN_MEM_SENSOR              (PROCPWRTHROT,   false,    false),
     MAIN_MEM_SENSOR              (PROCOTTHROT,    false,    false),
-    MAIN_MEM_SENSOR              (MEMPWRTHROT,    false,    false),
     MAIN_MEM_SENSOR              (MEMOTTHROT,     false,    false),
     MAIN_MEM_MEMORY_SENSORS      (MRDM,           false,    false),
     MAIN_MEM_MEMORY_SENSORS      (MWRM,           false,    false),
     MAIN_MEM_MEMORY_SENSORS      (MEMSPSTATM,     true,     false),
     MAIN_MEM_MEMORY_SENSORS      (MEMSPM,         false,    false),
+    MAIN_MEM_SENSOR              (DDSAVG,         false,    false),
+    MAIN_MEM_SENSOR              (DDSMIN,         false,    false),
 
     // NOTE: update MAIN_MEM_NUM_SENSORS when sensors are added/removed
 };

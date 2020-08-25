@@ -457,6 +457,8 @@ typedef struct
   sensor_t pwrvio;
   sensor_t procpwrthrot;
   sensor_t procotthrot;
+  sensor_t ddsavg;
+  sensor_t ddsmin;
 
   // Memory Summary Sensors
   sensor_t tempmembufthrm;
@@ -464,7 +466,6 @@ typedef struct
   sensor_t tempmcdimmthrm; // hottest of all DATA_FRU_MEMCTRL_DRAM monitored by this OCC
   sensor_t temppmicthrm;   // hottest of all DATA_FRU_PMIC monitored by this OCC
   sensor_t tempmcextthrm;  // hottest of all DATA_FRU_MEMCTRL_EXT monitored by this OCC
-  sensor_t mempwrthrot;
   sensor_t memotthrot;
 
   // Calculations & Interim Data

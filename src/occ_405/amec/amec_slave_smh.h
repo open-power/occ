@@ -123,8 +123,8 @@ void amec_slv_substate_5_5(void);
 void amec_slv_substate_5_6(void);
 void amec_slv_substate_5_7(void);
 
-// Slave SubState 6 called every SubState - check for inband cmd every 4ms
-void amec_slv_substate_6_all(void);
+// Slave SubState 6 (odd SubStates currently unused)
+void amec_slv_substate_6_even(void);
 
 // Slave SubState 7
 void amec_slv_substate_7_0(void);

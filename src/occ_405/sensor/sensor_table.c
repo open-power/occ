@@ -353,6 +353,8 @@ const sensor_ptr_t G_amec_sensor_list[] =
   SENSOR_PTR( PWRVIO,               &g_amec_sys.proc[0].pwrvio),
   SENSOR_PTR( PROCPWRTHROT,         &g_amec_sys.proc[0].procpwrthrot),
   SENSOR_PTR( PROCOTTHROT,          &g_amec_sys.proc[0].procotthrot),
+  SENSOR_PTR( DDSAVG,               &g_amec_sys.proc[0].ddsavg),
+  SENSOR_PTR( DDSMIN,               &g_amec_sys.proc[0].ddsmin),
 
   //-------------------------------------------------------
   // PROCIO (PAU) sensors
@@ -402,7 +404,6 @@ const sensor_ptr_t G_amec_sensor_list[] =
   MEMCONTROL_SENSOR_PTRS(MEMSPSTATM,    &g_amec_sys.proc[0].memctl, memspstat),
   MEMCONTROL_SENSOR_PTRS(TEMPMEMBUF,    &g_amec_sys.proc[0].memctl, membuf.tempmembuf),
 
-  SENSOR_PTR(MEMPWRTHROT,               &g_amec_sys.proc[0].mempwrthrot),
   SENSOR_PTR(MEMOTTHROT,                &g_amec_sys.proc[0].memotthrot),
 
   SENSOR_PTR(TEMPMEMBUFTHRM,        &g_amec_sys.proc[0].tempmembufthrm),
@@ -529,6 +530,8 @@ const minisensor_ptr_t G_amec_mini_sensor_list[] INIT_SECTION =
   MINI_SENSOR_PTR(         PWRVIO,  NULL),
   MINI_SENSOR_PTR(   PROCPWRTHROT,  NULL),
   MINI_SENSOR_PTR(    PROCOTTHROT,  NULL),
+  MINI_SENSOR_PTR(         DDSAVG,  NULL),
+  MINI_SENSOR_PTR(         DDSMIN,  NULL),
 
   // ------------------------------------------------------
   // Processor IO sensors
@@ -578,7 +581,6 @@ const minisensor_ptr_t G_amec_mini_sensor_list[] INIT_SECTION =
   MEMCONTROL_MINI_SENSOR_PTRS_NULL(MEMSPSTATM),
   MEMCONTROL_MINI_SENSOR_PTRS_NULL(TEMPMEMBUF),
 
-  MINI_SENSOR_PTR( MEMPWRTHROT,  NULL),
   MINI_SENSOR_PTR( MEMOTTHROT,   NULL),
 
   MINI_SENSOR_PTR( TEMPMEMBUFTHRM,  &G_dcom_slv_outbox_tx.tempmembufthrm),

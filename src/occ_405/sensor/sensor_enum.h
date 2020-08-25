@@ -121,6 +121,8 @@ enum e_gsid
     PWRVIO,         // calculated from AVSBUS data
     PROCPWRTHROT,
     PROCOTTHROT,
+    DDSAVG,         // Average DDS_DATA field in SDSR across all good cores
+    DDSMIN,         // Minimum of DDS_MIN field in the SDSR across all good cores
     TEMPPROCIO00,   // SE PAU DTS
     TEMPPROCIO01,   // NE PAU DTS
     TEMPPROCIO10,   // SW PAU DTS
@@ -601,7 +603,6 @@ enum e_gsid
     TEMPMEMBUF14,
     TEMPMEMBUF15,
 
-    MEMPWRTHROT,    // Count of memory throttled due to power
     MEMOTTHROT,     // Count of memory throttled due to over temperature
 
     // ------------------------------------------------------

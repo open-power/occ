@@ -170,10 +170,8 @@ typedef struct
 //Sensor status structure
 struct sensorStatus
 {
-    uint8_t buffer_area_type:1,
-            update_histogram:1,
-            reset:1,
-            reserved:5;
+    uint8_t reset:1,        // '1' indicates sensor needs to be reset
+            sample_info:7;  // specific info for current sample reading
 };
 typedef struct sensorStatus sensorStatus_t;
 
