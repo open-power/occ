@@ -23,6 +23,8 @@
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
 
+//#define DEBUG_APSS_SEQ
+
 #include "pk.h"
 #include "ppe42_scom.h"
 #include "pss_constants.h"
@@ -32,6 +34,9 @@
 #define SPIPSS_P2S_ONGOING_MASK 0x8000000000000000
 
 extern gpe_shared_data_t * G_gpe_shared_data;
+#ifdef DEBUG_APSS_SEQ
+extern uint32_t g_apss_trace_count;
+#endif
 
 /*
  * Function Specification
@@ -106,6 +111,10 @@ int wait_spi_completion(GpeErrorStruct *error, uint32_t reg, uint32_t i_timeout)
              num_reads = 1;
         }
 
+#ifdef DEBUG_APSS_SEQ
+        if (g_apss_trace_count < APSS_MAX_FAIL_TRACE)
+            PK_TRACE("wait_spi_completion: calling busy_wait(%d) for %d reads",wait_time, num_reads);
+#endif
         for (i = 0; i< num_reads; i++)
         {
             busy_wait(wait_time);
@@ -134,7 +143,8 @@ int wait_spi_completion(GpeErrorStruct *error, uint32_t reg, uint32_t i_timeout)
     // Check if timed out waiting on P2S_ONGOING / HWCTRL_ONGOING bit
     if (i >= num_reads)
     {
-        PK_TRACE("gpe0:wait_spi_completion Timed out waiting for p2s_ongoing to clear.");
+        PK_TRACE("wait_spi_completion: Timed out waiting for p2s_ongoing to clear. (%d reads)",
+                 num_reads);
         rc = GPE_RC_SPI_TIMEOUT;
         gpe_set_ffdc(error, reg, GPE_RC_SPI_TIMEOUT, rc);
     }
@@ -160,16 +170,14 @@ int wait_spi_completion(GpeErrorStruct *error, uint32_t reg, uint32_t i_timeout)
 void busy_wait(uint32_t i_microseconds)
 {
     uint32_t current_count = pk_timebase32_get();
-    uint32_t prev_count = current_count;
-    uint32_t timebase_zero_adjust = -current_count;
+    uint32_t start_count = current_count;
     uint32_t change_timeout = 0;
-    uint32_t end_count =
-        PK_INTERVAL_SCALE((uint32_t)PK_MICROSECONDS(i_microseconds));
+    uint32_t end_count = PK_INTERVAL_SCALE((uint32_t)PK_MICROSECONDS(i_microseconds));
     static bool L_traced = false;
 
-    while((current_count + timebase_zero_adjust) < end_count)
+    while((current_count - start_count) < end_count)
     {
-        prev_count = current_count;
+        uint32_t prev_count = current_count;
 
         current_count = pk_timebase32_get();
 

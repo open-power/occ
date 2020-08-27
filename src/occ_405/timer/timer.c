@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -220,9 +220,10 @@ void check_pgpe_beacon(void)
     static bool     L_first_pgpe_beacon_check   = true;  // First time examining Beacon?
     static bool     L_pgpe_beacon_unchanged_4ms = false; // pgpe beacon unchanged once (4ms)
     static bool     L_error_logged              = false; // trace and error log only once
-    errlHndl_t      l_err                       = NULL;  // Error handler
+    errlHndl_t      l_err = NULL;  // Error handler
     static bool L_unchanged_traced = false;
     static int  L_unchanged_count = 0;
+    static unsigned int L_trace_change_limit = 6;
 
     do
     {
@@ -247,10 +248,13 @@ void check_pgpe_beacon(void)
             {
                 // First time beacon unchaged (4ms), mark flag
                 L_pgpe_beacon_unchanged_4ms = true;
-                if(L_unchanged_traced == false)
+                if (L_trace_change_limit > 0)
                 {
-                    TRAC_ERR("Error PGPE Beacon didnt change for 4ms: 0x%08X", pgpe_beacon);
-                    L_unchanged_traced = true;
+                    if(L_unchanged_traced == false)
+                    {
+                        TRAC_ERR("Error PGPE Beacon didnt change for 4ms: 0x%08X", pgpe_beacon);
+                        L_unchanged_traced = true;
+                    }
                 }
                 break;
             }
@@ -304,10 +308,14 @@ void check_pgpe_beacon(void)
         {
             if (L_pgpe_beacon_unchanged_4ms)
             {
-                if (L_unchanged_traced)
+                if (L_trace_change_limit > 0)
                 {
-                    TRAC_ERR("check_pgpe_beacon: PGPE Beacon changed: 0x%08X (after %d calls)", pgpe_beacon, L_unchanged_count);
-                    L_unchanged_traced = false;
+                    --L_trace_change_limit; // started again (so decrement)
+                    if (L_unchanged_traced)
+                    {
+                        TRAC_ERR("check_pgpe_beacon: PGPE Beacon changed: 0x%08X (after %d calls)", pgpe_beacon, L_unchanged_count);
+                        L_unchanged_traced = false;
+                    }
                 }
             }
             // pgpe beacon changed over the last 4 ms

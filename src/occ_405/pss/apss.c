@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -426,8 +426,8 @@ void task_apss_start_pwr_meas(struct task *i_self)
 
     }while (0);
 
-
-    APSS_DBG("GPE_start_pwr_meas_read finished w/rc=0x%08X", G_gpe_start_pwr_meas_read_args.error.rc);
+    APSS_DBG("GPE_start_pwr_meas_read exiting w/rc=0x%08X (scheduled=%c)",
+             G_gpe_start_pwr_meas_read_args.error.rc, L_scheduled?'y':'n');
     APSS_DBG_HEXDUMP(&G_gpe_start_pwr_meas_read_args, sizeof(G_gpe_start_pwr_meas_read_args), "G_gpe_start_pwr_meas_read_args");
     G_ApssPwrMeasCompleted = FALSE;  // Will complete when 3rd task is complete.
     G_ApssPwrMeasDoneInvalid = FALSE;  // validity checked when 3rd task completes
@@ -591,7 +591,8 @@ void task_apss_continue_pwr_meas(struct task *i_self)
 
     }while (0);
 
-    APSS_DBG("task_apss_continue_pwr_meas: finished w/rc=0x%08X", G_gpe_continue_pwr_meas_read_args.error.rc);
+    APSS_DBG("task_apss_continue_pwr_meas: exiting w/rc=0x%08X (scheduled=%c)",
+             G_gpe_continue_pwr_meas_read_args.error.rc, L_scheduled?'y':'n');
     APSS_DBG_HEXDUMP(&G_gpe_continue_pwr_meas_read_args, sizeof(G_gpe_continue_pwr_meas_read_args), "G_gpe_continue_pwr_meas_read_args");
 
 } // end task_apss_continue_pwr_meas
@@ -632,8 +633,7 @@ void reformat_meas_data()
 #ifdef DEBUG_APSS_RESET
            g_force_apss_reset ||
 #endif
-           ((G_gpe_continue_pwr_meas_read_args.meas_data[0] & APSS_ADC_SEQ_MASK) != APSS_ADC_SEQ_CHECK) ||
-             !(G_gpe_continue_pwr_meas_read_args.meas_data[0] & ~APSS_ADC_SEQ_MASK))
+           (G_gpe_continue_pwr_meas_read_args.meas_data[0] & APSS_ADC_SEQ_MASK) != APSS_ADC_SEQ_CHECK)
         {
             // Recovery will begin on the next tick
             INCREMENT_ERR_HISTORY(ERRH_INVALID_APSS_DATA);
@@ -846,7 +846,8 @@ void task_apss_complete_pwr_meas(struct task *i_self)
 
     }while (0);
 
-    APSS_DBG("task_apss_complete_pwr_meas: finished w/rc=0x%08X\n", G_gpe_complete_pwr_meas_read_args.error.rc);
+    APSS_DBG("task_apss_complete_pwr_meas: exiting w/rc=0x%08X (scheduled=%c)",
+             G_gpe_complete_pwr_meas_read_args.error.rc, L_scheduled?'y':'n');
     APSS_DBG_HEXDUMP(&G_gpe_complete_pwr_meas_read_args, sizeof(G_gpe_complete_pwr_meas_read_args), "G_gpe_complete_pwr_meas_read_args");
 
 } // end task_apss_complete_pwr_meas
@@ -922,7 +923,7 @@ errlHndl_t initialize_apss(void)
                                     = G_gpio_config[1].interrupt;
 
         // Create/schedule IPC_ST_APSS_INIT_GPIO_FUNCID and wait for it to complete (BLOCKING)
-        TRAC_INFO("initialize_apss: Creating request for GPE_apss_initialize_gpio");
+        TRAC_INFO("initialize_apss: Creating/Scheduling request for GPE_apss_initialize_gpio");
         gpe_request_create(&G_init_gpio_request,                      // request
                            &G_async_gpe_queue0,                       // queue
                            IPC_ST_APSS_INIT_GPIO_FUNCID,              // Function ID
@@ -933,7 +934,6 @@ errlHndl_t initialize_apss(void)
                            ASYNC_REQUEST_BLOCKING);                   // options
 
         // Schedule the request to be executed
-        TRAC_INFO("initialize_apss: Scheduling request for IPC_ST_APSS_INIT_GPIO_FUNCID");
         gpe_request_schedule(&G_init_gpio_request);
 
         // Check for a timeout only; will create the error below.
@@ -966,7 +966,7 @@ errlHndl_t initialize_apss(void)
                                     = G_apss_mode_config.numGpioPortsToRead;
 
             // Create/schedule GPE_apss_set_mode and wait for it to complete (BLOCKING)
-            TRAC_INFO("initialize_apss: Creating request for GPE_apss_set_mode");
+            TRAC_INFO("initialize_apss: Creating/Scheduling request for GPE_apss_set_mode");
             gpe_request_create(&G_init_mode_request,                    // request
                                &G_async_gpe_queue0,                     // queue
                                IPC_ST_APSS_INIT_MODE_FUNCID,            // Function ID
@@ -993,7 +993,7 @@ errlHndl_t initialize_apss(void)
             if ((ASYNC_REQUEST_STATE_COMPLETE != G_init_mode_request.request.completion_state) ||
                 (G_gpe_apss_set_mode_args.error.rc != ERRL_RC_SUCCESS))
             {
-                TRAC_ERR("initialize_apss: GPE_apss_set_mode completed w/rc=0x%08x",
+                TRAC_ERR("initialize_apss: GPE_apss_set_mode failed w/rc=0x%08x",
                          G_init_mode_request.request.completion_state);
                 /*
                  * @errortype
@@ -1156,8 +1156,6 @@ void task_apss_reset(task_t *i_self)
     static bool L_reset_ffdc_collected = FALSE;
     static bool L_init_gpio_ffdc_collected = FALSE;
     static bool L_init_mode_ffdc_collected = FALSE;
-
-    APSS_DBG("Calling task_apss_reset. State %d",L_apss_reset_state);
 
     do
     {
@@ -1325,6 +1323,8 @@ void task_apss_reset(task_t *i_self)
         switch (L_apss_reset_state)
         {
             case APSS_RESET_STATE_START:
+                APSS_DBG("task_apss_reset: APSS_RESET_STATE_START");
+
             case APSS_RESET_STATE_WAIT_1MS:
                 // TOGGLE apss reset GPIO pin
                 schedule_rc = gpe_request_schedule(&G_apss_reset_request);
@@ -1367,6 +1367,8 @@ void task_apss_reset(task_t *i_self)
 
                 G_apss_recovery_requested = FALSE;
                 G_apss_data_traced = FALSE;
+
+                APSS_DBG("task_apss_reset: APSS_RESET_STATE_COMPLETE");
 
                 break;
 

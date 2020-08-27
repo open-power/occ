@@ -84,4 +84,6 @@ typedef struct gpe_shared_data
 // OCC linker command file.
 #define FIR_HEAP_SECTION_SIZE           0x3000
 
+#define APSS_MAX_FAIL_TRACE 5
+
 #endif //_GPE_EXPORT_H

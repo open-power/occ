@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -23,6 +23,7 @@
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
 
+//#define DEBUG_APSS_SEQ
 
 #include "pk.h"
 #include "ppe42_scom.h"
@@ -41,6 +42,10 @@ extern gpe_shared_data_t * G_gpe_shared_data;
 uint32_t g_max_apss_start __attribute__((section(".sbss.debug"))) = 0;
 uint32_t g_max_apss_cont  __attribute__((section(".sbss.debug")))  = 0;
 uint32_t g_max_apss_comp  __attribute__((section(".sbss.debug")))  = 0;
+
+#ifdef DEBUG_APSS_SEQ
+uint32_t g_apss_trace_count  __attribute__((section(".sbss.debug"))) = 0;
+#endif
 
 /*
  * Function Specifications:
@@ -64,7 +69,8 @@ void apss_start_pwr_meas_read(ipc_msg_t* cmd, void* arg)
     // to the G_gpe_start_pwr_meas_read_args struct.
 
 #ifdef DEBUG_APSS_SEQ
-    PK_TRACE("apss_start_pwr_meas_read: enter");
+    if (g_apss_trace_count < APSS_MAX_FAIL_TRACE)
+        PK_TRACE("apss_start_pwr_meas_read: enter");
 #endif
     uint32_t end_time = 0;
     uint32_t diff_time = 0;
@@ -106,7 +112,13 @@ void apss_start_pwr_meas_read(ipc_msg_t* cmd, void* arg)
 
         // SPIPSS_ADC_CTRL_REG1: ADC FSM
         // clock_divider=36, frames=17 (i.e. 18)
-        regValue = 0x8093C00000000000;  // 16 frames
+        // bit 0 - FSM_ENABLE
+        // bit 1 - Chip Select 0
+        // bit 2 - SPI clock polarity - 0=clk idle deasserted
+        // bit 3 - SPI clock phase - 0=change/sample values on first edge
+        // bit 4:13  - CLOCK_DIVIDER
+        // bit 14:18 - NR_OF_FRAMES (0=1 frame, ... up to 32 frames)
+        regValue = 0x8091E00000000000;  // divider 36, 16 frames (ADC channels)
         rc = putscom_abs(SPIPSS_ADC_CTRL_REG1, regValue);
         if(rc)
         {
@@ -159,7 +171,8 @@ void apss_start_pwr_meas_read(ipc_msg_t* cmd, void* arg)
     } while(0);
 
 #ifdef DEBUG_APSS_SEQ
-    PK_TRACE("apss_start_pwr_meas_read: calling ipc_send_rsp()");
+    if (g_apss_trace_count < APSS_MAX_FAIL_TRACE)
+        PK_TRACE("apss_start_pwr_meas_read: calling ipc_send_rsp()");
 #endif
     end_time = pk_timebase32_get();
 
@@ -220,14 +233,16 @@ void apss_continue_pwr_meas_read(ipc_msg_t* cmd, void* arg)
     apss_continue_args_t *args = (apss_continue_args_t*)async_cmd->cmd_data;
 
 #ifdef DEBUG_APSS_SEQ
-    PK_TRACE("apss_continue_pwr_meas_read: enter");
+    if (g_apss_trace_count < APSS_MAX_FAIL_TRACE)
+        PK_TRACE("apss_continue_pwr_meas_read: enter");
 #endif
 
     do{
-        // wait for ADC completion, or timeout after 120us (from Jordan for 16 channels)
+        // wait for ADC completion, or timeout
         // scom register SPIPSS_ADC_STATUS_REG's bit 0 (HWCTRL_ONGOING)
         // indicates when completion occurs.
-        rc = wait_spi_completion(&(args->error), SPIPSS_ADC_STATUS_REG, 120);
+        // (P9 used 120us timeout / increased to 300us for P10)
+        rc = wait_spi_completion(&(args->error), SPIPSS_ADC_STATUS_REG, 300);
         if(rc) // Timeout Reached, and SPI transaction didn't complete
         {
             PK_TRACE("apss_continue_pwr_meas_read:wait_spi_completion Timed out, rc = 0x%08x",
@@ -282,7 +297,7 @@ void apss_continue_pwr_meas_read(ipc_msg_t* cmd, void* arg)
 
         // Need to configure the ADC controller again.
         // ADC FSM, clock_divider=36, frames=1 (ie 2 for gpio ports)
-        regValue = 0x8090400000000000;
+        regValue = 0x8090200000000000;  // divider 36, 2 frames (2 gpio ports)
         rc = putscom_abs(SPIPSS_ADC_CTRL_REG1, regValue);
         if(rc)
         {
@@ -318,7 +333,8 @@ void apss_continue_pwr_meas_read(ipc_msg_t* cmd, void* arg)
     } while(0);
 
 #ifdef DEBUG_APSS_SEQ
-    PK_TRACE("apss_continue_pwr_meas_read: calling ipc_send_rsp()");
+    if (g_apss_trace_count < APSS_MAX_FAIL_TRACE)
+        PK_TRACE("apss_continue_pwr_meas_read: calling ipc_send_rsp()");
 #endif
 
     end_time = pk_timebase32_get();
@@ -370,7 +386,8 @@ void apss_complete_pwr_meas_read(ipc_msg_t* cmd, void* arg)
     // to the G_gpe_complete_pwr_meas_read_args
 
 #ifdef DEBUG_APSS_SEQ
-    PK_TRACE("apss_complete_pwr_meas_read: enter");
+    if (g_apss_trace_count < APSS_MAX_FAIL_TRACE)
+        PK_TRACE("apss_complete_pwr_meas_read: enter");
 #endif
     uint32_t end_time = 0;
     uint32_t diff_time = 0;
@@ -419,7 +436,8 @@ void apss_complete_pwr_meas_read(ipc_msg_t* cmd, void* arg)
     } while(0);
 
 #ifdef DEBUG_APSS_SEQ
-    PK_TRACE("apss_complete_pwr_meas_read: calling ipc_send_rsp()");
+    if (g_apss_trace_count < APSS_MAX_FAIL_TRACE)
+        PK_TRACE("apss_complete_pwr_meas_read: calling ipc_send_rsp()");
 #endif
     end_time = pk_timebase32_get();
 
@@ -444,4 +462,9 @@ void apss_complete_pwr_meas_read(ipc_msg_t* cmd, void* arg)
         gpe_set_ffdc(&(args->error), 0x00, GPE_RC_IPC_SEND_FAILED, rc);
         pk_halt();
     }
+
+#ifdef DEBUG_APSS_SEQ
+    if (g_apss_trace_count < APSS_MAX_FAIL_TRACE)
+        ++g_apss_trace_count;
+#endif
 }
