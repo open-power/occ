@@ -69,7 +69,7 @@ extern OCCPstateParmBlock_t G_oppb;
 // Globals
 //*************************************************************************/
 uint16_t G_allow_trace_flags = 0x0000;
-uint32_t G_internal_flags    = 0x00000000;
+uint32_t G_internal_flags    = INT_FLAG_DISABLE_OC_WOF_OFF | INT_FLAG_DISABLE_24X7;
 extern bool G_smf_mode;
 uint64_t G_inject_dimm = 0;
 uint32_t G_inject_dimm_trace[MAX_NUM_OCMBS][NUM_DIMMS_PER_OCMB] = {{0}};
