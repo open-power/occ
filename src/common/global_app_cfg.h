@@ -24,14 +24,15 @@
 /* IBM_PROLOG_END_TAG                                                     */
 #define GLOBAL_CFG_USE_IPC  // have lib/occlib/ipc_structs.h use "ipc_func_ids.h"
 
-#ifdef P10_HW_BUILD
-// Physical HW will use the external timebase register
+#if ( !defined(SIMICS_ENVIRONMENT ) || ( SIMICS_ENVIRONMENT == 0 ) )
+// Physical GPE HW will use the external timebase register This does not affect SSX
 #define APPCFG_USE_EXT_TIMEBASE
 #endif
 // Simics will use internal timebase (external not implemented)
 
-#define DEFAULT_NEST_FREQ_HZ 600000000
-#define DEFAULT_EXT_CLK_FREQ_HZ 37500000
+// This is the default 405 frequency and default OCB_OTBR frequency for P10
+#define DEFAULT_OCC405_FREQ_HZ (5020000000/4)
+#define DEFAULT_EXT_CLK_FREQ_HZ (DEFAULT_OCC405_FREQ_HZ/16)
 
 // Turn off periodic GPE traces
 #define PK_TRACE_TIMER_OUTPUT 0
@@ -55,7 +56,7 @@
 #ifdef APPCFG_USE_EXT_TIMEBASE
 #define PPE_TIMEBASE_HZ DEFAULT_EXT_CLK_FREQ_HZ
 #else
-#define PPE_TIMEBASE_HZ DEFAULT_NEST_FREQ_HZ
+#define PPE_TIMEBASE_HZ DEFAULT_OCC405_FREQ_HZ
 #endif /* APPCFG_USE_EXT_TIMEBASE */
 
 
