@@ -154,6 +154,9 @@ void task_misc_405_checks(task_t *i_self)
                                l_oisr1_status.value,
                                l_oisr0_status.value);
 
+            // add PGPE specific data
+            addPgpeDataToErrl(l_err);
+
             // The commit code will check for the frozen GPE0 and system
             // checkstop conditions and take appropriate actions.
             commitErrl(&l_err);

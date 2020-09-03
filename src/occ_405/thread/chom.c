@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -261,7 +261,7 @@ void chom_update_sensors()
     for( i = 0; i < MAX_APSS_ADC_CHANNELS; i++ )
     {
         // Transfer data from AMEC sensor to CHOM sensor
-        l_current_channel = AMECSENSOR_ARRAY_PTR( PWRAPSSCH0, i )->sample;
+        l_current_channel = AMECSENSOR_ARRAY_PTR( PWRAPSSCH00, i )->sample;
        // TRAC_INFO("channel %d reading: %d", i, l_current_channel);
         g_chom->sensorData[0].sensor[l_apss_idx].sample = l_current_channel;
 

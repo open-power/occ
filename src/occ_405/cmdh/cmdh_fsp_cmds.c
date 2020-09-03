@@ -532,7 +532,7 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
                       ((function_id >= ADC_GPU_0_1) && (function_id <= ADC_GPU_VOLT2_1_1)) )
                 {
                     // GPU channel: include if has a non-zero reading or if GPU is present
-                    if ( ( G_amec_sensor_list[PWRAPSSCH0 + k]->sample > 0) ||
+                    if ( ( G_amec_sensor_list[PWRAPSSCH00 + k]->sample > 0) ||
                          ( ((ADC_GPU_0_0 == function_id) || (ADC_GPU_VOLT2_0_0 == function_id)) &&
                            (G_first_sys_gpu_config & 0x01) ) ||
                          ( ((ADC_GPU_0_1 == function_id) || (ADC_GPU_VOLT2_0_1 == function_id)) &&
@@ -557,13 +557,13 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
                 }
                 if (include)
                 {
-                    l_pwrSensorList[l_sensorHeader.count].id = G_amec_sensor_list[PWRAPSSCH0 + k]->ipmi_sid;
+                    l_pwrSensorList[l_sensorHeader.count].id = G_amec_sensor_list[PWRAPSSCH00 + k]->ipmi_sid;
                     l_pwrSensorList[l_sensorHeader.count].function_id = function_id;
                     l_pwrSensorList[l_sensorHeader.count].apss_channel = k;
                     l_pwrSensorList[l_sensorHeader.count].reserved = 0;
-                    l_pwrSensorList[l_sensorHeader.count].current = G_amec_sensor_list[PWRAPSSCH0 + k]->sample;
-                    l_pwrSensorList[l_sensorHeader.count].accumul = G_amec_sensor_list[PWRAPSSCH0 + k]->accumulator;
-                    l_pwrSensorList[l_sensorHeader.count].update_tag  = G_amec_sensor_list[PWRAPSSCH0 + k]->update_tag;
+                    l_pwrSensorList[l_sensorHeader.count].current = G_amec_sensor_list[PWRAPSSCH00 + k]->sample;
+                    l_pwrSensorList[l_sensorHeader.count].accumul = G_amec_sensor_list[PWRAPSSCH00 + k]->accumulator;
+                    l_pwrSensorList[l_sensorHeader.count].update_tag  = G_amec_sensor_list[PWRAPSSCH00 + k]->update_tag;
                     l_sensorHeader.count++;
                 }
             }

@@ -134,16 +134,16 @@
  * Macro to build main_mem_sensor_t instances for all APSS channels.
  */
 #define MAIN_MEM_APSSCH_SENSORS(gsid_prefix, smf_mode, master_only) \
-    MAIN_MEM_SENSOR(gsid_prefix##0  , smf_mode, master_only) , \
-    MAIN_MEM_SENSOR(gsid_prefix##1  , smf_mode, master_only) , \
-    MAIN_MEM_SENSOR(gsid_prefix##2  , smf_mode, master_only) , \
-    MAIN_MEM_SENSOR(gsid_prefix##3  , smf_mode, master_only) , \
-    MAIN_MEM_SENSOR(gsid_prefix##4  , smf_mode, master_only) , \
-    MAIN_MEM_SENSOR(gsid_prefix##5  , smf_mode, master_only) , \
-    MAIN_MEM_SENSOR(gsid_prefix##6  , smf_mode, master_only) , \
-    MAIN_MEM_SENSOR(gsid_prefix##7  , smf_mode, master_only) , \
-    MAIN_MEM_SENSOR(gsid_prefix##8  , smf_mode, master_only) , \
-    MAIN_MEM_SENSOR(gsid_prefix##9  , smf_mode, master_only) , \
+    MAIN_MEM_SENSOR(gsid_prefix##00  , smf_mode, master_only) , \
+    MAIN_MEM_SENSOR(gsid_prefix##01  , smf_mode, master_only) , \
+    MAIN_MEM_SENSOR(gsid_prefix##02  , smf_mode, master_only) , \
+    MAIN_MEM_SENSOR(gsid_prefix##03  , smf_mode, master_only) , \
+    MAIN_MEM_SENSOR(gsid_prefix##04  , smf_mode, master_only) , \
+    MAIN_MEM_SENSOR(gsid_prefix##05  , smf_mode, master_only) , \
+    MAIN_MEM_SENSOR(gsid_prefix##06  , smf_mode, master_only) , \
+    MAIN_MEM_SENSOR(gsid_prefix##07  , smf_mode, master_only) , \
+    MAIN_MEM_SENSOR(gsid_prefix##08  , smf_mode, master_only) , \
+    MAIN_MEM_SENSOR(gsid_prefix##09  , smf_mode, master_only) , \
     MAIN_MEM_SENSOR(gsid_prefix##10 , smf_mode, master_only) , \
     MAIN_MEM_SENSOR(gsid_prefix##11 , smf_mode, master_only) , \
     MAIN_MEM_SENSOR(gsid_prefix##12 , smf_mode, master_only) , \
@@ -922,10 +922,10 @@ void mm_sensors_init_names_entry(const main_mem_sensor_t * i_mm_sensor,
 
     // Find the sensor specific info, if any
     uint8_t l_sensor_specific_info1 = 0;
-    if ((l_gsid >= PWRAPSSCH0) && (l_gsid <= PWRAPSSCH15))
+    if ((l_gsid >= PWRAPSSCH00) && (l_gsid <= PWRAPSSCH15))
     {
         // For APSS channel sensors, set to ADC func ID
-        uint8_t l_channel_num = (l_gsid - PWRAPSSCH0);
+        uint8_t l_channel_num = (l_gsid - PWRAPSSCH00);
         l_sensor_specific_info1 = G_apss_ch_to_function[l_channel_num];
     }
 

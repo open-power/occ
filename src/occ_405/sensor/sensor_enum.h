@@ -70,16 +70,16 @@ enum e_gsid
     // ------------------------------------------------------
     PWRSYS,            // System DC Power (from APSS)
     PWRGPU,            // GPU Subsystem Power (from APSS) e.g. Nvidia GPU
-    PWRAPSSCH0,        // These PWRAPSSCH sensors are used to report the power
-    PWRAPSSCH1,        // provided by each of the 16 APSS channels.
-    PWRAPSSCH2,
-    PWRAPSSCH3,
-    PWRAPSSCH4,
-    PWRAPSSCH5,
-    PWRAPSSCH6,
-    PWRAPSSCH7,
-    PWRAPSSCH8,
-    PWRAPSSCH9,
+    PWRAPSSCH00,       // These PWRAPSSCH sensors are used to report the power
+    PWRAPSSCH01,       // provided by each of the 16 APSS channels.
+    PWRAPSSCH02,
+    PWRAPSSCH03,
+    PWRAPSSCH04,
+    PWRAPSSCH05,
+    PWRAPSSCH06,
+    PWRAPSSCH07,
+    PWRAPSSCH08,
+    PWRAPSSCH09,
     PWRAPSSCH10,
     PWRAPSSCH11,
     PWRAPSSCH12,

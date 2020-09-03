@@ -268,7 +268,7 @@ bool amec_update_apss_sensors(void)
                             l_bulk_v = l_bulk_voltage_2;
                         }
                         temp32 = ROUND_POWER(ADC_CONVERTED_VALUE(l_idx) * l_bulk_v);
-                        sensor_update(AMECSENSOR_PTR(PWRAPSSCH0 + l_idx), (uint16_t) temp32);
+                        sensor_update(AMECSENSOR_PTR(PWRAPSSCH00 + l_idx), (uint16_t) temp32);
                     }
                 }
 

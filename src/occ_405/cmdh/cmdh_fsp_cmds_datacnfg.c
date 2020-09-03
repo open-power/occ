@@ -96,10 +96,10 @@ const data_req_table_t G_data_pri_table[] =
     {DATA_MASK_AVSBUS_CONFIG,         DATA_FORMAT_AVSBUS_CONFIG},
     {DATA_MASK_SET_ROLE,              DATA_FORMAT_SET_ROLE},
     {DATA_MASK_MEM_CFG,               DATA_FORMAT_MEM_CFG},
-    {DATA_MASK_GPU,                   DATA_FORMAT_GPU},
     {DATA_MASK_THRM_THRESHOLDS,       DATA_FORMAT_THRM_THRESHOLDS},
     {DATA_MASK_PCAP_PRESENT,          DATA_FORMAT_POWER_CAP},
     {DATA_MASK_MEM_THROT,             DATA_FORMAT_MEM_THROT},
+    {DATA_MASK_GPU,                   DATA_FORMAT_GPU},
 };
 
 cmdh_ips_config_data_t G_ips_config_data = {0};
@@ -649,9 +649,9 @@ void apss_store_ipmi_sensor_id(const uint16_t i_channel, const apss_cfg_adc_v20_
             (i_adc->assignment != ADC_12V_STANDBY_CURRENT) &&
             (i_adc->assignment != ADC_VOLT_SENSE_2))
         {
-            AMECSENSOR_PTR(PWRAPSSCH0 + i_channel)->ipmi_sid = i_adc->ipmisensorId;
+            AMECSENSOR_PTR(PWRAPSSCH00 + i_channel)->ipmi_sid = i_adc->ipmisensorId;
             CNFG_DBG("apss_store_ipmi_sensor_id: SID[0x%08X] stored as 0x%08X for channel %d",
-                     i_adc->ipmisensorId, AMECSENSOR_PTR(PWRAPSSCH0 + i_channel)->ipmi_sid, i_channel);
+                     i_adc->ipmisensorId, AMECSENSOR_PTR(PWRAPSSCH00 + i_channel)->ipmi_sid, i_channel);
         }
     }
 }
