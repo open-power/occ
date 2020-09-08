@@ -272,6 +272,7 @@ void amec_calc_dts_sensors(CoreData * i_core_data_ptr, uint8_t i_core)
 #define DTS_PER_CORE     2
 #define QUAD_DTS_PER_CORE     2
 
+    errlHndl_t    l_errl = NULL;
     uint32_t      l_coreTemp = 0;
     uint8_t       k = 0;
     uint16_t      l_coreDts[DTS_PER_CORE] = {0};
@@ -290,13 +291,16 @@ void amec_calc_dts_sensors(CoreData * i_core_data_ptr, uint8_t i_core)
     uint8_t       l_quad = 0;     // Quad this core resides in
 
     static bool   L_bad_read_trace = FALSE;
+    static bool   L_core_dts_error_logged[MAX_NUM_CORES][DTS_PER_CORE] = {{FALSE}};
+    static bool   L_L3_dts_error_logged[MAX_NUM_CORES] = {FALSE};
+    static bool   L_RT_dts_error_logged[MAX_NUM_CORES] = {FALSE};
 
     if (i_core_data_ptr != NULL)
     {
         //the Core DTS temperatures are considered in the calculation only if:
         //  - They are valid.
-        //  - Non-zero
-        //  - Non-negative
+        //  - Non-zero.  Module test will detect bad DTS and write coefficients to force 0 reading
+        //  - less than DTS saturate temperature
         for (k = 0; k < DTS_PER_CORE; k++)
         {
             //Check validity
@@ -306,12 +310,50 @@ void amec_calc_dts_sensors(CoreData * i_core_data_ptr, uint8_t i_core)
                 l_coreDts[k] = (i_core_data_ptr->dts.core[k].fields.reading & 0xFF);
                 l_coreDtsCnt++;
 
-                //Hardware bug workaround:  Module test will detect bad DTS and write coefficients
-                //to force a reading of 0 or negative to indicate the DTS is bad.
                 //Throw out any DTS that is bad
-                if(((l_coreDts[k] & DTS_INVALID_MASK) == DTS_INVALID_MASK) ||
-                    (l_coreDts[k] == 0))
+                if(l_coreDts[k] == 0)
                 {
+                    l_coreDtsCnt--;
+                }
+                if(l_coreDts[k] >= DTS_MAX_TEMP)
+                {
+                    // log mfg error for this DTS if haven't already
+                    if(L_core_dts_error_logged[i_core][k] == FALSE)
+                    {
+                         L_core_dts_error_logged[i_core][k] = TRUE;
+                         TRAC_ERR("amec_calc_dts_sensors: core[%d] DTS[%d] has invalid reading[%d]",
+                                   i_core, k, l_coreDts[k]);
+                         /* @
+                          * @errortype
+                          * @moduleid    AMEC_CALC_DTS_SENSORS
+                          * @reasoncode  INVALID_DTS
+                          * @userdata1   Core number
+                          * @userdata2   DTS reading
+                          * @userdata4   ERC_CORE
+                          * @devdesc     core DTS bad
+                          */
+                         l_errl = createErrl(AMEC_CALC_DTS_SENSORS,        //modId
+                                             INVALID_DTS,                  //reasoncode
+                                             ERC_CORE,                     //Extended reason code
+                                             ERRL_SEV_INFORMATIONAL,       //Severity
+                                             NULL,                         //Trace Buf
+                                             DEFAULT_TRACE_SIZE,           //Trace Size
+                                             i_core,                       //userdata1
+                                             l_coreDts[k]);                //userdata2
+
+                         // set the mfg action flag (allows callout to be added to info error)
+                         setErrlActions(l_errl, ERRL_ACTIONS_MANUFACTURING_ERROR);
+
+                         // add processor callout
+                         addCalloutToErrl(l_errl,
+                                          ERRL_CALLOUT_TYPE_HUID,
+                                          G_sysConfigData.proc_huid,
+                                          ERRL_CALLOUT_PRIORITY_HIGH);
+
+                         // Commit Error
+                         commitErrl(&l_errl);
+                    }
+                    // throw out this DTS
                     l_coreDts[k] = 0;
                     l_coreDtsCnt--;
                 }
@@ -324,20 +366,106 @@ void amec_calc_dts_sensors(CoreData * i_core_data_ptr, uint8_t i_core)
         } //for loop
 
         // Set the L3 DTS reading if it is valid
-        if( i_core_data_ptr->dts.cache.fields.valid &&
-            (i_core_data_ptr->dts.cache.fields.reading > 0) )
+        if( (i_core_data_ptr->dts.cache.fields.valid) &&
+            (i_core_data_ptr->dts.cache.fields.reading != 0) )
         {
-            l_L3Dts = i_core_data_ptr->dts.cache.fields.reading;
-            l_L3DtsCnt++;
-        }
+            // Don't use DTS if it reached max limit
+            if(i_core_data_ptr->dts.cache.fields.reading >= DTS_MAX_TEMP)
+            {
+                // log mfg error for this DTS if haven't already
+                if(L_L3_dts_error_logged[i_core] == FALSE)
+                {
+                     L_L3_dts_error_logged[i_core] = TRUE;
+                     TRAC_ERR("amec_calc_dts_sensors: core[%d] L3 DTS has invalid reading[%d]",
+                               i_core, i_core_data_ptr->dts.cache.fields.reading);
+                     /* @
+                      * @errortype
+                      * @moduleid    AMEC_CALC_DTS_SENSORS
+                      * @reasoncode  INVALID_DTS
+                      * @userdata1   Core number
+                      * @userdata2   DTS reading
+                      * @userdata4   ERC_L3
+                      * @devdesc     L3 DTS bad
+                      */
+                     l_errl = createErrl(AMEC_CALC_DTS_SENSORS,        //modId
+                                         INVALID_DTS,                  //reasoncode
+                                         ERC_L3,                       //Extended reason code
+                                         ERRL_SEV_INFORMATIONAL,       //Severity
+                                         NULL,                         //Trace Buf
+                                         DEFAULT_TRACE_SIZE,           //Trace Size
+                                         i_core,                       //userdata1
+                                         i_core_data_ptr->dts.cache.fields.reading);
 
-        // Set the racetrack DTS reading if it valid
-        if( i_core_data_ptr->dts.racetrack.fields.valid &&
-            (i_core_data_ptr->dts.racetrack.fields.reading > 0) )
+                     // set the mfg action flag (allows callout to be added to info error)
+                     setErrlActions(l_errl, ERRL_ACTIONS_MANUFACTURING_ERROR);
+
+                     // add processor callout
+                     addCalloutToErrl(l_errl,
+                                      ERRL_CALLOUT_TYPE_HUID,
+                                      G_sysConfigData.proc_huid,
+                                      ERRL_CALLOUT_PRIORITY_HIGH);
+
+                     // Commit Error
+                     commitErrl(&l_errl);
+                }
+            }
+            else  // DTS reading is good
+            {
+                l_L3Dts = i_core_data_ptr->dts.cache.fields.reading;
+                l_L3DtsCnt++;
+            }
+        } // if L3 DTS valid
+
+        // Set the racetrack DTS reading if it is valid
+        if( (i_core_data_ptr->dts.racetrack.fields.valid) &&
+            (i_core_data_ptr->dts.racetrack.fields.reading != 0) )
         {
-            l_raceTrackDts = i_core_data_ptr->dts.racetrack.fields.reading;
-            l_racetrackDtsCnt++;
-        }
+            // Don't use DTS if it reached max limit
+            if(i_core_data_ptr->dts.racetrack.fields.reading >= DTS_MAX_TEMP)
+            {
+                // log mfg error for this DTS if haven't already
+                if(L_RT_dts_error_logged[i_core] == FALSE)
+                {
+                     L_RT_dts_error_logged[i_core] = TRUE;
+                     TRAC_ERR("amec_calc_dts_sensors: core[%d] Racetrack DTS has invalid reading[%d]",
+                               i_core, i_core_data_ptr->dts.racetrack.fields.reading);
+                     /* @
+                      * @errortype
+                      * @moduleid    AMEC_CALC_DTS_SENSORS
+                      * @reasoncode  INVALID_DTS
+                      * @userdata1   Core number
+                      * @userdata2   DTS reading
+                      * @userdata4   ERC_RACETRACK
+                      * @devdesc     Racetrack DTS bad
+                      */
+                     l_errl = createErrl(AMEC_CALC_DTS_SENSORS,        //modId
+                                         INVALID_DTS,                  //reasoncode
+                                         ERC_RACETRACK,                //Extended reason code
+                                         ERRL_SEV_INFORMATIONAL,       //Severity
+                                         NULL,                         //Trace Buf
+                                         DEFAULT_TRACE_SIZE,           //Trace Size
+                                         i_core,                       //userdata1
+                                         i_core_data_ptr->dts.racetrack.fields.reading);
+
+                     // set the mfg action flag (allows callout to be added to info error)
+                     setErrlActions(l_errl, ERRL_ACTIONS_MANUFACTURING_ERROR);
+
+                     // add processor callout
+                     addCalloutToErrl(l_errl,
+                                      ERRL_CALLOUT_TYPE_HUID,
+                                      G_sysConfigData.proc_huid,
+                                      ERRL_CALLOUT_PRIORITY_HIGH);
+
+                     // Commit Error
+                     commitErrl(&l_errl);
+                }
+            }
+            else  // DTS reading is good
+            {
+                l_raceTrackDts = i_core_data_ptr->dts.racetrack.fields.reading;
+                l_racetrackDtsCnt++;
+            }
+        } // if RT DTS valid
 
         // The core DTSs are considered only if we have at least 1 valid DTS value
         // between the L3 DTS and the 2 core DTSs along with a non-zero weight for
@@ -357,7 +485,7 @@ void amec_calc_dts_sensors(CoreData * i_core_data_ptr, uint8_t i_core)
                 l3Wt = G_data_cnfg->thrm_thresh.proc_L3_weight;
             }
 
-            // Update the raw core DTS reading (average of the two)
+            // Update the raw non-weighted core DTS reading (average of the two core + L3)
             l_dtsAvg = (l_coreDts[0] + l_coreDts[1] + l_L3Dts) / (l_coreDtsCnt + l_L3DtsCnt);
             sensor_update( AMECSENSOR_ARRAY_PTR(TEMPC0, i_core), l_dtsAvg);
         }

@@ -81,6 +81,7 @@ typedef enum
     DATA_FRU_VRM_VDD            = 0x06,  // This is an actual temperature reading for VRM Vdd
     DATA_FRU_PMIC               = 0x07,
     DATA_FRU_MEMCTRL_EXT        = 0x08,  // External memory controller sensor
+    DATA_FRU_PROC_IO            = 0x09,  // Processor IO
     DATA_FRU_MAX,
 } eConfigDataFruType;
 

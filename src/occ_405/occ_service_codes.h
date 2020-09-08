@@ -68,6 +68,8 @@ enum occReasonCode
     /// Invalid configuration data (MRW, etc.)
     INVALID_CONFIG_DATA             = 0x34,
     /// MemBuf reached error threshold
+    /// Processor DTS reading invalid
+    INVALID_DTS                     = 0x35,
     MEMBUF_ERROR_TEMP               = 0x40,
     /// MemBuf in-band scom failure
     MEMBUF_SCOM_ERROR               = 0x41,
@@ -183,6 +185,7 @@ enum occExtReasonCode
     ERC_AMEC_DIMM_TEMP_TIMEOUT                  = 0x0031,
     ERC_AMEC_MEMBUF_TEMP_TIMEOUT                = 0x0032,
     ERC_AMEC_GPE1_TIMEOUT                       = 0x0033,
+    ERC_AMEC_PROC_IO_TEMP_TIMEOUT               = 0x0034,
 
     ERC_APSS_MISSING_ADC_VOLT_SENSE_2           = 0x0038,
     ERC_APSS_GPU_VOLTAGE_CONFLICT               = 0x0039,
@@ -230,6 +233,10 @@ enum occExtReasonCode
     ERC_PGPE_INVALID_ADDRESS                    = 0x00BB,
     ERC_OPS_INVALID_MAGIC_NUMBER                = 0x00BC,
     ERC_PGPE_WOF_VALUES_INVALID_ADDRESS         = 0x00BD,
+
+    ERC_CORE                                    = 0x00C0,
+    ERC_L3                                      = 0x00C1,
+    ERC_RACETRACK                               = 0x00C2,
 
     ERC_24X7_GPE_CREATE_FAILURE                 = 0x00D0,
     ERC_24X7_GPE_SCHEDULE_FAILURE               = 0x00D1,

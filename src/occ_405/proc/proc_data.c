@@ -39,6 +39,7 @@
 #include "sensor.h"
 #include "gpe_24x7_structs.h"
 #include "common.h"
+#include "occ_sys_config.h"
 
 extern bool G_simics_environment;
 
@@ -105,6 +106,9 @@ uint32_t G_get_per_core_data_max_schedule_intervals[MAX_CORES] = {0};
 void print_core_data_sensors(uint8_t core);
 void print_core_status(uint8_t core);
 #endif
+
+// Reading Processor IO temperature timed out?
+bool G_proc_io_temp_expired = false;
 
 extern bool G_smf_mode;
 extern uint16_t G_allow_trace_flags;
@@ -509,6 +513,8 @@ CoreData * proc_get_bulk_core_data_ptr( const uint8_t i_occ_core_id )
 // End Function Specification
 void task_nest_dts( task_t * i_task )
 {
+#define MAX_IO_TEMP_FAILS 125 // 125 x 8ms readings = 1 second
+
     errlHndl_t  l_err = NULL;  // Error handler
     int         l_rc = 0;      // Return code
     ipc_nest_dts_parms_t * l_parms = (ipc_nest_dts_parms_t*)(G_nest_dts_gpe_req.cmd_data);
@@ -516,9 +522,14 @@ void task_nest_dts( task_t * i_task )
     uint16_t    l_pauDtsTemp = 0;
     bool        l_nestDtsValid = FALSE;
     bool        l_pauDtsValid  = FALSE;
+    bool        l_log_dts_error = FALSE;
+    bool        l_io_temp_valid = FALSE;
+    static uint8_t L_io_temp_failures = 0;
+    static bool L_io_error_logged = FALSE;
     static bool L_scheduled = FALSE;
     static bool L_idle_trace = FALSE;
     static bool L_incomplete_trace = FALSE;
+    static bool L_dts_error_logged[NEST_DTS_COUNT] = {FALSE};
 
     do
     {
@@ -545,49 +556,157 @@ void task_nest_dts( task_t * i_task )
             {
                 l_nestDtsTemp = l_parms->data.sensor[N0_DTS].fields.reading;
                 l_nestDtsValid = l_parms->data.sensor[N0_DTS].fields.valid;
-                if(l_nestDtsValid && l_nestDtsTemp && l_nestDtsTemp < DTS_INVALID_MASK)
+                if(l_nestDtsValid && l_nestDtsTemp)
                 {
-                    sensor_update(AMECSENSOR_PTR(TEMPNEST0), l_nestDtsTemp);
+                    if(l_nestDtsTemp < DTS_MAX_TEMP)
+                        sensor_update(AMECSENSOR_PTR(TEMPNEST0), l_nestDtsTemp);
+
+                    // log mfg error for this DTS if haven't already
+                    else if(L_dts_error_logged[N0_DTS] == FALSE)
+                    {
+                       L_dts_error_logged[N0_DTS] = TRUE;
+                       TRAC_ERR("task_nest_dts: Nest0 DTS has invalid reading[%d]", l_nestDtsTemp);
+                       l_log_dts_error = TRUE;
+                    }
                 }
 
                 l_nestDtsTemp = l_parms->data.sensor[N1_DTS].fields.reading;
                 l_nestDtsValid = l_parms->data.sensor[N1_DTS].fields.valid;
-                if(l_nestDtsValid && l_nestDtsTemp && l_nestDtsTemp < DTS_INVALID_MASK)
+                if(l_nestDtsValid && l_nestDtsTemp)
                 {
-                    sensor_update(AMECSENSOR_PTR(TEMPNEST1), l_nestDtsTemp);
+                    if(l_nestDtsTemp < DTS_MAX_TEMP)
+                        sensor_update(AMECSENSOR_PTR(TEMPNEST1), l_nestDtsTemp);
+
+                    // log mfg error for this DTS if haven't already
+                    else if(L_dts_error_logged[N1_DTS] == FALSE)
+                    {
+                       L_dts_error_logged[N1_DTS] = TRUE;
+                       TRAC_ERR("task_nest_dts: Nest1 DTS has invalid reading[%d]", l_nestDtsTemp);
+                       l_log_dts_error = TRUE;
+                    }
                 }
 
                 l_pauDtsTemp = l_parms->data.sensor[SE_PAU_DTS].fields.reading;
                 l_pauDtsValid = l_parms->data.sensor[SE_PAU_DTS].fields.valid;
-                if(l_pauDtsValid && l_pauDtsTemp && l_pauDtsTemp < DTS_INVALID_MASK)
+                if(l_pauDtsValid && l_pauDtsTemp)
                 {
-                    sensor_update(AMECSENSOR_PTR(TEMPPROCIO00), l_pauDtsTemp);
+                    if(l_pauDtsTemp < DTS_MAX_TEMP)
+                    {
+                        l_io_temp_valid = TRUE;
+                        sensor_update(AMECSENSOR_PTR(TEMPPROCIO00), l_pauDtsTemp);
+                    }
+                    // log mfg error for this DTS if haven't already
+                    else if(L_dts_error_logged[SE_PAU_DTS] == FALSE)
+                    {
+                       L_dts_error_logged[SE_PAU_DTS] = TRUE;
+                       TRAC_ERR("task_nest_dts: SE PAU DTS has invalid reading[%d]", l_pauDtsTemp);
+                       l_log_dts_error = TRUE;
+                    }
                 }
 
                 l_pauDtsTemp = l_parms->data.sensor[NE_PAU_DTS].fields.reading;
                 l_pauDtsValid = l_parms->data.sensor[NE_PAU_DTS].fields.valid;
-                if(l_pauDtsValid && l_pauDtsTemp && l_pauDtsTemp < DTS_INVALID_MASK)
+                if(l_pauDtsValid && l_pauDtsTemp)
                 {
-                    sensor_update(AMECSENSOR_PTR(TEMPPROCIO01), l_pauDtsTemp);
+                    if(l_pauDtsTemp < DTS_MAX_TEMP)
+                    {
+                        l_io_temp_valid = TRUE;
+                        sensor_update(AMECSENSOR_PTR(TEMPPROCIO01), l_pauDtsTemp);
+                    }
+                    // log mfg error for this DTS if haven't already
+                    else if(L_dts_error_logged[NE_PAU_DTS] == FALSE)
+                    {
+                       L_dts_error_logged[NE_PAU_DTS] = TRUE;
+                       TRAC_ERR("task_nest_dts: NE PAU DTS has invalid reading[%d]", l_pauDtsTemp);
+                       l_log_dts_error = TRUE;
+                    }
                 }
 
                 l_pauDtsTemp = l_parms->data.sensor[SW_PAU_DTS].fields.reading;
                 l_pauDtsValid = l_parms->data.sensor[SW_PAU_DTS].fields.valid;
-                if(l_pauDtsValid && l_pauDtsTemp && l_pauDtsTemp < DTS_INVALID_MASK)
+                if(l_pauDtsValid && l_pauDtsTemp)
                 {
-                    sensor_update(AMECSENSOR_PTR(TEMPPROCIO10), l_pauDtsTemp);
+                    if(l_pauDtsTemp < DTS_MAX_TEMP)
+                    {
+                        l_io_temp_valid = TRUE;
+                        sensor_update(AMECSENSOR_PTR(TEMPPROCIO10), l_pauDtsTemp);
+                    }
+                    // log mfg error for this DTS if haven't already
+                    else if(L_dts_error_logged[SW_PAU_DTS] == FALSE)
+                    {
+                       L_dts_error_logged[SW_PAU_DTS] = TRUE;
+                       TRAC_ERR("task_nest_dts: SW PAU DTS has invalid reading[%d]", l_pauDtsTemp);
+                       l_log_dts_error = TRUE;
+                    }
                 }
 
                 l_pauDtsTemp = l_parms->data.sensor[NW_PAU_DTS].fields.reading;
                 l_pauDtsValid = l_parms->data.sensor[NW_PAU_DTS].fields.valid;
-                if(l_pauDtsValid && l_pauDtsTemp && l_pauDtsTemp < DTS_INVALID_MASK)
+                if(l_pauDtsValid && l_pauDtsTemp)
                 {
-                    sensor_update(AMECSENSOR_PTR(TEMPPROCIO11), l_pauDtsTemp);
+                    if(l_pauDtsTemp < DTS_MAX_TEMP)
+                    {
+                        l_io_temp_valid = TRUE;
+                        sensor_update(AMECSENSOR_PTR(TEMPPROCIO11), l_pauDtsTemp);
+                    }
+                    // log mfg error for this DTS if haven't already
+                    else if(L_dts_error_logged[NW_PAU_DTS] == FALSE)
+                    {
+                       L_dts_error_logged[NW_PAU_DTS] = TRUE;
+                       TRAC_ERR("task_nest_dts: NW PAU DTS has invalid reading[%d]", l_pauDtsTemp);
+                       l_log_dts_error = TRUE;
+                    }
                 }
 
+                // check if have at least 1 valid IO temperature
+                if(l_io_temp_valid)
+                {
+                    L_io_temp_failures = 0;
+                    G_proc_io_temp_expired = FALSE;
+                }
+                else
+                {
+                   L_io_temp_failures++;
+                }
+
+                // check if need to log DTS error, 1 error for all bad DTS
+                if(l_log_dts_error)
+                {
+                    /* @
+                     * @errortype
+                     * @moduleid    PROC_TASK_NEST_DTS_MOD
+                     * @reasoncode  INVALID_DTS
+                     * @userdata1   0
+                     * @userdata2   0
+                     * @userdata4   OCC_NO_EXTENDED_RC
+                     * @devdesc     Nest DTS bad
+                     */
+                    l_err = createErrl(PROC_TASK_NEST_DTS_MOD,       //modId
+                                       INVALID_DTS,                  //reasoncode
+                                       OCC_NO_EXTENDED_RC,           //Extended reason code
+                                       ERRL_SEV_INFORMATIONAL,       //Severity
+                                       NULL,                         //Trace Buf
+                                       DEFAULT_TRACE_SIZE,           //Trace Size
+                                       0,                            //userdata1
+                                       0);                           //userdata2
+
+                    // set the mfg action flag (allows callout to be added to info error)
+                    setErrlActions(l_err, ERRL_ACTIONS_MANUFACTURING_ERROR);
+
+                    // add processor callout
+                    addCalloutToErrl(l_err,
+                                     ERRL_CALLOUT_TYPE_HUID,
+                                     G_sysConfigData.proc_huid,
+                                     ERRL_CALLOUT_PRIORITY_HIGH);
+
+                    // Commit Error
+                    commitErrl(&l_err);
+                }
             } // if request completed without error
             else
             {
+                L_io_temp_failures++;
+
                 // Trace only once
                 if (!L_incomplete_trace)
                 {
@@ -634,6 +753,46 @@ void task_nest_dts( task_t * i_task )
         }
 
     } while(0);
+
+    // check if timeout getting new processor IO temperature
+    if(L_io_temp_failures == MAX_IO_TEMP_FAILS)
+    {
+        G_proc_io_temp_expired = TRUE;
+        // log error if haven't already and on real HW
+        if( (L_io_error_logged == FALSE) &&
+            (!G_simics_environment) )
+        {
+            L_io_error_logged = TRUE;
+            INTR_TRAC_ERR("Timeout Reading Processor IO Temperatures");
+
+            /* @
+             * @errortype
+             * @moduleid    PROC_TASK_NEST_DTS_MOD
+             * @reasoncode  FRU_TEMP_TIMEOUT
+             * @userdata1   consecutive 8ms readings failed
+             * @userdata2   0
+             * @userdata4   ERC_AMEC_PROC_IO_TEMP_TIMEOUT
+             * @devdesc     Failed to read processor IO temperature
+             */
+            l_err = createErrl(PROC_TASK_NEST_DTS_MOD,        //modId
+                               FRU_TEMP_TIMEOUT,              //reasoncode
+                               ERC_AMEC_PROC_IO_TEMP_TIMEOUT, //Extended reason code
+                               ERRL_SEV_PREDICTIVE,           //Severity
+                               NULL,                          //Trace Buf
+                               DEFAULT_TRACE_SIZE,            //Trace Size
+                               MAX_IO_TEMP_FAILS,             //userdata1
+                               0);                            //userdata2
+
+            // add processor callout
+            addCalloutToErrl(l_err,
+                             ERRL_CALLOUT_TYPE_HUID,
+                             G_sysConfigData.proc_huid,
+                             ERRL_CALLOUT_PRIORITY_HIGH);
+
+            // Commit Error
+            commitErrl(&l_err);
+        }
+    } // if timeout reading IO temp
 }
 
 // Function Specification

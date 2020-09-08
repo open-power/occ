@@ -43,9 +43,8 @@
 
 #define THREADS_PER_CORE    4
 
-// A dts should be considered invalid if it is returning a negative reading the dts reading is
-// actually only 8 bits (not 12 as the structure has) the signed bit is msb of the 8 bit reading
-#define DTS_INVALID_MASK    0x80
+// A processor dts should be considered invalid if it is at or above the saturation limit
+#define DTS_MAX_TEMP 127
 
 #define NUM_CORE_DATA_BUFF       7
 #define NUM_CORE_DATA_DOUBLE_BUF 2

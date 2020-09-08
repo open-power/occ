@@ -68,6 +68,7 @@ enum occAmecModuleId
     AMEC_HEALTH_CHECK_VRM_VDD_TEMP    =    AMEC_COMP_ID | 0x1A,
     AMEC_HEALTH_CHECK_VRM_VDD_TIMEOUT =    AMEC_COMP_ID | 0x1B,
     AMEC_VECTORIZE_PROCIO_SENSORS     =    AMEC_COMP_ID | 0x1C,
+    AMEC_CALC_DTS_SENSORS             =    AMEC_COMP_ID | 0x1D,
 };
 
 /*----------------------------------------------------------------------------*/

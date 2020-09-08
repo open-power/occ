@@ -55,6 +55,7 @@ extern dimm_sensor_flags_t G_dimm_temp_expired_bitmap;
 extern uint32_t G_first_proc_gpu_config;
 extern uint32_t G_first_sys_gpu_config;
 extern bool G_vrm_vdd_temp_expired;
+extern bool G_proc_io_temp_expired;
 extern bool G_reset_prep;
 extern uint16_t G_amester_max_data_length;
 extern uint8_t G_occ_interrupt_type;
@@ -433,55 +434,22 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
         }
     }
 
-    // Add GPU temperatures
-    for (k=0; k<MAX_NUM_GPU_PER_DOMAIN; k++)
+    // Add processor IO temperature
+    const sensor_t *tempio = getSensorByGsid(TEMPPROCIOTHRM);
+    if (tempio != NULL)
     {
-        if(GPU_PRESENT(k))
+        l_tempSensorList[l_sensorHeader.count].id = AMECSENSOR_PTR(TEMPPROCIOTHRM)->ipmi_sid;
+        l_tempSensorList[l_sensorHeader.count].fru_type = DATA_FRU_PROC_IO;
+        l_tempSensorList[l_sensorHeader.count].throttle = G_data_cnfg->thrm_thresh.data[DATA_FRU_PROC_IO].dvfs;
+        if(G_proc_io_temp_expired)
         {
-            // GPU core temperature
-            l_tempSensorList[l_sensorHeader.count].id = G_amec_sensor_list[TEMPGPU0 + k]->ipmi_sid;
-            l_tempSensorList[l_sensorHeader.count].fru_type = DATA_FRU_GPU;
-            l_tempSensorList[l_sensorHeader.count].throttle = 0xFF; // We do not throttle for GPU temps at this time.
-
-            if(g_amec->gpu[k].status.coreTempFailure)
-            {
-               // failed to read core temperature return 0xFF
-               l_tempSensorList[l_sensorHeader.count].value = 0xFF;
-            }
-            else if(g_amec->gpu[k].status.coreTempNotAvailable)
-            {
-               // core temperature not available return 0
-               l_tempSensorList[l_sensorHeader.count].value = 0;
-            }
-            else
-            {
-               // have a good core temperature return the reading
-               l_tempSensorList[l_sensorHeader.count].value = (G_amec_sensor_list[TEMPGPU0 + k]->sample) & 0xFF;
-            }
-            l_sensorHeader.count++;
-
-            // GPU memory temperature
-            l_tempSensorList[l_sensorHeader.count].id = G_amec_sensor_list[TEMPGPU0MEM + k]->ipmi_sid;
-            l_tempSensorList[l_sensorHeader.count].fru_type = DATA_FRU_GPU_MEM;
-            l_tempSensorList[l_sensorHeader.count].throttle = 0xFF; // We do not throttle for GPU temps at this time.
-
-            if(g_amec->gpu[k].status.memTempFailure)
-            {
-               // failed to read memory temperature return 0xFF
-               l_tempSensorList[l_sensorHeader.count].value = 0xFF;
-            }
-            else if(g_amec->gpu[k].status.memTempNotAvailable)
-            {
-               // memory temperature not available return 0
-               l_tempSensorList[l_sensorHeader.count].value = 0;
-            }
-            else
-            {
-               // have a good memory temperature return the reading
-               l_tempSensorList[l_sensorHeader.count].value = (G_amec_sensor_list[TEMPGPU0MEM + k]->sample) & 0xFF;
-            }
-            l_sensorHeader.count++;
+            l_tempSensorList[l_sensorHeader.count].value = 0xFF;
         }
+        else
+        {
+            l_tempSensorList[l_sensorHeader.count].value = tempio->sample & 0xFF;
+        }
+        l_sensorHeader.count++;
     }
 
     // Copy header first.

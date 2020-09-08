@@ -211,6 +211,28 @@ void amec_vectorize_quad_sensor(sensor_t * l_sensor,
         l_rc = VECTOR_ADD_ELEM_FAILURE;
         break;
       }
+
+      if(l_gsid == TEMPRTAVG)
+      {
+        // Average racetrack temperature should also include the 2 Nest DTS
+        sensor_vector_elem_add(l_sensor->vector,
+                               MAXIMUM_QUADS,  // location start right after last quad
+                               AMECSENSOR_PTR(TEMPNEST0));
+
+        sensor_vector_elem_add(l_sensor->vector,
+                               MAXIMUM_QUADS + 1,
+                               AMECSENSOR_PTR(TEMPNEST1));
+
+
+        // Sanity check that the 2 nest temperatures got added
+        if( l_sensor->vector->size != (MAXIMUM_QUADS + 2) )
+        {
+          TRAC_ERR("amec_vectorize_quad_sensor: Failed to add nest temperatures to TEMPRTAVG");
+          // Set l_rc and break out so that we can create an errl
+          l_rc = VECTOR_ADD_ELEM_FAILURE;
+          break;
+        }
+      }
     }
     else
     {
