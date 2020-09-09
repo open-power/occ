@@ -442,14 +442,16 @@ int gpe_ocmb_configuration_create(MemBufConfiguration_t* o_config)
             rc = getscom_abs(MI_MCSYNC[i], &mcsync);
             if (rc)
             {
-                PK_TRACE("getscom failed on MCSYNC, rc = %d. The first configured "
-                         "MC will be the designated sync",rc);
+                PK_TRACE("getscom failed on MCSYNC[%d], rc = %d. The first configured "
+                         "MC will be the designated sync",i,rc);
                 rc = 0;
             }
-            if (mcsync != 0)
+
+            // MCS_MCSYNC_EN_SYNC_IN should be set on all non-designated ports
+            if ((mcsync & MCS_MCSYNC_EN_SYNC_IN) == 0)
             {
                 designated_sync = i;
-                // There can only be one sync, so stop searching.
+                // There can only be one designated sync, so stop searching.
                 break;
             }
         }

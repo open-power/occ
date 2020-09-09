@@ -203,6 +203,7 @@ typedef enum
 }  membuf_scom_operation_t;
 
 #define MCS_MCSYNC_SYNC_GO 0x0000800000000000ull
+#define MCS_MCSYNC_EN_SYNC_IN 0x0000400000000000ull
 
 // BAR and PBA_SLAVE assigned to gpe1 membuf
 //  - @see POWER Energy Management Hcode/HWP spec
