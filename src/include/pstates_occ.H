@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2019                             */
+/* Contributors Listed Below - COPYRIGHT 2019,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -188,13 +188,24 @@ typedef struct
     // state.
     uint32_t            vdd_vret_mv;
 
-    // Altitude temperature adjustment (in (degrees Celsius/km)*1000)
+    // Altitude temperature adjustment (in (degrees Celcius/km)*1000)
     // eg 8C/2100m = 8C/2.1Km = 3.809 -> 1000 = 3809
-    uint32_t            altitude_temp_adj_degCpMm;
+    uint32_t            altitude_temp_adj_degCpm;
 
-    uint8_t reserved[44];
+    // Altitude base (in meters))
+    uint32_t            altitude_reference_m;
+    // Ceiling Frequency - Maximum operable frequency for a system that
+    // has limitations that are independent from Pstates.
+    // If 0, frequency_max_khz is the maximum frequency;
+    // If non-zero, this frequency should be translated to the Pstate space
+    //    so as to be the lowest Pstate (which is the highest frequency)
+    //    to which the system is clipped.
+    uint32_t            frequency_ceiling_khz;
 
-} OCCPstateParmBlock_t __attribute__((aligned(128))) ;
+    // Pad to make the structure an even 1KB
+    uint8_t             pad[36];
+
+} __attribute__((aligned(128))) OCCPstateParmBlock_t ;
 
 #ifdef __cplusplus
 } // end extern C

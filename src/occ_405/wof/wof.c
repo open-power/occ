@@ -1727,7 +1727,15 @@ void read_sensor_data( void )
     else
     {
        // add on adjustment to account for altitude
-       g_wof->ambient_condition = l_ambient + g_wof->ambient_adj_for_altitude;
+       if(g_wof->ambient_adj_for_altitude >= 0)
+           g_wof->ambient_condition = l_ambient + g_wof->ambient_adj_for_altitude;
+       else  // negative adjust prevent overflow
+       {
+           if(l_ambient >= (-g_wof->ambient_adj_for_altitude))
+               g_wof->ambient_condition = l_ambient + g_wof->ambient_adj_for_altitude;
+           else
+               g_wof->ambient_condition = 0;
+       }
     }
 
     g_wof->curvdd_sensor  = getSensorByGsid(CURVDD)->sample;

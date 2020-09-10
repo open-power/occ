@@ -1918,8 +1918,8 @@ errlHndl_t cmdh_send_ambient_temp(const cmdh_fsp_cmd_t * i_cmd_ptr,
     cmdh_send_ambient_temp_t*   l_cmd   = (cmdh_send_ambient_temp_t *) i_cmd_ptr;
     ERRL_RC                     l_rc    = ERRL_RC_SUCCESS;
     uint16_t                    l_data_length = sizeof(cmdh_send_ambient_temp_t) - sizeof(cmdh_fsp_cmd_header_t);
-    uint32_t                    l_temp32 = 0;
-    uint8_t                     l_amb_adj = 0;
+    int32_t                     l_temp32 = 0;
+    int8_t                      l_amb_adj = 0;
     static bool L_trace_fail = FALSE, L_trace_success = FALSE;
     do
     {
@@ -1955,7 +1955,7 @@ errlHndl_t cmdh_send_ambient_temp(const cmdh_fsp_cmd_t * i_cmd_ptr,
         {
             if(!L_trace_success)
             {
-                TRAC_INFO("cmdh_send_ambient_temp: successfully received ambient temp[%d] altitude[0x%04X]",
+                TRAC_INFO("cmdh_send_ambient_temp: successfully received ambient temp %dC altitude %dm",
                            l_cmd->ambient, l_cmd->altitude);
                 L_trace_success = TRUE;
                 L_trace_fail = FALSE;
@@ -1989,18 +1989,21 @@ errlHndl_t cmdh_send_ambient_temp(const cmdh_fsp_cmd_t * i_cmd_ptr,
             g_amec->sys.altitude = l_cmd->altitude;
 
             // determine WOF ambient adjust based on altitude received
-            // altitude_temp_adj_degCpMm is in (degrees Celcius/km)*1000
-            l_temp32 = g_amec->static_wof_data.altitude_temp_adj_degCpMm * g_amec->sys.altitude;
-            // divide by 1000000 --> 1000 for meter to km * 1000 in altitude_temp_adj_degCpMm
-            l_amb_adj = (uint8_t)(l_temp32 / 1000000);
-            // round
-            if((l_temp32 % 1000000) > 500000)
+            // altitude_temp_adj_degCpm is in (degrees Celcius/km)*1000
+            l_temp32 = g_amec->sys.altitude - g_amec->static_wof_data.altitude_reference_m;
+            l_temp32 *= g_amec->static_wof_data.altitude_temp_adj_degCpm;
+            // divide by 1000000 --> 1000 for meter to km * 1000 in altitude_temp_adj_degCpm
+            l_amb_adj = (int8_t)(l_temp32 / 1000000);
+
+            // round for positive adjust only
+            if( (l_temp32 > 0) && ((l_temp32 % 1000000) > 500000) )
                 l_amb_adj++;
             // save final value to be used by WOF alg
             g_amec->wof.ambient_adj_for_altitude = l_amb_adj;
             g_amec->wof.altitude = g_amec->sys.altitude;
-            TRAC_INFO("cmdh_send_ambient_temp received altitude[%d] WOF ambient_adj_for_altitude[%d]",
+            TRAC_INFO("cmdh_send_ambient_temp new altitude %dm reference %dm WOF ambient_adj_for_altitude[%d]",
                        g_amec->sys.altitude,
+                       g_amec->static_wof_data.altitude_reference_m,
                        g_amec->wof.ambient_adj_for_altitude);
         }
     }

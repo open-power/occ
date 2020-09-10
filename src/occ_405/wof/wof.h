@@ -220,8 +220,8 @@ typedef struct __attribute__ ((packed))
     uint32_t ceff_ratio_vcs;
     // [400]
     uint8_t Vdd_chip_index;
-    // [401] Contains degrees C ambient is increased by to account for higher altitudes
-    uint8_t ambient_adj_for_altitude;
+    // [401] Contains degrees C ambient is changed by to account for higher/lower altitudes than reference altitude this may be lowering ambient
+    int8_t ambient_adj_for_altitude;
     // [402] Altitude in meters 0xffff indicates not available
     uint16_t altitude;
     // [404]
@@ -416,7 +416,9 @@ typedef struct __attribute__ ((packed))
     // Number of bits to shift right to divide by IDDQ activity sample depth to calculate percentage
     uint8_t iddq_activity_divide_bit_shift;
     // Altitude temperature adjustment (in (degrees Celsius/km)*1000)
-    uint32_t altitude_temp_adj_degCpMm;
+    uint32_t altitude_temp_adj_degCpm;
+    // Altitude base in meters
+    uint32_t altitude_reference_m;
 } amec_static_wof_t;
 
 // Structure for sensors used in g_amec for AMESTER for additional debug

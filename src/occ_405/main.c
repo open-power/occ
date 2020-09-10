@@ -185,6 +185,23 @@ void populate_sys_mode_freq_table(void)
     int         i = 0;
     int         l_max_freq_index = 0;
     uint32_t    l_max_freq = 0;
+    uint32_t    l_system_freq_ceiling_mhz = 0;
+
+    // determine max frequency allowed by system
+    if( (G_oppb.frequency_ceiling_khz) &&
+        (G_oppb.frequency_ceiling_khz < G_oppb.frequency_max_khz) )
+    {
+       MAIN_TRAC_IMP("populate_sys_mode_freq_table: Clipping freq to system max ceiling[%dKHz] < Pstate0[%dKHz]",
+                      G_oppb.frequency_ceiling_khz, G_oppb.frequency_max_khz);
+       l_system_freq_ceiling_mhz = G_oppb.frequency_ceiling_khz / 1000;
+    }
+    else // max is Pstate 0
+    {
+       MAIN_TRAC_IMP("populate_sys_mode_freq_table: No system max ceiling[%dKHz] Pstate0[%dKHz] allowed",
+                      G_oppb.frequency_ceiling_khz, G_oppb.frequency_max_khz);
+
+       l_system_freq_ceiling_mhz = G_oppb.frequency_max_khz / 1000;
+    }
 
     // VPD curve fit points
     for(i = OCC_FREQ_PT_VPD_CF0; i <= OCC_FREQ_PT_VPD_LAST_CF; i++)
@@ -217,7 +234,8 @@ void populate_sys_mode_freq_table(void)
     }
 
     // Set the maximum frequency for this chip
-    // use the VPD operating point not Pstate 0 (G_oppb.frequency_max_khz) which
+    // use the VPD operating point
+    // do not use Pstate 0 (G_oppb.frequency_max_khz) which
     // represents the highest Fmax across all chips in the system here we want what
     // this chip is capable of
     if(l_max_freq_index != VPD_PV_FMAX)
@@ -231,14 +249,14 @@ void populate_sys_mode_freq_table(void)
     {
         G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MAX_FREQ] = G_oppb.operating_points[VPD_PV_FMAX].frequency_mhz;
     }
-    // sanity check that the chip's Fmax is equal to or lower than Pstate 0 frequency
-    if(G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MAX_FREQ] > (G_oppb.frequency_max_khz / 1000) )
+    // Now verify that the system supports the chip Fmax
+    if(G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MAX_FREQ] > l_system_freq_ceiling_mhz )
     {
-        // Impossible to set anything higher than Pstate 0! Clip max to Pstate 0 frequency
-        MAIN_TRAC_ERR("populate_sys_mode_freq_table: chip Fmax[%dMHz] is higher than Pstate0[%dMHz]",
+        // Clip max to system max frequency
+        MAIN_TRAC_IMP("populate_sys_mode_freq_table: clipping chip Fmax[%dMHz] to system max[%dMHz]",
                        G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MAX_FREQ],
-                       G_oppb.frequency_max_khz / 1000);
-        G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MAX_FREQ] = G_oppb.frequency_max_khz / 1000;
+                       l_system_freq_ceiling_mhz);
+        G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MAX_FREQ] = l_system_freq_ceiling_mhz;
     }
 
     // set the minimum frequency allowed.  Don't use VPD as this may be different
@@ -260,7 +278,7 @@ void populate_sys_mode_freq_table(void)
         // sanity check that this isn't higher than max
         if(G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_WOF_BASE] > G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MAX_FREQ])
         {
-            MAIN_TRAC_ERR("populate_sys_mode_freq_table: WOF Base freq[%dMHz] higher than max[%dMHz]",
+            MAIN_TRAC_IMP("populate_sys_mode_freq_table: WOF Base freq[%dMHz] higher than max[%dMHz]",
                            G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_WOF_BASE],
                            G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MAX_FREQ]);
             G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_WOF_BASE] = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MAX_FREQ];
@@ -306,7 +324,7 @@ void populate_sys_mode_freq_table(void)
         // sanity check that this isn't higher than max
         if(G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_DISABLED] > G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MAX_FREQ])
         {
-            MAIN_TRAC_ERR("populate_sys_mode_freq_table: Disabled freq[%dMHz] higher than max[%dMHz]",
+            MAIN_TRAC_IMP("populate_sys_mode_freq_table: Disabled freq[%dMHz] higher than max[%dMHz]",
                            G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_DISABLED],
                            G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MAX_FREQ]);
             G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_DISABLED] = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MAX_FREQ];
@@ -348,7 +366,7 @@ void populate_sys_mode_freq_table(void)
     else if(G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_VPD_UT] >
             G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MAX_FREQ])
     {
-        MAIN_TRAC_ERR("populate_sys_mode_freq_table: UT freq[%dMHz] higher than max[%dMHz]",
+        MAIN_TRAC_IMP("populate_sys_mode_freq_table: UT freq[%dMHz] higher than max[%dMHz]",
                        G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_VPD_UT],
                        G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MAX_FREQ]);
         G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_VPD_UT] = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MAX_FREQ];
@@ -1057,15 +1075,19 @@ bool read_oppb_params()
                                         ERC_WOF_OPPB_WOF_DISABLED );
                 break;
             }
-            // default altitude not available until receive valid value from FSP/BMC
-            g_amec->wof.altitude = ALTITUDE_NOT_AVAILABLE;
-            g_amec->static_wof_data.altitude_temp_adj_degCpMm = G_oppb.altitude_temp_adj_degCpMm;
-
-            MAIN_TRAC_INFO("OPPB has WOF enabled(%d) Vdd Vret[%d]100uv  Vdd Vret index[%d] altitude_temp_adj_degCpMm[%d] ",
+            MAIN_TRAC_INFO("OPPB has WOF enabled(%d) Vdd Vret[%d]100uv  Vdd Vret index[%d] ",
                            G_oppb.attr.fields.wof_enabled,
                            g_amec->static_wof_data.Vdd_vret_p1mv,
-                           g_amec->static_wof_data.Vdd_vret_index,
-                           g_amec->static_wof_data.altitude_temp_adj_degCpMm);
+                           g_amec->static_wof_data.Vdd_vret_index);
+
+            // default altitude not available until receive valid value from FSP/BMC
+            g_amec->wof.altitude = ALTITUDE_NOT_AVAILABLE;
+            g_amec->static_wof_data.altitude_temp_adj_degCpm = G_oppb.altitude_temp_adj_degCpm;
+            g_amec->static_wof_data.altitude_reference_m = G_oppb.altitude_reference_m;
+            MAIN_TRAC_INFO("OPPB Ambient Altitude adjust parms reference altitude %dm altitude_temp_adj_degCpm[%d] ",
+                           g_amec->static_wof_data.altitude_reference_m,
+                           g_amec->static_wof_data.altitude_temp_adj_degCpm);
+
         }
 
     } while (0);
