@@ -50,6 +50,8 @@
 __vectors:
 
 #if defined(__PPE42X__)
+        b   __machine_check
+
         # See comment below for set MSR function
         .org __vectors + 0x0010
 __set_msr:

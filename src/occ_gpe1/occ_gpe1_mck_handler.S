@@ -52,14 +52,19 @@ __gpe1_machine_check_handler:
     mfsrr0  %r3
     mfsrr1  %r4
     stvd    %d3,    PK_CTX_SRR0(%r1)
+    mfedr   %r5
 #else
+    mfedr   %r2     ;## stcxu destroys edr
     stcxu   %r1,    -PK_CTX_SIZE(%r1)
+    mtedr   %r2
+    mr      %r5,%r2
+    _liw    %r2, _SDA2_BASE_
     mfsrr0  %r3
     mfsrr1  %r4
+
 #endif
 
-    mfedr   %r5
-
+    mr      %r6,%r1
     bl  gpe1_machine_check_handler
     stw %r3,    PK_CTX_SRR0(%r1)
 

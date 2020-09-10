@@ -31,6 +31,7 @@
 #include <errl.h>
 #include <rtls.h>
 #include <ocmb_mem_data.h>
+#include <memory.h>
 
 
 /// This code is established in the RC field prior to collecting the memory buffer
@@ -45,16 +46,12 @@
 /// being updated.
 #define MEMBUF_GET_MEM_DATA_UPDATE_FAILED 7
 
-#define DIMM_SENSOR0 0x80
-
 #define MEMBUF_SENSOR_ENABLED(occ_membuf_id, sensor_num) \
         (G_dimm_enabled_sensors.bytes[occ_membuf_id] & (DIMM_SENSOR0 >> (sensor_num)))
 
-#define MBA_CONFIGURED(occ_membuf_id, mba_num) \
-        (G_configured_mbas & (1 << ((occ_membuf_id * 2) + mba_num)))
+#define MBA_CONFIGURED(occ_membuf_id) \
+        (G_configured_mbas & (1 << (occ_membuf_id)))
 
-
-extern dimm_sensor_flags_t G_dimm_present_sensors;
 
 // Generic memory initialization to handle init for all memory types
 void memory_init();

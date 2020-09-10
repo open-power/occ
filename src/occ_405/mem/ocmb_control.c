@@ -47,7 +47,7 @@ GPE_BUFFER(MemBufScomParms_t G_membuf_control_reg_parms);
 GPE_BUFFER(scomList_t G_memThrottle[NUM_THROTTLE_SCOMS]);
 
 
-uint16_t throttle_convert_2_numerator(uint16_t i_throttle, uint8_t i_membuf, uint8_t i_mba);
+uint16_t throttle_convert_2_numerator(uint16_t i_throttle, uint8_t i_membuf);
 void update_nlimits(uint32_t i_membuf);
 
 
@@ -147,21 +147,21 @@ bool ocmb_control( memory_control_task_t * i_memControlTask )
 
     // calculate new N values
     ocmb_mba_farb3q_t l_mbafarbq;
-    uint16_t l_mba01_n_per_mba =
-        throttle_convert_2_numerator(g_amec->mem_speed_request, l_membuf, 0);
+    uint16_t l_nm_n_per_slot =
+        throttle_convert_2_numerator(g_amec->mem_speed_request, l_membuf);
 
-    uint16_t l_mba01_n_per_chip = G_memoryThrottleLimits[l_membuf][0].max_n_per_chip;
-    amec_mem_speed_t l_mba01_speed;
+    uint16_t l_nm_n_per_chip = G_memoryThrottleLimits[l_membuf].max_n_per_chip;
+    amec_mem_speed_t l_nm_speed;
 
     //combine port and slot(mba) settings (16 bit) in to a single 32bit value
-    l_mba01_speed.mba_n = l_mba01_n_per_mba;
-    l_mba01_speed.chip_n = l_mba01_n_per_chip;
+    l_nm_speed.mba_n = l_nm_n_per_slot;
+    l_nm_speed.chip_n = l_nm_n_per_chip;
 
 
     // Check if the throttle value has been updated since the last
     // time we sent it.  If it has, then send a new value, otherwise
     // do nothing.
-    if ( l_mba01_speed.word32 != l_membuf_ptr->portpair[0].last_mem_speed_sent.word32 )
+    if ( l_nm_speed.word32 != l_membuf_ptr->portpair[0].last_mem_speed_sent.word32 )
     {
         /// Set up Scom Registers - array of Scoms
 
@@ -169,8 +169,8 @@ bool ocmb_control( memory_control_task_t * i_memControlTask )
         G_memThrottle[NM_THROTTLE_MBA].commandType = MEMBUF_SCOM_RMW;
         G_memThrottle[NM_THROTTLE_MBA].instanceNumber = l_membuf;
         // Set up value to be written
-        l_mbafarbq.fields.cfg_nm_n_per_slot = l_mba01_n_per_mba;
-        l_mbafarbq.fields.cfg_nm_n_per_port = l_mba01_n_per_chip;
+        l_mbafarbq.fields.cfg_nm_n_per_slot = l_nm_n_per_slot;
+        l_mbafarbq.fields.cfg_nm_n_per_port = l_nm_n_per_chip;
         G_memThrottle[NM_THROTTLE_MBA].data = l_mbafarbq.value;
 
         /// [1]: throttle sync
@@ -183,7 +183,7 @@ bool ocmb_control( memory_control_task_t * i_memControlTask )
 
         // Update the last sent throttle value, this will get
         // cleared if the GPE does not complete successfully.
-        l_membuf_ptr->portpair[0].last_mem_speed_sent.word32 = l_mba01_speed.word32;
+        l_membuf_ptr->portpair[0].last_mem_speed_sent.word32 = l_nm_speed.word32;
     }
     else
     {
@@ -206,14 +206,14 @@ bool ocmb_control( memory_control_task_t * i_memControlTask )
 // Thread: RTL
 //
 // End Function Specification
-uint16_t throttle_convert_2_numerator(uint16_t i_throttle, uint8_t i_membuf, uint8_t i_mba)
+uint16_t throttle_convert_2_numerator(uint16_t i_throttle, uint8_t i_membuf)
 {
 #define THROTTLE_100_PERCENT_VALUE 1000
 
     uint32_t l_nvalue = 0;
-    memory_throttle_t* l_mba = &G_memoryThrottleLimits[i_membuf][i_mba];
+    memory_throttle_t* l_mba = &G_memoryThrottleLimits[i_membuf];
 
-    if(MBA_CONFIGURED(i_membuf, i_mba))
+    if(MBA_CONFIGURED(i_membuf))
     {
         // Convert the throttle ( actually in units of 0.1 %) to a "N" value
         l_nvalue = (l_mba->max_n_per_mba * i_throttle) /
@@ -254,74 +254,57 @@ void update_nlimits(uint32_t i_membuf)
     /*  Local Variables                                                       */
     /*------------------------------------------------------------------------*/
     static uint32_t L_trace_throttle_count = 0;
-    uint16_t l_mba01_mba_maxn, l_mba01_chip_maxn, l_mba23_mba_maxn, l_mba23_chip_maxn;
+    uint16_t l_mba_maxn, l_chip_maxn;
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
 
     do
     {
-        memory_throttle_t* l_active_limits01 =
-            &G_memoryThrottleLimits[i_membuf][0];
-        memory_throttle_t* l_active_limits23 =
-            &G_memoryThrottleLimits[i_membuf][1];
+        memory_throttle_t* l_active_limits =
+            &G_memoryThrottleLimits[i_membuf];
 
-        mem_throt_config_data_v40_t* l_state_limits01 =
-            &G_sysConfigData.mem_throt_limits[i_membuf];
-        mem_throt_config_data_v40_t* l_state_limits23 =
+        mem_throt_config_data_v40_t* l_state_limits =
             &G_sysConfigData.mem_throt_limits[i_membuf];
 
         //Minimum N value is not state dependent
-        l_active_limits01->min_n_per_mba = l_state_limits01->min_n_per_mba;
-        l_active_limits23->min_n_per_mba = l_state_limits23->min_n_per_mba;
+        l_active_limits->min_n_per_mba = l_state_limits->min_n_per_mba;
 
         //oversubscription?
         if(AMEC_INTF_GET_OVERSUBSCRIPTION())
         {
-            l_mba01_mba_maxn = l_state_limits01->oversub_n_per_mba;
-            l_mba01_chip_maxn = l_state_limits01->oversub_n_per_chip;
-            l_mba23_mba_maxn = l_state_limits23->oversub_n_per_mba;
-            l_mba23_chip_maxn = l_state_limits23->oversub_n_per_chip;
+            l_mba_maxn = l_state_limits->oversub_n_per_mba;
+            l_chip_maxn = l_state_limits->oversub_n_per_chip;
         }
         else if(CURRENT_MODE() == OCC_MODE_DISABLED)
         {
-            l_mba01_mba_maxn = l_state_limits01->mode_disabled_n_per_mba;
-            l_mba01_chip_maxn = l_state_limits01->mode_disabled_n_per_chip;
-            l_mba23_mba_maxn = l_state_limits23->mode_disabled_n_per_mba;
-            l_mba23_chip_maxn = l_state_limits23->mode_disabled_n_per_chip;
+            l_mba_maxn = l_state_limits->mode_disabled_n_per_mba;
+            l_chip_maxn = l_state_limits->mode_disabled_n_per_chip;
         }
         else if(CURRENT_MODE() == OCC_MODE_FMAX)
         {
-            l_mba01_mba_maxn = l_state_limits01->fmax_n_per_mba;
-            l_mba01_chip_maxn = l_state_limits01->fmax_n_per_chip;
-            l_mba23_mba_maxn = l_state_limits23->fmax_n_per_mba;
-            l_mba23_chip_maxn = l_state_limits23->fmax_n_per_chip;
+            l_mba_maxn = l_state_limits->fmax_n_per_mba;
+            l_chip_maxn = l_state_limits->fmax_n_per_chip;
         }
         else //all other modes will use ultra turbo settings
         {
-            l_mba01_mba_maxn = l_state_limits01->ut_n_per_mba;
-            l_mba01_chip_maxn = l_state_limits01->ut_n_per_chip;
-            l_mba23_mba_maxn = l_state_limits23->ut_n_per_mba;
-            l_mba23_chip_maxn = l_state_limits23->ut_n_per_chip;
+            l_mba_maxn = l_state_limits->ut_n_per_mba;
+            l_chip_maxn = l_state_limits->ut_n_per_chip;
         }
 
-        l_active_limits01->max_n_per_chip = l_mba01_chip_maxn;
-        l_active_limits23->max_n_per_chip = l_mba23_chip_maxn;
+        l_active_limits->max_n_per_chip = l_chip_maxn;
 
         //Trace when the MBA max N value changes
-        if((l_mba01_mba_maxn != l_active_limits01->max_n_per_mba) ||
-           (l_mba23_mba_maxn != l_active_limits23->max_n_per_mba))
+        if(l_mba_maxn != l_active_limits->max_n_per_mba)
         {
-            l_active_limits01->max_n_per_mba = l_mba01_mba_maxn;
-            l_active_limits23->max_n_per_mba = l_mba23_mba_maxn;
+            l_active_limits->max_n_per_mba = l_mba_maxn;
 
             //Don't trace every MBA changing, just one
             if(!L_trace_throttle_count)
             {
                 L_trace_throttle_count = TRACE_THROTTLE_DELAY;
-                TRAC_IMP("New MBA throttle max|min N values: mba01[0x%08x], mba23[0x%08x]",
-                        (uint32_t)((l_mba01_mba_maxn << 16) | l_active_limits01->min_n_per_mba),
-                        (uint32_t)((l_mba23_mba_maxn << 16) | l_active_limits23->min_n_per_mba));
+                TRAC_IMP("New MBA throttle max|min N values: mba[0x%08x]",
+                        (uint32_t)((l_mba_maxn << 16) | l_active_limits->min_n_per_mba));
                 break;
             }
         }

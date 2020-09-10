@@ -53,9 +53,15 @@
 
 #define STATIC_IPC_TABLES
 // PBA Slave allocated to Gpe 1 is PBA_SLAVE 2. SET PBASLVCTLN to 2 here.
-#define PBASLVCTLN 2
+#define PBASLVCTLN 1
 
 #define PPE42_MACHINE_CHECK_HANDLER \
     b __gpe1_machine_check_handler
+
+#define PPE_CAPTURE_INTERRUPT_FFDC \
+    mfedr   %r2     ; \
+    stcxu   %r1,    -PK_CTX_SIZE(%r1); \
+    mtedr   %r2     ; \
+    _liw    %r2, _SDA2_BASE_ ;
 
 #endif /*__PK_APP_CFG_H__*/

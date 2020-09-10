@@ -785,7 +785,7 @@ void amec_health_check_membuf_timeout()
         G_membuf_temp_updated_bitmap = 0;
 
         //check if we need to increment any timers
-        l_need_inc = G_present_membufs & ~l_temp_update_bitmap;
+        l_need_inc = G_membuf_dts_enabled & ~l_temp_update_bitmap;
 
         //check if we need to clear any timers
         l_need_clr = l_temp_update_bitmap & ~L_temp_update_bitmap_prev;

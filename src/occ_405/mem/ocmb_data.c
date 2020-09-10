@@ -29,7 +29,8 @@
 #include "trac.h"
 #include "membuf_structs.h"
 #include "memory.h"
-#include "memory_data.h"
+#include "memory_data.h" 
+#include "amec_sys.h"
 
 // Used for specifing buffer allocations
 #define NUM_DATA_EMPTY_BUF  1
@@ -64,6 +65,7 @@ extern gpe_shared_data_t G_shared_gpe_data;
 //Global G_present_membufs is bitmask of all membufs
 //(1 = present, 0 = not present. Core 0 has the most significant bit)
 uint32_t G_present_membufs = 0;
+uint32_t G_membuf_dts_enabled = 0;
 
 //Memory data collect structures used for task data pointers
 struct membuf_data_task {
@@ -86,7 +88,7 @@ membuf_data_task_t G_membuf_data_task = {
 };
 
 dimm_sensor_flags_t G_dimm_enabled_sensors = {{0}};
-dimm_sensor_flags_t G_dimm_present_sensors = {{0}};
+dimm_sensor_flags_t G_dimm_configured_sensors = {{0}};
 
 //AMEC needs to know when data for a membuf has been collected.
 uint32_t G_updated_membuf_mask = 0;
@@ -134,7 +136,7 @@ void disable_membuf(uint32_t i_membuf)
  * data.
  * @post G_membufConfiguration populated
  * @post G_present_membufs populated
- * @post G_dimm_present_sensors
+ * @post G_dimm_enabled_sensors populated
  * @post G_membuf_data_task populated
  * @post GPE request to call for recover created ?
  * @post GPE request to call for throttle conttrol created
@@ -145,7 +147,10 @@ void ocmb_init(void)
 {
     //errlHndl_t err = NULL;
     int rc = 0;
+    int gpe_request_rc = 0;
     int membuf_idx = 0;
+    int l_reset_on_error = 1;
+    uint32_t missing_membuf_bitmap = 0;
     do
     {
         TRAC_INFO("ocmb_init: Initializing Memory Data Controller");
@@ -163,6 +168,7 @@ void ocmb_init(void)
         rc = membuf_configuration_create(&G_membufConfiguration);
         if( rc )
         {
+            l_reset_on_error = 1;
             break;
         }
 
@@ -171,24 +177,64 @@ void ocmb_init(void)
             if( G_membufConfiguration.baseAddress[membuf_idx] )
             {
                 // A valid inband Bar value was found, check for enabled DTS
+                // Enable dts if enabled in HW and configured by TMGT.
                 if(G_membufConfiguration.dts_config & CONFIG_MEMDTS0(membuf_idx))
                 {
-                    G_dimm_enabled_sensors.bytes[membuf_idx] |= DIMM_SENSOR0;
+                   if(G_dimm_configured_sensors.bytes[membuf_idx] & DIMM_SENSOR0)
+                   {
+                       G_dimm_enabled_sensors.bytes[membuf_idx] |= DIMM_SENSOR0;
+                   }
+                   else
+                   {
+                       TRAC_INFO("ocmb_init: Membuf[%d] Ignoring DIMM sensor0 found "
+                                 "enabled in hardware, but not configured by TMGT.",
+                                 membuf_idx);
+                   }
                 }
+
                 if(G_membufConfiguration.dts_config & CONFIG_MEMDTS1(membuf_idx))
                 {
-                    G_dimm_enabled_sensors.bytes[membuf_idx] |= (DIMM_SENSOR0 >> 1);
+                   if(G_dimm_configured_sensors.bytes[membuf_idx] & (DIMM_SENSOR0 >> 1))
+                   {
+                       G_dimm_enabled_sensors.bytes[membuf_idx] |= (DIMM_SENSOR0 >> 1);
+                   }
+                   else
+                   {
+                       TRAC_INFO("ocmb_init: Membuf[%d] Ignoring DIMM sensor1 found "
+                                 "enabled in hardware, but not configured by TMGT.",
+                                 membuf_idx);
+                   }
                 }
-                TRAC_INFO("ocmb_init: Membuf[%d] Found.",
-                          membuf_idx);
+
+                if(G_membufConfiguration.dts_config & CONFIG_UBDTS0(membuf_idx))
+                {
+                    if((MEMBUF_PRESENT(membuf_idx)) &&
+                       (g_amec->proc[0].memctl[membuf_idx].membuf.membuf_hottest.temp_fru_type != DATA_FRU_NOT_USED))
+                    {
+                        G_membuf_dts_enabled |= MEMBUF_BY_MASK(membuf_idx);
+                    }
+                    else
+                    {
+                        TRAC_INFO("ocmb_init: Ignoring membuf[%d]. Sensor configured"
+                                  " in hardware, but not configured by TMGT",
+                                  membuf_idx);
+                    }
+                }
+            }
+            else if (MEMBUF_PRESENT(membuf_idx)) //Only true if 1+ related TMGT configured dts
+            {
+                TRAC_ERR("ocmb_init: OCMB[%d] There are dts configured by TMGT, but"
+                         "not configured in hardware. Ignoring dts.",
+                         membuf_idx);
+
+                missing_membuf_bitmap |= MEMBUF_BY_MASK(membuf_idx);
+                G_present_membufs &= ~(MEMBUF_BY_MASK(membuf_idx));
             }
         }
 
         TRAC_IMP("ocmb_init: G_present_membufs = 0x%08x", G_present_membufs);
 
-        G_dimm_present_sensors = G_dimm_enabled_sensors;
-
-        TRAC_IMP("bitmap of present dimm temperature sensors: 0x%08X%08X %08X%08X",
+        TRAC_IMP("bitmap of enabled dimm temperature sensors: 0x%08X%08X %08X%08X",
                  (uint32_t)(G_dimm_enabled_sensors.dw[0]>>32),
                  (uint32_t)G_dimm_enabled_sensors.dw[0],
                  (uint32_t)(G_dimm_enabled_sensors.dw[1]>>32),
@@ -200,30 +246,84 @@ void ocmb_init(void)
         G_membuf_data_parms.update = -1;
         G_membuf_data_parms.data = 0;
 
-        rc = gpe_request_create(
-                &G_membuf_data_task.gpe_req,     //gpe_req for the task
-                &G_async_gpe_queue1,              //queue
-                IPC_ST_MEMBUF_DATA_FUNCID,        //Function ID
-                &G_membuf_data_parms,            //parm for the task
-                SSX_WAIT_FOREVER,                 //
-                NULL,                             //callback
-                NULL,                             //callback argument
-                0 );                              //options
-        if( rc )
+        gpe_request_rc = 
+            gpe_request_create(
+                               &G_membuf_data_task.gpe_req,     //gpe_req for the task
+                               &G_async_gpe_queue1,              //queue
+                               IPC_ST_MEMBUF_DATA_FUNCID,        //Function ID
+                               &G_membuf_data_parms,            //parm for the task
+                               SSX_WAIT_FOREVER,                 //
+                               NULL,                             //callback
+                               NULL,                             //callback argument
+                               0 );                              //options
+
+        if( gpe_request_rc )
         {
             TRAC_ERR("ocmb_init: gpe_request_create failed for "
                      "G_membuf_data_task.gpe_req. rc = 0x%08x", rc);
+            /* @
+             * @errortype
+             * @moduleid    MEM_MID_OCMB_INIT_MOD
+             * @reasoncode  GPE_REQUEST_CREATE_FAILURE
+             * @userdata1   rc - Return code of failing function
+             * @userdata4   OCC_NO_EXTENDED_RC
+             * @devdesc     Failed to create gpe request to read memory buffer sensors
+             */
+            errlHndl_t l_err =
+                createErrl(
+                           MEM_MID_OCMB_INIT_MOD,             //modId
+                           GPE_REQUEST_CREATE_FAILURE,        //reasoncode
+                           OCC_NO_EXTENDED_RC,                //Extended reasoncode
+                           ERRL_SEV_PREDICTIVE,               //Severity
+                           NULL,                              //Trace Buf
+                           DEFAULT_TRACE_SIZE,                //Trace Size
+                           gpe_request_rc,                    //userdata1
+                           0                                  //userdata2
+                          );
+
+            // Capture the GPE1 trace buffer
+            addUsrDtlsToErrl(l_err,
+                             (uint8_t *) G_shared_gpe_data.gpe1_tb_ptr,
+                             G_shared_gpe_data.gpe1_tb_sz,
+                             ERRL_USR_DTL_STRUCT_VERSION_1,
+                             ERRL_USR_DTL_TRACE_DATA);
+
+            REQUEST_RESET(l_err);
+
             break;
         }
 
     } while(0);
+
+    if(!rc && !gpe_request_rc)
+    {
+        if(missing_membuf_bitmap)
+        {
+            // already traced
+            rc = RC_OCMB_DTS_NOT_CONFIGURED | missing_membuf_bitmap;
+            l_reset_on_error = 0;
+        }
+        else if((G_dimm_enabled_sensors.dw[0] != G_dimm_configured_sensors.dw[0]) ||
+                (G_dimm_enabled_sensors.dw[1] != G_dimm_configured_sensors.dw[1]))
+        {
+            TRAC_ERR("ocmb_init: There are TMGT configured DIMM sensors that are not configured"
+                     " in hardware. Bitmap of configured dimm dts: 0x%08X%08X %08X%08X",
+                     (uint32_t)(G_dimm_configured_sensors.dw[0]>>32),
+                     (uint32_t)G_dimm_configured_sensors.dw[0],
+                     (uint32_t)(G_dimm_configured_sensors.dw[1]>>32),
+                     (uint32_t)G_dimm_configured_sensors.dw[1]);
+
+            rc = RC_DIMM_DTS_NOT_CONFIGURED;
+            l_reset_on_error = 0;
+        }
+    }
 
     if( rc )
     {
         /* @
          * @errortype
          * @moduleid    MEM_MID_OCMB_INIT_MOD
-         * @reasoncode  SSX_GENERIC_FAILURE
+         * @reasoncode  INVALID_CONFIG_DATA
          * @userdata1   rc - Return code of failing function
          * @userdata4   OCC_NO_EXTENDED_RC
          * @devdesc     Failed to initialize memory buffer sensors
@@ -231,7 +331,7 @@ void ocmb_init(void)
         errlHndl_t l_err =
             createErrl(
                        MEM_MID_OCMB_INIT_MOD,             //modId
-                       SSX_GENERIC_FAILURE,               //reasoncode
+                       INVALID_CONFIG_DATA,               //reasoncode
                        OCC_NO_EXTENDED_RC,                //Extended reasoncode
                        ERRL_SEV_PREDICTIVE,               //Severity
                        NULL,                              //Trace Buf
@@ -248,9 +348,17 @@ void ocmb_init(void)
                          ERRL_USR_DTL_TRACE_DATA);
 
 
-        REQUEST_RESET(l_err);
+        if(l_reset_on_error)
+        {
+            REQUEST_RESET(l_err);
+        }
+        else
+        {
+            commitErrl(&l_err);
+            ocmb_control_init();
+        }
     }
-    else
+    else if (!gpe_request_rc)
     {
         ocmb_control_init();
     }

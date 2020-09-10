@@ -44,16 +44,16 @@ uint16_t G_configured_mbas = 0;
 extern MemBufScomParms_t G_membuf_control_reg_parms;
 
 // This array identifies dimm throttle limits
-memory_throttle_t G_memoryThrottleLimits[MAX_NUM_MEM_CONTROLLERS][MAX_NUM_MCU_PORTS] = {{{0}}};
+memory_throttle_t G_memoryThrottleLimits[MAX_NUM_MEM_CONTROLLERS] = {{0}};
 
 //Memory structure used for task data pointers
 memory_control_task_t G_memory_control_task =
 {
-    .startMemIndex        = 0,  // First Memory Control Index (membuf/MC_pair|port)
-    .prevMemIndex         = 7,  // Previous Memory Control Index written to
-    .curMemIndex          = 0,  // Current Memory Control Index
-    .endMemIndex          = 7,  // Last Memory Control Index
-    .traceThresholdFlags  = 0,  // Trace Throttle Flags
+    .startMemIndex        = 0,                            // First Memory Control Index (membuf/MC_pair|port)
+    .prevMemIndex         = (MAX_NUM_MEM_CONTROLLERS-1),  // Previous Memory Control Index written to
+    .curMemIndex          = 0,                            // Current Memory Control Index
+    .endMemIndex          = (MAX_NUM_MEM_CONTROLLERS-1),  // Last Memory Control Index
+    .traceThresholdFlags  = 0,                            // Trace Throttle Flags
 };
 
 void ocmb_init(void);
@@ -156,7 +156,7 @@ void task_memory_control( task_t * i_task )
         memControlTask->curMemIndex = memIndex;
 
         if(!MEMBUF_PRESENT(memIndex) ||
-           (!MBA_CONFIGURED(memIndex, 0) && !MBA_CONFIGURED(memIndex, 1)))
+           !MBA_CONFIGURED(memIndex))
         {
             break;
         }

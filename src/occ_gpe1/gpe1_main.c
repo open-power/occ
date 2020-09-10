@@ -111,9 +111,15 @@ int main(int argc, char **argv)
     G_dataParms.data = (uint64_t*)(&G_escache);
     G_membuf_config = &G_membufConfiguration;
 
+    G_membufConfiguration.config = 0xf000ff00;
+
+    rc = gpe_ocmb_configuration_create(&G_membufConfiguration);
+
+    PK_TRACE("gpe_ocmb_configuration_create rc = %d",rc);
+
     rc = get_ocmb_sensorcache(&G_membufConfiguration, &G_dataParms);
 
-    PK_TRACE("get_ocmb_sensorcache rc = %x",rc);
+    PK_TRACE("get_ocmb_sensorcache rc = %d",rc);
 #endif
     return 0;
 }

@@ -64,13 +64,6 @@ void task_memory_data(struct task *i_self)
     {
         L_dimms_enabled = true;
         TRAC_INFO("task_memory_data: Memory temp collection is being started");
-        TRAC_INFO("Memory temp collection starting present DIMMs: 0x%08X%08X%08X%08X",
-                 (uint32_t)(G_dimm_present_sensors.dw[0]>>32),
-                 (uint32_t)G_dimm_present_sensors.dw[0],
-                 (uint32_t)(G_dimm_present_sensors.dw[1]>>32),
-                 (uint32_t)G_dimm_present_sensors.dw[1]);
-
-        G_dimm_enabled_sensors = G_dimm_present_sensors;
     }
 
     if(G_mem_monitoring_allowed)

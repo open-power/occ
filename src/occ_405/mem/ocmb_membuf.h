@@ -29,6 +29,8 @@
 #include "memory.h"
 #include "membuf_structs.h"
 
+#define RC_OCMB_DTS_NOT_CONFIGURED (0xE0000000)
+#define RC_DIMM_DTS_NOT_CONFIGURED (0xD0000000)
 
 extern MemBufConfiguration_t G_membufConfiguration;
 

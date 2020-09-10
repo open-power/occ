@@ -97,6 +97,34 @@ void amec_update_ocmb_sensors(uint8_t i_membuf)
 
 // Function Specification
 //
+// Name: decode_ocmb_dts
+//
+// Description: Decode DTS readings from OCMB
+//
+// End Function Specification
+
+int32_t decode_ocmb_dts(uint16_t i_reading)
+{
+    int32_t l_dimm_temp = 0;
+
+    // Swap MSB and LSB
+    uint16_t dts_reading = (i_reading >> 8) | (i_reading << 8);
+
+    dts_reading &= 0x3fff;  // mask of TCRIT HIGH LOW bits
+    if(dts_reading & 0x1000) // check sign bit
+    {
+        dts_reading |= 0xe000;  // Sign extend
+    }
+    l_dimm_temp = dts_reading;  // Temp in (1/16) deg C
+    l_dimm_temp /= 16;
+    if(dts_reading & 0x0008) // fraction - round up
+        ++l_dimm_temp;
+
+    return l_dimm_temp;
+}
+
+// Function Specification
+//
 // Name: amec_update_ocmb_dimm_dts_sensors
 //
 // Description: Updates sensors that have data from the membuf sensor cache
@@ -156,7 +184,10 @@ void amec_update_ocmb_dimm_dts_sensors(OcmbMemData * i_sensor_cache, uint8_t i_m
 
         fru_temp_t* l_fru = &l_membuf_ptr->dimm_temps[k];
 
-        l_dimm_temp = i_sensor_cache->memdts[k];
+        // The dts reading is mangled
+        // see ekb/chips/ocmb/explorer/procedures/hwp/memory/lab/sdk/temp_sensor/exp_temperature_sensor_utils.H
+        l_dimm_temp = decode_ocmb_dts(i_sensor_cache->memdts[k]);
+
         l_prev_temp = l_fru->cur_temp;
         if(!l_prev_temp)
         {
@@ -295,11 +326,11 @@ void amec_update_ocmb_dts_sensors(OcmbMemData * i_sensor_cache, uint8_t i_membuf
 #define MAX_VALID_MEMBUF_TEMP 125 //according to Mike Pardiek
 
     uint16_t l_dts;
-    uint16_t l_sens_temp;
+    int32_t l_sens_temp;
     int32_t  l_prev_temp;
     static uint8_t L_ran_once[MAX_NUM_OCMBS] = {FALSE};
 
-    l_sens_temp = i_sensor_cache->ubdts0;
+    l_sens_temp = decode_ocmb_dts(i_sensor_cache->ubdts0);
 
     amec_membuf_t* l_membuf_ptr = &g_amec->proc[0].memctl[i_membuf].membuf;
     fru_temp_t* l_fru = &l_membuf_ptr->membuf_hottest;

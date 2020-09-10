@@ -31,17 +31,20 @@
 
 extern uint32_t gpe1_machine_check_handler(uint32_t srr0,
                                            uint32_t srr1,
-                                           uint32_t edr);
+                                           uint32_t edr,
+                                           uint32_t stack_ptr);
 extern uint32_t g_inband_access_state;
 
 uint32_t gpe1_machine_check_handler(uint32_t srr0,
                                     uint32_t srr1,
-                                    uint32_t edr)
+                                    uint32_t edr,
+                                    uint32_t stack_ptr)
 {
-    PK_TRACE("GPE1 Machine check! SRR0:%08x SRR1: %08x EDR:%08x",
+    PK_TRACE("GPE1 Machine check! SRR0:%08x SRR1: %08x EDR:%08x StackPtr:%08x",
              srr0,
              srr1,
-             edr);
+             edr,
+             stack_ptr);
 
     // It's possible to get back-to-back machine checks for the same condition
     // so MEMBUF_CHANNEL_CHECKSTOP may already be set. Also check that the

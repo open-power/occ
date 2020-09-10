@@ -29,6 +29,7 @@
 #include "occ_sys_config.h"
 
 #define MEMBUF0_PRESENT_MASK      0x00008000ul
+#define DIMM_SENSOR0 0x80
 
 typedef enum
 {
@@ -96,10 +97,11 @@ struct memory_control_task {
 } __attribute__ ((__packed__));
 typedef struct memory_control_task memory_control_task_t;
 
-extern memory_throttle_t G_memoryThrottleLimits[MAX_NUM_MEM_CONTROLLERS][MAX_NUM_MCU_PORTS];
+extern memory_throttle_t G_memoryThrottleLimits[MAX_NUM_MEM_CONTROLLERS];
 
 //Global is bitmask of membufs
 extern uint32_t G_present_membufs;
+extern uint32_t G_membuf_dts_enabled;
 
 //global bitmap of dimms that have ever gone over the error temperature
 extern dimm_sensor_flags_t G_dimm_overtemp_bitmap;
@@ -122,6 +124,7 @@ extern uint16_t G_membuf_temp_updated_bitmap;
 
 extern uint16_t G_configured_mbas;
 extern dimm_sensor_flags_t G_dimm_enabled_sensors;
+extern dimm_sensor_flags_t G_dimm_configured_sensors;
 
 //AMEC needs to know when data for a membuf has been collected.
 extern uint32_t G_updated_membuf_mask;

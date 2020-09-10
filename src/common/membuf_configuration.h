@@ -208,7 +208,7 @@ typedef enum
 // BAR and PBA_SLAVE assigned to gpe1 membuf
 //  - @see POWER Energy Management Hcode/HWP spec
 #define PBA_BAR_MEMBUF  1
-#define PBA_SLAVE_MEMBUF 2
+#define PBA_SLAVE_MEMBUF 1
 
 // These are used to setup MemBufConfiguration.config field
 #define CHIP_CONFIG_MCS_BASE 0

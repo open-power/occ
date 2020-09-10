@@ -118,24 +118,52 @@ int inband_scom_setup(MemBufConfiguration_t* i_config,
                       uint32_t i_scom_address,
                       uint32_t *o_oci_addr)
 {
-    pba_slvctln_t slvctln;
+    int rc = 0;
 
     uint64_t pb_addr = i_config->baseAddress[i_membuf_instance];
     pb_addr |= ((uint64_t)i_scom_address << 3);
 
+#if defined(__USE_PBASLV__)
+    pba_slvctln_t slvctln;
     // put bits 23:36 of address into slvctln extended addr
     PPE_LVD((i_config->scomParms).slvctl_address, slvctln.value);
     slvctln.fields.extaddr = pb_addr >> 27;
+    pbaslvctl_reset(&(i_config->scomParms));
     PPE_STVD((i_config->scomParms).slvctl_address, slvctln.value);
+#else
 
-    // make oci address
+    {
+        // pba_addr[8:36] are from the PBABAR (mask off bar bits 37:43)
+        // pba_addr[37:63] come from OCI address[5:31]
+        uint64_t barMsk = 0x0000000007f00000ull;
+        mtmsr(mfmsr() | MSR_SEM); // Mask off SIB errors
+        // [8:36] into BAR
+        rc = putscom_abs(PBA_BARN(PBA_BAR_MEMBUF), pb_addr & 0x00fffffff8000000ull);
+        if(rc)
+        {
+            PK_TRACE("inband_scom_setup. putscom fail on PBABAR."
+                     " rc = %d",rc);
+        }
+        else
+        {
+            rc = putscom_abs(PBA_BARMSKN(PBA_BAR_MEMBUF), barMsk);
+            if(rc)
+            {
+                PK_TRACE("inband_scom_setup. putscom fail on PBABARMSK"
+                         " rc = %d",rc);
+            }
+        }
+    }
+
+#endif
+    // oci address pb_addr[37:63] -> oci_addr[5:31]
     *o_oci_addr = (uint32_t)(pb_addr & 0x07ffffffull);
 
     // upper nibble is PBA region and BAR_SELECT
     *o_oci_addr  |= ((PBA_BAR_MEMBUF | 0x8) << 28);
     PK_TRACE_DBG("OCI mapped scom addr: %08x",*o_oci_addr);
 
-    return 0;
+    return rc;
 }
 
 void pbaslvctl_reset(GpePbaParms* i_pba_parms)
@@ -393,10 +421,10 @@ int membuf_scom_rmw(MemBufConfiguration_t* i_config,
     {
 
         rc = inband_access(i_config,
-                            i_membuf_instance,
-                            oci_addr,
-                            &data64,
-                            INBAND_ACCESS_READ);
+                           i_membuf_instance,
+                           oci_addr,
+                           &data64,
+                           INBAND_ACCESS_READ);
 
         if(!rc)
         {
@@ -404,12 +432,13 @@ int membuf_scom_rmw(MemBufConfiguration_t* i_config,
             data64 |= *i_data;
 
             rc = inband_access(i_config,
-                                i_membuf_instance,
-                                oci_addr,
-                                &data64,
-                                INBAND_ACCESS_WRITE);
+                               i_membuf_instance,
+                               oci_addr,
+                               &data64,
+                               INBAND_ACCESS_WRITE);
         }
     }
+
 
     pbaslvctl_reset(&(i_config->scomParms));
     PPE_STVD((i_config->scomParms).slvctl_address, pba_slvctln_save);

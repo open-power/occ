@@ -345,7 +345,9 @@ int gpe_ocmb_configuration_create(MemBufConfiguration_t* o_config)
     int i = 0;
     int designated_sync = -1;
     mcfgpr_t mcfgpr;
-    uint64_t*   ptr = (uint64_t*)o_config;
+    uint64_t*   ptr64 = (uint64_t*)o_config;
+    ocmb_therm_t sensor;
+    int fail_count = 0;
 
     // Prevent unwanted interrupts from scom errors
     // Enable store Gathering, and Icache prefetch for performance.
@@ -356,8 +358,9 @@ int gpe_ocmb_configuration_create(MemBufConfiguration_t* o_config)
     uint32_t l_config = o_config->config;
     for(i = 0; i < sizeof(MemBufConfiguration_t) / 8; ++i)
     {
-        *ptr++ = 0ull;
+        *ptr64++ = 0ull;
     }
+    barrier();   //Needed to prevent compiler optimizing out restore of l_config
 
     o_config->configRc = MEMBUF_NOT_CONFIGURED;
     o_config->membuf_type = MEMTYPE_OCMB;
@@ -406,7 +409,7 @@ int gpe_ocmb_configuration_create(MemBufConfiguration_t* o_config)
 
             if(!mcfgpr.fields.mmio_valid)
             {
-                continue;  // MEMBUF MMIOBAR not configured, ignore MEMBUF
+                continue;  // MEMBUF MMIOBAR not configured, ignore MEMBUFs
             }
 
             l_mmio_bar =
@@ -420,10 +423,8 @@ int gpe_ocmb_configuration_create(MemBufConfiguration_t* o_config)
             l_pba_addr >>= 8;
 
             o_config->baseAddress[2*i] = l_pba_addr;
-            if(o_config->config & CHIP_CONFIG_MEMBUF((2*i)+1))
-            {
-                o_config->baseAddress[(2*i)+1] = l_pba_addr | OCMB_IB_BAR_B_BIT;
-            }
+            o_config->baseAddress[(2*i)+1] = l_pba_addr | OCMB_IB_BAR_B_BIT;
+
             // Add this MC channel to the configuration
             o_config->config |= CHIP_CONFIG_MCS(i);
         }
@@ -476,51 +477,73 @@ int gpe_ocmb_configuration_create(MemBufConfiguration_t* o_config)
             }
         }
 
-        if(!rc)
+        // Find out which DTS are present
+        for(i = 0; i < OCCHW_N_MEMBUF; ++i)
         {
-            // Find out which DTS are present
-            OcmbMemData escache;
-            MemBufGetMemDataParms_t l_parms;
-
-            l_parms.update = -1;  // NONE
-            l_parms.data = (uint64_t *)(&escache);
-
-            for(i = 0; i < OCCHW_N_MEMBUF; ++i)
+            if( o_config->baseAddress[i] != 0 )
             {
-                if( CHIP_CONFIG_MEMBUF(i) & (o_config->config))
+                fail_count = 0;
+                rc = membuf_get_scom(o_config, i, MMIO_OCTHERM, &(sensor.value));
+                if(rc)
                 {
-                    // Collect sensor cache data for this instance.
-                    l_parms.collect = i;
-                    rc = get_ocmb_sensorcache(o_config, &l_parms);
-                    if( rc )
-                    {
-                        PK_TRACE("gpe_ocmb_configuration_create failed to"
-                                 " get sensorcache for MEMBUF %d, rc = %d.",
-                                 i, rc);
-
-                        // Take this membuf out of the config
-                        o_config->config &= ~(CHIP_CONFIG_MEMBUF(i));
-
-                        continue; // Thermal sensors not available.
-                    }
-
-                    if(escache.status.fields.ubdts0_present)
+                    PK_TRACE("gpe_ocmb_configuration_create failed to read"
+                             " MMIO_OCTHERM for OCMB %d. rc = %d",
+                             i, rc);
+                    ++fail_count;
+                }
+                else
+                {
+                    if(sensor.fields.present)
                     {
                         o_config->dts_config |= CONFIG_UBDTS0(i);
                     }
-                    if(escache.status.fields.memdts0_present)
+                }
+
+                rc = membuf_get_scom(o_config, i, MMIO_D0THERM, &(sensor.value));
+                if(rc)
+                {
+                    PK_TRACE("gpe_ocmb_configuration_create failed to read"
+                             " MMIO_D0THERM for OCMB %d. rc = %d",
+                             i, rc);
+                    ++fail_count;
+                }
+                else
+                {
+                    if(sensor.fields.present)
                     {
                         o_config->dts_config |= CONFIG_MEMDTS0(i);
                     }
-                    if(escache.status.fields.memdts1_present)
+                }
+
+                rc = membuf_get_scom(o_config, i, MMIO_D1THERM, &(sensor.value));
+                if(rc)
+                {
+                    PK_TRACE("gpe_ocmb_configuration_create failed to read"
+                             " MMIO_D1THERM for OCMB %d. rc = %d",
+                             i, rc);
+                    ++fail_count;
+                }
+                else
+                {
+                    if(sensor.fields.present)
                     {
                         o_config->dts_config |= CONFIG_MEMDTS1(i);
                     }
-                    PK_TRACE("Ocmb dts_config: %08x",o_config->dts_config);
                 }
+
+                if(fail_count == 3)
+                {
+                    // This OCMB is not configured correctly. Remove it.
+                    o_config->config &= ~(CHIP_CONFIG_MEMBUF(i));
+                    o_config->baseAddress[i] = 0;
+                }
+                rc = 0; // error not terminal. The 405 will notice any missing sensors.
             }
         }
 
+        PK_TRACE("OCMB dts_config: %08x%08x",
+                 (uint32_t)(o_config->dts_config >> 32),
+                 (uint32_t)(o_config->dts_config));
     }
     while( 0 );
 
@@ -580,12 +603,11 @@ int ocmb_throttle_sync(MemBufConfiguration_t* i_config)
     // https://farm3802.rtp.stglabs.ibm.com/regdb/entire_table.php?db=FIGDB_cb1_25_36_DB&name=MB_SIM.SRQ.MBA_FARB3Q
     // SYNC only needed if OCMB_MBA_FARB3Q bit cfg_nm_change_after_sync is set.
     // HWP programs this.
-    // Ocmb may not need to sync as it only has one FARB3Q reg to write.
     uint64_t data;
     int rc = 0;
     do
     {
-        // No designated sync addr, therefore Sync not needed.
+        // No designated sync addr, therefore Sync not enabled.
         if(i_config->mcSyncAddr == 0)
         {
             break;
@@ -684,7 +706,7 @@ int get_ocmb_sensorcache(MemBufConfiguration_t* i_config,
     if(i_parms->collect != -1)
     {
         if((i_parms->collect >= OCCHW_N_MEMBUF) ||
-           (0 == (CHIP_CONFIG_MEMBUF(i_parms->collect) & (i_config->config))))
+           (0 == i_config->baseAddress[i_parms->collect]))
         {
             rc = MEMBUF_GET_MEM_DATA_COLLECT_INVALID;
         }

@@ -1904,6 +1904,12 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
                             break;
                         }
 
+                        // membuf must be present if at least one membuf or dimm dts is used.
+                        if(l_data_set->dimm_info2 != DATA_FRU_NOT_USED)
+                        {
+                            G_present_membufs |= MEMBUF0_PRESENT_MASK >> l_membuf_num;
+                        }
+
                         if(l_dimm_num == 0xFF) // sensors are for the Memory Buffer itself
                         {
                             // Store the hardware sensor ID
@@ -1915,12 +1921,16 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
                             // Store the thermal sensor type
                             g_amec->proc[0].memctl[l_membuf_num].membuf.membuf_hottest.temp_fru_type = l_data_set->dimm_info2;
 
-                            G_present_membufs |= MEMBUF0_PRESENT_MASK >> l_membuf_num;
-
                             l_num_mem_bufs++;
                         }
                         else // individual DIMM
                         {
+                            // Track TMGT configured/requested DIMM sensors
+                            if(l_data_set->dimm_info2 != DATA_FRU_NOT_USED)
+                            {
+                                G_dimm_configured_sensors.bytes[l_membuf_num] |= (DIMM_SENSOR0 >> l_dimm_num);
+                            }
+
                             // Store the hardware sensor ID
                             G_sysConfigData.dimm_huids[l_membuf_num][l_dimm_num] = l_data_set->hw_sensor_id;
 

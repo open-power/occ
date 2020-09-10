@@ -90,4 +90,23 @@ typedef union ocmb_mba_farb3q
     } fields;
 } ocmb_mba_farb3q_t;
 
+typedef union ocmb_therm
+{
+    uint64_t value;
+    struct
+    {
+        uint32_t high_order;
+        uint32_t low_order;
+    } words;
+
+    struct
+    {
+        uint64_t reserved0:         45;
+        uint64_t present:            1;
+        uint64_t valid:              1;
+        uint64_t error:              1;
+        uint64_t data:              16;
+    } fields;
+} ocmb_therm_t;
+
 #endif

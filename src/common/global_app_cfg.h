@@ -31,7 +31,7 @@
 // Simics will use internal timebase (external not implemented)
 
 // This is the default 405 frequency and default OCB_OTBR frequency for P10
-#define DEFAULT_OCC405_FREQ_HZ (5020000000/4)
+#define DEFAULT_OCC405_FREQ_HZ (2050000000/4)
 #define DEFAULT_EXT_CLK_FREQ_HZ (DEFAULT_OCC405_FREQ_HZ/16)
 
 // Turn off periodic GPE traces
