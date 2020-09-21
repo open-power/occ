@@ -311,6 +311,7 @@ typedef struct __attribute__ ((packed))
 }cmdh_thrm_thresholds_v30_t;
 
 // Header data for mem cfg packet
+// TODO RTC: 258705 Delete version 0x21
 typedef struct __attribute__ ((packed))
 {
     struct cmdh_fsp_cmd_header;
@@ -320,6 +321,17 @@ typedef struct __attribute__ ((packed))
     uint8_t                 ips_mem_pwr_ctl;      // Idle Power Save memory power control
     uint8_t                 num_data_sets;
 }cmdh_mem_cfg_header_v21_t;
+
+typedef struct __attribute__ ((packed))
+{
+    struct cmdh_fsp_cmd_header;
+    uint8_t                 format;
+    uint8_t                 version;
+    uint16_t                update_time_ms;       // time in ms that the cache line is updated
+    uint8_t                 default_mem_pwr_ctl;  // default memory power control
+    uint8_t                 ips_mem_pwr_ctl;      // Idle Power Save memory power control
+    uint8_t                 num_data_sets;
+}cmdh_mem_cfg_header_v30_t;
 
 // Config packet definition used to send
 // sensor mappings for membufs and dimms
@@ -334,11 +346,18 @@ typedef struct __attribute__ ((packed))
     uint8_t                    dimm_info3;  // Reserved
 }cmdh_mem_cfg_data_set_t;
 
+// TODO RTC: 258705 Delete version 0x21
 typedef struct __attribute__ ((packed))
 {
     cmdh_mem_cfg_header_v21_t   header;
     cmdh_mem_cfg_data_set_t data_set[1];
 }cmdh_mem_cfg_v21_t;
+
+typedef struct __attribute__ ((packed))
+{
+    cmdh_mem_cfg_header_v30_t   header;
+    cmdh_mem_cfg_data_set_t data_set[1];
+}cmdh_mem_cfg_v30_t;
 
 // Header data for mem throttle packet
 typedef struct __attribute__ ((packed))

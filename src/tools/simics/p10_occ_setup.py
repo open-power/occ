@@ -2881,7 +2881,7 @@ def occ_to_active(flg_nopgpe, flg_run, flg_verbose):
     RC = send_occ_cmd(0x00, "20", flg_verbose);
 
     print("\n#### SET MEMORY CONFIG ###################################################################################");
-    RC = send_occ_cmd(0x21, "0521000000", flg_verbose);
+    RC = send_occ_cmd(0x21, "053003E8000000", flg_verbose);
 
     print("\n#### SET THERMAL THRESHOLDS (TCT) ########################################################################");
     # FRU 0x00 = Processor, 0x03 = MC+DIMM  (DVFS temp, ERROR temp, max read timeout, reserved x 2)

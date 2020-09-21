@@ -56,7 +56,7 @@
 
 #define DATA_IPS_VERSION           0
 
-#define DATA_MEM_CFG_VERSION_20    0x20
+#define DATA_MEM_CFG_VERSION_30    0x30
 #define DATA_MEM_CFG_VERSION_21    0x21
 
 #define DATA_MEM_THROT_VERSION_30  0x30
@@ -105,6 +105,8 @@ const data_req_table_t G_data_pri_table[] =
 cmdh_ips_config_data_t G_ips_config_data = {0};
 
 bool G_mem_monitoring_allowed = FALSE;
+
+uint8_t G_read_ocmb_num_8ms_ticks = 1;
 
 // Save which voltage the GPU is using (1 = default (12V), 2 = 2nd voltage (54V))
 uint8_t G_gpu_volt_type[MAX_GPU_DOMAINS][MAX_NUM_GPU_PER_DOMAIN] = {{0}};
@@ -1771,9 +1773,12 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                     cmdh_fsp_rsp_t * o_rsp_ptr)
 {
     errlHndl_t                      l_err = NULL;
-    cmdh_mem_cfg_v21_t*             l_cmd_ptr = (cmdh_mem_cfg_v21_t*)i_cmd_ptr;
+// TODO RTC: 258705 Delete version 0x21
+    cmdh_mem_cfg_v21_t*             l_cmd_ptr_old = (cmdh_mem_cfg_v21_t*)i_cmd_ptr;
+    cmdh_mem_cfg_v30_t*             l_cmd_ptr = (cmdh_mem_cfg_v30_t*)i_cmd_ptr;
     uint16_t                        l_data_length = 0;
     uint16_t                        l_exp_data_length = 0;
+    uint16_t                        l_ocmb_update_time_ms = 0;
     uint8_t                         l_num_mem_bufs = 0;
     uint8_t                         l_num_dimms = 0;
     uint8_t                         l_dimm_num = 0;
@@ -1796,34 +1801,65 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
             }
         }
 
-        // Verify the version
-        if(l_cmd_ptr->header.version != DATA_MEM_CFG_VERSION_21)
+        // TODO RTC: 258705 Accept old version 0x21 until (H)TMGT supports new version 0x30
+
+        // Verify the version and length
+        if(l_cmd_ptr->header.version == DATA_MEM_CFG_VERSION_21)
+        {
+            num_data_sets = l_cmd_ptr_old->header.num_data_sets;
+            // Verify the actual data length matches the expected data length for this version
+            l_exp_data_length = sizeof(cmdh_mem_cfg_header_v21_t) - sizeof(cmdh_fsp_cmd_header_t) +
+                                (num_data_sets * sizeof(cmdh_mem_cfg_data_set_t));
+
+            if(l_exp_data_length != l_data_length)
+            {
+                CMDH_TRAC_ERR("data_store_mem_cfg: Invalid mem config data packet: "
+                              "data_length[%u] exp_length[%u] version[0x%02X] num_data_sets[%u]",
+                              l_data_length,
+                              l_exp_data_length,
+                              l_cmd_ptr->header.version,
+                              num_data_sets);
+
+                cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
+                break;
+            }
+
+            l_ocmb_update_time_ms = 1000;
+
+            // Store the mem config data
+            G_sysConfigData.ips_mem_pwr_ctl = l_cmd_ptr_old->header.ips_mem_pwr_ctl;
+            G_sysConfigData.default_mem_pwr_ctl = l_cmd_ptr_old->header.default_mem_pwr_ctl;
+        }
+        else if(l_cmd_ptr->header.version == DATA_MEM_CFG_VERSION_30)
+        {
+            num_data_sets = l_cmd_ptr->header.num_data_sets;
+            // Verify the actual data length matches the expected data length for this version
+            l_exp_data_length = sizeof(cmdh_mem_cfg_header_v30_t) - sizeof(cmdh_fsp_cmd_header_t) +
+                                (num_data_sets * sizeof(cmdh_mem_cfg_data_set_t));
+
+            if(l_exp_data_length != l_data_length)
+            {
+                CMDH_TRAC_ERR("data_store_mem_cfg: Invalid mem config data packet: "
+                              "data_length[%u] exp_length[%u] version[0x%02X] num_data_sets[%u]",
+                              l_data_length,
+                              l_exp_data_length,
+                              l_cmd_ptr->header.version,
+                              num_data_sets);
+
+                cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
+                break;
+            }
+
+            l_ocmb_update_time_ms = l_cmd_ptr->header.update_time_ms;
+
+            // Store the mem config data
+            G_sysConfigData.ips_mem_pwr_ctl = l_cmd_ptr->header.ips_mem_pwr_ctl;
+            G_sysConfigData.default_mem_pwr_ctl = l_cmd_ptr->header.default_mem_pwr_ctl;
+        }
+        else
         {
             CMDH_TRAC_ERR("data_store_mem_cfg: Invalid mem config data packet: version[0x%02X]",
                           l_cmd_ptr->header.version);
-
-            cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
-            break;
-        }
-
-        // Store the mem config data
-        G_sysConfigData.ips_mem_pwr_ctl = l_cmd_ptr->header.ips_mem_pwr_ctl;
-        G_sysConfigData.default_mem_pwr_ctl = l_cmd_ptr->header.default_mem_pwr_ctl;
-
-        num_data_sets = ((cmdh_mem_cfg_v21_t*) l_cmd_ptr)->header.num_data_sets;
-
-        // Verify the actual data length matches the expected data length for this version
-        l_exp_data_length = sizeof(cmdh_mem_cfg_header_v21_t) - sizeof(cmdh_fsp_cmd_header_t) +
-                            (num_data_sets * sizeof(cmdh_mem_cfg_data_set_t));
-
-        if(l_exp_data_length != l_data_length)
-        {
-            CMDH_TRAC_ERR("data_store_mem_cfg: Invalid mem config data packet: "
-                          "data_length[%u] exp_length[%u] version[0x%02X] num_data_sets[%u]",
-                          l_data_length,
-                          l_exp_data_length,
-                          l_cmd_ptr->header.version,
-                          num_data_sets);
 
             cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
             break;
@@ -1840,8 +1876,13 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
                 for(i=0; i<num_data_sets; i++)
                 {
                     cmdh_mem_cfg_data_set_t* l_data_set;
-                    cmdh_mem_cfg_v21_t*      l_cmd2_ptr = (cmdh_mem_cfg_v21_t*)i_cmd_ptr;
-                    l_data_set = &l_cmd2_ptr->data_set[i];
+                    l_data_set = &l_cmd_ptr->data_set[i];
+
+// TODO RTC: 258705 Delete version 0x21
+                    if(l_cmd_ptr->header.version == DATA_MEM_CFG_VERSION_21)
+                    {
+                        l_data_set = &l_cmd_ptr_old->data_set[i];
+                    }
 
                     // Verify matching memory type and process based on memory type
                     if (IS_OCM_MEM_TYPE(l_data_set->memory_type))
@@ -1952,6 +1993,24 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
         }
         else
         {
+            // calculate how often memory will be read based on how often OCMB is updating
+            // the cache line.  OCC shouldn't be reading faster than OCMB update time
+            // add 128ms to ocmb time to allow for slop in timing between OCC and OCMB
+            l_ocmb_update_time_ms += 128;
+            // task to read 1 OCMB is called every 8ms
+            // divide by (8ms * #OCMBs) to get number of 8ms ticks to read 1 OCMB
+            // i.e. 1000ms OCMB update time gives (1000+128)/(8*16) = 8 -> every 8 8ms calls (64ms) 1 OCMB read
+            // each OCMB read 64ms*16= 1,024ms
+            G_read_ocmb_num_8ms_ticks = l_ocmb_update_time_ms / (8*MAX_NUM_OCMBS);
+
+            // don't allow 0
+            if(G_read_ocmb_num_8ms_ticks == 0)
+               G_read_ocmb_num_8ms_ticks = 1;
+
+            CMDH_TRAC_IMP("1 OCMB will be read every %dms Each OCMB read every %dms",
+                          G_read_ocmb_num_8ms_ticks * 8,
+                          G_read_ocmb_num_8ms_ticks * 8 * MAX_NUM_OCMBS);
+
             // This notifies other code that we need to request the mem throttle packet
             // and we need to enable memory monitoring when we enter observation state
             G_mem_monitoring_allowed = TRUE;

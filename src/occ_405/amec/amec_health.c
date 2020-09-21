@@ -284,6 +284,7 @@ void amec_health_check_dimm_temp()
 void amec_health_check_dimm_timeout()
 {
     static dimm_sensor_flags_t L_temp_update_bitmap_prev = {{0}};
+    static dimm_sensor_flags_t L_trace_resume = {{0}};
     dimm_sensor_flags_t l_need_inc, l_need_clr, l_temp_update_bitmap;
     uint8_t l_dimm, l_other_dimm, l_membuf, l_temp_timeout;
     fru_temp_t* l_fru;
@@ -292,7 +293,6 @@ void amec_health_check_dimm_timeout()
     uint32_t    l_callouts_count = 0;
     uint32_t    l_redundancy_lost_callouts_count = 0;
     uint64_t    l_huid;
-    static bool L_ran_once = FALSE;
     uint8_t     l_max_membuf = 0; // number of membufs
     uint8_t     l_max_dimm_per_membuf = 0; // dimms per membuf
     uint8_t     l_ocm_dts_type_expired_bitmap = 0;
@@ -381,10 +381,13 @@ void amec_health_check_dimm_timeout()
                 // In Simics: the RTL timer is increased and a DIMM reading will not always
                 // complete on each call.  (an error will still be logged if reading does not
                 // meet the DIMM MAX_READ_TIMEOUT.)
-                if((l_fru->sample_age == 1) && (!G_simics_environment))
+                if((l_fru->sample_age == 2) && (!G_simics_environment))
                 {
                     TRAC_INFO("No new DIMM temperature available for DIMM%04X (cur_temp[%d] flags[0x%02X])",
                               (l_membuf<<8)|l_dimm, l_fru->cur_temp, l_fru->flags);
+
+                    // set flag to trace if this ever recovers
+                    L_trace_resume.bytes[l_membuf] |= (DIMM_SENSOR0 >> l_dimm);
                 }
 
                 //check if the temperature reading is still useable
@@ -411,8 +414,8 @@ void amec_health_check_dimm_timeout()
                 else // invalid type or not used, ignore
                    l_temp_timeout = 0xff;
 
-                if(l_temp_timeout == 0xff ||
-                   l_fru->sample_age < l_temp_timeout)
+                if( (l_temp_timeout == 0xff) ||
+                    (l_fru->sample_age < l_temp_timeout) )
                 {
                     continue;
                 }
@@ -587,10 +590,10 @@ void amec_health_check_dimm_timeout()
                 //clear timer
                 l_fru->sample_age = 0;
 
-                // In Simics: the RTL timer is increased and a DIMM reading will not always
-                // complete on each call.  Skip the "recovery" trace in Simics.
-                if((L_ran_once) && (!G_simics_environment))
+                // Trace recovery
+                if(L_trace_resume.bytes[l_membuf] & (DIMM_SENSOR0 >> l_dimm))
                 {
+                    L_trace_resume.bytes[l_membuf] &= ~(DIMM_SENSOR0 >> l_dimm);
                     TRAC_INFO("DIMM temperature collection has resumed for DIMM%04X temp[%d]",
                               (l_membuf<<8)|l_dimm, l_fru->cur_temp);
                 }
@@ -627,8 +630,6 @@ void amec_health_check_dimm_timeout()
                   G_ocmb_dts_type_expired_bitmap, l_ocm_dts_type_expired_bitmap);
         G_ocmb_dts_type_expired_bitmap = l_ocm_dts_type_expired_bitmap;
     }
-
-    L_ran_once = TRUE;
 
 } // end amec_health_check_dimm_timeout()
 
@@ -769,7 +770,7 @@ void amec_health_check_membuf_timeout()
     errlHndl_t  l_err = NULL;
     uint32_t    l_callouts_count = 0;
     uint64_t    l_huid;
-    static bool L_ran_once = FALSE;
+    static uint16_t L_trace_resume = 0;
 
     do
     {
@@ -827,10 +828,13 @@ void amec_health_check_membuf_timeout()
             }
 
             //info trace each transition to not having a new temperature
-            if(l_fru->sample_age == 1)
+            if(l_fru->sample_age == 2)
             {
                 TRAC_INFO("Failed to read membuf temperature on membuf[%d] temp[%d] flags[0x%02X]",
                               l_membuf, l_fru->cur_temp, l_fru->flags);
+
+                // set flag to trace if this ever recovers
+                L_trace_resume |= (MEMBUF0_PRESENT_MASK >> l_membuf);
             }
 
             //check if the temperature reading is still useable
@@ -945,15 +949,16 @@ void amec_health_check_membuf_timeout()
             l_fru->sample_age = 0;
 
             //info trace each time we recover
-            if(L_ran_once)
+            if(L_trace_resume & (MEMBUF0_PRESENT_MASK >> l_membuf))
             {
+                L_trace_resume &= ~(MEMBUF0_PRESENT_MASK >> l_membuf);
+
                 TRAC_INFO("membuf temperature collection has resumed on membuf[%d] temp[%d]",
                           l_membuf, l_fru->cur_temp);
             }
 
         }//iterate over all membufs
     }while(0);
-    L_ran_once = TRUE;
 }
 
 

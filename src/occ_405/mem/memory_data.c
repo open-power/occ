@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -44,13 +44,13 @@
 #include "i2c.h"
 
 extern bool G_mem_monitoring_allowed;
-
+extern uint8_t G_read_ocmb_num_8ms_ticks;
 
 // Function Specification
 //
 // Name:  task_memory_data
 //
-// Description: Called every other tick to collect memory temperatures
+// Description: Called every 8ms (tick0 only) to collect memory temperatures
 //
 // Task Flags: RTL_FLAG_ACTIVE
 //
@@ -58,6 +58,8 @@ extern bool G_mem_monitoring_allowed;
 void task_memory_data(struct task *i_self)
 {
     static unsigned int L_dimms_enabled = false;
+    static uint8_t L_num_8ms_ticks = 0;
+
     if (!L_dimms_enabled)
     {
         L_dimms_enabled = true;
@@ -71,9 +73,16 @@ void task_memory_data(struct task *i_self)
         G_dimm_enabled_sensors = G_dimm_present_sensors;
     }
 
-    if (G_mem_monitoring_allowed)
+    if(G_mem_monitoring_allowed)
     {
-        ocmb_data();
+        L_num_8ms_ticks++;
+
+        // check if it is time to read 1 OCMB
+        if(L_num_8ms_ticks == G_read_ocmb_num_8ms_ticks)
+        {
+            L_num_8ms_ticks = 0;
+            ocmb_data();
+        }
     }
 
 } // end task_memory_data()
