@@ -935,20 +935,20 @@ __save_ffdc_regs:
     # r6 gets the low 32 bits of the product of r3 and r4
     mullw       %r6, %r3, %r4
     # Put scom address in r3
-    _liwa       %r3, OCC_SCOM_OCCLFIR
+    #_liwa       %r3, OCC_SCOM_OCCLFIR
     # Save the FFDC buffer ptr in r4, _getscom saves the scom output at r4
-    _liwa       %r4, OCCLFIR
+    #_liwa       %r4, OCCLFIR
     # Call _getscom (non-panic version with timeout), timeout is 10us
-    bl          _getscom
+    #bl          _getscom
 
     # SCOM the PBAFIR into the buffer
-    _lwzsd      %r3, __ssx_timebase_frequency_mhz
-    li          %r4, 10
-    li          %r5, 0
-    mullw       %r6, %r3, %r4
-    _liwa       %r3, PBA_FIR
-    _liwa       %r4, PBAFIR
-    bl          _getscom
+    #_lwzsd      %r3, __ssx_timebase_frequency_mhz
+    #li          %r4, 10
+    #li          %r5, 0
+    #mullw       %r6, %r3, %r4
+    #_liwa       %r3, PBA_FIR
+    #_liwa       %r4, PBAFIR
+    #bl          _getscom
 
     # Save core (de)configuration
     _liw        %r5, OCB_CCSR

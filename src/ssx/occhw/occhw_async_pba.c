@@ -123,8 +123,10 @@ pba_common_ffdc(PbaCommonFfdc* ffdc)
 
         ffdc->mode.value = in64(PBA_MODE);
 
-        for (i = 0; i < PBA_READ_BUFFERS; i++)
+#if (OCCHW_USE_SCOM)
+       for (i = 0; i < PBA_READ_BUFFERS; i++)
         {
+
             getscom(PBA_RBUFVALN(i), &(ffdc->rbufval[i].value));
         }
 
@@ -143,7 +145,7 @@ pba_common_ffdc(PbaCommonFfdc* ffdc)
         getscom(PBA_ERRRPT0, &(ffdc->errrpt0.value));
         getscom(PBA_ERRRPT1, &(ffdc->errrpt1.value));
         getscom(PBA_ERRRPT2, &(ffdc->errrpt2.value));
-
+#endif
         ffdc->error = 1;
     }
 }
@@ -1166,7 +1168,11 @@ pba_error_handler_full(void* arg, SsxIrqId irq, int priority)
 
     ssx_irq_status_clear(irq);
 
+#if (OCCHW_USE_SCOM)
     getscom(PBA_FIR, &(fir.value));
+#else
+    fir.value = 0;
+#endif
     bcde_stat.words.high_order = in32(PBA_BCDE_STAT);
     bcue_stat.words.high_order = in32(PBA_BCUE_STAT);
     xsndstat.words.high_order = in32(PBA_XSNDSTAT);

@@ -34,6 +34,6 @@ volatile const char G_occ_buildname[16] __attribute__((section(".buildname"))) =
 
 #else
 
-volatile const char G_occ_buildname[16] __attribute__((section(".buildname"))) = /*<BuildName>*/  "op_p10_200923a\0"  /*</BuildName>*/ ;
+volatile const char G_occ_buildname[16] __attribute__((section(".buildname"))) = /*<BuildName>*/  "op_p10_201001a\0"  /*</BuildName>*/ ;
 
 #endif

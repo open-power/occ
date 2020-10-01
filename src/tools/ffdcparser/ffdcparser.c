@@ -40,7 +40,7 @@ void lookup_address(uint32_t address)
     if (G_stack_parser)
     {
         char command[512];
-        sprintf(command, "occ_stack.pl 0x%08X", address);
+        sprintf(command, "occ_stack.pl -q 0x%08X", address);
         //printf("==> %s", command);
         fflush(stdout);
         rc = system(command);
@@ -63,7 +63,7 @@ void parse_stack(char * header, uint32_t *stack, unsigned int num)
             int rc;
             printf("%s%d:   ", header, i+1);
             fflush(stdout);
-            sprintf(command, "occ_stack.pl 0x%08X", stack[i]);
+            sprintf(command, "occ_stack.pl -q 0x%08X", stack[i]);
             //printf("==> %s", command);
             rc = system(command);
             fflush(stdout);
