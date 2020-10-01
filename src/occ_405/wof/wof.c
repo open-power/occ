@@ -1472,14 +1472,14 @@ void calculate_ceff_ratio_vdd( void )
                                                             G_oppb.operating_points[g_wof->vpd_index2].vdd_mv);
 
         // Calculate Racetrack AC Current average TDP by interpolating #V current@g_wof->avg_freq_mhz
+        // NOTE: racetrack RDP in OPPB is the same as TDP
         // *100 to convert 10ma to 100ua
-g_wof->tdp_idd_rt_ac_100ua = 0; // $temp TODO RTC 258519
-/*        g_wof->tdp_idd_rt_ac_100ua = 100 * interpolate_linear( g_wof->avg_freq_mhz,
+        g_wof->tdp_idd_rt_ac_100ua = 100 * interpolate_linear( g_wof->avg_freq_mhz,
                                                           G_oppb.operating_points[g_wof->vpd_index1].frequency_mhz,
                                                           G_oppb.operating_points[g_wof->vpd_index2].frequency_mhz,
-                                                          G_oppb.operating_points[g_wof->vpd_index1].????,
-                                                          G_oppb.operating_points[g_wof->vpd_index2].????);
-*/
+                                                          G_oppb.operating_points[g_wof->vpd_index1].irt_rdp_ac_10ma,
+                                                          G_oppb.operating_points[g_wof->vpd_index2].irt_rdp_ac_10ma);
+
 
         if(G_allow_trace_flags & ALLOW_CEFF_RATIO_VDD_TRACE)
         {
@@ -1495,11 +1495,11 @@ g_wof->tdp_idd_rt_ac_100ua = 0; // $temp TODO RTC 258519
                             g_wof->vdd_avg_tdp_100uv,
                             G_oppb.operating_points[g_wof->vpd_index1].vdd_mv * 10,
                             G_oppb.operating_points[g_wof->vpd_index2].vdd_mv * 10);
-/* TODO RTC 258519           INTR_TRAC_INFO("ceff_ratio_vdd: interpolated tdp_idd_rt_ac_100ua[%d] point1[%d] point2[%d]",
+            INTR_TRAC_INFO("ceff_ratio_vdd: interpolated tdp_idd_rt_ac_100ua[%d] point1[%d] point2[%d]",
                             g_wof->tdp_idd_rt_ac_100ua,
-                            G_oppb.operating_points[g_wof->vpd_index1].???? * 100,
-                            G_oppb.operating_points[g_wof->vpd_index2].???? * 100);
-*/
+                            G_oppb.operating_points[g_wof->vpd_index1].irt_rdp_ac_10ma * 100,
+                            G_oppb.operating_points[g_wof->vpd_index2].irt_rdp_ac_10ma * 100);
+
         }
 
         // Calculate ceff ratio numerator = (g_wof->iac_vdd_100ua * g_wof->vdd_avg_tdp_100uv^1.3)
