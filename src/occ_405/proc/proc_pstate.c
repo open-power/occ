@@ -318,12 +318,15 @@ void populate_opal_static_config_data(void)
     uint32_t l_steps = 0;
     // Static OPAL configuration data
     G_opal_static_table.config.valid    = 1;
-    G_opal_static_table.config.version  = 0x90;
+    G_opal_static_table.config.major_version  = 0xA0;
+    G_opal_static_table.config.minor_version  = 0x01;
     G_opal_static_table.config.occ_role = G_occ_role;
     G_opal_static_table.config.pmin     = proc_freq2pstate(G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MIN_FREQ], &l_steps);
-    G_opal_static_table.config.pnominal = proc_freq2pstate(G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_DISABLED], &l_steps);
-    G_opal_static_table.config.pturbo   = proc_freq2pstate(G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_WOF_BASE], &l_steps);
-    G_opal_static_table.config.puturbo  = proc_freq2pstate(G_proc_fmax_mhz, &l_steps);
+    G_opal_static_table.config.pwof_base = proc_freq2pstate(G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_WOF_BASE], &l_steps);
+    G_opal_static_table.config.puturbo = proc_freq2pstate(G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_VPD_UT], &l_steps);
+    G_opal_static_table.config.pfmax   = proc_freq2pstate(G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MAX_FREQ], &l_steps);
+    G_opal_static_table.config.pfixed  = proc_freq2pstate(G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_DISABLED], &l_steps);
+    G_opal_static_table.config.pthrottle  = G_oppb.pstate_max_throttle;
 }
 
 // Function Specification
@@ -336,19 +339,30 @@ void populate_opal_static_config_data(void)
 // End Function Specification
 void populate_opal_static_pstates_data(void)
 {
-    uint16_t i; // loop variable
+    uint8_t  i; // loop variable
     uint32_t l_steps = 0;
-    for (i=0; i <= G_oppb.pstate_min; i++)
-    {
-        G_opal_static_table.pstates[i].pstate   = i;  // pstate number
-        G_opal_static_table.pstates[i].flag     = 0;  // flag is reserved for future use
-        G_opal_static_table.pstates[i].freq_khz = proc_pstate2freq(i, &l_steps); // pstate's frequency
-    }
 
-    for (i=0; i<MAX_NUM_CORES; i++)
+    // only populate frequency pstates (throttle space has same frequency)
+    // only pstates between this chips min and max frequency are valid frequency pstates
+    uint8_t  l_pmin = proc_freq2pstate(G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MIN_FREQ], &l_steps);
+    uint8_t  l_pmax = proc_freq2pstate(G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MAX_FREQ], &l_steps);
+
+    // pstate table starts with Pstate 0, valid pstates for a chip starts at its max freq
+    // mark pstates between 0 and chip's max as invalid but still populate frequency for OPAL
+    for (i=0; i <= l_pmin; i++)
     {
-        // TODO - RTC:170582 fix entries for WOF systems
-        G_opal_static_table.max_pstate[i] = G_opal_static_table.config.puturbo;
+        G_opal_static_table.pstates[i].pstate = i;  // pstate number
+        G_opal_static_table.pstates[i].freq_khz = proc_pstate2freq(i, &l_steps); // pstate's frequency
+        if(i < l_pmax)
+        {
+            // Pstate not valid for this chip
+            G_opal_static_table.pstates[i].valid = 0;
+        }
+        else
+        {
+            // Pstate valid
+            G_opal_static_table.pstates[i].valid = 1;
+        }
     }
 }
 

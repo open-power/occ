@@ -62,21 +62,24 @@ typedef enum
 typedef struct __attribute__ ((packed))
 {
     uint8_t              valid;
-    uint8_t              version;
+    uint8_t              major_version;
+    uint8_t              minor_version;
     uint8_t              occ_role;
     uint8_t              pmin;
-    uint8_t              pnominal;
-    uint8_t              pturbo;
+    uint8_t              pwof_base;
     uint8_t              puturbo;
-    uint8_t              reserved;
+    uint8_t              pfmax;
+    uint8_t              pfixed;
+    uint8_t              pthrottle;
+    uint8_t              reserved[6];  // pad to 16 bytes
 
 } opal_config_t;
 
 
 typedef struct __attribute__ ((packed))
 {
-    int8_t               pstate;
-    uint8_t              flag;
+    uint8_t              pstate;
+    uint8_t              valid;
     uint16_t             reserved;
     uint32_t             freq_khz;
 } opal_pstate_data_t;
@@ -113,11 +116,10 @@ typedef struct __attribute__ ((packed))
 // This size must be a multiple of 128
 typedef struct __attribute__ ((packed))
 {
-    opal_config_t        config;                  // Static OPAL config parameters: 8B
-    uint8_t              reserved[16];            // Reserved static space: 16B
+    opal_config_t        config;                  // Static OPAL config parameters: 16B
+    uint8_t              reserved[8];             // Reserved static space: 8B
     opal_pstate_data_t   pstates[PSTATE_ENTRIES]; // Generated Pstates Table: 2048B
-    uint8_t              max_pstate[24];          // Maximum Pstate with N active cores is max_pstate[N-1]: 24B
-    uint8_t              pad[80];                 // Padding in reserved static space: 80B
+    uint8_t              pad[104];                // Padding in reserved static space for multiple 128B
 } opal_static_table_t __attribute__ ((aligned (128)));
 
 
