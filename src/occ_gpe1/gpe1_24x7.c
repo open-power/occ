@@ -34,7 +34,6 @@
 #include "gpe1_24x7.h"
 #include "string.h"
 
-
 /*
  * Function Specifications:
  *
@@ -107,15 +106,19 @@ void gpe_24x7(ipc_msg_t* cmd, void* arg)
      * [16:23] - Day
      * [24:31] - Month
      * [32:47] - Year
-     * [48:63] - Reserved
+     * [48:53] – Major spec version: [48:49] = <0-3> [50:53] = <0-15>
+     * [54:55] – Minor spec version: [54:55] = <0-3>
+     * [56:63] - Reserved
      **/
     uint64_t VERSION = 0;
     static uint64_t ver_major  = 0x1;
     static uint64_t ver_minor  = 0x0;
     static uint64_t ver_bugfix = 0x0;
-    static uint64_t ver_day    = 0x15;   // Day: 27
-    static uint64_t ver_month  = 0x08;   // Month: 04
+    static uint64_t ver_day    = 0x20;   // Day: 27
+    static uint64_t ver_month  = 0x10;   // Month: 04
     static uint64_t ver_year   = 0x2020; // Year:2018
+    static uint64_t spec_major = 0x14;   // Spec version 14
+    static uint64_t spec_minor = 0x0;
 
     VERSION |= (ver_major  << 60);
     VERSION |= (ver_minor  << 52);
@@ -123,6 +126,8 @@ void gpe_24x7(ipc_msg_t* cmd, void* arg)
     VERSION |= (ver_day    << 40);
     VERSION |= (ver_month  << 32);
     VERSION |= (ver_year   << 16);
+    VERSION |= (spec_major << 10);
+    VERSION |= (spec_minor << 8);
 
     do
     {
@@ -146,10 +151,10 @@ void gpe_24x7(ipc_msg_t* cmd, void* arg)
             }
 
             //set DMA
-            rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_DMA, pError);
+            rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_DMA, pError);
             if ( rc )
             {
-                PK_TRACE("ERR>> gpe_24x7: PBASLVCTL2_C0040030 ticks=0");
+                PK_TRACE("ERR>> gpe_24x7: PBASLVCTL1_C0040028 ticks=0");
                 break;
             }
 
@@ -185,10 +190,10 @@ void gpe_24x7(ipc_msg_t* cmd, void* arg)
         {
             // It has been ticks*500us since last call
             PK_TRACE("gpe_24x7: It has been 0x%02X ticks since last call", ticks);
-            rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_DMA, pError);
+            rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_DMA, pError);
             if ( rc )
             {
-                PK_TRACE("ERR>> gpe_24x7: PBASLVCTL2_C0040030, ticks > 1");
+                PK_TRACE("ERR>> gpe_24x7: PBASLVCTL1_C0040028, ticks > 1");
                 break;
             }
 
@@ -199,10 +204,10 @@ void gpe_24x7(ipc_msg_t* cmd, void* arg)
         //----------------------
         if ( *L_cmd != CNTL_CMD_NOP )
         {
-            rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_DMA, pError);
+            rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_DMA, pError);
             if ( rc )
             {
-                PK_TRACE("ERR>> gpe_24x7: PBASLVCTL2_C0040030 New Cmd");
+                PK_TRACE("ERR>> gpe_24x7: PBASLVCTL1_C0040028 New Cmd");
                 break;
             }
 
@@ -290,10 +295,10 @@ void gpe_24x7(ipc_msg_t* cmd, void* arg)
         //initialize postings if required from new cmd or change of speed or UAV change.
         if ( L_INIT )
         {
-            rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_DMA, pError);
+            rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_DMA, pError);
             if ( rc )
             {
-                PK_TRACE("ERR>> gpe_24x7 PBASLVCTL2_C0040030 L_INIT");
+                PK_TRACE("ERR>> gpe_24x7 PBASLVCTL1_C0040028 L_INIT");
                 break;
             }
 
@@ -339,25 +344,25 @@ void gpe_24x7(ipc_msg_t* cmd, void* arg)
         //G3A     (states 2,6)
         //G3B     (states 4,8)
         //G4      (state  2)
-        //G8A,G5  (state  4)
+        //G5      (state  4)
         //G6      (state  6)
         //G7      (state  8)
-        //G8B     (state  8)
+        //G8      (state  8)
         //
         //during first time entry or a re-init is triggered, the current run is used for pmu configuration.
         //configuration will continue across multiple re-entry slots till all configuration scoms are done.
         //scoms are generally kept at 16 per slot, to prevent from exceeding 50us runtime buget.
         if ( L_DONT_RUN == false )
         {
-            rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_DMA, pError);
+            rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_DMA, pError);
             if ( rc )
             {
-                PK_TRACE("ERR>> gpe_24x7: PBASLVCTL2_C0040030 L_DONT_RUN==false");
+                PK_TRACE("ERR>> gpe_24x7: PBASLVCTL1_C0040028 L_DONT_RUN==false");
                 break;
             }
 
 
-            PK_TRACE("gpe_24x7: state = %d",(int)L_current_state);
+            PK_TRACE("gpe_24x7: state = %d ",(int)L_current_state);
             *L_DBG_STATE = L_current_state;
             switch (L_current_state)
             {
@@ -393,6 +398,7 @@ void gpe_24x7(ipc_msg_t* cmd, void* arg)
                             L_DELAY_2--;
                     }
                     break;
+
                 case 2:
                     if(L_configure)
                     {
@@ -426,6 +432,7 @@ void gpe_24x7(ipc_msg_t* cmd, void* arg)
                             L_DELAY_4--;
                     }
                     break;
+
                 case 3:
                     if(L_configure)
                     {
@@ -458,6 +465,7 @@ void gpe_24x7(ipc_msg_t* cmd, void* arg)
                             L_DELAY_2--;
                     }
                     break;
+
                 case 4:
                     if(L_configure)
                     {
@@ -468,12 +476,6 @@ void gpe_24x7(ipc_msg_t* cmd, void* arg)
                         if(L_DELAY_3 == 0)
                         {
                             rc = post_pmu_events(G3B, pError);
-                            if ( rc )
-                            {
-                                break;
-                            }
-
-                            rc = post_pmu_events(G8A, pError);
                             if ( rc )
                             {
                                 break;
@@ -498,6 +500,7 @@ void gpe_24x7(ipc_msg_t* cmd, void* arg)
                             L_DELAY_5--;
                     }
                     break;
+
                 case 5:
                     if(L_configure)
                     {
@@ -530,6 +533,7 @@ void gpe_24x7(ipc_msg_t* cmd, void* arg)
                             L_DELAY_2--;
                     }
                     break;
+
                 case 6:
                     if(L_configure)
                     {
@@ -563,6 +567,7 @@ void gpe_24x7(ipc_msg_t* cmd, void* arg)
                             L_DELAY_6--;
                     }
                     break;
+
                 case 7:
                     if(L_configure)
                     {
@@ -595,15 +600,21 @@ void gpe_24x7(ipc_msg_t* cmd, void* arg)
                             L_DELAY_2--;
                     }
                     break;
+
                 case 8:
                     if(L_configure)
                     {
                         rc = configure_pmu(L_current_state, L_cur_speed, pError);
+                        if ( rc )
+                        {
+                            break;
+                        }
+
                         L_configure = false;
                         *L_status = CNTL_STATUS_RUN;
                         //*L_status = L_prev_status;
                         if(L_prev_status == CNTL_STATUS_PAUSE)
-                        {    
+                        { 
                             L_DONT_RUN = true;
                             *L_status = L_prev_status;
                         }
@@ -621,7 +632,7 @@ void gpe_24x7(ipc_msg_t* cmd, void* arg)
                                 break;
                             }
 
-                            rc = post_pmu_events(G8B, pError);
+                            rc = post_pmu_events(G8, pError);
                             if ( rc )
                             {
                                 break;
@@ -666,11 +677,6 @@ void gpe_24x7(ipc_msg_t* cmd, void* arg)
 
     } while(0);
 
-    // @TODO: Check if we can sent back a IPC_RC_CMD_FAILED on bad path
-#if 0
-    // uint32_t ipc_rc = ( rc ) ? IPC_RC_CMD_FAILED:IPC_RC_SUCCESS;
-#endif
-
     // send back a response, IPC success even if ffdc/rc are non zeros
     rc = ipc_send_rsp(cmd, IPC_RC_SUCCESS);
     //PK_TRACE("gpe_24x7: SRN exiting thread with rc =%d", rc);
@@ -689,8 +695,9 @@ void gpe_24x7(ipc_msg_t* cmd, void* arg)
 uint32_t configure_pmu(uint8_t state, uint64_t speed, GpeErrorStruct* o_err)
 {
     uint32_t rc = 0;
+    uint64_t ocmbInstChk, ocmbUAV;
     //write the configuration SCOMs for all pmus.
-    int i,start = (state - 1) * 16,end = state * 16;
+    int i,j,start = (state - 1) * 16,end = state * 16;
     static volatile uint64_t* L_conf_last = (uint64_t*) (DBG_CONF_OFFSET | PBA_ENABLE);
     static volatile uint64_t* L_DBG_UAV   = (uint64_t*) (DBG_UAV | PBA_ENABLE);
 
@@ -698,10 +705,10 @@ uint32_t configure_pmu(uint8_t state, uint64_t speed, GpeErrorStruct* o_err)
 
     do
     {
-        rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_DMA, o_err);
+        rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_DMA, o_err);
         if ( rc )
         {
-            PK_TRACE("configure_pmu: 0x%08x putscom failed. rc = 0x%x", PBASLVCTL2_C0040030, rc);
+            PK_TRACE("configure_pmu: 0x%08x putscom failed. rc = 0x%x", PBASLVCTL1_C0040028, rc);
             break;
         }
 
@@ -714,25 +721,25 @@ uint32_t configure_pmu(uint8_t state, uint64_t speed, GpeErrorStruct* o_err)
 //use the unit wise masks to acertain availability of a unit.
             if( ((i>=0) && (i<40)) && (!(G_CUR_UAV & MASK_PB)) )
                 continue;
-            else if( ((i>=40) && (i<=43)) && (!(G_CUR_UAV & MASK_MC0) || (!(G_CUR_UAV & MASK_MC1)) ) )
+            else if( ((i>=40) && (i<=43)) && (!(G_CUR_UAV & MASK_MC0) && (!(G_CUR_UAV & MASK_MC1)) ) )
                 continue;
             else if( (i==44) && (!(G_CUR_UAV & MASK_MC0)) )
                 continue;
             else if( (i==45) && (!(G_CUR_UAV & MASK_MC1)) )
                 continue;
-            else if( ((i>=46) && (i<=49)) && (!(G_CUR_UAV & MASK_MC2) || (!(G_CUR_UAV & MASK_MC3)) ) )
+            else if( ((i>=46) && (i<=49)) && (!(G_CUR_UAV & MASK_MC2) && (!(G_CUR_UAV & MASK_MC3)) ) )
                 continue;
             else if( (i==50) && (!(G_CUR_UAV & MASK_MC2)) )
                 continue;
             else if( (i==51) && (!(G_CUR_UAV & MASK_MC3)) )
                 continue;
-            else if( ((i>=52) && (i<=55)) && (!(G_CUR_UAV & MASK_MC4) || (!(G_CUR_UAV & MASK_MC5)) ) )
+            else if( ((i>=52) && (i<=55)) && (!(G_CUR_UAV & MASK_MC4) && (!(G_CUR_UAV & MASK_MC5)) ) )
                 continue;
             else if( (i==56) && (!(G_CUR_UAV & MASK_MC4)) )
                 continue;
             else if( (i==57) && (!(G_CUR_UAV & MASK_MC5)) )
                 continue;
-            else if( ((i>=58) && (i<=61)) && (!(G_CUR_UAV & MASK_MC6) || (!(G_CUR_UAV & MASK_MC7)) ) )
+            else if( ((i>=58) && (i<=61)) && (!(G_CUR_UAV & MASK_MC6) && (!(G_CUR_UAV & MASK_MC7)) ) )
                 continue;
             else if( (i==62) && (!(G_CUR_UAV & MASK_MC6)) )
                 continue;
@@ -780,21 +787,10 @@ uint32_t configure_pmu(uint8_t state, uint64_t speed, GpeErrorStruct* o_err)
                 continue;
             else if( ((i==116) || (i==117)) && !(G_CUR_UAV & MASK_PHB5) )
                 continue;
+            else if( (i==118) && !(G_CUR_UAV & MASK_OCMB) )
+                continue;
 
-            else if( (i==118) || (i==119) ) //This to be removed later
-                continue;
-#if 0
-//OCMB disabled
-            else if( ((i==118) || (i==119)) && 
-                     (!(G_CUR_UAV & MASK_OCMB0) && !(G_CUR_UAV & MASK_OCMB1) && !(G_CUR_UAV & MASK_OCMB2) && 
-                      !(G_CUR_UAV & MASK_OCMB3) && !(G_CUR_UAV & MASK_OCMB4) && !(G_CUR_UAV & MASK_OCMB5) && 
-                      !(G_CUR_UAV & MASK_OCMB6) && !(G_CUR_UAV & MASK_OCMB7) && !(G_CUR_UAV & MASK_OCMB8) && 
-                      !(G_CUR_UAV & MASK_OCMB9) && !(G_CUR_UAV & MASK_OCMB10) && !(G_CUR_UAV & MASK_OCMB11) && 
-                      !(G_CUR_UAV & MASK_OCMB12) && !(G_CUR_UAV & MASK_OCMB13) && !(G_CUR_UAV & MASK_OCMB14) && 
-                      !(G_CUR_UAV & MASK_OCMB15)) )
-                continue;
-#endif
-            else if( i>=120 && i<=128 ) //Not supported
+            else if( i>=119 && i<=128 ) //Not supported
                 continue;
             else
             {
@@ -802,17 +798,53 @@ uint32_t configure_pmu(uint8_t state, uint64_t speed, GpeErrorStruct* o_err)
                 //for speeds >=1MS && <=2048MS
                 if((speed >= CNTL_SPEED_1MS) && (speed <= CNTL_SPEED_2048MS))
                 {
-                    rc = putScom (G_PMU_CONFIGS_8[i][0], G_PMU_CONFIGS_8[i][1], o_err);
-                    if ( rc )
+                    if ( i < 118 )
                     {
-                        PK_TRACE("configure_pmu: 0x%08x putscom failed. rc = 0x%x", G_PMU_CONFIGS_8[i][0], rc);
-                        break;
+                        rc = putScom (G_PMU_CONFIGS_8[i][0], G_PMU_CONFIGS_8[i][1], o_err);
+                        if ( rc )
+                        {
+                            PK_TRACE("configure_pmu: 0x%08x putscom failed. rc = 0x%x", G_PMU_CONFIGS_8[i][0], rc);
+                            break;
+                        }
+                    }
+                    else
+                    {
+                        //Configure OCMB
+                        ocmbInstChk = MASK_OCMB0;
+                        ocmbUAV     = (G_CUR_UAV & MASK_OCMB);
+                        if ( ocmbUAV && (G_membuf_config != NULL) )
+                        {
+                            for ( j=0; j<16; j++ )
+                            {
+                                if ( ocmbUAV & ocmbInstChk )
+                                {
+                                    // Write OCMB scom
+                                    rc = membuf_put_scom(G_membuf_config,
+                                                         j,
+                                                         G_PMU_CONFIGS_8[i][0],
+                                                         G_PMU_CONFIGS_8[i][1]);
+                                    if ( rc )
+                                    {
+                                        PK_TRACE("configure_pmu:: 0x%08x 0x%08x membuf_put_scom failed. rc = 0x%x", G_membuf_config->baseAddress[j], G_PMU_CONFIGS_8[i][0], rc);
+                                        break;
+                                    }
+                                }
+                                ocmbInstChk >>= 1;
+                            }
+                            if ( rc )
+                            {
+                                break;
+                            }
+                        }
+                        else
+                        {
+                            PK_TRACE("configure_pmu::Either OCMB is NOT enabled OR G_membuf_config is NULL");
+                        }
                     }
 
-                    *L_conf_last = (uint64_t)i;            
+                    *L_conf_last = (uint64_t)i;
                 }
             }
- 
         } //for(i = start; i < end; i++)
     }while(0);
 
@@ -828,6 +860,7 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
     PK_TRACE (">> post_pmu_events: Group %d", grp);
 
     uint32_t rc = 0;
+
     //read the scom pmulets. split/extract the counters.accumulate to main memory.
     volatile uint64_t* post_addr;
     static volatile uint64_t* L_DBG_GRP = (uint64_t*) (DBG_GRP_OFFSET | PBA_ENABLE);
@@ -835,14 +868,14 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
 
     //union to split a pmulet containg 4 counters into its constituents.
     union u1
-    { 
+    {
         struct event
         {
             uint16_t e[4];
         } ev;
         uint64_t pmulet;
     } u3;
-   
+
     //initialize local vars
     int i=0,j=0;
 
@@ -851,10 +884,10 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
     {
         //set the PBA
         post_addr = (uint64_t*) (POSTING_START | PBA_ENABLE);
-        rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_DMA, o_err);
+        rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_DMA, o_err);
         if ( rc )
         {
-            PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+            PK_TRACE("post_pmu_events: PBASLVCTL1_C0040028 putscom failed. rc = 0x%08x", rc);
             break;
         }
 
@@ -867,10 +900,10 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                     post_addr = (uint64_t*) (POST_OFFSET_DBG1AH | PBA_ENABLE);
                 *L_DBG_GRP = G1A;
                 *L_DBG_UNIT = 1;
-                rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_ATOMIC, o_err);
+                rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_ATOMIC, o_err);
                 if ( rc )
                 {
-                    PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                    PK_TRACE("post_pmu_events: PBASLVCTL1_C0040028 putscom failed. rc = 0x%08x", rc);
                     break;
                 }
 
@@ -910,10 +943,10 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                     post_addr = (uint64_t*) (POST_OFFSET_DBG1BH | PBA_ENABLE);
                 *L_DBG_GRP = G1B;
                 *L_DBG_UNIT = 1;
-                rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_ATOMIC, o_err);
+                rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_ATOMIC, o_err);
                 if ( rc )
                 {
-                    PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                    PK_TRACE("post_pmu_events: PBASLVCTL1_C0040028 putscom failed. rc = 0x%08x", rc);
                     break;
                 }
 
@@ -959,10 +992,10 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                 {
                     post_addr = (uint64_t*) (POST_OFFSET_G2A_A_H | PBA_ENABLE);
                 }
-                rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_ATOMIC, o_err);
+                rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_ATOMIC, o_err);
                 if ( rc )
                 {
-                    PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                    PK_TRACE("post_pmu_events: PBASLVCTL1_C0040028 putscom failed. rc = 0x%08x", rc);
                     break;
                 }
 
@@ -972,10 +1005,10 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                 if ( ((G_CUR_UAV & MASK_TLPM0) == MASK_XLINK0) || 
                      ((G_CUR_UAV & MASK_TLPM0) == MASK_ALINK0) )
                 {
-                    rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_DMA, o_err);
+                    rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_DMA, o_err);
                     if ( rc )
                     {
-                        PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                        PK_TRACE("post_pmu_events: PBASLVCTL1_C0040028 putscom failed. rc = 0x%08x", rc);
                         break;
                     }
 
@@ -988,10 +1021,10 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                     {
                         post_addr = (uint64_t*) (POST_OFFSET_G2A_A_0 | PBA_ENABLE);
                     }
-                    rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_ATOMIC, o_err);
+                    rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_ATOMIC, o_err);
                     if ( rc )
                     {
-                        PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                        PK_TRACE("post_pmu_events: PBASLVCTL1_C0040028 putscom failed. rc = 0x%08x", rc);
                         break;
                     }
 
@@ -999,6 +1032,15 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                     if ( rc )
                     {
                         PK_TRACE("post_pmu_events: 0x%08x getscom failed. rc = 0x%x", G_PMULETS_2A[0], rc);
+                        break;
+                    }
+
+                    // Read counter do not reset when read.
+                    // Explicitly value 0 written to read counter after reading them. 
+                    rc = putScom (G_PMULETS_2A[0], 0, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: 0x%08x putscom failed. rc = 0x%x", G_PMULETS_2A[0], rc);
                         break;
                     }
 
@@ -1015,6 +1057,15 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                         break;
                     }
 
+                    // Read counter do not reset when read.
+                    // Explicitly value 0 written to read counter after reading them. 
+                    rc = putScom (G_PMULETS_2A[1], 0, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: 0x%08x putscom failed. rc = 0x%x", G_PMULETS_2A[1], rc);
+                        break;
+                    }
+
                     for(j=0; j<4; j++)
                     {
                         *post_addr = (uint64_t)u3.ev.e[j];
@@ -1025,10 +1076,10 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                 if ( ((G_CUR_UAV & MASK_TLPM1) == MASK_XLINK1) || 
                      ((G_CUR_UAV & MASK_TLPM1) == MASK_ALINK1) )
                 {
-                    rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_DMA, o_err);
+                    rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_DMA, o_err);
                     if ( rc )
                     {
-                        PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                        PK_TRACE("post_pmu_events: PBASLVCTL1_C0040028 putscom failed. rc = 0x%08x", rc);
                         break;
                     }
 
@@ -1041,10 +1092,10 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                     {
                         post_addr = (uint64_t*) (POST_OFFSET_G2A_A_1 | PBA_ENABLE);
                     }
-                    rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_ATOMIC, o_err);
+                    rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_ATOMIC, o_err);
                     if ( rc )
                     {
-                        PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                        PK_TRACE("post_pmu_events: PBASLVCTL1_C0040028 putscom failed. rc = 0x%08x", rc);
                         break;
                     }
 
@@ -1052,6 +1103,15 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                     if ( rc )
                     {
                         PK_TRACE("post_pmu_events: 0x%08x getscom failed. rc = 0x%x", G_PMULETS_2A[2], rc);
+                        break;
+                    }
+
+                    // Read counter do not reset when read.
+                    // Explicitly value 0 written to read counter after reading them. 
+                    rc = putScom (G_PMULETS_2A[2], 0, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: 0x%08x putscom failed. rc = 0x%x", G_PMULETS_2A[2], rc);
                         break;
                     }
 
@@ -1068,6 +1128,15 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                         break;
                     }
 
+                    // Read counter do not reset when read.
+                    // Explicitly value 0 written to read counter after reading them. 
+                    rc = putScom (G_PMULETS_2A[3], 0, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: 0x%08x putscom failed. rc = 0x%x", G_PMULETS_2A[3], rc);
+                        break;
+                    }
+
                     for(j=0; j<4; j++)
                     {
                         *post_addr = (uint64_t)u3.ev.e[j];
@@ -1078,10 +1147,10 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                 if ( ((G_CUR_UAV & MASK_TLPM2) == MASK_XLINK2) || 
                         ((G_CUR_UAV & MASK_TLPM2) == MASK_ALINK2) )
                 {
-                    rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_DMA, o_err);
+                    rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_DMA, o_err);
                     if ( rc )
                     {
-                        PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                        PK_TRACE("post_pmu_events: PBASLVCTL1_C0040028 putscom failed. rc = 0x%08x", rc);
                         break;
                     }
 
@@ -1094,10 +1163,10 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                     {
                         post_addr = (uint64_t*) (POST_OFFSET_G2A_A_2 | PBA_ENABLE);
                     }
-                    rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_ATOMIC, o_err);
+                    rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_ATOMIC, o_err);
                     if ( rc )
                     {
-                        PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                        PK_TRACE("post_pmu_events: PBASLVCTL1_C0040028 putscom failed. rc = 0x%08x", rc);
                         break;
                     }
 
@@ -1105,6 +1174,15 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                     if ( rc )
                     {
                         PK_TRACE("post_pmu_events: 0x%08x getscom failed. rc = 0x%x", G_PMULETS_2A[4], rc);
+                        break;
+                    }
+
+                    // Read counter do not reset when read.
+                    // Explicitly value 0 written to read counter after reading them. 
+                    rc = putScom (G_PMULETS_2A[4], 0, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: 0x%08x putscom failed. rc = 0x%x", G_PMULETS_2A[4], rc);
                         break;
                     }
 
@@ -1121,6 +1199,15 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                         break;
                     }
 
+                    // Read counter do not reset when read.
+                    // Explicitly value 0 written to read counter after reading them. 
+                    rc = putScom (G_PMULETS_2A[5], 0, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: 0x%08x putscom failed. rc = 0x%x", G_PMULETS_2A[5], rc);
+                        break;
+                    }
+
                     for(j=0; j<4; j++)
                     {
                         *post_addr = (uint64_t)u3.ev.e[j];
@@ -1131,10 +1218,10 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                 if ( ((G_CUR_UAV & MASK_TLPM3) == MASK_XLINK3) || 
                         ((G_CUR_UAV & MASK_TLPM3) == MASK_ALINK3) )
                 {
-                    rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_DMA, o_err);
+                    rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_DMA, o_err);
                     if ( rc )
                     {
-                        PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                        PK_TRACE("post_pmu_events: PBASLVCTL1_C0040028 putscom failed. rc = 0x%08x", rc);
                         break;
                     }
 
@@ -1147,10 +1234,10 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                     {
                         post_addr = (uint64_t*) (POST_OFFSET_G2A_A_3 | PBA_ENABLE);
                     }
-                    rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_ATOMIC, o_err);
+                    rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_ATOMIC, o_err);
                     if ( rc )
                     {
-                        PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                        PK_TRACE("post_pmu_events: PBASLVCTL1_C0040028 putscom failed. rc = 0x%08x", rc);
                         break;
                     }
 
@@ -1158,6 +1245,15 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                     if ( rc )
                     {
                         PK_TRACE("post_pmu_events: 0x%08x getscom failed. rc = 0x%x", G_PMULETS_2A[6], rc);
+                        break;
+                    }
+
+                    // Read counter do not reset when read.
+                    // Explicitly value 0 written to read counter after reading them. 
+                    rc = putScom (G_PMULETS_2A[6], 0, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: 0x%08x putscom failed. rc = 0x%x", G_PMULETS_2A[6], rc);
                         break;
                     }
 
@@ -1171,6 +1267,15 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                     if ( rc )
                     {
                         PK_TRACE("post_pmu_events: 0x%08x getscom failed. rc = 0x%x", G_PMULETS_2A[7], rc);
+                        break;
+                    }
+
+                    // Read counter do not reset when read.
+                    // Explicitly value 0 written to read counter after reading them. 
+                    rc = putScom (G_PMULETS_2A[7], 0, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: 0x%08x putscom failed. rc = 0x%x", G_PMULETS_2A[7], rc);
                         break;
                     }
 
@@ -1208,10 +1313,10 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                 {
                     post_addr = (uint64_t*) (POST_OFFSET_G2B_A_H | PBA_ENABLE);
                 }
-                rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_ATOMIC, o_err);
+                rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_ATOMIC, o_err);
                 if ( rc )
                 {
-                    PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                    PK_TRACE("post_pmu_events: PBASLVCTL1_C0040028 putscom failed. rc = 0x%08x", rc);
                     break;
                 }
 
@@ -1221,10 +1326,10 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                 if ( ((G_CUR_UAV & MASK_TLPM4) == MASK_XLINK4) || 
                         ((G_CUR_UAV & MASK_TLPM4) == MASK_ALINK4) )
                 {
-                    rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_DMA, o_err);
+                    rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_DMA, o_err);
                     if ( rc )
                     {
-                        PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                        PK_TRACE("post_pmu_events: PBASLVCTL1_C0040028 putscom failed. rc = 0x%08x", rc);
                         break;
                     }
 
@@ -1237,10 +1342,10 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                     {
                         post_addr = (uint64_t*) (POST_OFFSET_G2B_A_4 | PBA_ENABLE);
                     }
-                    rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_ATOMIC, o_err);
+                    rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_ATOMIC, o_err);
                     if ( rc )
                     {
-                        PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                        PK_TRACE("post_pmu_events: PBASLVCTL1_C0040028 putscom failed. rc = 0x%08x", rc);
                         break;
                     }
 
@@ -1248,6 +1353,15 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                     if ( rc )
                     {
                         PK_TRACE("post_pmu_events: 0x%08x getscom failed. rc = 0x%x", G_PMULETS_2B[0], rc);
+                        break;
+                    }
+
+                    // Read counter do not reset when read.
+                    // Explicitly value 0 written to read counter after reading them. 
+                    rc = putScom (G_PMULETS_2B[0], 0, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: 0x%08x putscom failed. rc = 0x%x", G_PMULETS_2B[0], rc);
                         break;
                     }
 
@@ -1264,6 +1378,15 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                         break;
                     }
 
+                    // Read counter do not reset when read.
+                    // Explicitly value 0 written to read counter after reading them. 
+                    rc = putScom (G_PMULETS_2B[1], 0, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: 0x%08x putscom failed. rc = 0x%x", G_PMULETS_2B[1], rc);
+                        break;
+                    }
+
                     for(j=0; j<4; j++)
                     {
                         *post_addr = (uint64_t)u3.ev.e[j];
@@ -1274,10 +1397,10 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                 if ( ((G_CUR_UAV & MASK_TLPM5) == MASK_XLINK5) || 
                         ((G_CUR_UAV & MASK_TLPM5) == MASK_ALINK5) )
                 {
-                    rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_DMA, o_err);
+                    rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_DMA, o_err);
                     if ( rc )
                     {
-                        PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                        PK_TRACE("post_pmu_events: PBASLVCTL1_C0040028 putscom failed. rc = 0x%08x", rc);
                         break;
                     }
 
@@ -1290,10 +1413,10 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                     {
                         post_addr = (uint64_t*) (POST_OFFSET_G2B_A_5 | PBA_ENABLE);
                     }
-                    rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_ATOMIC, o_err);
+                    rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_ATOMIC, o_err);
                     if ( rc )
                     {
-                        PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                        PK_TRACE("post_pmu_events: PBASLVCTL1_C0040028 putscom failed. rc = 0x%08x", rc);
                         break;
                     }
 
@@ -1301,6 +1424,15 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                     if ( rc )
                     {
                         PK_TRACE("post_pmu_events: 0x%08x getscom failed. rc = 0x%x", G_PMULETS_2B[2], rc);
+                        break;
+                    }
+
+                    // Read counter do not reset when read.
+                    // Explicitly value 0 written to read counter after reading them. 
+                    rc = putScom (G_PMULETS_2B[2], 0, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: 0x%08x putscom failed. rc = 0x%x", G_PMULETS_2B[2], rc);
                         break;
                     }
 
@@ -1317,6 +1449,15 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                         break;
                     }
 
+                    // Read counter do not reset when read.
+                    // Explicitly value 0 written to read counter after reading them. 
+                    rc = putScom (G_PMULETS_2B[3], 0, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: 0x%08x putscom failed. rc = 0x%x", G_PMULETS_2B[3], rc);
+                        break;
+                    }
+
                     for(j=0; j<4; j++)
                     {
                         *post_addr = (uint64_t)u3.ev.e[j];
@@ -1327,10 +1468,10 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                 if ( ((G_CUR_UAV & MASK_TLPM6) == MASK_XLINK6) || 
                         ((G_CUR_UAV & MASK_TLPM6) == MASK_ALINK6) )
                 {
-                    rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_DMA, o_err);
+                    rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_DMA, o_err);
                     if ( rc )
                     {
-                        PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                        PK_TRACE("post_pmu_events: PBASLVCTL1_C0040028 putscom failed. rc = 0x%08x", rc);
                         break;
                     }
 
@@ -1343,10 +1484,10 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                     {
                         post_addr = (uint64_t*) (POST_OFFSET_G2B_A_6 | PBA_ENABLE);
                     }
-                    rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_ATOMIC, o_err);
+                    rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_ATOMIC, o_err);
                     if ( rc )
                     {
-                        PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                        PK_TRACE("post_pmu_events: PBASLVCTL1_C0040028 putscom failed. rc = 0x%08x", rc);
                         break;
                     }
 
@@ -1354,6 +1495,15 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                     if ( rc )
                     {
                         PK_TRACE("post_pmu_events: 0x%08x getscom failed. rc = 0x%x", G_PMULETS_2B[4], rc);
+                        break;
+                    }
+
+                    // Read counter do not reset when read.
+                    // Explicitly value 0 written to read counter after reading them. 
+                    rc = putScom (G_PMULETS_2B[4], 0, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: 0x%08x putscom failed. rc = 0x%x", G_PMULETS_2B[4], rc);
                         break;
                     }
 
@@ -1370,6 +1520,15 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                         break;
                     }
 
+                    // Read counter do not reset when read.
+                    // Explicitly value 0 written to read counter after reading them. 
+                    rc = putScom (G_PMULETS_2B[5], 0, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: 0x%08x putscom failed. rc = 0x%x", G_PMULETS_2B[5], rc);
+                        break;
+                    }
+
                     for(j=0; j<4; j++)
                     {
                         *post_addr = (uint64_t)u3.ev.e[j];
@@ -1380,10 +1539,10 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                 if ( ((G_CUR_UAV & MASK_TLPM7) == MASK_XLINK7) || 
                         ((G_CUR_UAV & MASK_TLPM7) == MASK_ALINK7) )
                 {
-                    rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_DMA, o_err);
+                    rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_DMA, o_err);
                     if ( rc )
                     {
-                        PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                        PK_TRACE("post_pmu_events: PBASLVCTL1_C0040028 putscom failed. rc = 0x%08x", rc);
                         break;
                     }
 
@@ -1396,10 +1555,10 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                     {
                         post_addr = (uint64_t*) (POST_OFFSET_G2B_A_7 | PBA_ENABLE);
                     }
-                    rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_ATOMIC, o_err);
+                    rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_ATOMIC, o_err);
                     if ( rc )
                     {
-                        PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                        PK_TRACE("post_pmu_events: PBASLVCTL1_C0040028 putscom failed. rc = 0x%08x", rc);
                         break;
                     }
 
@@ -1407,6 +1566,15 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                     if ( rc )
                     {
                         PK_TRACE("post_pmu_events: 0x%08x getscom failed. rc = 0x%x", G_PMULETS_2B[6], rc);
+                        break;
+                    }
+
+                    // Read counter do not reset when read.
+                    // Explicitly value 0 written to read counter after reading them. 
+                    rc = putScom (G_PMULETS_2B[6], 0, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: 0x%08x putscom failed. rc = 0x%x", G_PMULETS_2B[6], rc);
                         break;
                     }
 
@@ -1420,6 +1588,15 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                     if ( rc )
                     {
                         PK_TRACE("post_pmu_events: 0x%08x getscom failed. rc = 0x%x", G_PMULETS_2B[7], rc);
+                        break;
+                    }
+
+                    // Read counter do not reset when read.
+                    // Explicitly value 0 written to read counter after reading them. 
+                    rc = putScom (G_PMULETS_2B[7], 0, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: 0x%08x putscom failed. rc = 0x%x", G_PMULETS_2B[7], rc);
                         break;
                     }
 
@@ -1447,10 +1624,10 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
             case G3A://OCAPI - [0,3,4,5]
                 *L_DBG_GRP = G3A;
                 post_addr = (uint64_t*) (POST_OFFSET_G3A_O_H | PBA_ENABLE);
-                rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_ATOMIC, o_err);
+                rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_ATOMIC, o_err);
                 if ( rc )
                 {
-                    PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                    PK_TRACE("post_pmu_events: PBASLVCTL1_C0040028 putscom failed. rc = 0x%08x", rc);
                     break;
                 }
 
@@ -1458,19 +1635,19 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                 post_addr++;
                 if ( (G_CUR_UAV & MASK_TLPM0) == MASK_OCAPI0 )
                 {
-                    rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_DMA, o_err);
+                    rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_DMA, o_err);
                     if ( rc )
                     {
-                        PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                        PK_TRACE("post_pmu_events: PBASLVCTL1_C0040028 putscom failed. rc = 0x%08x", rc);
                         break;
                     }
 
                     *L_DBG_UNIT = 1;
                     post_addr = (uint64_t*) (POST_OFFSET_G3A_O_0 | PBA_ENABLE);
-                    rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_ATOMIC, o_err);
+                    rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_ATOMIC, o_err);
                     if ( rc )
                     {
-                        PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                        PK_TRACE("post_pmu_events: PBASLVCTL1_C0040028 putscom failed. rc = 0x%08x", rc);
                         break;
                     }
 
@@ -1478,6 +1655,15 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                     if ( rc )
                     {
                         PK_TRACE("post_pmu_events: 0x%08x getscom failed. rc = 0x%x", G_PMULETS_3A[0], rc);
+                        break;
+                    }
+
+                    // Read counter do not reset when read.
+                    // Explicitly value 0 written to read counter after reading them. 
+                    rc = putScom (G_PMULETS_3A[0], 0, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: 0x%08x putscom failed. rc = 0x%x", G_PMULETS_3A[0], rc);
                         break;
                     }
 
@@ -1494,6 +1680,15 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                         break;
                     }
 
+                    // Read counter do not reset when read.
+                    // Explicitly value 0 written to read counter after reading them. 
+                    rc = putScom (G_PMULETS_3A[1], 0, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: 0x%08x putscom failed. rc = 0x%x", G_PMULETS_3A[1], rc);
+                        break;
+                    }
+
                     for(j=0; j<4; j++)
                     {
                         *post_addr = (uint64_t)u3.ev.e[j];
@@ -1503,19 +1698,19 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
 
                 if ( (G_CUR_UAV & MASK_TLPM3) == MASK_OCAPI3 )
                 {
-                    rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_DMA, o_err);
+                    rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_DMA, o_err);
                     if ( rc )
                     {
-                        PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                        PK_TRACE("post_pmu_events: PBASLVCTL1_C0040028 putscom failed. rc = 0x%08x", rc);
                         break;
                     }
 
                     *L_DBG_UNIT = 2;
                     post_addr = (uint64_t*) (POST_OFFSET_G3A_O_3 | PBA_ENABLE);
-                    rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_ATOMIC, o_err);
+                    rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_ATOMIC, o_err);
                     if ( rc )
                     {
-                        PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                        PK_TRACE("post_pmu_events: PBASLVCTL1_C0040028 putscom failed. rc = 0x%08x", rc);
                         break;
                     }
 
@@ -1523,6 +1718,15 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                     if ( rc )
                     {
                         PK_TRACE("post_pmu_events: 0x%08x getscom failed. rc = 0x%x", G_PMULETS_3A[2], rc);
+                        break;
+                    }
+
+                    // Read counter do not reset when read.
+                    // Explicitly value 0 written to read counter after reading them. 
+                    rc = putScom (G_PMULETS_3A[2], 0, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: 0x%08x putscom failed. rc = 0x%x", G_PMULETS_3A[2], rc);
                         break;
                     }
 
@@ -1539,6 +1743,15 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                         break;
                     }
 
+                    // Read counter do not reset when read.
+                    // Explicitly value 0 written to read counter after reading them. 
+                    rc = putScom (G_PMULETS_3A[3], 0, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: 0x%08x putscom failed. rc = 0x%x", G_PMULETS_3A[3], rc);
+                        break;
+                    }
+
                     for(j=0; j<4; j++)
                     {
                         *post_addr = (uint64_t)u3.ev.e[j];
@@ -1548,19 +1761,19 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
 
                 if ( (G_CUR_UAV & MASK_TLPM4) == MASK_OCAPI4 )
                 {
-                    rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_DMA, o_err);
+                    rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_DMA, o_err);
                     if ( rc )
                     {
-                        PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                        PK_TRACE("post_pmu_events: PBASLVCTL1_C0040028 putscom failed. rc = 0x%08x", rc);
                         break;
                     }
 
                     *L_DBG_UNIT = 3;
                     post_addr = (uint64_t*) (POST_OFFSET_G3A_O_4 | PBA_ENABLE);
-                    rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_ATOMIC, o_err);
+                    rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_ATOMIC, o_err);
                     if ( rc )
                     {
-                        PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                        PK_TRACE("post_pmu_events: PBASLVCTL1_C0040028 putscom failed. rc = 0x%08x", rc);
                         break;
                     }
 
@@ -1568,6 +1781,15 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                     if ( rc )
                     {
                         PK_TRACE("post_pmu_events: 0x%08x getscom failed. rc = 0x%x", G_PMULETS_3A[4], rc);
+                        break;
+                    }
+
+                    // Read counter do not reset when read.
+                    // Explicitly value 0 written to read counter after reading them. 
+                    rc = putScom (G_PMULETS_3A[4], 0, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: 0x%08x putscom failed. rc = 0x%x", G_PMULETS_3A[4], rc);
                         break;
                     }
 
@@ -1584,6 +1806,15 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                         break;
                     }
 
+                    // Read counter do not reset when read.
+                    // Explicitly value 0 written to read counter after reading them. 
+                    rc = putScom (G_PMULETS_3A[5], 0, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: 0x%08x putscom failed. rc = 0x%x", G_PMULETS_3A[5], rc);
+                        break;
+                    }
+
                     for(j=0; j<4; j++)
                     {
                         *post_addr = (uint64_t)u3.ev.e[j];
@@ -1593,19 +1824,19 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
 
                 if ( (G_CUR_UAV & MASK_TLPM5) == MASK_OCAPI5 )
                 {
-                    rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_DMA, o_err);
+                    rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_DMA, o_err);
                     if ( rc )
                     {
-                        PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                        PK_TRACE("post_pmu_events: PBASLVCTL1_C0040028 putscom failed. rc = 0x%08x", rc);
                         break;
                     }
 
                     *L_DBG_UNIT = 4;
                     post_addr = (uint64_t*) (POST_OFFSET_G3A_O_5 | PBA_ENABLE);
-                    rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_ATOMIC, o_err);
+                    rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_ATOMIC, o_err);
                     if ( rc )
                     {
-                        PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                        PK_TRACE("post_pmu_events: PBASLVCTL1_C0040028 putscom failed. rc = 0x%08x", rc);
                         break;
                     }
 
@@ -1613,6 +1844,15 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                     if ( rc )
                     {
                         PK_TRACE("post_pmu_events: 0x%08x getscom failed. rc = 0x%x", G_PMULETS_3A[6], rc);
+                        break;
+                    }
+
+                    // Read counter do not reset when read.
+                    // Explicitly value 0 written to read counter after reading them. 
+                    rc = putScom (G_PMULETS_3A[6], 0, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: 0x%08x putscom failed. rc = 0x%x", G_PMULETS_3A[6], rc);
                         break;
                     }
 
@@ -1626,6 +1866,15 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                     if ( rc )
                     {
                         PK_TRACE("post_pmu_events: 0x%08x getscom failed. rc = 0x%x", G_PMULETS_3A[7], rc);
+                        break;
+                    }
+
+                    // Read counter do not reset when read.
+                    // Explicitly value 0 written to read counter after reading them. 
+                    rc = putScom (G_PMULETS_3A[7], 0, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: 0x%08x putscom failed. rc = 0x%x", G_PMULETS_3A[7], rc);
                         break;
                     }
 
@@ -1643,10 +1892,10 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
             case G3B://OCAPI - [6,7]
                 *L_DBG_GRP = G3B;
                 post_addr = (uint64_t*) (POST_OFFSET_G3B_O_H | PBA_ENABLE);
-                rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_ATOMIC, o_err);
+                rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_ATOMIC, o_err);
                 if ( rc )
                 {
-                    PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                    PK_TRACE("post_pmu_events: PBASLVCTL1_C0040028 putscom failed. rc = 0x%08x", rc);
                     break;
                 }
 
@@ -1654,19 +1903,19 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                 post_addr++;
                 if ( (G_CUR_UAV & MASK_TLPM6) == MASK_OCAPI6 )
                 {
-                    rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_DMA, o_err);
+                    rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_DMA, o_err);
                     if ( rc )
                     {
-                        PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                        PK_TRACE("post_pmu_events: PBASLVCTL1_C0040028 putscom failed. rc = 0x%08x", rc);
                         break;
                     }
 
                     *L_DBG_UNIT = 1;
                     post_addr = (uint64_t*) (POST_OFFSET_G3B_O_6 | PBA_ENABLE);
-                    rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_ATOMIC, o_err);
+                    rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_ATOMIC, o_err);
                     if ( rc )
                     {
-                        PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                        PK_TRACE("post_pmu_events: PBASLVCTL1_C0040028 putscom failed. rc = 0x%08x", rc);
                         break;
                     }
 
@@ -1674,6 +1923,15 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                     if ( rc )
                     {
                         PK_TRACE("post_pmu_events: 0x%08x getscom failed. rc = 0x%x", G_PMULETS_3B[0], rc);
+                        break;
+                    }
+
+                    // Read counter do not reset when read.
+                    // Explicitly value 0 written to read counter after reading them. 
+                    rc = putScom (G_PMULETS_3B[0], 0, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: 0x%08x putscom failed. rc = 0x%x", G_PMULETS_3B[0], rc);
                         break;
                     }
 
@@ -1690,6 +1948,15 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                         break;
                     }
 
+                    // Read counter do not reset when read.
+                    // Explicitly value 0 written to read counter after reading them. 
+                    rc = putScom (G_PMULETS_3B[1], 0, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: 0x%08x putscom failed. rc = 0x%x", G_PMULETS_3B[1], rc);
+                        break;
+                    }
+
                     for(j=0; j<4; j++)
                     {
                         *post_addr = (uint64_t)u3.ev.e[j];
@@ -1699,19 +1966,19 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
 
                 if ( (G_CUR_UAV & MASK_TLPM7) == MASK_OCAPI7 ) 
                 {
-                    rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_DMA, o_err);
+                    rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_DMA, o_err);
                     if ( rc )
                     {
-                        PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                        PK_TRACE("post_pmu_events: PBASLVCTL1_C0040028 putscom failed. rc = 0x%08x", rc);
                         break;
                     }
 
                     *L_DBG_UNIT = 2;
                     post_addr = (uint64_t*) (POST_OFFSET_G3B_O_7 | PBA_ENABLE);
-                    rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_ATOMIC, o_err);
+                    rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_ATOMIC, o_err);
                     if ( rc )
                     {
-                        PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                        PK_TRACE("post_pmu_events: PBASLVCTL1_C0040028 putscom failed. rc = 0x%08x", rc);
                         break;
                     }
 
@@ -1719,6 +1986,15 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                     if ( rc )
                     {
                         PK_TRACE("post_pmu_events: 0x%08x getscom failed. rc = 0x%x", G_PMULETS_3B[2], rc);
+                        break;
+                    }
+
+                    // Read counter do not reset when read.
+                    // Explicitly value 0 written to read counter after reading them. 
+                    rc = putScom (G_PMULETS_3B[2], 0, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: 0x%08x putscom failed. rc = 0x%x", G_PMULETS_3B[2], rc);
                         break;
                     }
 
@@ -1732,6 +2008,15 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                     if ( rc )
                     {
                         PK_TRACE("post_pmu_events: 0x%08x getscom failed. rc = 0x%x", G_PMULETS_3B[3], rc);
+                        break;
+                    }
+
+                    // Read counter do not reset when read.
+                    // Explicitly value 0 written to read counter after reading them. 
+                    rc = putScom (G_PMULETS_3B[3], 0, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: 0x%08x putscom failed. rc = 0x%x", G_PMULETS_3B[3], rc);
                         break;
                     }
 
@@ -1749,10 +2034,10 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
             case G4:
                 *L_DBG_GRP = 4;
                 post_addr = (uint64_t*) (POST_OFFSET_G4H | PBA_ENABLE);
-                rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_ATOMIC, o_err);
+                rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_ATOMIC, o_err);
                 if ( rc )
                 {
-                    PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                    PK_TRACE("post_pmu_events: PBASLVCTL1_C0040028 putscom failed. rc = 0x%08x", rc);
                     break;
                 }
 
@@ -1760,18 +2045,18 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                 post_addr++;
                 if (G_CUR_UAV & MASK_PHB0)
                 {
-                    rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_DMA, o_err);
+                    rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_DMA, o_err);
                     if ( rc )
                     {
-                        PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                        PK_TRACE("post_pmu_events: PBASLVCTL1_C0040028 putscom failed. rc = 0x%08x", rc);
                         break;
                     }
 
                     *L_DBG_UNIT = 1;
-                    rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_ATOMIC, o_err);
+                    rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_ATOMIC, o_err);
                     if ( rc )
                     {
-                        PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                        PK_TRACE("post_pmu_events: PBASLVCTL1_C0040028 putscom failed. rc = 0x%08x", rc);
                         break;
                     }
 
@@ -1792,18 +2077,18 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
 
                 if (G_CUR_UAV & MASK_PHB1)
                 {
-                    rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_DMA, o_err);
+                    rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_DMA, o_err);
                     if ( rc )
                     {
-                        PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                        PK_TRACE("post_pmu_events: PBASLVCTL1_C0040028 putscom failed. rc = 0x%08x", rc);
                         break;
                     }
 
                     *L_DBG_UNIT = 2;
-                    rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_ATOMIC, o_err);
+                    rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_ATOMIC, o_err);
                     if ( rc )
                     {
-                        PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                        PK_TRACE("post_pmu_events: PBASLVCTL1_C0040028 putscom failed. rc = 0x%08x", rc);
                         break;
                     }
 
@@ -1824,18 +2109,18 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
 
                 if (G_CUR_UAV & MASK_PHB2)
                 {
-                    rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_DMA, o_err);
+                    rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_DMA, o_err);
                     if ( rc )
                     {
-                        PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                        PK_TRACE("post_pmu_events: PBASLVCTL1_C0040028 putscom failed. rc = 0x%08x", rc);
                         break;
                     }
 
                     *L_DBG_UNIT = 3;
-                    rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_ATOMIC, o_err);
+                    rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_ATOMIC, o_err);
                     if ( rc )
                     {
-                        PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                        PK_TRACE("post_pmu_events: PBASLVCTL1_C0040028 putscom failed. rc = 0x%08x", rc);
                         break;
                     }
 
@@ -1856,18 +2141,18 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
 
                 if (G_CUR_UAV & MASK_PHB3)
                 {
-                    rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_DMA, o_err);
+                    rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_DMA, o_err);
                     if ( rc )
                     {
-                        PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                        PK_TRACE("post_pmu_events: PBASLVCTL1_C0040028 putscom failed. rc = 0x%08x", rc);
                         break;
                     }
 
                     *L_DBG_UNIT = 4;
-                    rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_ATOMIC, o_err);
+                    rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_ATOMIC, o_err);
                     if ( rc )
                     {
-                        PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                        PK_TRACE("post_pmu_events: PBASLVCTL1_C0040028 putscom failed. rc = 0x%08x", rc);
                         break;
                     }
 
@@ -1888,18 +2173,18 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
 
                 if (G_CUR_UAV & MASK_PHB4)
                 {
-                    rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_DMA, o_err);
+                    rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_DMA, o_err);
                     if ( rc )
                     {
-                        PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                        PK_TRACE("post_pmu_events: PBASLVCTL1_C0040028 putscom failed. rc = 0x%08x", rc);
                         break;
                     }
 
                     *L_DBG_UNIT = 5;
-                    rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_ATOMIC, o_err);
+                    rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_ATOMIC, o_err);
                     if ( rc )
                     {
-                        PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                        PK_TRACE("post_pmu_events: PBASLVCTL1_C0040028 putscom failed. rc = 0x%08x", rc);
                         break;
                     }
 
@@ -1920,18 +2205,18 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
 
                 if (G_CUR_UAV & MASK_PHB5)
                 {
-                    rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_DMA, o_err);
+                    rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_DMA, o_err);
                     if ( rc )
                     {
-                        PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                        PK_TRACE("post_pmu_events: PBASLVCTL1_C0040028 putscom failed. rc = 0x%08x", rc);
                         break;
                     }
 
                     *L_DBG_UNIT = 6;
-                    rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_ATOMIC, o_err);
+                    rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_ATOMIC, o_err);
                     if ( rc )
                     {
-                        PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                        PK_TRACE("post_pmu_events: PBASLVCTL1_C0040028 putscom failed. rc = 0x%08x", rc);
                         break;
                     }
 
@@ -1954,49 +2239,73 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                 *post_addr = INC_UPD_COUNT;
                 break;
 
-            case G5://OCMB - [0:3]- TODO:NOT READY YET
-            case G6:
-            case G7:
-            case G8A:
-            case G8B:
-                break; //OCMB disabled
-#if 0           // @TODO Enabled OCMB via different settings and scom APIs
+            case G5://OCMB - [0:3]
                 *L_DBG_GRP = 5;
                 post_addr = (uint64_t*) (POST_OFFSET_G5H | PBA_ENABLE);
-                rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_ATOMIC, o_err);
+                rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_ATOMIC, o_err);
                 if ( rc )
                 {
-                    PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                    PK_TRACE("post_pmu_events: PBASLVCTL1_C0040028 putscom failed. rc = 0x%08x", rc);
                     break;
                 }
 
                 *post_addr = INC_UPD_COUNT;
                 post_addr++;
-                if (G_CUR_UAV & MASK_OCMB0)
+
+                rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_DMA, o_err);
+                if ( rc )
                 {
-                    rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_DMA, o_err);
+                    PK_TRACE("post_pmu_events: PBASLVCTL1_C0040028 putscom failed. rc = 0x%08x", rc);
+                    break;
+                }
+
+                rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_ATOMIC, o_err);
+                if ( rc )
+                {
+                    PK_TRACE("post_pmu_events: PBASLVCTL1_C0040028 putscom failed. rc = 0x%08x", rc);
+                    break;
+                }
+
+                if ( G_membuf_config == NULL )
+                {
+                    PK_TRACE("post_pmu_events: G_membuf_config is NULL. No OCMB (G5) reading.");
+                    break;
+                }
+
+                // For OCMB:[0:3]
+                for(j=0; j<=3; j++)
+                {
+                    if ( (j == 0) && !(G_CUR_UAV & MASK_OCMB0) )
+                    {
+                        continue;
+                    }
+                    else if ( (j == 1) && !(G_CUR_UAV & MASK_OCMB1) )
+                    {
+                        continue;
+                    }
+                    else if ( (j == 2) && !(G_CUR_UAV & MASK_OCMB2) )
+                    {
+                        continue;
+                    }
+                    else if ( (j == 3) && !(G_CUR_UAV & MASK_OCMB3) )
+                    {
+                        continue;
+                    }
+
+                    *L_DBG_UNIT = (j+1);
+
+                    // Read OCMB scom
+                    rc = membuf_get_scom(G_membuf_config,
+                                         j,
+                                         G_PMULETS_5678[0],
+                                         &u3.pmulet);
                     if ( rc )
                     {
-                        PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+                        PK_TRACE("post_pmu_events: 0x%08x 0x%08x membuf_get_scom failed. rc = 0x%x", G_membuf_config->baseAddress[j], G_PMULETS_5678[0], rc);
                         break;
                     }
 
-                    *L_DBG_UNIT = 1;
-                    post_addr = (uint64_t*) (POST_OFFSET_G5_0 | PBA_ENABLE);
-                    rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_ATOMIC, o_err);
-                    if ( rc )
-                    {
-                        PK_TRACE("post_pmu_events: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
-                        break;
-                    }
-
-                    rc = getScom (G_PMULETS_5a[0], &u3.pmulet, o_err);
-                    if ( rc )
-                    {
-                        PK_TRACE("post_pmu_events: 0x%08x getscom failed. rc = 0x%x", G_PMULETS_5a[0], rc);
-                        break;
-                    }
-
+                    post_addr = (uint64_t*) ( (uint32_t)POST_OFFSET_G5_0 | (uint32_t)(0x20 * j) | (uint32_t)PBA_ENABLE );
                     for(i=0; i<4; i++)
                     {
                         *post_addr = (uint64_t)u3.ev.e[i];
@@ -2007,7 +2316,240 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                 post_addr = (uint64_t*) (POST_OFFSET_G5T | PBA_ENABLE);
                 *post_addr = INC_UPD_COUNT;
                 break;
-#endif
+
+            case G6://OCMB - [4:7]
+                *L_DBG_GRP = 6;
+                post_addr = (uint64_t*) (POST_OFFSET_G6H | PBA_ENABLE);
+                rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_ATOMIC, o_err);
+                if ( rc )
+                {
+                    PK_TRACE("post_pmu_events: PBASLVCTL1_C0040028 putscom failed. rc = 0x%08x", rc);
+                    break;
+                }
+
+                *post_addr = INC_UPD_COUNT;
+                post_addr++;
+
+                rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_DMA, o_err);
+                if ( rc )
+                {
+                    PK_TRACE("post_pmu_events: PBASLVCTL1_C0040028 putscom failed. rc = 0x%08x", rc);
+                    break;
+                }
+
+                rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_ATOMIC, o_err);
+                if ( rc )
+                {
+                    PK_TRACE("post_pmu_events: PBASLVCTL1_C0040028 putscom failed. rc = 0x%08x", rc);
+                    break;
+                }
+
+                if ( G_membuf_config == NULL )
+                {
+                    PK_TRACE("post_pmu_events: G_membuf_config is NULL. No OCMB (G6) reading.");
+                    break;
+                }
+
+                // For OCMB:[4:7]
+                for(j=4; j<=7; j++)
+                {
+                    if ( (j == 4) && !(G_CUR_UAV & MASK_OCMB4) )
+                    {
+                        continue;
+                    }
+                    else if ( (j == 5) && !(G_CUR_UAV & MASK_OCMB5) )
+                    {
+                        continue;
+                    }
+                    else if ( (j == 6) && !(G_CUR_UAV & MASK_OCMB6) )
+                    {
+                        continue;
+                    }
+                    else if ( (j == 7) && !(G_CUR_UAV & MASK_OCMB7) )
+                    {
+                        continue;
+                    }
+
+                    *L_DBG_UNIT = (j+1);
+
+                    // Read OCMB scom
+                    rc = membuf_get_scom(G_membuf_config,
+                                         j,
+                                         G_PMULETS_5678[0],
+                                         &u3.pmulet);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: 0x%08x 0x%08x membuf_get_scom failed. rc = 0x%x", G_membuf_config->baseAddress[j], G_PMULETS_5678[0], rc);
+                        break;
+                    }
+
+                    post_addr = (uint64_t*) ( (uint32_t)POST_OFFSET_G6_4 | (uint32_t)(0x20 * (j-4)) | (uint32_t)PBA_ENABLE );
+                    for(i=0; i<4; i++)
+                    {
+                        *post_addr = (uint64_t)u3.ev.e[i];
+                        post_addr++;
+                    }
+                }
+
+                post_addr = (uint64_t*) (POST_OFFSET_G6T | PBA_ENABLE);
+                *post_addr = INC_UPD_COUNT;
+                break;
+
+            case G7://OCMB - [8:11]
+                *L_DBG_GRP = 7;
+                post_addr = (uint64_t*) (POST_OFFSET_G7H | PBA_ENABLE);
+                rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_ATOMIC, o_err);
+                if ( rc )
+                {
+                    PK_TRACE("post_pmu_events: PBASLVCTL1_C0040028 putscom failed. rc = 0x%08x", rc);
+                    break;
+                }
+
+                *post_addr = INC_UPD_COUNT;
+                post_addr++;
+
+                rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_DMA, o_err);
+                if ( rc )
+                {
+                    PK_TRACE("post_pmu_events: PBASLVCTL1_C0040028 putscom failed. rc = 0x%08x", rc);
+                    break;
+                }
+
+                rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_ATOMIC, o_err);
+                if ( rc )
+                {
+                    PK_TRACE("post_pmu_events: PBASLVCTL1_C0040028 putscom failed. rc = 0x%08x", rc);
+                    break;
+                }
+
+                if ( G_membuf_config == NULL )
+                {
+                    PK_TRACE("post_pmu_events: G_membuf_config is NULL. No OCMB (G7) reading.");
+                    break;
+                }
+
+                // For OCMB:[8:11]
+                for(j=8; j<=11; j++)
+                {
+                    if ( (j == 8) && !(G_CUR_UAV & MASK_OCMB8) )
+                    {
+                        continue;
+                    }
+                    else if ( (j == 9) && !(G_CUR_UAV & MASK_OCMB9) )
+                    {
+                        continue;
+                    }
+                    else if ( (j == 10) && !(G_CUR_UAV & MASK_OCMB10) )
+                    {
+                        continue;
+                    }
+                    else if ( (j == 11) && !(G_CUR_UAV & MASK_OCMB11) )
+                    {
+                        continue;
+                    }
+
+                    *L_DBG_UNIT = (j+1);
+
+                    // Read OCMB scom
+                    rc = membuf_get_scom(G_membuf_config,
+                                         j,
+                                         G_PMULETS_5678[0],
+                                         &u3.pmulet);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: 0x%08x 0x%08x membuf_get_scom failed. rc = 0x%x", G_membuf_config->baseAddress[j], G_PMULETS_5678[0], rc);
+                        break;
+                    }
+
+                    post_addr = (uint64_t*) ( (uint32_t)POST_OFFSET_G7_8 | (uint32_t)(0x20 * (j-8)) | (uint32_t)PBA_ENABLE );
+                    for(i=0; i<4; i++)
+                    {
+                        *post_addr = (uint64_t)u3.ev.e[i];
+                        post_addr++;
+                    }
+                }
+
+                post_addr = (uint64_t*) (POST_OFFSET_G7T | PBA_ENABLE);
+                *post_addr = INC_UPD_COUNT;
+                break;
+
+            case G8://OCMB - [12:15]
+                *L_DBG_GRP = 8;
+                post_addr = (uint64_t*) (POST_OFFSET_G8H | PBA_ENABLE);
+                rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_ATOMIC, o_err);
+                if ( rc )
+                {
+                    PK_TRACE("post_pmu_events: PBASLVCTL1_C0040028 putscom failed. rc = 0x%08x", rc);
+                    break;
+                }
+
+                *post_addr = INC_UPD_COUNT;
+                post_addr++;
+
+                rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_DMA, o_err);
+                if ( rc )
+                {
+                    PK_TRACE("post_pmu_events: PBASLVCTL1_C0040028 putscom failed. rc = 0x%08x", rc);
+                    break;
+                }
+
+                rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_ATOMIC, o_err);
+                if ( rc )
+                {
+                    PK_TRACE("post_pmu_events: PBASLVCTL1_C0040028 putscom failed. rc = 0x%08x", rc);
+                    break;
+                }
+
+                if ( G_membuf_config == NULL )
+                {
+                    PK_TRACE("post_pmu_events: G_membuf_config is NULL. No OCMB (G8) reading.");
+                    break;
+                }
+
+                // For OCMB:[12:15]
+                for(j=12; j<=15; j++)
+                {
+                    if ( (j == 12) && !(G_CUR_UAV & MASK_OCMB12) )
+                    {
+                        continue;
+                    }
+                    else if ( (j == 13) && !(G_CUR_UAV & MASK_OCMB13) )
+                    {
+                        continue;
+                    }
+                    else if ( (j == 14) && !(G_CUR_UAV & MASK_OCMB14) )
+                    {
+                        continue;
+                    }
+                    else if ( (j == 15) && !(G_CUR_UAV & MASK_OCMB15) )
+                    {
+                        continue;
+                    }
+
+                    *L_DBG_UNIT = (j+1);
+
+                    // Read OCMB scom
+                    rc = membuf_get_scom(G_membuf_config,
+                                         j,
+                                         G_PMULETS_5678[0],
+                                         &u3.pmulet);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: 0x%08x 0x%08x membuf_get_scom failed. rc = 0x%x", G_membuf_config->baseAddress[j], G_PMULETS_5678[0], rc);
+                        break;
+                    }
+
+                    post_addr = (uint64_t*) ( (uint32_t)POST_OFFSET_G8_12 | (uint32_t)(0x20 * (j-12)) | (uint32_t)PBA_ENABLE );
+                    for(i=0; i<4; i++)
+                    {
+                        *post_addr = (uint64_t)u3.ev.e[i];
+                        post_addr++;
+                    }
+                }
+
+                post_addr = (uint64_t*) (POST_OFFSET_G8T | PBA_ENABLE);
+                *post_addr = INC_UPD_COUNT;
+                break;
 
             default:
                 PK_TRACE("gpe_24x7: Invalid Group: %d", grp);
@@ -2017,7 +2559,7 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
         }
 
         if ( rc )
-            break; 
+            break;
     } while (0);
 
     PK_TRACE ("<< post_pmu_events %d rc: 0x%08X", grp, rc);
@@ -2036,10 +2578,10 @@ uint32_t initialize_postings (GpeErrorStruct* o_err)
 
     PK_TRACE (">> initialize_postings");
 
-    rc = putScom (PBASLVCTL2_C0040030, PBASLV_SET_DMA, o_err);
+    rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_DMA, o_err);
     if ( rc )
     {
-        PK_TRACE("initialize_postings: PBASLVCTL2_C0040030 putscom failed. rc = 0x%08x", rc);
+        PK_TRACE("initialize_postings: PBASLVCTL1_C0040028 putscom failed. rc = 0x%08x", rc);
         return rc;
     }
 

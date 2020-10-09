@@ -50,7 +50,7 @@
 #define MI_3_MCSYNC     0x0f010c15
 
 extern uint32_t g_inband_access_state;
-
+extern MemBufConfiguration_t * G_membuf_config;
 
 // IPC interface
 void gpe_membuf_scom(ipc_msg_t* i_cmd, void* i_arg);
@@ -113,5 +113,14 @@ int ocmb_throttle_sync(MemBufConfiguration_t* i_config);
 int get_ocmb_sensorcache(MemBufConfiguration_t* i_config,
                              MemBufGetMemDataParms_t* i_parms);
 
+int membuf_get_scom(MemBufConfiguration_t* i_config,
+                    int i_membuf_instance,
+                    uint32_t i_scom_address,
+                    uint64_t* o_data);
+
+int membuf_put_scom(MemBufConfiguration_t* i_config,
+                    int i_membuf_instance,
+                    uint32_t i_scom_address,
+                    uint64_t i_data);
 
 #endif

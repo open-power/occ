@@ -26,13 +26,16 @@
 #ifndef _GPE1_24x7_H
     #define _GPE1_24x7_H
 
+#include "gpe_membuf.h"
+#include "membuf_configuration.h"
+
 //PMU config table defined below.
 //------------------------------
-#define TOTAL_CONFIGS  120
+#define TOTAL_CONFIGS  119
 #define TOTAL_POSTINGS 442
 #define INC_UPD_COUNT  1
 
-#define TOTAL_CONFIG_SCOMS  120
+#define TOTAL_CONFIG_SCOMS  119
 #define TOTAL_COUNTER_SCOMS 82
 
 #define MAX_32 4294967295ULL
@@ -181,8 +184,7 @@ uint64_t G_PMU_CONFIGS_8[][2] =
     {0x9010997, 0x8000550000000000},//phb-5//117
 
 //OCMB//
-    {0x8011440, 0x0451805515000000},//ocmb//118
-    {0x8011441, 0x0000000000000000} //ocmb//119
+    {0x8011440, 0x0451805515000000}//ocmb//118
 };
 
 
@@ -284,98 +286,23 @@ uint64_t G_PMULETS_4[] =
 };
 
 //------------------------- OCMB ---------------------------//
-uint64_t G_PMULETS_5a[] =
-{//OCMB0
-    0x801143f,//0
+uint64_t G_PMULETS_5678[] =
+{//OCMB0-15
+    0x801143f,//0-15
 };
-
-uint64_t G_PMULETS_5b[] =
-{//OCMB1
-    0x801143f,//1
-};
-
-uint64_t G_PMULETS_5c[] =
-{//OCMB2
-    0x801143f,//2
-};
-
-uint64_t G_PMULETS_5d[] =
-{//OCMB3
-    0x801143f,//3
-};
-
-uint64_t G_PMULETS_6a[] =
-{//OCMB4
-    0x801143f,//4
-};
-
-uint64_t G_PMULETS_6b[] =
-{//OCMB5
-    0x801143f,//5
-};
-
-uint64_t G_PMULETS_6c[] =
-{//OCMB6
-    0x801143f,//6
-};
-
-uint64_t G_PMULETS_6d[] =
-{//OCMB7
-    0x801143f,//7
-};
-
-uint64_t G_PMULETS_7a[] =
-{//OCMB8
-    0x801143f,//8
-};
-
-uint64_t G_PMULETS_7b[] =
-{//OCMB9
-    0x801143f,//9
-};
-
-uint64_t G_PMULETS_7c[] =
-{//OCMB10
-    0x801143f,//10
-};
-
-uint64_t G_PMULETS_7d[] =
-{//OCMB11
-    0x801143f,//11
-};
-
-uint64_t G_PMULETS_8a[] =
-{//OCMB12
-    0x801143f,//12
-};
-
-uint64_t G_PMULETS_8b[] =
-{//OCMB13
-    0x801143f,//13
-};
-
-uint64_t G_PMULETS_8c[] =
-{//OCMB14
-    0x801143f,//14
-};
-
-uint64_t G_PMULETS_8d[] =
-{//OCMB15
-    0x801143f,//15
-};
-
 
 
 /**
  * Groups 
  **/
-enum groups {G1A=1,G1B=2,G2A=3,G2B=4,G3A=5,G3B=6,G4=7,G5=8,G6=9,G7=10,G8A=11,G8B=12};
+enum groups {G1A=1,G1B=2,G2A=3,G2B=4,G3A=5,G3B=6,G4=7,G5=8,G6=9,G7=10,G8=11};
 
 enum
 {
     ZERO                        = 0,
     PBA_ENABLE                  = 0x80000000,
     TEST_ADDR                   = 0x00180110,
+    PBASLVCTL1_C0040028         = 0xC0040028,
     PBASLVCTL2_C0040030         = 0xC0040030,
     PBASLV_SET_DMA              = 0x97005EC000000000,
     PBASLV_SET_ATOMIC           = 0x97405EC060000000,
@@ -629,7 +556,8 @@ enum MASKS
     MASK_OCMB12  = 0x0000000000000400,
     MASK_OCMB13  = 0x0000000000000200,
     MASK_OCMB14  = 0x0000000000000100,
-    MASK_OCMB15  = 0x0000000000000080
+    MASK_OCMB15  = 0x0000000000000080,
+    MASK_OCMB    = 0x00000000007FFF80
 };
 
 

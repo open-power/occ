@@ -57,8 +57,6 @@ MemBufGetMemDataParms_t G_dataParms;
 MemBufConfiguration_t G_membufConfiguration;
 OcmbMemData G_escache;
 
-extern MemBufConfiguration_t * G_membuf_config;
-
 int gpe_ocmb_configuration_create(MemBufConfiguration_t* o_config);
 int get_ocmb_sensorcache(MemBufConfiguration_t* i_config,
                          MemBufGetMemDataParms_t* i_parms);
