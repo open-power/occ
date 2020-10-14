@@ -414,7 +414,7 @@ void parse_tmgt_info(const uint8_t *i_rsp_data, const uint16_t i_rsp_len)
     {
         occ_info_t * occd = &data->occ[occ];
         printf("OCC%d: %s %s (0x%02X) resetCount:%d wofResets:%d flags pollRsp:0x%02X%02X%02X%02X... %s\n",
-               occd->instance, (occd->instance == data->master)?"Master":"Slave",
+               occd->instance, (occd->instance == data->master)?"Master":"Slave ",
                getStateString(occd->state), occd->state,
                occd->reset_count, occd->wof_reset_count, occd->last_poll[0], occd->last_poll[1], occd->last_poll[2], occd->last_poll[3],
                getPollExtStatus(occd->last_poll[1]));

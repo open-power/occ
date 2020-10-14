@@ -389,7 +389,7 @@ typedef struct __attribute__ ((packed))
 } amec_wof_t;  // 818 bytes total
 
 // Structure used in g_amec to hold static WOF data
-typedef struct __attribute__ ((packed))
+typedef struct __attribute__ ((packed, aligned(128)))
 {
     // Data from wof table header structure defined in /include/pstates_common.H
     WofTablesHeader_t wof_header;

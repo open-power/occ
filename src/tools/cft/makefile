@@ -72,7 +72,7 @@ endif
 # AR = the archive creator
 # DEFINES = -D defines to pass thru
 #
-CC := /opt/rh/devtoolset-2/root/usr/bin/g++
+CC := g++
 # Assign default values, unless the user set them before calling the script
 LD  := ${CC}
 # Update CFLAGS to include ECMD headers

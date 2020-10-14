@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -114,8 +114,6 @@ static const SsxAddress G_pba_xshincn[PBAX_ENGINES] =
 static void
 pba_common_ffdc(PbaCommonFfdc* ffdc)
 {
-    int i;
-
     if (ffdc->error == 0)
     {
 
@@ -124,7 +122,8 @@ pba_common_ffdc(PbaCommonFfdc* ffdc)
         ffdc->mode.value = in64(PBA_MODE);
 
 #if (OCCHW_USE_SCOM)
-       for (i = 0; i < PBA_READ_BUFFERS; i++)
+        int i;
+        for (i = 0; i < PBA_READ_BUFFERS; i++)
         {
 
             getscom(PBA_RBUFVALN(i), &(ffdc->rbufval[i].value));

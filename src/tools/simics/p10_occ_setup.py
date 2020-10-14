@@ -51,21 +51,27 @@ G_bypass_bootloader = 0
 # Indicates if the symbols were loaded (by running occinit)
 G_symbols_loaded = 0
 
-# P10
-bp = "backplane0"   # Standalone
-bp = "Nisqually"    # Rainier
-# Determine backplane dynamically:
-value,junk = cli.quiet_run_command("get-object-list -all type = apss_device");
-bp = str(value[0][:-5])
+#bp = "backplane0"   # Standalone
+#bp = "Nisqually"    # Rainier
+#proc = "dcm[0].chip[0]"
+#bp = "Tanager"; proc = "scm[0].chip[0]" # Denali
+occ_instance = 0
 
-proc = "dcm[0].chip[0]"
-if 1 == 1:
-    G_occsram_trace_length = "0x2400"
-    G_occsram_err_trace  = "0xFFFF6400" # New SRAM locations 10/10/2019
-    G_occsram_inf_trace  = "0xFFFF8800"
-    G_occsram_imp_trace  = "0xFFFFAC00"
-    G_occsram_cmd_buffer = "0xFFFFD000"
-    G_occsram_rsp_buffer = "0xFFFFE000"
+# Determine backplane dynamically:
+value,junk = cli.quiet_run_command("get-all-procs");
+bp = str(value[occ_instance][:-15])
+proc = str(value[occ_instance][-14:])
+print("BP:"+bp)
+print("OCC: "+str(occ_instance))
+print("PROC:"+proc)
+
+
+G_occsram_trace_length = "0x2400"
+G_occsram_err_trace  = "0xFFFF6400" # New SRAM locations 10/10/2019
+G_occsram_inf_trace  = "0xFFFF8800"
+G_occsram_imp_trace  = "0xFFFFAC00"
+G_occsram_cmd_buffer = "0xFFFFD000"
+G_occsram_rsp_buffer = "0xFFFFE000"
 
 G_occ_rsp_buffer_size = 4096
 
@@ -1102,7 +1108,7 @@ def parse_response_POLL(DataList, FLG_VRB):
                         name=name+" "
                     tempindex += 1
                 print("\""+name+"\"  ",end="")
-                if (name == "FMIN") or (name == "FBAS") or (name == "FUT ") or (name == "FMAX"):
+                if (name == "FMIN") or (name == "FDIS") or (name == "FBAS") or (name == "FUT ") or (name == "FMAX"):
                     tempindex += 2
                     print("0x"+str(format(DataList[tempindex],'02X'))+"  ",end="")
                     tempindex += 1
@@ -1619,7 +1625,7 @@ def print_elog(err_id, err_addr, err_len, flg_verbose):
 def occ_trace(directory_arg, flg_verbose, flg_directory, i_directory, flg_prefix, i_prefix):
     """Dump OCC trace"""
     RC = 0
-    OCC = 0
+    OCC = occ_instance
 
     # Determine where the string file is located
     parse_opts = ""
@@ -1740,7 +1746,7 @@ def occ_trace(directory_arg, flg_verbose, flg_directory, i_directory, flg_prefix
 def pgpe_trace(directory_arg, flg_verbose):
     """Dump PGPE trace"""
     RC = 0
-    OCC = 0
+    OCC = occ_instance
 
     print("Dumping PGPE trace for OCC" + str(OCC))
 
@@ -1866,7 +1872,7 @@ def int_to_bin_string(i):
 def dump_occ_machine_state(flg_verbose):
     """Dump OCC machine state"""
     RC = 0
-    OCC = 0
+    OCC = occ_instance
     ReturnData = []
 
     if flg_verbose:
@@ -1982,7 +1988,7 @@ def dump_occ_machine_state(flg_verbose):
 def poll_and_clear_elog(flg_verbose):
     """Poll and clear OCC elog"""
     elog_id = 0
-    OCC = 0
+    OCC = occ_instance
     ReturnData = []
     global G_run_time
     global LastCmd_SeqNum
@@ -2009,7 +2015,7 @@ def poll_and_clear_elog(flg_verbose):
 def sensor_list(flg_verbose):
     """OCC Sensors"""
     RC = 0
-    OCC = 0
+    OCC = occ_instance
     ReturnData = []
     sensor_type=0xFFFF
     sensor_loc=0xFFFF
@@ -2051,7 +2057,7 @@ def sensor_list(flg_verbose):
 def send_occ_cmd(occ_cmd, occ_data, flg_verbose):
     """Send OCC Command to OCC"""
     RC = 0
-    OCC = 0
+    OCC = occ_instance
     ReturnData = []
     retries = 2
     global G_run_time
@@ -2430,7 +2436,7 @@ Send Poll command to OCC and collect/clear one error log if found<br>
 def occ_init(code_dir, flg_nopgpe, flg_verbose):
     """Initialization to get OCC ready to run"""
     RC = 0
-    OCC = 0
+    OCC = occ_instance
     ReturnData = []
     global L_pgpe_enabled
 
@@ -2651,6 +2657,9 @@ def occ_init(code_dir, flg_nopgpe, flg_verbose):
     cli.run_command(bp+"."+proc+".bridge_cmp.pba->pba_barmsk0=0x0000000007f00000")
 
     print("==> INIT APSS CHANNEL VALUES")
+    value,junk = cli.quiet_run_command("get-object-list -all type = apss_device");
+    apssdev = str(value[0])
+    print("APSS DEVICE: "+apssdev)
     command = bp+".apss->adc_channel_val = [0x0293, 0x9287, 0x2887, 0x3877, 0x4326, 0x52F2, 0x6214, 0x7006, 0x8003, 0x9EB7, 0xA01B, 0xB013, 0xC123, 0xD0FC, 0xE0F2, 0xF008]"
     print("==> " + command)
     cli.run_command(command)
@@ -2757,7 +2766,7 @@ def wait_for_checkpoint(flg_verbose):
 def occ_to_ckpt(flg_nopgpe, flg_run, flg_verbose):
     """Wait for checkpoint and send Poll command"""
     RC = 0
-    OCC = 0
+    OCC = occ_instance
     ReturnData = []
     global G_run_time
     global LastCmd_SeqNum
@@ -2783,7 +2792,7 @@ def occ_to_ckpt(flg_nopgpe, flg_run, flg_verbose):
 def occ_to_active(flg_nopgpe, flg_run, flg_verbose):
     """Config Required for Active State"""
     RC = 0
-    OCC = 0
+    OCC = occ_instance
     ReturnData = []
     global G_run_time
     global LastCmd_SeqNum
@@ -2900,8 +2909,6 @@ def occ_to_active(flg_nopgpe, flg_run, flg_verbose):
     cmdData=cmdData+"0100444445555666233334446777788823333444EEEE"
     cmdData=cmdData+"0200444445555666233334446777788823333444EEEE"
     cmdData=cmdData+"0300444445555666233334446777788823333444EEEE"
-
-
 
     RC = send_occ_cmd(0x21, cmdData, flg_verbose);
 

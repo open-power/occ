@@ -466,7 +466,8 @@ void parse_occ_poll(const uint8_t *i_rsp_data, const uint16_t i_rsp_len)
                 }
                 else
                 {
-                    if ((name == ntohl(0x464D494E)) || (name == ntohl(0x46424153)) || // FMIN/FBAS
+                    if ((name == ntohl(0x464D494E)) || (name == ntohl(0x46444953)) || // FMIN/FDIS
+                        (name == ntohl(0x46424153)) || // FBAS
                         (name == ntohl(0x46555400)) || (name == ntohl(0x46555400))) // FUT/FMAX
                     {
                         printf("\"%-4.4s\" %02X %02X %08X%04X    pSstate: %3d / %d MHz", (char*)&name, flags, dblock[sindex+5],

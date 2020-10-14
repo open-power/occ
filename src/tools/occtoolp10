@@ -1061,7 +1061,7 @@ function parse_rsp_poll
                                     fi
                                     printf "           $hist_data    $history_desc\n";
                                     #printf "         $pwr    $funcid_name\n";
-                                elif [ $sensor_id == "464D494E" ] || [ $sensor_id == "464E4F4D" ] || [ $sensor_id == "46540000" ] || [ $sensor_id == "46555400" ]; then # FMIN,FNOM,FT,FUT
+                                elif [ $sensor_id == "464D494E" ] || [ $sensor_id == "46444953" ] || [ $sensor_id == "46424154" ] || [ $sensor_id == "46555400" ] || [ $sensor_id == "464D4158" ]; then # FMIN,FDIS,FBAS,FUT,FMAX
                                     freq_data=`hexdump -s $offset -n $sensorLength -e ' 4/1 "%_p" "   " 1/1 "%02X" " " 1/1 "%02X" " " 6/1 "%02X""\n"' ${binfile}`
                                     let freq_pstate=0x${freq_data:13:2}
                                     let freq_value=0x${freq_data:15:4}
