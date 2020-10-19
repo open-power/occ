@@ -39,11 +39,13 @@
 #define TOD_VALUE_REG           0x00040020
 #define CPMS_SDSR               0x000e0e68
 #define QME_FTXR                0x000e0178
+#define FIR_ERR_INJ             0x0002044d
+#define PMC_THREAD_INFO         0x00020413
 #define STOP_STATE_HIST_OCC_REG 0x000F0112 // TODO RTC 213673 Exist on P10?
 
 #define CORE_RAW_CYCLES             0x200
 
-#define MAX_SCOMD_RETRY     2
+#define MAX_SCOMD_RETRY     1
 
 #define EMPATH_CORE_THREADS 4
 

@@ -140,6 +140,38 @@ uint32_t get_core_data(uint32_t i_core,
         // =============
         // EMPATH
         // =============
+        // HW548583 work-around - start
+        uint64_t inj_data;
+        uint64_t thread_info_data;
+
+        if((mfspr(SPRN_PVR) & 0x00000700) == 0x100)
+        {
+            rc = getscom(coreSelect,FIR_ERR_INJ,&inj_data);
+            if(rc)
+            {
+                break;
+            }
+
+            inj_data |= 0x0880000000000000ull;  //bits(4,8) = 11
+
+            rc = putscom(coreSelect,FIR_ERR_INJ,inj_data);
+            if(rc)
+            {
+                break;
+            }
+
+            do
+            {
+                rc = getscom(coreSelect,PMC_THREAD_INFO, &thread_info_data);
+            } while ((rc == 0) && ((thread_info_data & 0x0000010000000000ull)) != 0 ); // until bit(23) off
+
+            if(rc)
+            {
+                break;
+            }
+        }
+        // HW548583 work-around - end
+
         // Send command to select which emmpath counter to read
         uint32_t empath_offset = CORE_RAW_CYCLES;
         uint64_t empath_scom_data = (uint64_t)empath_offset;
@@ -351,6 +383,17 @@ uint32_t get_core_data(uint32_t i_core,
             break;
         }
         o_data->droop.mma_active = (uint32_t)empath_scom_data;
+
+        // HW548583 work-around - Post empath gather
+        if((mfspr(SPRN_PVR) & 0x00000700) == 0x100)
+        {
+            inj_data &= ~(0x0080000000000000ull);
+            rc = putscom(coreSelect, FIR_ERR_INJ, inj_data);
+            if (rc)
+            {
+                break;
+            }
+        }
 
         // TOD value
         rc = getscom_abs(TOD_VALUE_REG,&empath_scom_data);
