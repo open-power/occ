@@ -36,7 +36,7 @@
 #include "amec_master_smh.h"
 #include <trac.h>               // For traces
 #include "amec_sys.h"
-#include "amec_service_codes.h" //For AMEC_MST_CHECK_PCAPS_MATCH
+#include "amec_service_codes.h"
 #include "dcom.h"
 #include <amec_sensors_power.h>
 #include <cmdh_fsp_cmds.h>      // For G_apss_ch_to_function
@@ -53,9 +53,6 @@
 //*************************************************************************/
 // Defines/Enums
 //*************************************************************************/
-
-//Power cap mismatch threshold set to 8 ticks
-#define PCAPS_MISMATCH_THRESHOLD 8
 
 //Power cap failure threshold with no GPUs set to 32 ticks
 #define PCAP_FAILURE_THRESHOLD 32
@@ -76,9 +73,6 @@ smh_state_t G_amec_mst_state = {AMEC_INITIAL_STATE,
 
 //Array that stores active power cap values of all OCCs
 slave_pcap_info_t G_slave_active_pcaps[MAX_OCCS] = {{0}};
-
-//OCC Power cap mismatch count
-uint8_t G_pcaps_mismatch_count = 0;
 
 //OCC over power cap count
 uint8_t G_over_cap_count = 0;
@@ -267,118 +261,6 @@ void amec_master_auto_slew(void)
 
     return;
 }
-
-// Function Specification
-//
-// Name: amec_mst_check_pcaps_match
-//
-// Description: This function checks for mismatch in power caps between
-//              occs for 8 consecutive ticks.
-//
-// End Function Specification
-void amec_mst_check_pcaps_match(void)
-{
-    /*------------------------------------------------------------------------*/
-    /*  Local Variables                                                       */
-    /*------------------------------------------------------------------------*/
-    uint8_t l_chip_id;
-    bool l_prev_pcap_valid = FALSE;
-    uint16_t l_prev_pcap = 0;
-    bool l_pcap_mismatch = FALSE;
-    errlHndl_t  l_err = NULL;
-
-    /*------------------------------------------------------------------------*/
-    /*  Code                                                                  */
-    /*------------------------------------------------------------------------*/
-
-    //Loop through all occs
-    for(l_chip_id = 0; l_chip_id < MAX_OCCS; l_chip_id++)
-    {
-        //if occ is present && its pcap data is considered valid
-        if((G_sysConfigData.is_occ_present & (1<< l_chip_id)) &&
-           (G_slave_active_pcaps[l_chip_id].pcap_valid != 0))
-        {
-            //TRAC_INFO(" occ[%d]: pcap[%d] valid(%d)",
-            //    l_chip_id, G_slave_active_pcaps[l_chip_id].active_pcap, G_slave_active_pcaps[l_chip_id].pcap_valid );
-
-            //Initialize l_prev_pcap to the first valid/present occ's power cap
-            if(!l_prev_pcap_valid)
-            {
-                //TRAC_INFO("First present occ - power cap info[%d]=%d(%d)",
-                //    l_chip_id, G_slave_active_pcaps[l_chip_id].active_pcap, G_slave_active_pcaps[l_chip_id].pcap_valid );
-
-                l_prev_pcap = G_slave_active_pcaps[l_chip_id].active_pcap;
-                l_prev_pcap_valid = TRUE;
-            }
-            else
-            {
-                //If there is mismatch between OCCs power caps, increment mismatch
-                // count
-                if(l_prev_pcap != G_slave_active_pcaps[l_chip_id].active_pcap)
-                {
-                    G_pcaps_mismatch_count++;
-                    l_pcap_mismatch = TRUE;
-
-                    // don't trace first mismatch
-                    if(G_pcaps_mismatch_count > 1)
-                    {
-                       TRAC_INFO("Mismatch in OCC power cap values: mismatch cnt=%d pcap=%d vs compared pcap[%d]=%d(%d)",
-                           G_pcaps_mismatch_count, l_prev_pcap, l_chip_id, G_slave_active_pcaps[l_chip_id].active_pcap,
-                           G_slave_active_pcaps[l_chip_id].pcap_valid);
-                    }
-
-                    //If mismatch occurs for 8 consecutive ticks then reset occ
-                    if(G_pcaps_mismatch_count >= PCAPS_MISMATCH_THRESHOLD)
-                    {
-                        TRAC_ERR("Mismatch in OCC power cap values: pcap=%d, slave_active_pcap[%d]=%d(%d)",
-                            l_prev_pcap, l_chip_id, G_slave_active_pcaps[l_chip_id].active_pcap,
-                            G_slave_active_pcaps[l_chip_id].pcap_valid);
-
-                        /* @
-                         * @errortype
-                         * @moduleid    AMEC_MST_CHECK_PCAPS_MATCH
-                         * @reasoncode  INTERNAL_FAILURE
-                         * @userdata1   First OCC Power cap
-                         * @userdata2   Mismatch OCC Power cap
-                         * @devdesc     Internal max power limits mismatched
-                         *
-                         */
-                        l_err = createErrl( AMEC_MST_CHECK_PCAPS_MATCH,
-                                            INTERNAL_FAILURE,
-                                            ERC_AMEC_PCAPS_MISMATCH_FAILURE,
-                                            ERRL_SEV_PREDICTIVE,
-                                            NULL,
-                                            DEFAULT_TRACE_SIZE,
-                                            l_prev_pcap,
-                                            G_slave_active_pcaps[l_chip_id].active_pcap);
-
-                        //Callout to OVS
-                        addCalloutToErrl(l_err,
-                                         ERRL_CALLOUT_TYPE_COMPONENT_ID,
-                                         ERRL_COMPONENT_ID_FIRMWARE,
-                                         ERRL_CALLOUT_PRIORITY_HIGH);
-
-                        //Callout to APSS
-                        addCalloutToErrl(l_err,
-                                         ERRL_CALLOUT_TYPE_HUID,
-                                         G_sysConfigData.apss_huid,
-                                         ERRL_CALLOUT_PRIORITY_HIGH);
-                        //Reset OCC
-                        REQUEST_RESET(l_err);
-                    }
-                    break;
-                }
-            }
-        }
-    }
-
-    //If there was no power cap mismatch between occ's,then reset count to zero
-    if(!l_pcap_mismatch)
-    {
-        G_pcaps_mismatch_count = 0;
-    }
-}
-
 
 // Function Specification
 //
@@ -904,9 +786,6 @@ void amec_mst_common_tasks_post(void)
   {
       // Call the OCC auto-slew function
       amec_master_auto_slew();
-
-      //Call OCC pcaps mismatch function
-      amec_mst_check_pcaps_match();
 
       if(0 == G_dcom_slv_inbox_doorbell_rx.apss_recovery_in_progress)
       {

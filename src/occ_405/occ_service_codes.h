@@ -173,7 +173,6 @@ enum occExtReasonCode
     ERC_APSS_NO_VALID_DATA                      = 0x0028,
     ERC_APSS_RESET_FAILURE                      = 0x0029,
 
-    ERC_AMEC_PCAPS_MISMATCH_FAILURE             = 0x002A,
     ERC_AMEC_UNDER_PCAP_FAILURE                 = 0x002B,
 
     ERC_AMEC_SLAVE_OVS_STATE                    = 0x002D,

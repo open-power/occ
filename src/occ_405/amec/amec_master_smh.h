@@ -82,7 +82,6 @@ typedef struct
 }slave_pcap_info_t;
 
 extern slave_pcap_info_t G_slave_active_pcaps[MAX_OCCS];
-extern uint8_t G_pcaps_mismatch_count;
 extern uint8_t G_over_cap_count;
 extern uint16_t G_mst_soft_fmin;
 extern uint16_t G_mst_soft_fmax;
@@ -99,8 +98,6 @@ void amec_mst_common_tasks_post(void);
 
 // Master auto-slewing function
 void amec_master_auto_slew(void);
-// OCC Power cap mismatch function
-void amec_mst_check_pcaps_match(void);
 // Check if under power cap function
 void amex_mst_check_under_pcap(void);
 // Idle Power Saver main algorithm
