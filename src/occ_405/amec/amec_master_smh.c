@@ -54,8 +54,8 @@
 // Defines/Enums
 //*************************************************************************/
 
-//Power cap mismatch threshold set to 8 ticks
-#define PCAPS_MISMATCH_THRESHOLD 8
+//Power cap mismatch threshold
+#define PCAPS_MISMATCH_THRESHOLD 80
 
 //Power cap failure threshold with no GPUs set to 32 ticks
 #define PCAP_FAILURE_THRESHOLD 32
@@ -286,6 +286,7 @@ void amec_mst_check_pcaps_match(void)
     uint16_t l_prev_pcap = 0;
     bool l_pcap_mismatch = FALSE;
     errlHndl_t  l_err = NULL;
+    static bool L_error_logged = FALSE;
 
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
@@ -319,17 +320,12 @@ void amec_mst_check_pcaps_match(void)
                     G_pcaps_mismatch_count++;
                     l_pcap_mismatch = TRUE;
 
-                    // don't trace first mismatch
-                    if(G_pcaps_mismatch_count > 1)
+                    // Log error if mismatch occurs for maximum consecutive ticks
+                    if( (G_pcaps_mismatch_count == PCAPS_MISMATCH_THRESHOLD) &&
+                        (!L_error_logged) )
                     {
-                       TRAC_INFO("Mismatch in OCC power cap values: mismatch cnt=%d pcap=%d vs compared pcap[%d]=%d(%d)",
-                           G_pcaps_mismatch_count, l_prev_pcap, l_chip_id, G_slave_active_pcaps[l_chip_id].active_pcap,
-                           G_slave_active_pcaps[l_chip_id].pcap_valid);
-                    }
-
-                    //If mismatch occurs for 8 consecutive ticks then reset occ
-                    if(G_pcaps_mismatch_count >= PCAPS_MISMATCH_THRESHOLD)
-                    {
+                        // Power capping is now handled by master only, so it is not critical
+                        // if slave doesn't match, just log informational log
                         TRAC_ERR("Mismatch in OCC power cap values: pcap=%d, slave_active_pcap[%d]=%d(%d)",
                             l_prev_pcap, l_chip_id, G_slave_active_pcaps[l_chip_id].active_pcap,
                             G_slave_active_pcaps[l_chip_id].pcap_valid);
@@ -346,25 +342,14 @@ void amec_mst_check_pcaps_match(void)
                         l_err = createErrl( AMEC_MST_CHECK_PCAPS_MATCH,
                                             INTERNAL_FAILURE,
                                             ERC_AMEC_PCAPS_MISMATCH_FAILURE,
-                                            ERRL_SEV_PREDICTIVE,
+                                            ERRL_SEV_INFORMATIONAL,
                                             NULL,
                                             DEFAULT_TRACE_SIZE,
                                             l_prev_pcap,
                                             G_slave_active_pcaps[l_chip_id].active_pcap);
 
-                        //Callout to OVS
-                        addCalloutToErrl(l_err,
-                                         ERRL_CALLOUT_TYPE_COMPONENT_ID,
-                                         ERRL_COMPONENT_ID_FIRMWARE,
-                                         ERRL_CALLOUT_PRIORITY_HIGH);
-
-                        //Callout to APSS
-                        addCalloutToErrl(l_err,
-                                         ERRL_CALLOUT_TYPE_HUID,
-                                         G_sysConfigData.apss_huid,
-                                         ERRL_CALLOUT_PRIORITY_HIGH);
-                        //Reset OCC
-                        REQUEST_RESET(l_err);
+                        commitErrl(&l_err);
+                        L_error_logged = TRUE;
                     }
                     break;
                 }
