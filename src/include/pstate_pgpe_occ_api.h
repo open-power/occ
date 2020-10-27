@@ -196,8 +196,8 @@ typedef struct
             uint64_t average_frequency_pstate   : 8;
             uint64_t wof_clip_pstate            : 8;
             uint64_t average_throttle_idx       : 8;
-            uint64_t vratio_inst                : 16;
-            uint64_t vratio_avg                 : 16;
+            uint64_t vratio_vcs_avg             : 16;
+            uint64_t vratio_vdd_avg             : 16;
         } fields;
     } dw0;
     union
@@ -210,10 +210,10 @@ typedef struct
         } words;
         struct
         {
-            uint64_t idd_avg_ma                 : 16;
-            uint64_t ics_avg_ma                 : 16;
-            uint64_t idn_avg_ma                 : 16;
-            uint64_t iio_avg_ma                 : 16;
+            uint64_t idd_avg_10ma               : 16;
+            uint64_t ics_avg_10ma               : 16;
+            uint64_t idn_avg_10ma               : 16;
+            uint64_t iio_avg_10ma               : 16;
 
         } fields;
     } dw1;

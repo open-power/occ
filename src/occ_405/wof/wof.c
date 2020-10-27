@@ -885,6 +885,8 @@ void copy_vrt_to_sram( uint32_t i_vrt_main_mem_addr )
 void read_pgpe_produced_wof_values( void )
 {
     uint8_t  l_update_pwr_sensors = 0;
+    static bool L_traced_no_readings       = FALSE;
+    static bool L_traced_received_readings = FALSE;
 
     // Read in OCS bits from OCC Flag 0 register
     uint32_t occ_flags0 = 0;
@@ -957,7 +959,7 @@ void read_pgpe_produced_wof_values( void )
     }
 
     // Save Vdd current to sensor
-    l_current = (uint16_t)l_PgpeWofValues.dw1.fields.idd_avg_ma;
+    l_current = (uint16_t)l_PgpeWofValues.dw1.fields.idd_avg_10ma;
     if (l_current != 0)
     {
         // Current value stored in the sensor should be in 10mA (A scale -2)
@@ -967,7 +969,7 @@ void read_pgpe_produced_wof_values( void )
     }
 
     // Save Vdn current to sensor
-    l_current = (uint16_t)l_PgpeWofValues.dw1.fields.idn_avg_ma;
+    l_current = (uint16_t)l_PgpeWofValues.dw1.fields.idn_avg_10ma;
     if (l_current != 0)
     {
         // Current value stored in the sensor should be in 10mA (A scale -2)
@@ -977,7 +979,7 @@ void read_pgpe_produced_wof_values( void )
     }
 
     // Save Vcs current to sensor
-    l_current = (uint16_t)l_PgpeWofValues.dw1.fields.ics_avg_ma;
+    l_current = (uint16_t)l_PgpeWofValues.dw1.fields.ics_avg_10ma;
     if (l_current != 0)
     {
         // Current value stored in the sensor should be in 10mA (A scale -2)
@@ -987,7 +989,7 @@ void read_pgpe_produced_wof_values( void )
     }
 
     // Save Vio current to sensor
-    l_current = (uint16_t)l_PgpeWofValues.dw1.fields.iio_avg_ma;
+    l_current = (uint16_t)l_PgpeWofValues.dw1.fields.iio_avg_10ma;
     if (l_current != 0)
     {
         // Current value stored in the sensor should be in 10mA (A scale -2)
@@ -997,7 +999,26 @@ void read_pgpe_produced_wof_values( void )
     }
 
     // Update the chip voltage and power sensors
-    update_avsbus_power_sensors(l_update_pwr_sensors);
+    if(l_update_pwr_sensors)
+    {
+        update_avsbus_power_sensors(l_update_pwr_sensors);
+        if( (L_traced_no_readings) && (!L_traced_received_readings) )
+        {
+           INTR_TRAC_IMP("read_pgpe_produced_wof_values: Received current readings from PGPE dw1[0x%08X%08X]",
+                          WORD_HIGH(l_PgpeWofValues.dw1.value), WORD_LOW(l_PgpeWofValues.dw1.value));
+           INTR_TRAC_IMP("read_pgpe_produced_wof_values: Received voltage readings from PGPE dw2[0x%08X%08X]",
+                          WORD_HIGH(l_PgpeWofValues.dw2.value), WORD_LOW(l_PgpeWofValues.dw2.value));
+           L_traced_received_readings = TRUE;
+        }
+    }
+    else if(!L_traced_no_readings)
+    {
+        INTR_TRAC_IMP("read_pgpe_produced_wof_values: No current readings from PGPE dw1[0x%08X%08X]",
+                       WORD_HIGH(l_PgpeWofValues.dw1.value), WORD_LOW(l_PgpeWofValues.dw1.value));
+        INTR_TRAC_IMP("read_pgpe_produced_wof_values: No voltage readings from PGPE dw2[0x%08X%08X]",
+                       WORD_HIGH(l_PgpeWofValues.dw2.value), WORD_LOW(l_PgpeWofValues.dw2.value));
+        L_traced_no_readings = TRUE;
+    }
 
     // populate values used by WOF alg
 
@@ -1472,13 +1493,12 @@ void calculate_ceff_ratio_vdd( void )
                                                             G_oppb.operating_points[g_wof->vpd_index2].vdd_mv);
 
         // Calculate Racetrack AC Current average TDP by interpolating #V current@g_wof->avg_freq_mhz
-        // NOTE: racetrack RDP in OPPB is the same as TDP
         // *100 to convert 10ma to 100ua
         g_wof->tdp_idd_rt_ac_100ua = 100 * interpolate_linear( g_wof->avg_freq_mhz,
                                                           G_oppb.operating_points[g_wof->vpd_index1].frequency_mhz,
                                                           G_oppb.operating_points[g_wof->vpd_index2].frequency_mhz,
-                                                          G_oppb.operating_points[g_wof->vpd_index1].irt_rdp_ac_10ma,
-                                                          G_oppb.operating_points[g_wof->vpd_index2].irt_rdp_ac_10ma);
+                                                          G_oppb.operating_points[g_wof->vpd_index1].rt_tdp_ac_10ma,
+                                                          G_oppb.operating_points[g_wof->vpd_index2].rt_tdp_ac_10ma);
 
 
         if(G_allow_trace_flags & ALLOW_CEFF_RATIO_VDD_TRACE)
@@ -1497,8 +1517,8 @@ void calculate_ceff_ratio_vdd( void )
                             G_oppb.operating_points[g_wof->vpd_index2].vdd_mv * 10);
             INTR_TRAC_INFO("ceff_ratio_vdd: interpolated tdp_idd_rt_ac_100ua[%d] point1[%d] point2[%d]",
                             g_wof->tdp_idd_rt_ac_100ua,
-                            G_oppb.operating_points[g_wof->vpd_index1].irt_rdp_ac_10ma * 100,
-                            G_oppb.operating_points[g_wof->vpd_index2].irt_rdp_ac_10ma * 100);
+                            G_oppb.operating_points[g_wof->vpd_index1].rt_tdp_ac_10ma * 100,
+                            G_oppb.operating_points[g_wof->vpd_index2].rt_tdp_ac_10ma * 100);
 
         }
 
