@@ -56,7 +56,7 @@ static const uint32_t INVALID_ERR = 0xFFFFFFFF;
 #define NUM_OF_TRACE_TYPE 3
 
 // maximum size of PGPE debug data will be added for ERRL_USR_DTL_PGPE_PK_TRACE
-#define MAX_PGPE_DBUG_DATA 0x860
+#define MAX_PGPE_DBUG_DATA 0x600
 
 /* Slot Masks */
 // These bits are used to acquire a slot number.  When used with the global

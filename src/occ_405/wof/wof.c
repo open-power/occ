@@ -1264,7 +1264,7 @@ void calculate_core_leakage( void )
                 l_temp64 = (uint32_t)(l_temp64 / 100000);
 
                 // prevent going negative.  This should never be negative
-                if(l_temp64 > l_iddq_p000001ua)
+                if(l_temp64 <= l_iddq_p000001ua)
                     l_iddq_p000001ua -= l_temp64;
                 else
                 {
