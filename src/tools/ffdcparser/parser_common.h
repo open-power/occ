@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2018                             */
+/* Contributors Listed Below - COPYRIGHT 2018,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -24,135 +24,9 @@
 /* IBM_PROLOG_END_TAG                                                     */
 
 // Constants
-#define MAXIMUM_QUADS 6
-#define CORE_IDDQ_MEASUREMENTS 6
-#define MAX_NUM_CORES 24
+#define MAX_NUM_CORES 32
 
-// WOF data struct
-typedef struct __attribute__ ((packed))
-{
-    uint32_t wof_disabled;
-    uint8_t  version;
-    uint16_t vfrt_block_size;
-    uint16_t vfrt_blck_hdr_sz;
-    uint16_t vfrt_data_size;
-    uint8_t  active_quads_size;
-    uint8_t  core_count;
-    uint16_t vdn_start;
-    uint16_t vdn_step;
-    uint16_t vdn_size;
-    uint16_t vdd_start;
-    uint16_t vdd_step;
-    uint16_t vdd_size;
-    uint16_t vratio_start;
-    uint16_t vratio_step;
-    uint16_t vratio_size;
-    uint16_t fratio_start;
-    uint16_t fratio_step;
-    uint16_t fratio_size;
-    uint16_t vdn_percent[8];
-    uint16_t socket_power_w;
-    uint16_t nest_freq_mhz;
-    uint16_t nom_freq_mhz;
-    uint16_t rdp_capacity;
-    uint64_t wof_tbls_src_tag;
-    uint64_t package_name_hi;
-    uint64_t package_name_lo;
-    uint16_t vdd_step_from_start;
-    uint16_t vdn_step_from_start;
-    uint8_t quad_step_from_start;
-    uint32_t v_core_100uV[MAXIMUM_QUADS];
-    uint32_t core_pwr_on;
-    uint8_t cores_on_per_quad[MAXIMUM_QUADS];
-    uint32_t voltvddsense_sensor;
-    uint16_t tempprocthrmc[MAX_NUM_CORES];
-    uint16_t tempnest_sensor;
-    uint16_t tempq[MAXIMUM_QUADS];
-    uint16_t curvdd_sensor;
-    uint16_t curvdn_sensor;
-    uint16_t voltvdn_sensor;
-    uint8_t  quad_x_pstates[MAXIMUM_QUADS];
-    uint8_t quad_v_idx[MAXIMUM_QUADS];
-    uint8_t  quad_ivrm_states;
-    uint32_t idc_vdd;
-    uint32_t idc_vdn;
-    uint32_t idc_quad;
-    uint32_t iac_vdd;
-    uint32_t iac_vdn;
-    uint32_t iac_tdp_vdd;
-    uint16_t v_ratio;
-    uint16_t f_ratio;
-    uint16_t v_clip;
-    uint8_t f_clip_ps;
-    uint32_t f_clip_freq;
-    uint32_t ceff_tdp_vdd;
-    uint32_t ceff_vdd;
-    uint32_t ceff_ratio_vdd;
-    uint32_t ceff_tdp_vdn;
-    uint32_t ceff_vdn;
-    uint32_t ceff_ratio_vdn;
-    uint8_t chip_volt_idx;
-    uint32_t all_cores_off_iso;
-    uint32_t all_good_caches_on_iso;
-    uint32_t all_caches_off_iso;
-    uint32_t quad_good_cores_only[MAXIMUM_QUADS];
-    uint16_t quad_on_cores[MAXIMUM_QUADS];
-    uint16_t quad_bad_off_cores[MAXIMUM_QUADS];
-    uint8_t req_active_quad_update;
-    uint8_t prev_req_active_quads;
-    uint8_t num_active_quads;
-    uint32_t curr_ping_pong_buf;
-    uint32_t next_ping_pong_buf;
-    uint32_t curr_vfrt_main_mem_addr;
-    uint32_t next_vfrt_main_mem_addr;
-    uint32_t vfrt_tbls_main_mem_addr;
-    uint32_t vfrt_tbls_len;
-    uint8_t wof_init_state;
-    uint32_t quad_state_0_addr;
-    uint32_t quad_state_1_addr;
-    uint32_t pgpe_wof_state_addr;
-    uint32_t req_active_quads_addr;
-    uint16_t core_leakage_percent;
-    uint32_t pstate_tbl_sram_addr;
-    uint32_t gpe_req_rc;
-    uint32_t control_ipc_rc;
-    uint8_t vfrt_callback_error;
-    uint8_t pgpe_wof_off;
-    uint8_t pgpe_wof_disabled;
-    uint32_t vfrt_mm_offset;
-    uint8_t wof_vfrt_req_rc;
-    uint32_t c_ratio_vdd_volt;
-    uint32_t c_ratio_vdd_freq;
-    uint32_t c_ratio_vdn_volt;
-    uint32_t c_ratio_vdn_freq;
-    uint8_t vfrt_state;
-    uint32_t all_cores_off_before;
-    uint8_t good_quads_per_sort;
-    uint8_t good_normal_cores_per_sort;
-    uint8_t good_caches_per_sort;
-    uint8_t good_normal_cores[MAXIMUM_QUADS];
-    uint8_t good_caches[MAXIMUM_QUADS];
-    uint16_t allGoodCoresCachesOn[CORE_IDDQ_MEASUREMENTS];
-    uint16_t allCoresCachesOff[CORE_IDDQ_MEASUREMENTS];
-    uint16_t coresOffCachesOn[CORE_IDDQ_MEASUREMENTS];
-    uint16_t quad1CoresCachesOn[CORE_IDDQ_MEASUREMENTS];
-    uint16_t quad2CoresCachesOn[CORE_IDDQ_MEASUREMENTS];
-    uint16_t quad3CoresCachesOn[CORE_IDDQ_MEASUREMENTS];
-    uint16_t quad4CoresCachesOn[CORE_IDDQ_MEASUREMENTS];
-    uint16_t quad5CoresCachesOn[CORE_IDDQ_MEASUREMENTS];
-    uint16_t quad6CoresCachesOn[CORE_IDDQ_MEASUREMENTS];
-    uint16_t ivdn[CORE_IDDQ_MEASUREMENTS];
-    uint8_t allCoresCachesOnT[CORE_IDDQ_MEASUREMENTS];
-    uint8_t allCoresCachesOffT[CORE_IDDQ_MEASUREMENTS];
-    uint8_t coresOffCachesOnT[CORE_IDDQ_MEASUREMENTS];
-    uint8_t quad1CoresCachesOnT[CORE_IDDQ_MEASUREMENTS];
-    uint8_t quad2CoresCachesOnT[CORE_IDDQ_MEASUREMENTS];
-    uint8_t quad3CoresCachesOnT[CORE_IDDQ_MEASUREMENTS];
-    uint8_t quad4CoresCachesOnT[CORE_IDDQ_MEASUREMENTS];
-    uint8_t quad5CoresCachesOnT[CORE_IDDQ_MEASUREMENTS];
-    uint8_t quad6CoresCachesOnT[CORE_IDDQ_MEASUREMENTS];
-    uint8_t avgtemp_vdn[CORE_IDDQ_MEASUREMENTS];
-} wof_data_t;
+
 
 // Thread struct
 typedef struct __attribute__((packed,aligned(4))) thread_dump
