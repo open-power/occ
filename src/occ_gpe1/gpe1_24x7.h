@@ -31,12 +31,12 @@
 
 //PMU config table defined below.
 //------------------------------
-#define TOTAL_CONFIGS  119
-#define TOTAL_POSTINGS 442
+#define TOTAL_CONFIGS  123
+#define TOTAL_POSTINGS 450
 #define INC_UPD_COUNT  1
 
-#define TOTAL_CONFIG_SCOMS  119
-#define TOTAL_COUNTER_SCOMS 82
+#define TOTAL_CONFIG_SCOMS  123
+#define TOTAL_COUNTER_SCOMS 84
 
 #define MAX_32 4294967295ULL
 #define MAX_48 281474976710655ULL
@@ -92,38 +92,38 @@ uint64_t G_PMU_CONFIGS_8[][2] =
     {0x301139f, 0x0000000600000000},//trace_es3//38
     {0x30113df, 0x0000000600000000},//trace_es4//39
 
-//MC0-7//
-    {0xc010fa4, 0x0005755b60000000},//MC0/1-mc0-scom-en0//40
-    {0xc010fa5, 0x0000000000000000},//MC0/1-mc0-scom-en1//41
-    {0xc010fa6, 0x0000000000000000},//MC0/1-mc0-scom-en2//42
-    {0xc010fa7, 0x6000800000000000},//MC0/1-mc0-scom-en3//43
-    {0xc010c29, 0xf800000000000000},//MC0-mc0-chan-en0//44
-    {0xc010c39, 0xf800000000000000},//MC1-mc0-chan-en1//45
+//MC0-3//MCC0-7//
+    {0xc010fa4, 0x0005755b60000000},//MCC0/1-MC0-scom-en0//40
+    {0xc010fa5, 0x0000000000000000},//MCC0/1-MC0-scom-en1//41
+    {0xc010fa6, 0x0000000000000000},//MCC0/1-MC0-scom-en2//42
+    {0xc010fa7, 0x6000800000000000},//MCC0/1-MC0-scom-en3//43
+    {0xc010c29, 0xf800000000000000},//MCC0-MC0-chan-en0//44
+    {0xc010c39, 0xf800000000000000},//MCC1-MC0-chan-en1//45
     
-    {0xd010fa4, 0x0000000000000005},//MC2/3-mc1-scom-en0//46
-    {0xd010fa5, 0x755b600000000000},//MC2/3-mc1-scom-en1//47
-    {0xd010fa6, 0x0000000000000000},//MC2/3-mc1-scom-en2//48
-    {0xd010fa7, 0x0600800000000000},//MC2/3-mc1-scom-en3//49
-    {0xd010c29, 0xf800000000000000},//MC2-mc1-chan-en0//50
-    {0xd010c39, 0xf800000000000000},//MC3-mc1-chan-en1//51
+    {0xd010fa4, 0x0000000000000005},//MCC0/1-MC1-scom-en0//46
+    {0xd010fa5, 0x755b600000000000},//MCC0/1-MC1-scom-en1//47
+    {0xd010fa6, 0x0000000000000000},//MCC0/1-MC1-scom-en2//48
+    {0xd010fa7, 0x0600800000000000},//MCC0/1-MC1-scom-en3//49
+    {0xd010c29, 0xf800000000000000},//MCC0-MC1-chan-en0//50
+    {0xd010c39, 0xf800000000000000},//MCC1-MC1-chan-en1//51
     
-    {0xe010fa4, 0x0005755b60000000},//MC4/5-mc2-scom-en0//52
-    {0xe010fa5, 0x0000000000000000},//MC4/5-mc2-scom-en1//53
-    {0xe010fa6, 0x0000000000000000},//MC4/5-mc2-scom-en2//54
-    {0xe010fa7, 0x6000800000000000},//MC4/5-mc2-scom-en3//55
-    {0xe010c29, 0xf800000000000000},//MC4-mc2-chan-en0//56
-    {0xe010c39, 0xf800000000000000},//MC5-mc2-chan-en1//57
+    {0xe010fa4, 0x0005755b60000000},//MCC0/1-MC2-scom-en0//52
+    {0xe010fa5, 0x0000000000000000},//MCC0/1-MC2-scom-en1//53
+    {0xe010fa6, 0x0000000000000000},//MCC0/1-MC2-scom-en2//54
+    {0xe010fa7, 0x6000800000000000},//MCC0/1-MC2-scom-en3//55
+    {0xe010c29, 0xf800000000000000},//MCC0-MC2-chan-en0//56
+    {0xe010c39, 0xf800000000000000},//MCC1-MC2-chan-en1//57
     
-    {0xf010fa4, 0x0000000000000005},//MC6/7-mc3-scom-en0//58
-    {0xf010fa5, 0x755b600000000000},//MC6/7-mc3-scom-en1//59
-    {0xf010fa6, 0x0000000000000000},//MC6/7-mc3-scom-en2//60
-    {0xf010fa7, 0x0600800000000000},//MC6/7-mc3-scom-en3//61
-    {0xf010c29, 0xf800000000000000},//MC6-mc3-chan-en0//62
-    {0xf010c39, 0xf800000000000000},//MC7-mc3-chan-en1//63
+    {0xf010fa4, 0x0000000000000005},//MCC0/1-MC3-scom-en0//58
+    {0xf010fa5, 0x755b600000000000},//MCC0/1-MC3-scom-en1//59
+    {0xf010fa6, 0x0000000000000000},//MCC0/1-MC3-scom-en2//60
+    {0xf010fa7, 0x0600800000000000},//MCC0/1-MC3-scom-en3//61
+    {0xf010c29, 0xf800000000000000},//MCC0-MC3-chan-en0//62
+    {0xf010c39, 0xf800000000000000},//MCC1-MC3-chan-en1//63
 
 //PEC0-1//
-    {0x3011804, 0xff00780000000000},//pec0//64
-    {0x2011804, 0xff00780000000000},//pec1//65
+    {0x3011804, 0x1000780000000000},//pec0//64
+    {0x2011804, 0x1000780000000000},//pec1//65
 
 //TLPM0-7:Xlink/Alink//
     {0x1001181a, 0x9003015754000000},//tl-0-scom10//66
@@ -184,7 +184,13 @@ uint64_t G_PMU_CONFIGS_8[][2] =
     {0x9010997, 0x8000550000000000},//phb-5//117
 
 //OCMB//
-    {0x8011440, 0x0451805515000000}//ocmb//118
+    {0x8011440, 0x0451805515000000},//ocmb//118
+
+//NX//
+    {0x20110a6, 0x855a300080000000},//PMU-0 //119
+    {0x2011054, 0x0000000000000000},//PMON-0//120
+    {0x20110a9, 0x8550492480000000},//PMU-1 //121
+    {0x2011055, 0x0000000060000000} //PMON-1//122
 };
 
 
@@ -283,6 +289,11 @@ uint64_t G_PMULETS_4[] =
     0x9010919,//PHB3//
     0x9010959,//PHB4//
     0x9010999,//PHB5/
+
+    0x20110a7,//NX PMU-0//
+    0x20110aa,//NX PMU-1//
+    0x20110a6,//NX PMU-0 control reg//
+    0x20110a9,//NX PMU-1 control reg//
 };
 
 //------------------------- OCMB ---------------------------//
@@ -366,7 +377,7 @@ enum
     POST_OFFSET_G3B_O_7         = 0x001807b8,
     POST_OFFSET_G3B_O_T         = 0x00180878,
 
-    //------------------------- PHB ---------------------------//
+    //------------------------- PHB & NX -----------------------//
     // Group G4 - PHB 0-5
     POST_OFFSET_G4H             = 0x00180880,
     POST_OFFSET_G4_0            = 0x00180888,
@@ -375,6 +386,9 @@ enum
     POST_OFFSET_G4_3            = 0x001808e8,
     POST_OFFSET_G4_4            = 0x00180908,
     POST_OFFSET_G4_5            = 0x00180928,
+    // Group G4 - NX
+    POST_OFFSET_G4_6            = 0x00180948,
+    POST_OFFSET_G4_7            = 0x00180968,
     POST_OFFSET_G4T             = 0x00180988,
 
     //------------------------- OCMB ---------------------------//
@@ -493,14 +507,14 @@ enum
 enum MASKS
 {
     MASK_PB      = 0x8000000000000000,
-    MASK_MC0     = 0x4000000000000000,
-    MASK_MC1     = 0x2000000000000000,
-    MASK_MC2     = 0x1000000000000000,
-    MASK_MC3     = 0x0800000000000000,
-    MASK_MC4     = 0x0400000000000000,
-    MASK_MC5     = 0x0200000000000000,
-    MASK_MC6     = 0x0100000000000000,
-    MASK_MC7     = 0x0080000000000000,
+    MASK_MC00    = 0x4000000000000000,
+    MASK_MC01    = 0x2000000000000000,
+    MASK_MC10    = 0x1000000000000000,
+    MASK_MC11    = 0x0800000000000000,
+    MASK_MC20    = 0x0400000000000000,
+    MASK_MC21    = 0x0200000000000000,
+    MASK_MC30    = 0x0100000000000000,
+    MASK_MC31    = 0x0080000000000000,
     MASK_PEC0    = 0x0040000000000000,
     MASK_PEC1    = 0x0020000000000000,
     MASK_TLPM0   = 0x001C000000000000,
@@ -557,9 +571,27 @@ enum MASKS
     MASK_OCMB13  = 0x0000000000000200,
     MASK_OCMB14  = 0x0000000000000100,
     MASK_OCMB15  = 0x0000000000000080,
-    MASK_OCMB    = 0x00000000007FFF80
+    MASK_OCMB    = 0x00000000007FFF80,
+    MASK_NX      = 0x0000000000000040
 };
 
+//
+//version structure
+//
+typedef union version {
+    uint64_t value;
+    struct {
+        uint64_t  major:4;
+        uint64_t  minor:8;
+        uint64_t  bugfix:4;
+        uint64_t  day:8;
+        uint64_t  month:8;
+        uint64_t  year:16;
+        uint64_t  spec_major:6;
+        uint64_t  spec_minor:2;
+        uint64_t  reserved:8;
+    } val;
+} version_t;
 
 //
 //function declarations below.

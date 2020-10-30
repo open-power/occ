@@ -110,24 +110,7 @@ void gpe_24x7(ipc_msg_t* cmd, void* arg)
      * [54:55] – Minor spec version: [54:55] = <0-3>
      * [56:63] - Reserved
      **/
-    uint64_t VERSION = 0;
-    static uint64_t ver_major  = 0x1;
-    static uint64_t ver_minor  = 0x0;
-    static uint64_t ver_bugfix = 0x0;
-    static uint64_t ver_day    = 0x20;   // Day: 27
-    static uint64_t ver_month  = 0x10;   // Month: 04
-    static uint64_t ver_year   = 0x2020; // Year:2018
-    static uint64_t spec_major = 0x14;   // Spec version 14
-    static uint64_t spec_minor = 0x0;
-
-    VERSION |= (ver_major  << 60);
-    VERSION |= (ver_minor  << 52);
-    VERSION |= (ver_bugfix << 48);
-    VERSION |= (ver_day    << 40);
-    VERSION |= (ver_month  << 32);
-    VERSION |= (ver_year   << 16);
-    VERSION |= (spec_major << 10);
-    VERSION |= (spec_minor << 8);
+    static version_t ver;
 
     do
     {
@@ -159,7 +142,15 @@ void gpe_24x7(ipc_msg_t* cmd, void* arg)
             }
 
             //set code version
-            *L_version = VERSION;
+            ver.val.major      = 0x1;
+            ver.val.minor      = 0x1;
+            ver.val.bugfix     = 0x0;
+            ver.val.day        = 0x20;
+            ver.val.month      = 0x11;
+            ver.val.year       = 0x2020;
+            ver.val.spec_major = 0x15;
+            ver.val.spec_minor = 0x0;
+            *L_version         = ver.value;
 
             //set status as initializing
             *L_status = CNTL_STATUS_INIT;
@@ -721,29 +712,29 @@ uint32_t configure_pmu(uint8_t state, uint64_t speed, GpeErrorStruct* o_err)
 //use the unit wise masks to acertain availability of a unit.
             if( ((i>=0) && (i<40)) && (!(G_CUR_UAV & MASK_PB)) )
                 continue;
-            else if( ((i>=40) && (i<=43)) && (!(G_CUR_UAV & MASK_MC0) && (!(G_CUR_UAV & MASK_MC1)) ) )
+            else if( ((i>=40) && (i<=43)) && (!(G_CUR_UAV & MASK_MC00) && (!(G_CUR_UAV & MASK_MC01)) ) )
                 continue;
-            else if( (i==44) && (!(G_CUR_UAV & MASK_MC0)) )
+            else if( (i==44) && !(G_CUR_UAV & MASK_MC00) )
                 continue;
-            else if( (i==45) && (!(G_CUR_UAV & MASK_MC1)) )
+            else if( (i==45) && !(G_CUR_UAV & MASK_MC01) )
                 continue;
-            else if( ((i>=46) && (i<=49)) && (!(G_CUR_UAV & MASK_MC2) && (!(G_CUR_UAV & MASK_MC3)) ) )
+            else if( ((i>=46) && (i<=49)) && (!(G_CUR_UAV & MASK_MC10) && (!(G_CUR_UAV & MASK_MC11)) ) )
                 continue;
-            else if( (i==50) && (!(G_CUR_UAV & MASK_MC2)) )
+            else if( (i==50) && !(G_CUR_UAV & MASK_MC10) )
                 continue;
-            else if( (i==51) && (!(G_CUR_UAV & MASK_MC3)) )
+            else if( (i==51) && !(G_CUR_UAV & MASK_MC11) )
                 continue;
-            else if( ((i>=52) && (i<=55)) && (!(G_CUR_UAV & MASK_MC4) && (!(G_CUR_UAV & MASK_MC5)) ) )
+            else if( ((i>=52) && (i<=55)) && (!(G_CUR_UAV & MASK_MC20) && (!(G_CUR_UAV & MASK_MC21)) ) )
                 continue;
-            else if( (i==56) && (!(G_CUR_UAV & MASK_MC4)) )
+            else if( (i==56) && !(G_CUR_UAV & MASK_MC20) )
                 continue;
-            else if( (i==57) && (!(G_CUR_UAV & MASK_MC5)) )
+            else if( (i==57) && !(G_CUR_UAV & MASK_MC21) )
                 continue;
-            else if( ((i>=58) && (i<=61)) && (!(G_CUR_UAV & MASK_MC6) && (!(G_CUR_UAV & MASK_MC7)) ) )
+            else if( ((i>=58) && (i<=61)) && (!(G_CUR_UAV & MASK_MC30) && (!(G_CUR_UAV & MASK_MC31)) ) )
                 continue;
-            else if( (i==62) && (!(G_CUR_UAV & MASK_MC6)) )
+            else if( (i==62) && !(G_CUR_UAV & MASK_MC30) )
                 continue;
-            else if( (i==63) && (!(G_CUR_UAV & MASK_MC7)) )
+            else if( (i==63) && !(G_CUR_UAV & MASK_MC31) )
                 continue;
             else if( ((i==64) || (i==65)) && (!(G_CUR_UAV & MASK_PEC0)) && (!(G_CUR_UAV & MASK_PEC1)) )
                 continue;
@@ -789,8 +780,10 @@ uint32_t configure_pmu(uint8_t state, uint64_t speed, GpeErrorStruct* o_err)
                 continue;
             else if( (i==118) && !(G_CUR_UAV & MASK_OCMB) )
                 continue;
+            else if( ((i>=119) && (i<=122)) && !(G_CUR_UAV & MASK_NX) )
+                continue;
 
-            else if( i>=119 && i<=128 ) //Not supported
+            else if( i>=123 && i<=128 ) //Not supported
                 continue;
             else
             {
@@ -798,7 +791,7 @@ uint32_t configure_pmu(uint8_t state, uint64_t speed, GpeErrorStruct* o_err)
                 //for speeds >=1MS && <=2048MS
                 if((speed >= CNTL_SPEED_1MS) && (speed <= CNTL_SPEED_2048MS))
                 {
-                    if ( i < 118 )
+                    if ( i != 118 )
                     {
                         rc = putScom (G_PMU_CONFIGS_8[i][0], G_PMU_CONFIGS_8[i][1], o_err);
                         if ( rc )
@@ -920,6 +913,22 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
 
                     for(j=0; j<4; j++)
                     {
+                        // PB unit is always avaiable and its events always populated
+                        // so no need for PB unit check
+                        if ( ( i == 0 && j == 1 && !( (G_CUR_UAV & MASK_MC00) || (G_CUR_UAV & MASK_MC01) ) ) ||
+                             ( i == 0 && j == 2 && !( (G_CUR_UAV & MASK_MC00) || (G_CUR_UAV & MASK_MC01) ) ) ||
+                             ( i == 1 && j == 1 && !( (G_CUR_UAV & MASK_MC10) || (G_CUR_UAV & MASK_MC11) ) ) ||
+                             ( i == 1 && j == 2 && !( (G_CUR_UAV & MASK_MC10) || (G_CUR_UAV & MASK_MC11) ) ) ||
+                             ( i == 4 && j == 1 && !( (G_CUR_UAV & MASK_MC20) || (G_CUR_UAV & MASK_MC21) ) ) ||
+                             ( i == 4 && j == 2 && !( (G_CUR_UAV & MASK_MC20) || (G_CUR_UAV & MASK_MC21) ) ) ||
+                             ( i == 5 && j == 1 && !( (G_CUR_UAV & MASK_MC30) || (G_CUR_UAV & MASK_MC31) ) ) ||
+                             ( i == 5 && j == 2 && !( (G_CUR_UAV & MASK_MC30) || (G_CUR_UAV & MASK_MC31) ) ) ||
+                             ( i == 0 && j == 3 && !(G_CUR_UAV & MASK_PEC0) ) ||
+                             ( i == 4 && j == 3 && !(G_CUR_UAV & MASK_PEC1) ) )
+                        {
+                            post_addr++;
+                            continue;
+                        }
                         *post_addr = (uint64_t)u3.ev.e[j];
                         post_addr++;
                     }
@@ -2232,6 +2241,122 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                     {
                         *post_addr = (uint64_t)u3.ev.e[i];
                         post_addr++;
+                    }
+                }
+
+                if (G_CUR_UAV & MASK_NX)
+                {
+                    rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_DMA, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: PBASLVCTL1_C0040028 putscom failed. rc = 0x%08x", rc);
+                        break;
+                    }
+
+                    *L_DBG_UNIT = 6;
+                    rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_ATOMIC, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: PBASLVCTL1_C0040028 putscom failed. rc = 0x%08x", rc);
+                        break;
+                    }
+
+                    // Read NX PMON-0
+                    post_addr = (uint64_t*) (POST_OFFSET_G4_6 | PBA_ENABLE);
+                    rc = getScom (G_PMULETS_4[6], &u3.pmulet, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: 0x%08x getscom failed. rc = 0x%x", G_PMULETS_4[6], rc);
+                        break;
+                    }
+
+                    for(i=0; i<4; i++)
+                    {
+                        *post_addr = (uint64_t)u3.ev.e[i];
+                        post_addr++;
+                    }
+
+                    // Read counter do not reset when read.
+                    // A reset pulse has to be generated by writing 1 (followed by 0) 
+                    // to Bit position 2 for registers: 
+                    // NX.PBI.CQ_WRAP.NXCQ_SCOM.NX_PMU0_CONTROL_REG and 
+                    // NX.PBI.CQ_WRAP.NXCQ_SCOM.NX_PMU1_CONTROL_REG
+                    // Explicitly value 0 written to read counter after reading them. 
+                    rc = getScom (G_PMULETS_4[8], &u3.pmulet, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: 0x%08x getscom failed. rc = 0x%x", G_PMULETS_4[8], rc);
+                        break;
+                    }
+                    u3.pmulet |= 0x2000000000000000;
+                    rc = putScom (G_PMULETS_4[8], u3.pmulet, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: 0x%08x putscom failed. rc = 0x%x", G_PMULETS_4[8], rc);
+                        break;
+                    }
+
+                    rc = getScom (G_PMULETS_4[8], &u3.pmulet, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: 0x%08x getscom failed. rc = 0x%x", G_PMULETS_4[8], rc);
+                        break;
+                    }
+                    u3.pmulet &= ~0x2000000000000000;
+                    rc = putScom (G_PMULETS_4[8], u3.pmulet, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: 0x%08x putscom failed. rc = 0x%x", G_PMULETS_4[8], rc);
+                        break;
+                    }
+
+                    // Read PMON-1
+                    post_addr = (uint64_t*) (POST_OFFSET_G4_7 | PBA_ENABLE);
+                    rc = getScom (G_PMULETS_4[7], &u3.pmulet, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: 0x%08x getscom failed. rc = 0x%x", G_PMULETS_4[7], rc);
+                        break;
+                    }
+
+                    for(i=0; i<4; i++)
+                    {
+                        *post_addr = (uint64_t)u3.ev.e[i];
+                        post_addr++;
+                    }
+
+                    // Read counter do not reset when read.
+                    // A reset pulse has to be generated by writing 1 (followed by 0) 
+                    // to Bit position 2 for registers: 
+                    // NX.PBI.CQ_WRAP.NXCQ_SCOM.NX_PMU0_CONTROL_REG and 
+                    // NX.PBI.CQ_WRAP.NXCQ_SCOM.NX_PMU1_CONTROL_REG
+                    // Explicitly value 0 written to read counter after reading them. 
+                    rc = getScom (G_PMULETS_4[9], &u3.pmulet, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: 0x%08x getscom failed. rc = 0x%x", G_PMULETS_4[9], rc);
+                        break;
+                    }
+                    u3.pmulet |= 0x2000000000000000;
+                    rc = putScom (G_PMULETS_4[9], u3.pmulet, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: 0x%08x putscom failed. rc = 0x%x", G_PMULETS_4[9], rc);
+                        break;
+                    }
+
+                    rc = getScom (G_PMULETS_4[9], &u3.pmulet, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: 0x%08x getscom failed. rc = 0x%x", G_PMULETS_4[9], rc);
+                        break;
+                    }
+                    u3.pmulet &= ~0x2000000000000000;
+                    rc = putScom (G_PMULETS_4[9], u3.pmulet, o_err);
+                    if ( rc )
+                    {
+                        PK_TRACE("post_pmu_events: 0x%08x putscom failed. rc = 0x%x", G_PMULETS_4[9], rc);
+                        break;
                     }
                 }
 
