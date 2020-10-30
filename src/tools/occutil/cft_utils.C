@@ -28,7 +28,6 @@
 */
 
 
-#include <ecmdClientCapi.H>
 #include <unistd.h> // sleep
 #include "cft_utils.H"
 
@@ -70,11 +69,9 @@ const uint64_t HOST_PASS_THROUGH_MEM_ADDRESS      = 0x0;
 const uint64_t HOST_PASS_THROUGH_MEM_ADDRESS_128  = 0x80;
 const uint32_t CFAM_REGISTER_ADDRESS              = 0x283B;
 const uint32_t READ_CFAM_WAIT_TIME                = 2;  //in seconds
-const uint32_t READ_CFAM_MAX_ATTEMPT              = 30; //If there is no response from OCC within
 const uint32_t CMT_HBRT_CMD_COMPLETE_BIT                = 0x0;
 const uint32_t CMT_HBRT_CMD_IN_PROGRESS_BIT             = 0x1;
-                                                        //READ_CFAM_MAX_ATTEMPT * READ_CFAM_WAIT_TIME seconds, then timeout.
-const uint32_t  DATA_128_BYTE_ALLIGN    = 128;
+const uint32_t DATA_128_BYTE_ALLIGN    = 128;
 
 
 void dumpHex(const uint8_t *data, const unsigned int i_len)
@@ -152,7 +149,11 @@ void ecmdTargetInit(ecmdChipTarget &o_target)
 }
 
 
-uint32_t cmtOCCSendReceive(ecmdChipTarget &i_target, ecmdDataBuffer &i_data, uint8_t *&o_responseData,  uint32_t  & o_responseSize)
+uint32_t cmtOCCSendReceive(ecmdChipTarget &i_target,
+                           ecmdDataBuffer &i_data,
+                           uint8_t       *&o_responseData,
+                           uint32_t       &o_responseSize,
+                           const uint32_t  i_timeout)
 {
     uint32_t l_rc = CMT_SUCCESS;
 
@@ -165,7 +166,7 @@ uint32_t cmtOCCSendReceive(ecmdChipTarget &i_target, ecmdDataBuffer &i_data, uin
     std::string       l_existingValueAlpha;
     uint32_t          l_existingValueNumeric;
     bool              l_modifiedConfig = false;
-    if (G_verbose)
+    if (G_verbose >= 2)
         printf("cmtOCCSendReceive: calling ecmdGetConfiguration()\n");
     l_rc = ecmdGetConfiguration(i_target, USE_SBE_FIFO_STR, l_existingConfigValid, l_existingValueAlpha, l_existingValueNumeric);
     if ( l_rc ) {
@@ -177,7 +178,7 @@ uint32_t cmtOCCSendReceive(ecmdChipTarget &i_target, ecmdDataBuffer &i_data, uin
         //If SBE FIFO is not on, then update the configuration to set it to on
         if ( strcasecmp(l_existingValueAlpha.c_str(),CMT_SBE_FIFO_ON) != 0 )  {
 
-            if (G_verbose)
+            if (G_verbose >= 2)
                 printf("cmtOCCSendReceive: calling ecmdGetConfiguration(ECMD_CONFIG_VALID_FIELD_ALPHA, CMT_SBE_FIFO_ON)\n");
             l_rc = ecmdSetConfiguration(i_target, USE_SBE_FIFO_STR, ECMD_CONFIG_VALID_FIELD_ALPHA, CMT_SBE_FIFO_ON, 0);
             if ( l_rc ) {
@@ -193,7 +194,7 @@ uint32_t cmtOCCSendReceive(ecmdChipTarget &i_target, ecmdDataBuffer &i_data, uin
     {
         uint32_t l_bytes = i_data.getByteLength();
 
-        if (G_verbose)
+        if (G_verbose >= 2)
         {
             printf("cmtOCCSendReceive: calling putMemPba(0x%08X)\n", (unsigned int)HOST_PASS_THROUGH_MEM_ADDRESS);
             uint8_t l_buffer[l_bytes];
@@ -207,37 +208,55 @@ uint32_t cmtOCCSendReceive(ecmdChipTarget &i_target, ecmdDataBuffer &i_data, uin
             break;
         }
 
+        uint32_t l_polling_interval = READ_CFAM_WAIT_TIME;
+        if (i_timeout <= 60)
+        {
+            l_polling_interval = 1; // Check once per second
+        }
+        uint32_t l_timeout = i_timeout / l_polling_interval;
+        if (i_timeout < l_polling_interval)
+        {
+            l_polling_interval = i_timeout;
+        }
         uint32_t l_attempt = 0;
         ecmdDataBuffer l_regData;
+        if (G_verbose)
+            printf("cmtOCCSendReceive: Waiting for response (timeout=%d sec, %d sec between polls)\n",
+                   l_timeout, l_polling_interval);
         do {
-            if (G_verbose)
-                printf("cmtOCCSendReceive: sleeping %d sec (%d attempts remaining)\n",
-                       READ_CFAM_WAIT_TIME, READ_CFAM_MAX_ATTEMPT-l_attempt);
-            sleep(READ_CFAM_WAIT_TIME);
-            if (G_verbose)
-                printf("cmtOCCSendReceive: calling getCfamRegister(0x%04X)\n", CFAM_REGISTER_ADDRESS);
+            //if (G_verbose)
+            //    printf("cmtOCCSendReceive: sleeping %d sec (%d attempts remaining)\n",
+            //           l_polling_interval, l_timeout-l_attempt);
+            sleep(l_polling_interval);
+            //if (G_verbose)
+            //    printf("cmtOCCSendReceive: calling getCfamRegister(0x%04X)\n", CFAM_REGISTER_ADDRESS);
             l_rc = getCfamRegister(i_target,CFAM_REGISTER_ADDRESS,l_regData);
             if(l_rc) {
                 cmtOutputError("%s : getCfamRegister() failed. RC=0x%08X\n", __FUNCTION__, l_rc);
                 break;
             }
             l_attempt++;
-        } while ((l_attempt < READ_CFAM_MAX_ATTEMPT) && (!l_regData.isBitSet(CMT_HBRT_CMD_COMPLETE_BIT)));
+        } while ((l_attempt < l_timeout) && (!l_regData.isBitSet(CMT_HBRT_CMD_COMPLETE_BIT)));
 
 
         if(l_rc) {
             break;
         }
 
-        if ( (l_attempt == READ_CFAM_MAX_ATTEMPT) && (!l_regData.isBitSet(CMT_HBRT_CMD_COMPLETE_BIT)) ) {
-            cmtOutputError("Host pass through commmand has timed out!\n");
+        if ( (l_attempt == l_timeout) && (!l_regData.isBitSet(CMT_HBRT_CMD_COMPLETE_BIT)) ) {
+            cmtOutputError("Host pass through commmand has timed out! (%d sec)\n", i_timeout);
             l_rc = 0x55; //CMT_HOST_PASSTHROUGH_TIMEOUT;
             break;
+        }
+        else if (G_verbose >= 2)
+        {
+            printf("cmtOCCSendReceive: request completed in %d sec\n",
+                   l_attempt * l_polling_interval);
         }
 
         ecmdDataBuffer l_header;
         //Reading 128 bytes to get data size from HBRT header
-        if (G_verbose)
+        if (G_verbose >= 2)
             printf("cmtOCCSendReceive: calling getMemPbaHidden(0x%08X, %d)\n",
                    (unsigned int)HOST_PASS_THROUGH_MEM_ADDRESS, DATA_128_BYTE_ALLIGN);
         l_rc = getMemPbaHidden(i_target, HOST_PASS_THROUGH_MEM_ADDRESS, DATA_128_BYTE_ALLIGN, l_header,(PBA_MODE_LCO|PBA_OPTION_PASSTHROUGH));
@@ -245,7 +264,7 @@ uint32_t cmtOCCSendReceive(ecmdChipTarget &i_target, ecmdDataBuffer &i_data, uin
             cmtOutputError("%s : getMemPbaHidden() failed. RC=0x%08X\n", __FUNCTION__, l_rc);
             break;
         }
-        else if (G_verbose)
+        else if (G_verbose >= 2)
             dumpHex(l_header);
 
         //This l_rc indicates the Status returned by HBRT as a response of executing
@@ -272,7 +291,7 @@ uint32_t cmtOCCSendReceive(ecmdChipTarget &i_target, ecmdDataBuffer &i_data, uin
         {
             uint32_t l_remainingRespSize = l_responseSize - DATA_128_BYTE_ALLIGN;
             l_bytes = ((l_remainingRespSize)%DATA_128_BYTE_ALLIGN)? (l_remainingRespSize-(l_remainingRespSize%DATA_128_BYTE_ALLIGN)+DATA_128_BYTE_ALLIGN) : l_remainingRespSize;
-            if (G_verbose)
+            if (G_verbose >= 2)
                 printf("cmtOCCSendReceive: calling getMemPbaHidden(0x%08X, %d bytes)\n",
                        (unsigned int)HOST_PASS_THROUGH_MEM_ADDRESS_128, l_bytes);
             l_rc = getMemPbaHidden(i_target, HOST_PASS_THROUGH_MEM_ADDRESS_128, l_bytes, l_tempData,(PBA_MODE_LCO|PBA_OPTION_PASSTHROUGH));
@@ -297,7 +316,7 @@ uint32_t cmtOCCSendReceive(ecmdChipTarget &i_target, ecmdDataBuffer &i_data, uin
     //If this fails, then ignore the error
     if ( l_modifiedConfig == true ) {
         //No need to check the rc
-        if (G_verbose)
+        if (G_verbose >= 2)
             printf("cmtOCCSendReceive: calling ecmdSetConfiguration(restore prior)\n");
         ecmdSetConfiguration(i_target, USE_SBE_FIFO_STR, l_existingConfigValid,
                              l_existingValueAlpha, l_existingValueNumeric);
@@ -319,7 +338,7 @@ bool isFsp()
     }
     else
     {
-        if (G_verbose)
+        if (G_verbose >= 2)
             printf("isFSP: ecmdQuerySP returned %s\n", spType.c_str());
         if (spType == "FSP")
             is_fsp = true;
@@ -327,3 +346,85 @@ bool isFsp()
 
     return is_fsp;
 }
+
+
+uint32_t send_fsp_command(const char *i_cmd)
+{
+    uint32_t l_rc = CMT_SUCCESS;
+
+    if ((i_cmd != NULL) && (i_cmd[0] != '\0'))
+    {
+        if (isFsp())
+        {
+            ecmdChipTarget  l_target;
+            std::string     l_output;
+            l_rc = makeSPSystemCall(l_target, i_cmd, l_output);
+            if (l_rc)
+            {
+                printf("ERROR: send_fsp_command(%s) failed with rc=%d\n", i_cmd, l_rc);
+                cmtOutputError(l_output.c_str());
+            }
+            else
+            {
+                printf("-FSP-> %s\n", i_cmd);
+                printf("%s\n", l_output.c_str());
+                fflush(stdout);
+            }
+        }
+        else
+        {
+            cmtOutputError("send_fsp_command: Not supported on BMC system!\n");
+            l_rc = CMT_NOT_SUPPORTED;
+        }
+    }
+    else
+    {
+        cmtOutputError("send_fsp_command: No FSP command specified!\n");
+        l_rc = CMT_INVALID_DATA;
+    }
+
+    return l_rc;
+
+} // send_fsp_command()
+
+
+uint32_t send_bmc_command(const char *i_cmd)
+{
+    uint32_t l_rc = CMT_SUCCESS;
+
+    if ((i_cmd != NULL) && (i_cmd[0] != '\0'))
+    {
+        if (!isFsp())
+        {
+            ecmdChipTarget  l_target;
+            std::string     l_output;
+            l_rc = makeSPSystemCall(l_target, i_cmd, l_output);
+            if (l_rc)
+            {
+                printf("ERROR: send_bmc_command(%s) failed with rc=%d\n", i_cmd, l_rc);
+                cmtOutputError(l_output.c_str());
+            }
+            else
+            {
+                printf("-BMC-> %s\n", i_cmd);
+                printf("%s\n", l_output.c_str());
+                fflush(stdout);
+            }
+        }
+        else
+        {
+            cmtOutputError("send_bmc_command: Not supported on FSP system!\n");
+            l_rc = CMT_NOT_SUPPORTED;
+        }
+    }
+    else
+    {
+        cmtOutputError("send_bmc_command: No BMC command specified!\n");
+        l_rc = CMT_INVALID_DATA;
+    }
+
+    return l_rc;
+
+} // send_bmc_command()
+
+

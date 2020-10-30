@@ -5,7 +5,7 @@
 #
 # OpenPOWER OnChipController Project
 #
-# Contributors Listed Below - COPYRIGHT 2014,2019
+# Contributors Listed Below - COPYRIGHT 2014,2020
 # [+] International Business Machines Corp.
 #
 #
@@ -47,6 +47,18 @@ endif
 
 ifndef TRACEPP_DIR
 export TRACEPP_DIR = $(abspath tools/tracepp)
+endif
+
+ifndef TOOLS_OBJDIR
+export TOOLS_OBJDIR = $(abspath ../obj/tools)
+endif
+
+ifndef PARSER_DIR
+export PARSER_DIR = $(abspath tools/ffdcparser)
+endif
+
+ifndef OCCUTIL_DIR
+export OCCUTIL_DIR = $(abspath tools/occutil)
 endif
 
 ifndef PK_SRCDIR
@@ -95,7 +107,10 @@ export GCC-DEFS += -DP10_HW_BUILD=1
 endif
 
 .PHONY : all
-all: ppetools $(NEEDED_IMAGES) combineImage tracehash
+all: tools $(NEEDED_IMAGES) combineImage tracehash
+
+.PHONY: tools
+tools: $(TOOLS_OBJDIR) ppetools ffdcparser wofparser occutil
 
 .PHONY: ppetools
 ppetools: $(PPETOOLS_OBJDIR)/ppetracepp $(PPETOOLS_OBJDIR)/ppe2fsp $(PPETOOLS_OBJDIR)/tracepp
@@ -108,6 +123,21 @@ $(PPETOOLS_OBJDIR)/ppe2fsp: $(PPETOOLS_OBJDIR)
 
 $(PPETOOLS_OBJDIR):
 	mkdir -p $(PPETOOLS_OBJDIR)/
+
+ffdcparser: $(TOOLS_OBJDIR) $(PARSER_DIR)/ffdcparser.c $(PARSER_DIR)/parser_common.h
+	gcc $(PARSER_DIR)/ffdcparser.c -o $(TOOLS_OBJDIR)/ffdcparser
+
+wofparser: $(TOOLS_OBJDIR) $(PARSER_DIR)/wofparser.c  $(PARSER_DIR)/parser_common.h
+	gcc $(PARSER_DIR)/wofparser.c -o  $(TOOLS_OBJDIR)/wofparser
+
+occutil: $(TOOLS_OBJDIR)/occutil
+	(cd $(OCCUTIL_DIR) && make)
+
+$(TOOLS_OBJDIR):
+	mkdir -p $(TOOLS_OBJDIR)/
+
+$(TOOLS_OBJDIR)/occutil:
+	mkdir -p $(TOOLS_OBJDIR)/occutil
 
 .PHONY : needed_images
 needed_images: $(NEEDED_IMAGES)

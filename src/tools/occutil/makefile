@@ -24,6 +24,11 @@
 # IBM_PROLOG_END_TAG
 # Makefile for Converged Manufacturing Toolkit(CMT)
 
+ifeq ($(strip $(CTEPATH)),)
+  $(warning The CTEPATH variable is not defined;  Defaulting to /afs/awd/projects/cte)
+  CTEPATH=/afs/awd/projects/cte
+endif
+
 ifeq ($(strip $(BUILD_INFO)),)
   $(info No BUILD_INFO specified...)
   $(info Using: BUILD_INFO="-DOPLTK_VERSION=20190109 -DOPFTK_VERSION=20190110")
@@ -35,9 +40,9 @@ BUILD_HOST_IP   := $(shell hostname -I)
 BUILD_OS        := $(shell lsb_release -sd)
 
 # Cleanup multiple //'s in the path built above
-OBJPATH                         := ../../../obj/ppetools/cft/
-BINPATH                         := ../../../obj/ppetools
-occtool_SOURCE                  := cftocctool.C cft_utils.C cft_tmgt.C cft_occ.C
+OBJPATH                         := ../../../obj/tools/occutil/
+BINPATH                         := ../../../obj/tools/occutil/
+occtool_SOURCE                  := occutil.C cft_utils.C cft_tmgt.C cft_occ.C
 
 CFLAGS          := ${CFLAGS} -g -I/usr/include/libxml2 -Icmd -Icapi -Imnfg -Ihwp -Ijson/single_include "-DBUILD_HOST_NAME=$(BUILD_HOST_NAME)" "-DBUILD_HOST_IP=$(BUILD_HOST_IP)" -DBUILD_OS=$(BUILD_OS) $(BUILD_INFO)
 
@@ -82,18 +87,18 @@ occtool_LDFLAGS             := ${LDFLAGS} -m64 -L${ECMD_PATH}/x86_64/lib -lecmd 
 
 LDFLAGS                     := ${LDFLAGS} -m64 -L${ECMD_PATH}/x86_64/lib -ldl -lecmd -lxml2 -lz -l:libssh2.so.1 -lssl -lcrypto -ldl -lrt
 
-all: dir cftocctool
+all: dir occutil
 
 clean: objclean
 
 objclean:
-	rm -rf ${OBJPATH}*
+	rm -rf ${OBJPATH}/*
 
 dir:
 	@mkdir -p ${OBJPATH}
 
 install:
-	cp -v ${BINPATH}/cftocctool ${HOME}/bin/
+	cp -v ${BINPATH}/occutil ${HOME}/bin/
 
 # *****************************************************************************
 #  Object Build Targets
@@ -114,6 +119,6 @@ $(occtool_SOURCE_OBJS): ${OBJPATH}%.o : %.C ${INCLUDES} ${INT_INCLUDES}
 # *****************************************************************************
 #  Create the binary
 # *****************************************************************************
-cftocctool: ${occtool_SOURCE_OBJS}  ${LINK_OBJS}
-	${LD} ${occtool_LDFLAGS} $^ -o ${BINPATH}/cftocctool ${LDLIBS}
+occutil: ${occtool_SOURCE_OBJS}  ${LINK_OBJS}
+	${LD} ${occtool_LDFLAGS} $^ -o ${BINPATH}/occutil ${LDLIBS}
 

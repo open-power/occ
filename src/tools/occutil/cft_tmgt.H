@@ -27,53 +27,47 @@
   @brief Main Program entry point for cmtDllClient Application
 */
 
-#ifndef __CFT_UTILS_H
-#define __CFT_UTILS_H
+#ifndef __CFT_TMGT_H
+#define __CFT_TMGT_H
+
+#include "cft_utils.H"
 
 
-#include <stdio.h>
-#include <string.h>
-#include <arpa/inet.h> // htons
-#include <stddef.h> // offsetof
-#include <ecmdClientCapi.H>
-
-
-extern unsigned int G_verbose;
-
-#define UINT16_GET(__uint8_ptr)   ((uint16_t)((*((const uint8_t *)(__uint8_ptr)) << 8) | *((const uint8_t *)(__uint8_ptr) + 1)))
-#define UINT32_GET(__uint8_ptr)   ((uint32_t)((uint32_t)(UINT16_GET(__uint8_ptr) << 16) | UINT16_GET((((const uint8_t *)(__uint8_ptr)) + 2))))
-
-#define cmtOutputError printf
-
-
-enum cmt_status_e
+enum htmgt_command
 {
-    CMT_SUCCESS = 0,
-    CMT_INIT_FAILURE,
-    CMT_INVALID_TARGET,
-    CMT_SEND_RECEIVE_FAILURE
+    HTMGT_QUERY_STATE =     0x01,
+    HTMGT_INTERNAL_FLAGS =  0x02,
+    HTMGT_SEND_OCC_CMD =    0x03
 };
 
-struct cmtHeader
-{
-    uint32_t sbeHeaderVersion;
-    uint32_t lengthOfMsg;
-    uint32_t sequenceId;
-    uint32_t cmdHeaderVersion;
-    uint32_t status;
-    uint32_t dataOffset;
-    uint32_t dataSize;
-    uint16_t cmdClass;
-    uint16_t cmdCode;
-} __attribute__((packed));
 
+uint32_t occ_cmd_via_htmgt(const uint8_t i_occNum,
+                           const uint8_t i_cmd,
+                           const uint8_t* i_cmd_data,
+                           const uint16_t i_len,
+                           uint8_t *& o_responseData,
+                           uint32_t & o_responseSize);
 
-void dumpHex(const uint8_t *data, const unsigned int i_len);
+uint32_t occ_cmd_via_tmgt(const uint8_t i_occNum,
+                          const uint8_t i_cmd,
+                          const uint8_t* i_cmd_data,
+                          const uint16_t i_len,
+                          uint8_t *& o_responseData,
+                          uint32_t & o_responseSize);
 
-void initHeader(cmtHeader & i_header, uint32_t i_lengthOfMsg);
-void ecmdTargetInit(ecmdChipTarget &o_target);
-uint32_t cmtOCCSendReceive(ecmdChipTarget &i_target, ecmdDataBuffer &i_data, uint8_t *&o_responseData,  uint32_t  & o_responseSize);
+uint32_t send_htmgt_command(const uint8_t i_cmd,
+                           const uint8_t* i_cmd_data,
+                           const uint16_t i_len);
 
-bool isFsp();
+uint32_t send_tmgt_command(const uint8_t i_cmd,
+                           const uint8_t* i_cmd_data,
+                           const uint16_t i_len);
+
+uint32_t send_tmgt_pmcomplex_reset(const bool i_clear_reset_count = false);
+
+uint32_t tmgt_flags(const uint32_t i_flag_value,
+                    const uint16_t i_len);
+
+uint32_t tmgt_waitforstate(const uint8_t i_state);
 
 #endif

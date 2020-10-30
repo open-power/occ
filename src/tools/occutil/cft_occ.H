@@ -30,6 +30,9 @@
 #ifndef __CFT_OCC_H
 #define __CFT_OCC_H
 
+extern char G_occ_string_file[512];
+
+const char * getCmdString(const uint8_t i_cmd);
 const char * getStateString(const uint8_t i_state);
 const char * getPollStatus(const uint8_t i_flags);
 const char * getPollExtStatus(const uint8_t i_flags);
@@ -40,5 +43,7 @@ uint32_t send_occ_command(const uint8_t i_occ,
                           const uint8_t i_cmd,
                           const uint8_t* i_cmd_data,
                           const uint16_t i_len);
+
+uint32_t get_occ_trace(const uint8_t i_occ = 0);
 
 #endif

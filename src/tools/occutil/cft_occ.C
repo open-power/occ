@@ -27,10 +27,11 @@
   @brief Main Program entry point for cmtDllClient Application
 */
 
-#include <ecmdClientCapi.H>
+#include "cft_utils.H"
 #include "cft_occ.H"
 #include "cft_tmgt.H"
 
+char G_occ_string_file[512] = "/afs/rch/usr2/cjcain/public/occStringFile.p10";
 
 struct occ_poll_rsp_t
 {
@@ -120,6 +121,28 @@ void parse_occ_poll(const uint8_t *i_rsp_data,
 
 
 
+const char * getCmdString(const uint8_t i_cmd)
+{
+    // from src/occ_405/cmdh/cmdh_fsp_cmds.h
+    const char *string = "UNKNOWN";
+    switch(i_cmd)
+    {
+        case 0x00: string = "POLL"; break;
+        case 0x12: string = "CLEAR_ELOG"; break;
+        case 0x20: string = "SET_MODE_STATE"; break;
+        case 0x21: string = "SET_CFG_DATA"; break;
+        case 0x22: string = "SET_USER_CAP"; break;
+        case 0x25: string = "RESET_PREP"; break;
+        case 0x30: string = "SEND_AMBIENT"; break;
+        case 0x40: string = "DEBUG_PT"; break;
+        case 0x41: string = "AME_PT"; break;
+        case 0x42: string = "GET_FIELD_DEBUG"; break;
+        case 0x53: string = "MFG_TEST"; break;
+    }
+    return string;
+}
+
+
 const char * getStateString(const uint8_t i_state)
 {
     const char *string = "UNKNOWN";
@@ -141,14 +164,14 @@ const char * getStateString(const uint8_t i_state)
 
 const char * getPollStatus(const uint8_t i_flags)
 {
+    // from src/occ_405/cmdh/cmdh_fsp_cmds.h
     static char string[256] = "";
     if (i_flags & 0x80) strcat(string, "Master ");
-    if (i_flags & 0x40) strcat(string, "CollectFIR ");
     if (i_flags & 0x10) strcat(string, "OCCPmcrOwner ");
     if (i_flags & 0x08) strcat(string, "SIMICS ");
     if (i_flags & 0x02) strcat(string, "ObsReady ");
     if (i_flags & 0x01) strcat(string, "ActReady ");
-    if (i_flags & 0x24) strcat(string, "UNKNOWN ");
+    if (i_flags & 0x64) strcat(string, "UNKNOWN ");
     unsigned int len = strlen(string);
     if ((len > 0) && (string[len-1] == ' ')) string[len-1]='\0';
    return string;
@@ -157,13 +180,17 @@ const char * getPollStatus(const uint8_t i_flags)
 
 const char * getPollExtStatus(const uint8_t i_flags)
 {
+    // from src/occ_405/cmdh/cmdh_fsp_cmds.h
     static char string[256] = "";
     if (i_flags & 0x80) strcat(string, "Throttle-ProcOverTemp ");
     if (i_flags & 0x40) strcat(string, "Throttle-Power ");
     if (i_flags & 0x20) strcat(string, "MemThrot-OverTemp ");
     if (i_flags & 0x10) strcat(string, "QuickPowerDrop ");
     if (i_flags & 0x08) strcat(string, "Throttle-VddOverTemp ");
-    if (i_flags & 0x07) strcat(string, "UNKNOWN ");
+    if (i_flags & 0x04) strcat(string, "GPU2-Throttled ");
+    if (i_flags & 0x02) strcat(string, "GPU1-Throttled ");
+    if (i_flags & 0x01) strcat(string, "GPU0-Throttled ");
+    if (i_flags & 0x00) strcat(string, "UNKNOWN ");
     unsigned int len = strlen(string);
     if ((len > 0) && (string[len-1] == ' ')) string[len-1]='\0';
    return string;
@@ -172,16 +199,20 @@ const char * getPollExtStatus(const uint8_t i_flags)
 
 const char * getFruString(const uint8_t i_fru)
 {
+    // from src/occ_405/cmdh/cmdh_fsp_cmds_datacnfg.h
     const char * string = "";
     switch(i_fru)
     {
         case 0: string="core"; break;
-        case 1: string="centaur"; break;
+        case 1: string="membuf"; break;
         case 2: string="dimm"; break;
-        case 3: string="vrm-ot"; break;
+        case 3: string="memctrl-dram"; break;
         case 4: string="gpu"; break;
         case 5: string="gpu-mem"; break;
         case 6: string="vrm-vdd"; break;
+        case 7: string="pmic"; break;
+        case 8: string="memctrl-ext"; break;
+        case 9: string="proc-io"; break;
     }
     return string;
 }
@@ -190,20 +221,21 @@ const char * getFruString(const uint8_t i_fru)
 // Return function name for APSS function IDs
 const char * getApssFuncName(uint8_t i_funcId)
 {
+    // from src/occ_405/occ_sys_config.h
     switch (i_funcId)
     {
         case 0x01: return("Mem Proc 0"); break;
         case 0x02: return("Mem Proc 1"); break;
         case 0x03: return("Mem Proc 2"); break;
         case 0x04: return("Mem Proc 3"); break;
-        case 0x05: return("Proc 0"); break;
-        case 0x06: return("Proc 1"); break;
-        case 0x07: return("Proc 2"); break;
-        case 0x08: return("Proc 3"); break;
-        case 0x09: return("Proc 0 cache/io/pcie"); break;
-        case 0x0A: return("Proc 1 cache/io/pcie"); break;
-        case 0x0B: return("Proc 2 cache/io/pcie"); break;
-        case 0x0C: return("Proc 3 cache/io/pcie"); break;
+        case 0x05: return("Proc 0 Vdd"); break;
+        case 0x06: return("Proc 1 Vdd"); break;
+        case 0x07: return("Proc 2 Vdd"); break;
+        case 0x08: return("Proc 3 Vdd"); break;
+        case 0x09: return("Proc 0 Vcs/io/pcie"); break;
+        case 0x0A: return("Proc 1 Vcs/io/pcie"); break;
+        case 0x0B: return("Proc 2 Vcs/io/pcie"); break;
+        case 0x0C: return("Proc 3 Vcs/io/pcie"); break;
         case 0x0D: return("IO A"); break;
         case 0x0E: return("IO B"); break;
         case 0x0F: return("IO C"); break;
@@ -214,17 +246,23 @@ const char * getApssFuncName(uint8_t i_funcId)
         case 0x14: return("(12V voltage sense)"); break;
         case 0x15: return("(ground remote sense)"); break;
         case 0x16: return("Total System Power"); break;
-        case 0x17: return("Memory Cache (Centaur)"); break;
+        case 0x17: return("Memory Cache"); break;
         case 0x18: return("Proc 0 GPU 0"); break;
-        case 0x19: return("Mem Proc 0-0"); break;
-        case 0x1A: return("Mem Proc 0-1"); break;
-        case 0x1B: return("Mem Proc 0-2"); break;
+        case 0x19: return("Proc 0 Mem 0"); break;
+        case 0x1A: return("Proc 0 Mem 1"); break;
+        case 0x1B: return("Proc 0 Mem 2"); break;
         case 0x1C: return("(12V standby current)"); break;
         case 0x1D: return("Proc 0 GPU 1"); break;
         case 0x1E: return("Proc 0 GPU 2"); break;
         case 0x1F: return("Proc 1 GPU 0"); break;
         case 0x20: return("Proc 1 GPU 1"); break;
         case 0x21: return("Proc 1 GPU 2"); break;
+        case 0x22: return("Proc 0 GPU Volt 2-0"); break;
+        case 0x23: return("Proc 0 GPU Volt 2-12"); break;
+        case 0x24: return("Proc 1 GPU Volt 2-0"); break;
+        case 0x25: return("Proc 1 GPU Volt 2-1"); break;
+        case 0x26: return("(voltage sense 2)"); break;
+        case 0x27: return("Total System Power 2"); break;
         default: return(""); break;
     }
 }
@@ -232,42 +270,40 @@ const char * getApssFuncName(uint8_t i_funcId)
 
 const char * getHistoryName(uint8_t id)
 {
+    // from src/occ_405/errl/errl.h
     const char *string = "";
     switch (id)
     {
-        case  1: string="VddCurrent"; break;
-        case  2: string="VddVoltage"; break;
-        case  3: string="VdnCurrent"; break;
-        case  4: string="VdnVoltage"; break;
-        case  5: string="DimmI2cPort0"; break;
-        case  6: string="DimmI2cPort1"; break;
-        case  7: string="VddOverTemp"; break;
-        case  8: string="VdnOverTemp"; break;
-        case  9: string="VddOverCurrent"; break;
-        case 10: string="VdnOverCurrent"; break;
-        case 11: string="ApssData"; break;
-        case 12: string="ApssComplete"; break;
-        case 13: string="ApssTimeout"; break;
-        case 14: string="DcomTxSlvInbox"; break;
-        case 15: string="DcomRxSlvInbox"; break;
-        case 16: string="DcomTxSlvOutbox"; break;
-        case 17: string="DcomRxSlvOutbox"; break;
-        case 18: string="DcomMstPbaxSend"; break;
-        case 19: string="DcomSlvPbaxSend"; break;
-        case 20: string="DcomMstPbaxRead"; break;
-        case 21: string="DcomSlvPbaxRead"; break;
-        case 22: string="Gpe0NotIdle"; break;
-        case 23: string="Gpe1NotIdle"; break;
-        case 24: string="24x7Disabled"; break;
-        case 25: string="CeffRatioVdd"; break;
-        case 26: string="VddTemp"; break;
-        case 27: string="OverPcapIgn"; break;
-        case 28: string="VFRTTimeoutIgn"; break;
-        case 29: string="WOFControlTimeoutIgn"; break;
-        case 30: string="PstateChangeIngored"; break;
-        case 31: string="VddCurrentRolloverMax"; break;
-        case 32: string="CoreSmallDroop"; break;
-        case 33: string="CoreLargeDroop"; break;
+        case 0x07: string="VddReadFail"; break;
+        case 0x09: string="VddOverCurrent"; break;
+        case 0x0B: string="InvalidApssData"; break;
+        case 0x0C: string="ApssCompleteErr"; break;
+        case 0x0D: string="ApssTimeout"; break;
+        case 0x0E: string="DcomTxSlvInbox"; break;
+        case 0x0F: string="DcomRxSlvInbox"; break;
+        case 0x10: string="DcomTxSlvOutbox"; break;
+        case 0x11: string="DcomRxSlvOutbox"; break;
+        case 0x12: string="DcomMstPbaxSend"; break;
+        case 0x13: string="DcomSlvPbaxSend"; break;
+        case 0x14: string="DcomMstPbaxRead"; break;
+        case 0x15: string="DcomSlvPbaxRead"; break;
+        case 0x16: string="Gpe0NotIdle"; break;
+        case 0x17: string="Gpe1NotIdle"; break;
+        case 0x18: string="24x7Disabled"; break;
+        case 0x19: string="CeffRatioVdd"; break;
+        case 0x1A: string="VddTemp"; break;
+        case 0x1B: string="OverPcapIgnored"; break;
+        case 0x1C: string="VFRTTimeoutIgn"; break;
+        case 0x1D: string="WOFControlTimeoutIgn"; break;
+        case 0x1E: string="PstateChangeIgnored"; break;
+        case 0x1F: string="VddCurrentRolloverMax"; break;
+        case 0x20: string="CoreSmallDroop"; break;
+        case 0x21: string="CoreLargeDroop"; break;
+        case 0x22: string="OCSDirtyBlock"; break;
+        case 0x23: string="RtlTimeExceeded"; break;
+        case 0x24: string="DcomSlvInIncomplete"; break;
+        case 0x25: string="DcomSlvLostConn"; break;
+        case 0x26: string="24x7NotIdle"; break;
     }
     return string;
 }
@@ -279,12 +315,7 @@ uint32_t send_occ_command(const uint8_t i_occ,
                           const uint16_t i_len)
 {
     uint32_t rc = CMT_SUCCESS;
-    printf("Sending 0x%02X command to OCC%d\n", i_cmd, i_occ);
-    if (G_verbose)
-    {
-        printf("send_occ_command(OCC%d, command=0x%02X, isFSP=%c)\n", i_occ, i_cmd, isFsp()?'y':'n');
-        dumpHex(i_cmd_data, i_len);
-    }
+    printf("Sending %s (0x%02X) command to OCC%d\n", getCmdString(i_cmd), i_cmd, i_occ);
 
     uint8_t *rsp_ptr = NULL;
     uint32_t rsp_length = 0;
@@ -297,7 +328,7 @@ uint32_t send_occ_command(const uint8_t i_occ,
         rc = occ_cmd_via_htmgt(i_occ, i_cmd, i_cmd_data, i_len, rsp_ptr, rsp_length);
         if (rc == CMT_SUCCESS)
         {
-            printf("Poll returned %d bytes (0x%04X)\n", rsp_length, rsp_length);
+            printf("%s (0x%02X) response has %d bytes (0x%04X)\n", getCmdString(i_cmd), i_cmd, rsp_length, rsp_length);
             if ((rsp_length > 0) && (rsp_ptr != NULL))
             {
                 parse_occ_response(i_cmd, rsp_ptr, rsp_length);
@@ -312,7 +343,8 @@ uint32_t send_occ_command(const uint8_t i_occ,
 
     if (rc != CMT_SUCCESS)
     {
-        cmtOutputError("**** ERROR: Attempt to send POLL command returned 0x%02X\n", rc);
+        cmtOutputError("**** ERROR: Attempt to send %s (0x%02X) command returned 0x%02X\n",
+                       getCmdString(i_cmd), i_cmd, rc);
     }
     return rc;
 }
@@ -500,4 +532,28 @@ void parse_occ_poll(const uint8_t *i_rsp_data, const uint16_t i_rsp_len)
         --num_blocks;
     }
 
+}
+
+
+uint32_t get_occ_trace(const uint8_t i_occ)
+{
+    uint32_t rc = CMT_SUCCESS;
+    printf("Collecting OCC%d trace\n", i_occ);
+
+    if (isFsp())
+    {
+        char command[128];
+        sprintf(command, "tmgt trace occsram %d", i_occ);
+        rc = send_fsp_command(command);
+    }
+    else
+    {
+        char command[1024];
+        sprintf(command, "/afs/rch/usr2/cjcain/bin/occtoolp10 -trace -s %s -o %d",
+                G_occ_string_file, i_occ);
+        printf("==> %s\n", command);
+        system(command);
+    }
+
+    return rc;
 }

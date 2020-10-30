@@ -28,10 +28,9 @@
 */
 
 
-#include <ecmdClientCapi.H>
+#include "cft_utils.H"
 #include "cft_occ.H"
 #include "cft_tmgt.H"
-#include "cft_utils.H"
 
 
 const uint16_t  HTMGT_CMD_CLASS   = 0x00E0;
@@ -89,11 +88,10 @@ struct htmgt_info_t
 
 
 
-uint32_t send_fsp_command(const char *i_cmd);
-
 uint32_t send_hbrt_command(const uint8_t i_cmd,
                            const uint8_t* i_cmd_data,
-                           const uint16_t i_len);
+                           const uint16_t i_len,
+                           const uint32_t i_timeout = 60 /*seconds*/);
 
 void parse_htmgt_response(const uint8_t i_cmd,
                           const uint8_t *i_rsp_data,
@@ -124,7 +122,7 @@ uint32_t occ_cmd_via_htmgt(const uint8_t i_occNum,
         {
             l_packet_length += i_len;
         }
-        if (G_verbose)
+        if (G_verbose >= 2)
             printf("occ_cmd_via_htmgt: calling initHeader()\n");
         initHeader(l_packet.header, l_packet_length);
         l_packet.header.cmdClass = htons(HTMGT_CMD_CLASS);
@@ -137,21 +135,28 @@ uint32_t occ_cmd_via_htmgt(const uint8_t i_occNum,
         {
             memcpy(l_packet.data, i_cmd_data, i_len);
         }
-        if (G_verbose)
+        if (G_verbose >= 2)
             dumpHex((uint8_t*)&l_packet, l_packet_length);
+        else if (G_verbose)
+        {
+            printf("occ_cmd_via_htmgt: Sending %s (0x%02X) command to OCC%d (%d bytes of data)\n",
+                   getCmdString(i_cmd), i_cmd, i_occNum, i_len);
+            if (i_len)
+                dumpHex(i_cmd_data, i_len);
+        }
         uint8_t *pData = reinterpret_cast<uint8_t *>(&l_packet);
         l_data.memCopyIn(pData, l_packet_length);
 
         ecmdChipTarget l_target;
         ecmdLooperData looper;
 
-        if (G_verbose)
+        if (G_verbose >= 2)
             printf("occ_cmd_via_htmgt: calling ecmdTargetInit()\n");
         ecmdTargetInit(l_target);
         l_target.posState = ECMD_TARGET_FIELD_VALID;
         l_target.pos      = i_occNum;
 
-        if (G_verbose)
+        if (G_verbose >= 2)
             printf("occ_cmd_via_htmgt: calling ecmdConfigLooperInit()\n");
         l_rc = ecmdConfigLooperInit(l_target, ECMD_SELECTED_TARGETS_LOOP_DEFALL, looper);
         if (l_rc)
@@ -161,7 +166,7 @@ uint32_t occ_cmd_via_htmgt(const uint8_t i_occNum,
             break;
         }
 
-        if (G_verbose)
+        if (G_verbose >= 2)
             printf("occ_cmd_via_htmgt: calling ecmdConfigLooperNext()\n");
         l_rc = ecmdConfigLooperNext(l_target, looper);
         if (!l_rc) {
@@ -189,7 +194,8 @@ uint32_t occ_cmd_via_htmgt(const uint8_t i_occNum,
 
     } while (0);
 
-    printf("%s returning %d\n", __FUNCTION__, l_rc);
+    if (G_verbose)
+        printf("occ_cmd_via_htmgt: returning %d\n", l_rc);
     return l_rc;
 
 } // end occ_cmd_via_htmgt()
@@ -223,7 +229,7 @@ uint32_t occ_cmd_via_tmgt(const uint8_t i_occNum,
     l_rc = send_fsp_command(command);
 
     if (G_verbose)
-        printf("%s returning %d\n", __FUNCTION__, l_rc);
+        printf("occ_cmd_via_tmgt returning %d\n", l_rc);
 
     return l_rc;
 
@@ -264,39 +270,37 @@ uint32_t send_tmgt_command(const uint8_t i_cmd,
 } // end send_tmgt_command()
 
 
-uint32_t send_fsp_command(const char *i_cmd)
+uint32_t send_htmgt_command(const uint8_t i_cmd,
+                           const uint8_t* i_cmd_data,
+                           const uint16_t i_len)
 {
     uint32_t l_rc = CMT_SUCCESS;
 
-    if ((i_cmd != NULL) && (i_cmd[0] != '\0'))
+    if (G_verbose)
     {
-        ecmdChipTarget  l_target;
-        std::string     l_output;
-        l_rc = makeSPSystemCall(l_target, i_cmd, l_output);
-        if (l_rc)
-        {
-            printf("ERROR: send_fsp_command(%s) failed with rc=%d\n", i_cmd, l_rc);
-            cmtOutputError(l_output.c_str());
-        }
-        else
-        {
-            printf("==> %s\n%s\n", i_cmd, l_output.c_str());
-        }
+        printf("send_htmgt_command(command=0x%02X, FSP=%c)\n", i_cmd, isFsp()?'y':'n');
+        dumpHex(i_cmd_data, i_len);
+    }
+
+    if (isFsp())
+    {
+        cmtOutputError("send_htmgt_command: Not supported on FSP");
+        l_rc = 6;
     }
     else
     {
-        cmtOutputError("send_fsp_command: No FSP command specified!");
-        l_rc = 5;
+       l_rc = send_hbrt_command(i_cmd, i_cmd_data, i_len);
     }
 
     return l_rc;
 
-} // send_fsp_command()
+} // end send_htmgt_command()
 
 
 uint32_t send_hbrt_command(const uint8_t i_cmd,
                            const uint8_t* i_cmd_data,
-                           const uint16_t i_len)
+                           const uint16_t i_len,
+                           const uint32_t i_timeout)
 {
     uint32_t l_rc = CMT_SUCCESS;
 
@@ -308,7 +312,7 @@ uint32_t send_hbrt_command(const uint8_t i_cmd,
     {
         cmtHtmgtCmd l_packet;
         uint32_t l_packet_length = sizeof(cmtHeader)+1;
-        if ((i_cmd_data != 0) && (i_len > 0))
+        if ((i_len > 0) && (i_cmd_data != 0))
         {
             l_packet_length += i_len;
         }
@@ -316,14 +320,16 @@ uint32_t send_hbrt_command(const uint8_t i_cmd,
         l_packet.header.cmdClass    = htons(HTMGT_CMD_CLASS);
         l_packet.header.cmdCode     = htons(HTMGT_CMD_CODE);
         l_packet.htmgtCmd    = i_cmd;
+        if (G_verbose)
+            printf("HTMGT command 0x%02X w/%d bytes of data\n", i_cmd, i_len);
         // command data
         l_data.setByteLength(l_packet_length);
-        if ((i_cmd_data != 0) && (i_len > 0))
+        if ((i_len > 0) && (i_cmd_data != 0))
         {
+            if (G_verbose)
+                dumpHex(i_cmd_data, i_len);
             memcpy(l_packet.data, i_cmd_data, i_len);
         }
-        if (G_verbose)
-            dumpHex((uint8_t*)&l_packet, l_packet_length);
         uint8_t *pData = reinterpret_cast<uint8_t *>(&l_packet);
         l_data.memCopyIn(pData, l_packet_length);
 
@@ -347,7 +353,7 @@ uint32_t send_hbrt_command(const uint8_t i_cmd,
             break;
         }
 
-        l_rc = cmtOCCSendReceive(l_target,l_data,l_responseData,l_responseSize);
+        l_rc = cmtOCCSendReceive(l_target,l_data,l_responseData,l_responseSize, i_timeout);
         if (l_rc)
         {
             cmtOutputError("%s : cmtOCCSendReceive() failed. RC=0x%08X\n", __FUNCTION__, l_rc);
@@ -359,10 +365,6 @@ uint32_t send_hbrt_command(const uint8_t i_cmd,
         {
             parse_htmgt_response(i_cmd, l_responseData, l_responseSize);
             free(l_responseData);
-        }
-        else
-        {
-            printf("WARNING: No data was returned");
         }
 
     } while (0);
@@ -395,29 +397,178 @@ void parse_htmgt_response(const uint8_t i_cmd,
 void parse_tmgt_info(const uint8_t *i_rsp_data, const uint16_t i_rsp_len)
 {
     htmgt_info_t *data = (htmgt_info_t*)i_rsp_data;
-    printf("HTMGT State: %s (0x%02X), %d OCC (master:OCC%d), resetCount:%d,",
-           getStateString(data->state), data->state, data->num_occs, data->master, data->system_reset_count);
-    if (data->safe_mode)
+    if (i_rsp_len >= 16)
     {
-        printf(",  (SAFE MODE: rc=0x%04X/OCC%d)", htonl(data->safe_rc), htonl(data->safe_occ));
+        printf("HTMGT State: %s (0x%02X), %d OCC (master:OCC%d), resetCount:%d,",
+               getStateString(data->state), data->state, data->num_occs, data->master, data->system_reset_count);
+        if (data->safe_mode)
+        {
+            printf(",  (SAFE MODE: rc=0x%04X/OCC%d)", htonl(data->safe_rc), htonl(data->safe_occ));
+        }
+        else if (data->safe_rc != 0)
+        {
+            printf(",  (last reset due to rc=0x%04X/OCC%d)", htonl(data->safe_rc), htonl(data->safe_occ));
+        }
+        printf("\n");
+        if (data->reset_since_boot > 0)
+        {
+            printf("           : PM Complex Resets since boot: %d\n", data->reset_since_boot);
+        }
+        for (unsigned int occ = 0; occ < data->num_occs; ++occ)
+        {
+            if (i_rsp_len >= (16 + (sizeof(occ_info_t)*(occ+1))))
+            {
+                occ_info_t * occd = &data->occ[occ];
+                printf("OCC%d: %s %s (0x%02X) resetCount:%d wofResets:%d flags pollRsp:0x%02X%02X%02X%02X... %s\n",
+                       occd->instance, (occd->instance == data->master)?"Master":"Slave ",
+                       getStateString(occd->state), occd->state,
+                       occd->reset_count, occd->wof_reset_count, occd->last_poll[0], occd->last_poll[1], occd->last_poll[2], occd->last_poll[3],
+                       getPollExtStatus(occd->last_poll[1]));
+            }
+            else
+            {
+                printf("ERROR: parse_tmgt_info: Unable to parse OCC%d - rsp too short! (rcvd %d, exp > %ld)\n",
+                       occ, i_rsp_len, (16 + (sizeof(occ_info_t)*(occ+1))));
+                dumpHex(i_rsp_data, i_rsp_len);
+            }
+        }
     }
-    else if (data->safe_rc != 0)
+    else
     {
-        printf(",  (last reset due to rc=0x%04X/OCC%d)", htonl(data->safe_rc), htonl(data->safe_occ));
+        printf("ERROR: parse_tmgt_info: Unable to parse - rsp too short! (rcvd %d, exp >= 16)\n",
+               i_rsp_len);
+        dumpHex(i_rsp_data, i_rsp_len);
     }
-    printf("\n");
-    if (data->reset_since_boot > 0)
-    {
-        printf("           : PM Complex Resets since boot: %d\n", data->reset_since_boot);
-    }
-    for (unsigned int occ = 0; occ < data->num_occs; ++occ)
-    {
-        occ_info_t * occd = &data->occ[occ];
-        printf("OCC%d: %s %s (0x%02X) resetCount:%d wofResets:%d flags pollRsp:0x%02X%02X%02X%02X... %s\n",
-               occd->instance, (occd->instance == data->master)?"Master":"Slave ",
-               getStateString(occd->state), occd->state,
-               occd->reset_count, occd->wof_reset_count, occd->last_poll[0], occd->last_poll[1], occd->last_poll[2], occd->last_poll[3],
-               getPollExtStatus(occd->last_poll[1]));
-    }
+
 } // end parse_tmgt_info()
 
+
+uint32_t send_tmgt_pmcomplex_reset(const bool i_clear_reset_count)
+{
+    uint32_t l_rc = CMT_SUCCESS;
+
+    if (G_verbose)
+    {
+        printf("send_tmgt_pmcomplex_reset(clear resets=%c)\n", i_clear_reset_count?'y':'n');
+    }
+
+    if (isFsp())
+    {
+        if (i_clear_reset_count)
+        {
+            l_rc = send_fsp_command("tmgtclient --reset_occ_clear 0");
+        }
+        else
+        {
+            l_rc = send_fsp_command("tmgtclient --reset_occ 0");
+        }
+        if (l_rc == CMT_SUCCESS)
+        {
+            l_rc = tmgt_waitforstate(0x03);
+        }
+    }
+    else
+    {
+        if (i_clear_reset_count)
+        {
+            uint32_t l_clear_rc;
+            l_clear_rc = send_hbrt_command(4, NULL, 0); // Clear Reset Counts
+            if (l_clear_rc)
+            {
+                printf("send_tmgt_pmcomplex_reset: Clear of reset counts failed! (before reset) RC=0x%04X\n",
+                       l_clear_rc);
+            }
+
+            printf("Waiting up to 5 minutes for reset to complete...\n");
+            l_rc = send_hbrt_command(6, NULL, 0, 300); // Reset PM Complex (5 minute timeout)
+
+            l_clear_rc = send_hbrt_command(4, NULL, 0); // Clear Reset Counts
+            if (l_clear_rc)
+            {
+                printf("send_tmgt_pmcomplex_reset: Clear of reset counts failed! RC=0x%04X\n",
+                       l_clear_rc);
+            }
+        }
+        else
+        {
+            l_rc = send_hbrt_command(6, NULL, 0, 300); // Reset PM Complex
+        }
+    }
+
+    return l_rc;
+
+} // end send_tmgt_pmcomplex_reset
+
+
+uint32_t tmgt_flags(const uint32_t i_flag_data,
+                    const uint16_t i_len)
+{
+    uint32_t l_rc = CMT_SUCCESS;
+    uint32_t l_flag = htonl(i_flag_data);
+
+    if (G_verbose)
+    {
+        if (i_len == 0)
+            printf("tmgt_flags(query)\n");
+        else
+            printf("tmgt_flags(set 0x%08X)\n", l_flag);
+    }
+
+    if (isFsp())
+    {
+        if (i_len == 0)
+            l_rc = send_fsp_command("registry -l tmgt/internalFlags");
+        else
+        {
+            char command[128];
+            sprintf(command, "registry -Hw tmgt/internalFlags 0x%08X", l_flag);
+            l_rc = send_fsp_command(command);
+            // query flags
+            l_rc = send_fsp_command("registry -l tmgt/internalFlags");
+        }
+    }
+    else
+    {
+       l_rc = send_hbrt_command(0x02, (const uint8_t*)&i_flag_data, i_len);
+       if (i_len > 0)
+       {
+           // re-query flags
+           (void)send_hbrt_command(0x02, NULL, 0);
+       }
+    }
+
+    return l_rc;
+
+} // end send_tmgt_command()
+
+
+uint32_t tmgt_waitforstate(const uint8_t i_state)
+{
+    uint32_t l_rc = CMT_SUCCESS;
+
+    if (isFsp())
+    {
+        const char *target_state = "";
+        if (i_state == 0x03)
+            target_state = "active";
+        else
+        {
+            l_rc = CMT_INVALID_DATA;
+        }
+        if (target_state[0] != '\0')
+        {
+            printf("Waiting for OCC state %s...\n", target_state);
+            char command[128];
+            sprintf(command, "tmgt %s", target_state);
+            l_rc = send_fsp_command(command);
+        }
+    }
+    else
+    {
+        cmtOutputError("tmgt_waitforstate: Not supported!\n");
+        l_rc = CMT_INVALID_DATA;
+    }
+
+    return l_rc;
+
+} // end tmgt_waitforstate()
