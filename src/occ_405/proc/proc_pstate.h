@@ -63,13 +63,13 @@ typedef struct __attribute__ ((packed))
 {
     uint8_t              valid;
     uint8_t              major_version;
-    uint8_t              minor_version;
     uint8_t              occ_role;
     uint8_t              pmin;
+    uint8_t              pfixed;
     uint8_t              pwof_base;
     uint8_t              puturbo;
     uint8_t              pfmax;
-    uint8_t              pfixed;
+    uint8_t              minor_version;
     uint8_t              pthrottle;
     uint8_t              reserved[6];  // pad to 16 bytes
 
