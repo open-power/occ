@@ -2727,6 +2727,10 @@ def occ_init(code_dir, flg_nopgpe, flg_verbose):
         # Allow bootloader to run a while (sram test/copy code images)
         cli.quiet_run_command("run 40 ms", output_mode = output_modes.formatted_text)
 
+    # Set perv clock (required for some SCOMs i.e. FIR_ERR_INJ)
+    conf.backplane0.dcm[0].power_on_and_gate.ports.input[0].signal.signal_raise()
+    conf.backplane0.dcm[0].power_on_and_gate.ports.input[1].signal.signal_raise()
+    conf.backplane0.dcm[0].chip[0].perv_clk_root.iface.signal.signal_raise()
     return RC
 
 
