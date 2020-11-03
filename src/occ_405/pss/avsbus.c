@@ -237,16 +237,17 @@ void avsbus_init()
     }
 
     // Write O2SCTRL1_[a][n]
-    //  0     o2s_bridge_enable = 1 (make the O2S bridge active if not already)
-    //  1     reserved
-    //  2     o2s_cpol = 0 (positive active clock)
-    //  3     o2s_cpha = 1 (second edge data sample)
+    //  0     o2s_bridge_enable_a = 1 (make the O2S bridge active if not already)
+    //  1     o2s_bridge_enable_b = 1 (make the O2S bridge active if not already)
+    //  2:3   reserved
     //  4:13  o2s_clock_divider = set based on the nest frequency for the desired frequency of 10MHz (assumed speed) per O2SCTRL1_[a][n] description.
     //  14:16 reserved
     //  17    o2s_nr_of_frames = 1 (2 frames to account for the first and second frames of an AVSBus command)
-    //  18:63 reserved
+    //  18:19 reserved
+    //  20:26 slave_data_sample_delay
+    //  27:63 reserved
     //  1r00DDDD DDDDDDrr r1rrrrrr rrrrrrrrr
-    value = 0x90004000;
+    value = 0xD0004000;
     // calculate o2s_clock_divider based on OCC freq and target bus freq
     const uint32_t divider = (G_occ_frequency_mhz / (AVSBUS_FREQUENCY_MHZ * 8)) - 1;
     value |= (divider << 18);
