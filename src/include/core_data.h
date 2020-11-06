@@ -45,7 +45,7 @@
 
 #define CORE_RAW_CYCLES             0x200
 
-#define MAX_SCOMD_RETRY     1
+#define MAX_SCOMD_RETRY     3
 
 #define EMPATH_CORE_THREADS 4
 
