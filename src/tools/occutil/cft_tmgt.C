@@ -62,7 +62,8 @@ struct occ_info_t
     uint8_t role;
     uint8_t master_capable;
     uint8_t comm_established;
-    uint8_t reserved[3];
+    uint8_t mode;
+    uint8_t reserved[2];
     uint8_t failed;
     uint8_t needs_reset;
     uint8_t reset_reason;
@@ -79,16 +80,37 @@ struct htmgt_info_t
     uint8_t target_state;
     uint8_t system_reset_count;
     uint8_t reset_since_boot;
-    uint8_t reserved;
+    uint8_t mode;
     uint8_t safe_mode;
     uint32_t safe_rc;
     uint32_t safe_occ;
     occ_info_t occ[8];
 };
 
+struct htmgt_query_mode_function_t
+{
+    uint8_t system_mode;
+    uint8_t cust_mode;
+    uint8_t current_mode;
+    uint8_t state;
+    uint8_t hftrading;
+    uint16_t freq;
+    uint8_t occ_status;
+    uint8_t power_save;
+    uint8_t power_cap;
+    uint8_t reserved1;
+    uint8_t dyn_perf;
+    uint8_t ffo;
+    uint8_t reserved2;
+    uint8_t max_perf;
+    uint8_t reserved3[5];
+    uint32_t safe_rc;
+    uint32_t safe_occ;
+} __attribute__((packed));
 
 
-uint32_t send_hbrt_command(const uint8_t i_cmd,
+
+uint32_t send_hbrt_command(const htmgt_command i_cmd,
                            const uint8_t* i_cmd_data,
                            const uint16_t i_len,
                            const uint32_t i_timeout = 60 /*seconds*/);
@@ -97,10 +119,11 @@ void parse_htmgt_response(const uint8_t i_cmd,
                           const uint8_t *i_rsp_data,
                           const uint16_t i_rsp_len);
 
-void parse_tmgt_info(const uint8_t *i_rsp_data,
-                     const uint16_t i_rsp_len);
+int parse_tmgt_info(const uint8_t *i_rsp_data,
+                    const uint16_t i_rsp_len);
 
-
+int parse_query_mode_func(const uint8_t *i_rsp_data,
+                          const uint16_t i_rsp_len);
 
 uint32_t occ_cmd_via_htmgt(const uint8_t i_occNum,
                            const uint8_t i_cmd,
@@ -226,7 +249,7 @@ uint32_t occ_cmd_via_tmgt(const uint8_t i_occNum,
     }
     sprintf(&command[cmd_index], " -O %d", i_occNum);
 
-    l_rc = send_fsp_command(command);
+    l_rc = send_fsp_command_rspdata(command, o_responseData, o_responseSize);
 
     if (G_verbose)
         printf("occ_cmd_via_tmgt returning %d\n", l_rc);
@@ -245,14 +268,19 @@ uint32_t send_tmgt_command(const uint8_t i_cmd,
     if (G_verbose)
     {
         printf("send_tmgt_command(command=0x%02X, FSP=%c)\n", i_cmd, isFsp()?'y':'n');
-        dumpHex(i_cmd_data, i_len);
+        if ((i_cmd_data != NULL) && (i_len > 0))
+            dumpHex(i_cmd_data, i_len);
     }
 
     if (isFsp())
     {
-        if (i_cmd == 0x01)
+        if (i_cmd == HTMGT_QUERY_STATE)
         {
             l_rc = send_fsp_command("tmgtclient -I");
+        }
+        else if (i_cmd == HTMGT_QUERY_MODE_FUNC)
+        {
+            l_rc = send_fsp_command("tmgtclient --query_mode_and_function");
         }
         else
         {
@@ -262,7 +290,7 @@ uint32_t send_tmgt_command(const uint8_t i_cmd,
     }
     else
     {
-       l_rc = send_hbrt_command(i_cmd, i_cmd_data, i_len);
+       l_rc = send_hbrt_command((htmgt_command)i_cmd, i_cmd_data, i_len);
     }
 
     return l_rc;
@@ -289,7 +317,7 @@ uint32_t send_htmgt_command(const uint8_t i_cmd,
     }
     else
     {
-       l_rc = send_hbrt_command(i_cmd, i_cmd_data, i_len);
+       l_rc = send_hbrt_command((htmgt_command)i_cmd, i_cmd_data, i_len);
     }
 
     return l_rc;
@@ -297,7 +325,7 @@ uint32_t send_htmgt_command(const uint8_t i_cmd,
 } // end send_htmgt_command()
 
 
-uint32_t send_hbrt_command(const uint8_t i_cmd,
+uint32_t send_hbrt_command(const htmgt_command i_cmd,
                            const uint8_t* i_cmd_data,
                            const uint16_t i_len,
                            const uint32_t i_timeout)
@@ -378,29 +406,42 @@ void parse_htmgt_response(const uint8_t i_cmd,
                           const uint8_t *i_rsp_data,
                           const uint16_t i_rsp_len)
 {
+    int l_rc = 0;
+
     if ((i_rsp_data != NULL) && (i_rsp_len > 0))
     {
+        if (G_verbose)
+            dumpHex(i_rsp_data, i_rsp_len);
         switch (i_cmd)
         {
-            case 0x01:
-                parse_tmgt_info(i_rsp_data, i_rsp_len);
+            case HTMGT_QUERY_STATE:
+                l_rc = parse_tmgt_info(i_rsp_data, i_rsp_len);
+                break;
+
+            case HTMGT_QUERY_MODE_FUNC:
+                l_rc = parse_query_mode_func(i_rsp_data, i_rsp_len);
                 break;
 
             default:
-                dumpHex(i_rsp_data, i_rsp_len);
+                l_rc = -1;
                 break;
         }
+
+        if (l_rc != 0)
+            dumpHex(i_rsp_data, i_rsp_len);
     }
 } // end parse_htmgt_response()
 
 
-void parse_tmgt_info(const uint8_t *i_rsp_data, const uint16_t i_rsp_len)
+int parse_tmgt_info(const uint8_t *i_rsp_data, const uint16_t i_rsp_len)
 {
+    int l_rc = 0;
     htmgt_info_t *data = (htmgt_info_t*)i_rsp_data;
     if (i_rsp_len >= 16)
     {
-        printf("HTMGT State: %s (0x%02X), %d OCC (master:OCC%d), resetCount:%d,",
-               getStateString(data->state), data->state, data->num_occs, data->master, data->system_reset_count);
+        printf("HTMGT State: %s (0x%02X), Mode: %s (0x%02X), %d OCC (master:OCC%d), resetCount:%d,",
+               getStateString(data->state), data->state, getModeString(data->mode), data->mode,
+               data->num_occs, data->master, data->system_reset_count);
         if (data->safe_mode)
         {
             printf(",  (SAFE MODE: rc=0x%04X/OCC%d)", htonl(data->safe_rc), htonl(data->safe_occ));
@@ -419,9 +460,10 @@ void parse_tmgt_info(const uint8_t *i_rsp_data, const uint16_t i_rsp_len)
             if (i_rsp_len >= (16 + (sizeof(occ_info_t)*(occ+1))))
             {
                 occ_info_t * occd = &data->occ[occ];
-                printf("OCC%d: %s %s (0x%02X) resetCount:%d wofResets:%d flags pollRsp:0x%02X%02X%02X%02X... %s\n",
+                printf("OCC%d: %s %s (0x%02X) %s (0x%02X) resetCount:%d wofResets:%d flags pollRsp:0x%02X%02X%02X%02X... %s\n",
                        occd->instance, (occd->instance == data->master)?"Master":"Slave ",
                        getStateString(occd->state), occd->state,
+                       getModeString(occd->mode), occd->mode,
                        occd->reset_count, occd->wof_reset_count, occd->last_poll[0], occd->last_poll[1], occd->last_poll[2], occd->last_poll[3],
                        getPollExtStatus(occd->last_poll[1]));
             }
@@ -429,7 +471,7 @@ void parse_tmgt_info(const uint8_t *i_rsp_data, const uint16_t i_rsp_len)
             {
                 printf("ERROR: parse_tmgt_info: Unable to parse OCC%d - rsp too short! (rcvd %d, exp > %ld)\n",
                        occ, i_rsp_len, (16 + (sizeof(occ_info_t)*(occ+1))));
-                dumpHex(i_rsp_data, i_rsp_len);
+                l_rc = -1;
             }
         }
     }
@@ -437,10 +479,47 @@ void parse_tmgt_info(const uint8_t *i_rsp_data, const uint16_t i_rsp_len)
     {
         printf("ERROR: parse_tmgt_info: Unable to parse - rsp too short! (rcvd %d, exp >= 16)\n",
                i_rsp_len);
-        dumpHex(i_rsp_data, i_rsp_len);
+        l_rc = -1;
     }
+    return l_rc;
 
 } // end parse_tmgt_info()
+
+
+int parse_query_mode_func(const uint8_t *i_rsp_data, const uint16_t i_rsp_len)
+{
+    int l_rc = 0;
+    htmgt_query_mode_function_t *data = (htmgt_query_mode_function_t*)i_rsp_data;
+    if (i_rsp_len >= sizeof(htmgt_query_mode_function_t))
+    {
+        printf("            System Mode: 0x%02X  %s\n", data->system_mode, data->system_mode==1?"NORMAL":"SAFE");
+        printf("Customer Requested Mode: 0x%02X  %s\n", data->cust_mode, getModeString(data->cust_mode));
+        printf("           Current Mode: 0x%02X  %s\n", data->current_mode, getModeString(data->current_mode));
+        printf("          Current State: 0x%02X  %s\n", data->state, getStateString(data->state));
+        if (data->freq != 0)
+            printf("      Desired Frequency: 0x%04X (%d)\n", data->freq, data->freq);
+        else
+            printf("      Desired Frequency: N/A\n");
+        printf("             OCC Status: 0x%02X  %s\n", data->occ_status, data->occ_status==1?"ENABLED":"DISABLED");
+        printf("             Power Save? %c\n", data->power_save?'Y':'N');
+        printf("          Power Capping? %c\n", data->power_cap?'Y':'N');
+        printf("    Dynamic Performance? %c\n", data->dyn_perf?'Y':'N');
+        printf("  Fixed Frequency (FFO)? %c\n", data->ffo?'Y':'N');
+        printf("    Maximum Performance? %c\n", data->max_perf?'Y':'N');
+        if (data->safe_rc)
+        {
+            printf("  SAFE MODE RC: 0x%04X (OCC%d)", htonl(data->safe_rc), htonl(data->safe_occ));
+        }
+    }
+    else
+    {
+        printf("ERROR: parse_query_mode_func: Unable to parse - rsp too short! (rcvd %d, exp >= 16)\n",
+               i_rsp_len);
+        l_rc = -1;
+    }
+
+    return l_rc;
+} // end parse_query_mode_func()
 
 
 uint32_t send_tmgt_pmcomplex_reset(const bool i_clear_reset_count)
@@ -472,7 +551,7 @@ uint32_t send_tmgt_pmcomplex_reset(const bool i_clear_reset_count)
         if (i_clear_reset_count)
         {
             uint32_t l_clear_rc;
-            l_clear_rc = send_hbrt_command(4, NULL, 0); // Clear Reset Counts
+            l_clear_rc = send_hbrt_command(HTMGT_CLEAR_RESET_COUNTS, NULL, 0);
             if (l_clear_rc)
             {
                 printf("send_tmgt_pmcomplex_reset: Clear of reset counts failed! (before reset) RC=0x%04X\n",
@@ -480,9 +559,9 @@ uint32_t send_tmgt_pmcomplex_reset(const bool i_clear_reset_count)
             }
 
             printf("Waiting up to 5 minutes for reset to complete...\n");
-            l_rc = send_hbrt_command(6, NULL, 0, 300); // Reset PM Complex (5 minute timeout)
+            l_rc = send_hbrt_command(HTMGT_RESET_PM_COMPLEX, NULL, 0, 300);
 
-            l_clear_rc = send_hbrt_command(4, NULL, 0); // Clear Reset Counts
+            l_clear_rc = send_hbrt_command(HTMGT_CLEAR_RESET_COUNTS, NULL, 0);
             if (l_clear_rc)
             {
                 printf("send_tmgt_pmcomplex_reset: Clear of reset counts failed! RC=0x%04X\n",
@@ -491,7 +570,7 @@ uint32_t send_tmgt_pmcomplex_reset(const bool i_clear_reset_count)
         }
         else
         {
-            l_rc = send_hbrt_command(6, NULL, 0, 300); // Reset PM Complex
+            l_rc = send_hbrt_command(HTMGT_RESET_PM_COMPLEX, NULL, 0, 300);
         }
     }
 
@@ -529,11 +608,11 @@ uint32_t tmgt_flags(const uint32_t i_flag_data,
     }
     else
     {
-       l_rc = send_hbrt_command(0x02, (const uint8_t*)&i_flag_data, i_len);
+       l_rc = send_hbrt_command(HTMGT_INTERNAL_FLAGS, (const uint8_t*)&i_flag_data, i_len);
        if (i_len > 0)
        {
            // re-query flags
-           (void)send_hbrt_command(0x02, NULL, 0);
+           (void)send_hbrt_command(HTMGT_INTERNAL_FLAGS, NULL, 0);
        }
     }
 
@@ -572,3 +651,100 @@ uint32_t tmgt_waitforstate(const uint8_t i_state)
     return l_rc;
 
 } // end tmgt_waitforstate()
+
+
+uint32_t tmgt_set_state(const uint8_t i_state)
+{
+    uint32_t l_rc = CMT_SUCCESS;
+
+    if (IS_VALID_STATE(i_state))
+    {
+            if (isFsp())
+            {
+                char command[128];
+                sprintf(command, "tmgtclient --change_occ_state %d", i_state);
+                l_rc = send_fsp_command(command);
+            }
+            else
+            {
+                l_rc = send_hbrt_command(HTMGT_SET_OCC_STATE, &i_state, sizeof(i_state));
+            }
+
+            if (l_rc == CMT_SUCCESS)
+            {
+                // Display the resulting state/mode
+                (void)send_tmgt_command(HTMGT_QUERY_STATE, NULL, 0);
+            }
+    }
+    else
+    {
+        cmtOutputError("tmgt_set_state: State %d not supported!\n", i_state);
+        l_rc = CMT_INVALID_DATA;
+    }
+
+    return l_rc;
+
+} // end tmgt_set_state()
+
+
+uint32_t tmgt_set_mode(const uint8_t  i_mode,
+                       const uint16_t i_freq)
+{
+    uint32_t l_rc = CMT_SUCCESS;
+
+    if (IS_VALID_MODE(i_mode))
+    {
+
+        if ((i_mode == POWERMODE_SFP) ||
+            (i_mode == POWERMODE_FFO))
+        {
+            if (i_freq == 0)
+            {
+                cmtOutputError("tmgt_set_mode: Mode %d requires a non zero frequency point (-f option)!\n",
+                               i_mode);
+                l_rc = CMT_INVALID_DATA;
+            }
+            else
+            {
+                if (isFsp())
+                {
+                    char command[128];
+                    sprintf(command, "tmgtclient --set_cust_requested_mode 0x%02X -f %d",
+                            i_mode, i_freq);
+                    l_rc = send_fsp_command(command);
+                }
+                else
+                {
+                    const uint8_t l_data[3] = { i_mode, uint8_t(i_freq>>8), uint8_t(i_freq & 0xFF) };
+                    l_rc = send_hbrt_command(HTMGT_SET_OCC_MODE, l_data, sizeof(l_data));
+                }
+            }
+        }
+        else
+        {
+            if (isFsp())
+            {
+                char command[128];
+                sprintf(command, "tmgtclient --set_cust_requested_mode 0x%02X", i_mode);
+                l_rc = send_fsp_command(command);
+            }
+            else
+            {
+                l_rc = send_hbrt_command(HTMGT_SET_OCC_MODE, (uint8_t*)&i_mode, sizeof(i_mode));
+            }
+        }
+        if (l_rc == CMT_SUCCESS)
+        {
+            // Display the resulting state/mode
+            (void)send_tmgt_command(HTMGT_QUERY_STATE, NULL, 0);
+        }
+    }
+    else
+    {
+        cmtOutputError("tmgt_set_mode: Mode %d not supported!\n", i_mode);
+        l_rc = CMT_INVALID_DATA;
+    }
+
+    return l_rc;
+
+} // end tmgt_set_mode()

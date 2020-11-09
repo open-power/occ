@@ -31,9 +31,47 @@
 #define __CFT_OCC_H
 
 extern char G_occ_string_file[512];
+extern uint16_t G_sensor_type;
+extern uint16_t G_sensor_loc;
+extern uint16_t G_sensor_guid;
+
+enum occStateId
+{
+    OCC_STATE_UNKNOWN           = 0x00,
+    OCC_STATE_STANDBY           = 0x01,
+    OCC_STATE_OBSERVATION       = 0x02,
+    OCC_STATE_ACTIVE            = 0x03,
+    OCC_STATE_SAFE              = 0x04,
+    OCC_STATE_CHARACTERIZATION  = 0x05
+};
+
+#define IS_VALID_STATE(state) ((state == OCC_STATE_OBSERVATION) || \
+                               (state == OCC_STATE_ACTIVE) || \
+                               (state == OCC_STATE_CHARACTERIZATION))
+
+enum powerMode
+{
+    POWERMODE_DISABLE           = 0x01, // Disabled Mode
+    POWERMODE_SFP               = 0x03, // Static Frequency Point
+    POWERMODE_SAFE              = 0x04, // -- not settable mode --
+    POWERMODE_POWER_SAVE        = 0x05, // Static Power Save
+    POWERMODE_FMAX              = 0x09, // Maximum Frequency
+    POWERMODE_DYNAMIC_PERF      = 0x0A, // Dynamic Performace
+    POWERMODE_FFO               = 0x0B, // Fixed Frequency Override
+    POWERMODE_MAX_PERF          = 0x0C, // Maximum Performance
+};
+
+#define IS_VALID_MODE(mode) ((mode == POWERMODE_DISABLE) || \
+                             (mode == POWERMODE_SFP) || \
+                             (mode == POWERMODE_POWER_SAVE) || \
+                             (mode == POWERMODE_FMAX) || \
+                             (mode == POWERMODE_DYNAMIC_PERF) || \
+                             (mode == POWERMODE_FFO) || \
+                             (mode == POWERMODE_MAX_PERF))
 
 const char * getCmdString(const uint8_t i_cmd);
 const char * getStateString(const uint8_t i_state);
+const char * getModeString(const uint8_t i_mode);
 const char * getPollStatus(const uint8_t i_flags);
 const char * getPollExtStatus(const uint8_t i_flags);
 const char * getFruString(const uint8_t i_fru);
@@ -45,5 +83,7 @@ uint32_t send_occ_command(const uint8_t i_occ,
                           const uint16_t i_len);
 
 uint32_t get_occ_trace(const uint8_t i_occ = 0);
+
+int get_occ_sensors(const uint8_t i_occ = 0);
 
 #endif

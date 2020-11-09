@@ -82,7 +82,8 @@ void dumpHex(const uint8_t *data, const unsigned int i_len)
     text[16] = '\0';
 
     unsigned int len = i_len;
-    if (len > 0x0800) len = 0x800;
+    if (len > 0x1000)
+        len = 0x1000;
     for(i = 0; i < len; i++)
     {
         if (i % 16 == 0)
@@ -104,6 +105,10 @@ void dumpHex(const uint8_t *data, const unsigned int i_len)
         }
     }
     printf("   \"%s\"\n", text);
+    if (len < i_len)
+    {
+        printf("WARNING: data was truncated from %d to %d\n", i_len, len);
+    }
     return;
 }
 
@@ -386,6 +391,131 @@ uint32_t send_fsp_command(const char *i_cmd)
     return l_rc;
 
 } // send_fsp_command()
+
+
+// Convert FSP output of OCC response buffer to binary data (to parse)
+int convert_rsp_to_binary(const char *   i_output,
+                          uint8_t *    & o_rspdata,
+                          uint32_t     & o_rsplen)
+{
+    int rc = -1;
+    o_rspdata = NULL;
+    o_rsplen = 0;
+
+    const char *s = strstr(i_output, "failure rc=");
+    if (s == NULL)
+    {
+        s = strstr(i_output, "status:   0x00");
+        if (s != NULL)
+        {
+            s = strstr(i_output, "data len:");
+            if (s != NULL)
+            {
+                sscanf(s+12, "%04X", &o_rsplen);
+
+                // print response header
+                const unsigned int hlen = s+17 - i_output;
+                printf("%.*s\n", hlen, i_output);
+
+                if (o_rsplen > 0)
+                {
+                    char const *d = strstr(s, "0000:  ");
+                    if (d != NULL)
+                    {
+                        unsigned int offset = 0;
+                        uint8_t *buffer = (uint8_t*)malloc(o_rsplen);
+                        while (offset < o_rsplen)
+                        {
+                            if (offset % 16 == 0)
+                            {
+                                d += 6;
+                                if (offset > 0) ++d; // strip newline
+                            }
+                            if (offset % 4 == 0) ++d;
+                            unsigned int hex;
+                            sscanf(d, "%02X", &hex);
+                            buffer[offset] = hex & 0xFF;
+                            d += 2;
+                            ++offset;
+                        }
+                        o_rspdata = buffer;
+                        rc = 0;
+                    }
+                    else
+                    {
+                        if (G_verbose)
+                            printf("convert_rsp_to_binary: \"0000:\" was not found - data already parsed?\n");
+                    }
+                }
+            }
+            else
+            {
+                printf("convert_rsp_to_binary: unable to find \"data len:\"\n");
+            }
+        }
+        else
+        {
+            if (G_verbose)
+                printf("convert_rsp_to_binary: OCC rsp status was not success\n");
+        }
+    }
+    else
+    {
+        printf("TMGT returned ERROR\n");
+    }
+
+    return rc;
+
+} // end convert_rsp_to_binary()
+
+
+uint32_t send_fsp_command_rspdata(const char * i_cmd,
+                                  uint8_t *  & o_rspdata,
+                                  uint32_t   & o_rsplen)
+{
+    uint32_t l_rc = CMT_SUCCESS;
+    o_rspdata = NULL;
+    o_rsplen = 0;
+
+    if ((i_cmd != NULL) && (i_cmd[0] != '\0'))
+    {
+        if (isFsp())
+        {
+            ecmdChipTarget  l_target;
+            std::string     l_output;
+            l_rc = makeSPSystemCall(l_target, i_cmd, l_output);
+            if (l_rc)
+            {
+                printf("ERROR: send_fsp_command_rspdata(%s) failed with rc=%d (0x%02X)\n",
+                       i_cmd, l_rc, l_rc);
+                cmtOutputError(l_output.c_str());
+            }
+            else
+            {
+                printf("-FSP-> %s\n", i_cmd);
+                if (convert_rsp_to_binary(l_output.c_str(), o_rspdata, o_rsplen) != 0)
+                {
+                    // Failed to convert, so just output raw output
+                    printf("%s\n", l_output.c_str());
+                    fflush(stdout);
+                }
+            }
+        }
+        else
+        {
+            cmtOutputError("send_fsp_command_rspdata: Not supported on BMC system!\n");
+            l_rc = CMT_NOT_SUPPORTED;
+        }
+    }
+    else
+    {
+        cmtOutputError("send_fsp_command_rspdata: No FSP command specified!\n");
+        l_rc = CMT_INVALID_DATA;
+    }
+
+    return l_rc;
+
+} // send_fsp_command_rspdata()
 
 
 uint32_t send_bmc_command(const char *i_cmd)

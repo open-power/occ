@@ -84,6 +84,10 @@ bool isFsp();
 
 uint32_t send_fsp_command(const char *i_cmd);
 
+uint32_t send_fsp_command_rspdata(const char * i_cmd,
+                                  uint8_t *  & o_rspdata,
+                                  uint32_t   & o_rsplen);
+
 uint32_t send_bmc_command(const char *i_cmd);
 
 #endif

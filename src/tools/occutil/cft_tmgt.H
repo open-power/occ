@@ -37,7 +37,12 @@ enum htmgt_command
 {
     HTMGT_QUERY_STATE =     0x01,
     HTMGT_INTERNAL_FLAGS =  0x02,
-    HTMGT_SEND_OCC_CMD =    0x03
+    HTMGT_SEND_OCC_CMD =    0x03,
+    HTMGT_CLEAR_RESET_COUNTS = 0x04,
+    HTMGT_RESET_PM_COMPLEX = 0x06,
+    HTMGT_QUERY_MODE_FUNC = 0x07,
+    HTMGT_SET_OCC_STATE =   0x09,
+    HTMGT_SET_OCC_MODE =    0x0D,
 };
 
 
@@ -69,5 +74,10 @@ uint32_t tmgt_flags(const uint32_t i_flag_value,
                     const uint16_t i_len);
 
 uint32_t tmgt_waitforstate(const uint8_t i_state);
+
+uint32_t tmgt_set_state(const uint8_t i_state);
+
+uint32_t tmgt_set_mode(const uint8_t  i_mode,
+                       const uint16_t i_freq = 0);
 
 #endif

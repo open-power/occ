@@ -32,6 +32,12 @@
 #include "cft_tmgt.H"
 
 char G_occ_string_file[512] = "/afs/rch/usr2/cjcain/public/occStringFile.p10";
+uint16_t G_sensor_type = 0xFFFF;
+uint16_t G_sensor_loc  = 0xFFFF;
+uint16_t G_sensor_guid = 0;
+
+#define MAX_SENSOR_NAME_SZ          16 // including NULL
+#define MAX_SENSOR_UNIT_SZ          4 // including NULL
 
 struct occ_poll_rsp_t
 {
@@ -113,11 +119,21 @@ struct occ_poll_rsp_t
 
 
 
-int parse_occ_response(const uint8_t i_cmd,
+int parse_occ_response(const uint8_t  i_cmd,
+                       const uint8_t* i_cmd_data,
                        const uint8_t *i_rsp_data,
                        const uint16_t i_rsp_len);
-void parse_occ_poll(const uint8_t *i_rsp_data,
-                    const uint16_t i_rsp_len);
+
+int parse_occ_poll(const uint8_t *i_rsp_data,
+                   const uint16_t i_rsp_len);
+
+int parse_occ_debug_passthru(const uint8_t *i_cmd_data,
+                             const uint8_t *i_rsp_data,
+                             const uint16_t i_rsp_len);
+
+int parse_occ_mfg_test(const uint8_t *i_cmd_data,
+                       const uint8_t *i_rsp_data,
+                       const uint16_t i_rsp_len);
 
 
 
@@ -157,6 +173,24 @@ const char * getStateString(const uint8_t i_state)
         case 0x87: string = "TRANSITION"; break;
         case 0x88: string = "LOADING"; break;
         case 0x89: string = ""; break;
+    }
+    return string;
+}
+
+
+const char * getModeString(const uint8_t i_mode)
+{
+    const char *string = "UNKNOWN";
+    switch(i_mode)
+    {
+        case 0x01: string = "DISABLED"; break;
+        case 0x03: string = "STATIC FREQ POINT"; break;
+        case 0x04: string = "SAFE"; break;
+        case 0x05: string = "STATIC POWER SAVE"; break;
+        case 0x09: string = "MAXIMUM FREQUENCY"; break;
+        case 0x0A: string = "DYNAMIC PERFORMANCE"; break;
+        case 0x0B: string = "FIXED FREQ OVERRIDE"; break;
+        case 0x0C: string = "MAXIMUM PERFORMANCE"; break;
     }
     return string;
 }
@@ -326,22 +360,22 @@ uint32_t send_occ_command(const uint8_t i_occ,
     else
     {
         rc = occ_cmd_via_htmgt(i_occ, i_cmd, i_cmd_data, i_len, rsp_ptr, rsp_length);
-        if (rc == CMT_SUCCESS)
-        {
-            printf("%s (0x%02X) response has %d bytes (0x%04X)\n", getCmdString(i_cmd), i_cmd, rsp_length, rsp_length);
-            if ((rsp_length > 0) && (rsp_ptr != NULL))
-            {
-                parse_occ_response(i_cmd, rsp_ptr, rsp_length);
-                free(rsp_ptr);
-            }
-            else
-            {
-                printf("WARNING: No data was returned");
-            }
-        }
     }
 
-    if (rc != CMT_SUCCESS)
+    if (rc == CMT_SUCCESS)
+    {
+        printf("%s (0x%02X) response has %d bytes (0x%04X)\n", getCmdString(i_cmd), i_cmd, rsp_length, rsp_length);
+        if ((rsp_length > 0) && (rsp_ptr != NULL))
+        {
+            parse_occ_response(i_cmd, i_cmd_data, rsp_ptr, rsp_length);
+            if ((rsp_ptr != NULL) && (rsp_length > 0)) free(rsp_ptr);
+        }
+        else
+        {
+            printf("WARNING: No data was returned");
+        }
+    }
+    else
     {
         cmtOutputError("**** ERROR: Attempt to send %s (0x%02X) command returned 0x%02X\n",
                        getCmdString(i_cmd), i_cmd, rc);
@@ -350,7 +384,10 @@ uint32_t send_occ_command(const uint8_t i_occ,
 }
 
 
-int parse_occ_response(const uint8_t i_cmd, const uint8_t *i_rsp_data, const uint16_t i_rsp_len)
+int parse_occ_response(const uint8_t  i_cmd,
+                       const uint8_t* i_cmd_data,
+                       const uint8_t *i_rsp_data,
+                       const uint16_t i_rsp_len)
 {
     int rc = 0;
 
@@ -363,20 +400,36 @@ int parse_occ_response(const uint8_t i_cmd, const uint8_t *i_rsp_data, const uin
     switch(i_cmd)
     {
         case 0x00:
-            parse_occ_poll(i_rsp_data, i_rsp_len);
+            rc = parse_occ_poll(i_rsp_data, i_rsp_len);
+            break;
+
+        case 0x40:
+            rc = parse_occ_debug_passthru(i_cmd_data, i_rsp_data, i_rsp_len);
+            break;
+
+        case 0x53:
+            rc = parse_occ_mfg_test(i_cmd_data, i_rsp_data, i_rsp_len);
             break;
 
         default:
-            printf("      Data:\n");
-            dumpHex(i_rsp_data, i_rsp_len);
+            rc = -1;
+    }
+
+    if (rc != 0)
+    {
+        // Failed to parse, just dump raw data
+        printf("      Data:\n");
+        dumpHex(i_rsp_data, i_rsp_len);
     }
 
     return rc;
-}
+
+} // end parse_occ_response()
 
 
-void parse_occ_poll(const uint8_t *i_rsp_data, const uint16_t i_rsp_len)
+int parse_occ_poll(const uint8_t *i_rsp_data, const uint16_t i_rsp_len)
 {
+    int rc = 0;
     occ_poll_rsp_t *data = (occ_poll_rsp_t*)i_rsp_data;
 
     printf("    Status: 0x%02X  %s\n", data->status.word, getPollStatus(data->status.word));
@@ -384,7 +437,7 @@ void parse_occ_poll(const uint8_t *i_rsp_data, const uint16_t i_rsp_len)
     printf("OCCs Prsnt: 0x%02X\n", data->occ_pres_mask);
     printf("Confg Reqd: 0x%02X\n", data->config_data);
     printf("     State: 0x%02X  %s\n", data->state, getStateString(data->state));
-    printf("      Mode: 0x%02X\n", data->mode);
+    printf("      Mode: 0x%02X  %s\n", data->mode, getModeString(data->mode));
     printf("IPS Status: 0x%02X  %s  %s\n", data->ips_status.word,
            (data->ips_status.ips_enabled) ? "Enabled" : "Disabled",
            (data->ips_status.ips_active) ? "Active" : "");
@@ -532,7 +585,126 @@ void parse_occ_poll(const uint8_t *i_rsp_data, const uint16_t i_rsp_len)
         --num_blocks;
     }
 
-}
+    return rc;
+
+} // end parse_occ_poll()
+
+
+int parse_occ_debug_passthru(const uint8_t *i_cmd_data,
+                             const uint8_t *i_rsp_data,
+                             const uint16_t i_rsp_len)
+{
+    int rc = -1;
+
+    if (i_cmd_data != NULL)
+    {
+        switch(i_cmd_data[0])
+        {
+            case 0x07: // Get Multiple Sensor Data
+                {
+                    struct sensor_t
+                    {
+                        char name[16];
+                        uint16_t guid;
+                        uint16_t current;
+                        uint16_t min;
+                        uint16_t max;
+                    };
+                    const uint16_t num_sensors = htons(*(uint16_t*)i_rsp_data);
+                    unsigned int sensor= 0;
+                    unsigned int offset = 2;
+                    printf("Number of sensors retrieved: %d\n", num_sensors);
+                    printf("Sensor              GSID  Current    Min     Max\n");
+                    printf("------------------------------------------------\n");
+                    while ((sensor < num_sensors) && (offset + 14 <= i_rsp_len))
+                    {
+                        const struct sensor_t *sensorPtr = (struct sensor_t*)(i_rsp_data+offset);
+                        printf("%-16.16s  0x%04X  %6d  %6d  %6d\n",
+                               sensorPtr->name, htons(sensorPtr->guid),
+                               htons(sensorPtr->current), htons(sensorPtr->min), htons(sensorPtr->max));
+                        offset += 24;
+                        ++sensor;
+                    }
+                    if (sensor < num_sensors)
+                    {
+                        printf("WARNING: rsp data too short for %d sensors\n", num_sensors);
+                    }
+                    rc = 0;
+                }
+                break;
+
+            default:
+                rc = -1;
+                break;
+        }
+    }
+
+    return rc;
+
+} // end parse_occ_debug_passthru()
+
+
+int parse_occ_mfg_test(const uint8_t *i_cmd_data,
+                       const uint8_t *i_rsp_data,
+                       const uint16_t i_rsp_len)
+{
+    int rc = -1;
+
+    if (i_cmd_data != NULL)
+    {
+        switch(i_cmd_data[0])
+        {
+            case 0x06: // Get Sensor Details
+                {
+                    printf("  MFG Sub Cmd: 0x%02X  (Get Sensor Details)\n\n", i_cmd_data[0]);
+                    typedef struct __attribute__ ((packed))
+                    {
+                        uint16_t                gsid;
+                        uint16_t                sample;
+                        uint8_t                 status;
+                        uint32_t                accumulator;
+                        uint16_t                min;
+                        uint16_t                max;
+                        char                    name[MAX_SENSOR_NAME_SZ];
+                        char                    units[MAX_SENSOR_UNIT_SZ];
+                        uint32_t                freq;
+                        uint32_t                scalefactor;
+                        uint16_t                location;
+                        uint16_t                type;
+                        uint16_t                checksum;
+                    } cmdh_mfg_get_sensor_resp_t;
+                    unsigned int offset = 0;
+                    const cmdh_mfg_get_sensor_resp_t *sensorPtr = (cmdh_mfg_get_sensor_resp_t*)(i_rsp_data+offset);
+                    const char *units = sensorPtr->units;
+                    printf("         GUID: 0x%04X\n", htons(sensorPtr->gsid));
+                    printf("Latest sample: %6d %s (0x%04X)\n", htons(sensorPtr->sample), units, htons(sensorPtr->sample));
+                    printf("       Status: 0x%02X\n", sensorPtr->status);
+                    printf("  Accumulator: %u (0x%08X)\n", htonl(sensorPtr->accumulator), htonl(sensorPtr->accumulator));
+                    printf("   Min Sample: %6d %s (0x%04X)\n", htons(sensorPtr->min), units, htons(sensorPtr->min));
+                    printf("   Max Sample: %6d %s (0x%04X)\n", htons(sensorPtr->max), units, htons(sensorPtr->max));
+                    printf("         Name: %s\n", sensorPtr->name);
+                    printf("        Units: %s\n", units);
+                    printf("  Update freq: %u (0x%08X)\n", htonl(sensorPtr->freq), htonl(sensorPtr->freq));
+                    uint16_t mantissa=htonl(sensorPtr->scalefactor)>>8;
+                    uint16_t exponent=htonl(sensorPtr->scalefactor)&0xFF;
+                    if (exponent > 128) exponent -= 256;
+                    printf(" Scale Factor: 0x%08X  (%dx10^%d)\n", htonl(sensorPtr->scalefactor), mantissa, exponent);
+                    printf(" Sen Location: 0x%04X\n", htons(sensorPtr->location));
+                    printf("  Sensor Type: 0x%04X\n", htons(sensorPtr->type));
+                    rc = 0;
+                }
+                break;
+
+            default:
+                printf("  MFG Sub Cmd: 0x%02X\n\n", i_cmd_data[0]);
+                rc = -1;
+                break;
+        }
+    }
+
+    return rc;
+
+} // end parse_occ_mfg_test()
 
 
 uint32_t get_occ_trace(const uint8_t i_occ)
@@ -557,3 +729,25 @@ uint32_t get_occ_trace(const uint8_t i_occ)
 
     return rc;
 }
+
+
+
+int get_occ_sensors(const uint8_t i_occ)
+{
+    int rc = 0;
+
+    if (G_sensor_guid != 0)
+    {
+        uint8_t cmd_data[] = { 0x06, 0x00, uint8_t(G_sensor_guid >> 8), uint8_t(G_sensor_guid & 0xFF) };
+        send_occ_command(i_occ, 0x53, cmd_data, sizeof(cmd_data));
+    }
+    else
+    {
+        uint8_t cmd_data[] = { 0x07, uint8_t(G_sensor_type >> 8), uint8_t(G_sensor_type & 0xFF),
+            uint8_t(G_sensor_loc >> 8), uint8_t(G_sensor_loc & 0xFF) };
+        send_occ_command(i_occ, 0x40, cmd_data, sizeof(cmd_data));
+    }
+
+    return rc;
+
+} // end get_occ_sensors

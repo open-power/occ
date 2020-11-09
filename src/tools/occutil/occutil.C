@@ -39,20 +39,35 @@ void usage()
         printf("    Options:\n");
         printf("        -o #           Target specified OCC instance\n");
         printf("        -D XX...       Data for other commands (XX is a hex string)\n");
-        printf("        -s file        Specify occStringFile for --occ_trace\n");
-        printf("        -v2            Verbose level 2 (including ECMD packets)\n");
-        printf("    Commands:\n");
-        printf("        -S             Query system state\n");
+        printf("        -v | -v2       Verbose (-v2 includes ECMD packets)\n");
+        printf("    Informational Commands:\n");
         printf("        -I             Query TMGT/OCC states\n");
+        printf("        --driver       Display system driver level\n");
+        printf("        --system       Query system state\n");
+        printf("        --trace        Collect OCC trace (use -s to specify string file)\n");
+        printf("           -s file     Specify occStringFile\n");
+        printf("    Commands:\n");
         printf("        -p             Send POLL command to OCC\n");
-        printf("        --occ_trace    Collect OCC trace (use -s to specify string file)\n");
+        printf("        --mode #       Set the Power Mode for the system\n");
+        printf("                Modes: 1=DISABLED, 3=STATIC FREQ POINT*, 5=STATIC POWER SAVE,\n");
+        printf("                       9=MAX FREQ, 10=DYNAMIC PERF, 11=FIXED FREQ*, 12=MAX PERF\n");
+        printf("           -f XXXX     Frequency point (required for * modes)\n");
+        printf("        --state #      Set the OCC state\n");
+        printf("                States: 2=OBSERVATION, 3=ACTIVE, 5=CHARACTERIZATION\n");
+        printf("        --query        Query mode and function\n");
         printf("        --reset        Reset the PM Complex (waits or OCC to go active)\n");
         printf("        --reset_clear  Reset the PM Complex (and clear reset counts)\n");
         printf("        --active_wait  Wait for the OCCs to get to active state\n");
         printf("        -H XX          Send HTMGT cmd (use -D to specify data)\n");
+        printf("        -S guid=XX     Dump speecified OCC sensor by GUID\n");
+        printf("        -S type=XX,loc=XX Dump OCC sensors (type/loc are both optional)\n");
+        printf("           types: 0x1=Generic, 0x2=Current, 0x4=Voltage, 0x8=Temperature,\n");
+        printf("                  0x10=Utilization, 0x20=Time, 0x40=Frequency, 0x80=Power,\n");
+        printf("                  0x200=Performance, 0x400=WOF\n");
+        printf("           locs:  0x1=System, 0x2=Processor, 0x4=Partition, 0x8=Memory,\n");
+        printf("                  0x10=VRM, 0x20=OCC, 0x40=Core, 0x80=GPU, 0x100=Quad\n");
         printf("        -X XX          Send OCC command XX (use -D to specify data)\n");
-        printf("        --driver       Display system driver level\n");
-        printf("\n    last update: 5-Nov-2020\n");
+        printf("\n    last update: 16-Nov-2020\n");
 }
 
 
@@ -70,6 +85,10 @@ enum operation_e
     OP_SYSTEM_STATE,
     OP_ACTIVE_WAIT,
     OP_DRIVER,
+    OP_OCC_SENSORS,
+    OP_SET_STATE,
+    OP_SET_MODE,
+    OP_QUERY_MODE_FUNCTION,
 };
 
 
@@ -93,78 +112,22 @@ int main (int argc, char *argv[])
         unsigned int l_occ_cmd = 0xFF;
         uint8_t l_data[1024] = {0};
         unsigned int l_dataLen = 0;
+        uint8_t l_state = 0;
+        uint16_t l_mode = 0;
+        uint16_t l_freq = 0;
 
         for (int ii = 1; ii < argc; ii++)
         {
             //printf("arg[%d]: %s\n", ii, argv[ii]);
             if (argv[ii][0] == '-')
             {
-                if (strcmp(argv[ii], "-h") == 0) { op = OP_HELP; }
-                else if (strcmp(argv[ii], "-p") == 0) { op = OP_OCC_POLL; }
-                else if (strcmp(argv[ii], "--IF") == 0)
+                // OPTIONS:
+
+                if ((strcmp(argv[ii], "-h") == 0) || (strcmp(argv[ii], "--help") == 0))
                 {
-                    op = OP_INTERNAL_FLAGS;
+                    op = OP_HELP;
                 }
-                else if (strcmp(argv[ii], "-S") == 0)
-                {
-                    op = OP_SYSTEM_STATE;
-                }
-                else if (strcmp(argv[ii], "--driver") == 0)
-                {
-                    op = OP_DRIVER;
-                }
-                else if (strcmp(argv[ii], "--occ_trace") == 0)
-                {
-                    op = OP_OCC_TRACE;
-                }
-                else if (strcmp(argv[ii], "--reset") == 0)
-                {
-                    op = OP_PMCOMPLEX_RESET;
-                }
-                else if (strcmp(argv[ii], "--reset_clear") == 0)
-                {
-                    op = OP_PMCOMPLEX_RESET_CLEAR;
-                }
-                else if (strcmp(argv[ii], "--active_wait") == 0)
-                {
-                    op = OP_ACTIVE_WAIT;
-                }
-                else if (strcmp(argv[ii], "-H") == 0)
-                {
-                    op = OP_HTMGT_CMD;
-                    if ((ii+1 < argc) && (argv[ii+1][0] != '-'))
-                    {
-                        ++ii;
-                        if (argv[ii][1] == 'x')
-                            sscanf(&argv[ii][2], "%X", &l_occ_cmd);
-                        else
-                            sscanf(argv[ii], "%d", &l_occ_cmd);
-                    }
-                    else
-                    {
-                        cmtOutputError("ERROR: HTMGT command (-H option) requires number\n");
-                        op = OP_HELP;
-                    }
-                }
-                else if (strcmp(argv[ii], "-I") == 0) { op = OP_TMGT_INFO; }
-                else if (strcmp(argv[ii], "-X") == 0)
-                {
-                    op = OP_SEND_OCC_CMD;
-                    if ((ii+1 < argc) && (argv[ii+1][0] != '-'))
-                    {
-                        ++ii;
-                        if (argv[ii][1] == 'x')
-                            sscanf(&argv[ii][2], "%X", &l_occ_cmd);
-                        else
-                            sscanf(argv[ii], "%d", &l_occ_cmd);
-                    }
-                    else
-                    {
-                        cmtOutputError("ERROR: OCC command (-X option) requires number\n");
-                        op = OP_HELP;
-                    }
-                }
-                else if (strcmp(argv[ii], "-D") == 0)
+                else if ((strcmp(argv[ii], "-D") == 0) || (strcmp(argv[ii], "--data") == 0))
                 {
                     if ((ii+1 < argc) && (argv[ii+1][0] != '-'))
                     {
@@ -199,6 +162,22 @@ int main (int argc, char *argv[])
                     else
                     {
                         cmtOutputError("ERROR: DATA (-D option) requires hex string \"%s\"\n", argv[ii+1]);
+                        op = OP_HELP;
+                    }
+                }
+                else if (strcmp(argv[ii], "-f") == 0)
+                {
+                    if ((ii+1 < argc) && (argv[ii+1][0] != '-'))
+                    {
+                        ++ii;
+                        if (argv[ii][1] == 'x')
+                            sscanf(&argv[ii][2], "%hX", &l_freq);
+                        else
+                            sscanf(argv[ii], "%hd", &l_freq);
+                    }
+                    else
+                    {
+                        cmtOutputError("ERROR: Frequency point (-f option) requires number\n");
                         op = OP_HELP;
                     }
                 }
@@ -244,6 +223,147 @@ int main (int argc, char *argv[])
                 {
                     G_verbose = 2;
                 }
+
+                // COMMANDS:
+
+                else if (strcmp(argv[ii], "-p") == 0) { op = OP_OCC_POLL; }
+                else if (strcmp(argv[ii], "--IF") == 0)
+                {
+                    op = OP_INTERNAL_FLAGS;
+                }
+                else if (strcmp(argv[ii], "--mode") == 0)
+                {
+                    op = OP_SET_MODE;
+                    if ((ii+1 < argc) && (argv[ii+1][0] != '-'))
+                    {
+                        ++ii;
+                        if (argv[ii][1] == 'x')
+                            sscanf(&argv[ii][2], "%hX", &l_mode);
+                        else
+                            sscanf(argv[ii], "%hu", &l_mode);
+
+                        if (!IS_VALID_MODE(l_mode))
+                        {
+                            cmtOutputError("ERROR: --mode command requires valid mode parameter\n");
+                            op = OP_HELP;
+                        }
+                    }
+                    else
+                    {
+                        cmtOutputError("ERROR: --mode command requires valid mode parameter\n");
+                        op = OP_HELP;
+                    }
+                }
+                else if (strcmp(argv[ii], "--state") == 0)
+                {
+                    op = OP_SET_STATE;
+                    if ((ii+1 < argc) && (argv[ii+1][0] != '-'))
+                    {
+                        sscanf(argv[++ii], "%hhu", &l_state);
+                    }
+                    if (!IS_VALID_STATE(l_state))
+                    {
+                        cmtOutputError("ERROR: --state requires valid state parameter\n");
+                        op = OP_HELP;
+                    }
+                }
+                else if (strcmp(argv[ii], "--system") == 0)
+                {
+                    op = OP_SYSTEM_STATE;
+                }
+                else if (strcmp(argv[ii], "--driver") == 0)
+                {
+                    op = OP_DRIVER;
+                }
+                else if (strcmp(argv[ii], "--trace") == 0)
+                {
+                    op = OP_OCC_TRACE;
+                }
+                else if (strcmp(argv[ii], "--query") == 0)
+                {
+                    op = OP_QUERY_MODE_FUNCTION;
+                }
+                else if (strcmp(argv[ii], "--reset") == 0)
+                {
+                    op = OP_PMCOMPLEX_RESET;
+                }
+                else if (strcmp(argv[ii], "--reset_clear") == 0)
+                {
+                    op = OP_PMCOMPLEX_RESET_CLEAR;
+                }
+                else if (strcmp(argv[ii], "--active_wait") == 0)
+                {
+                    op = OP_ACTIVE_WAIT;
+                }
+                else if (strcmp(argv[ii], "-H") == 0)
+                {
+                    op = OP_HTMGT_CMD;
+                    if ((ii+1 < argc) && (argv[ii+1][0] != '-'))
+                    {
+                        ++ii;
+                        if (argv[ii][1] == 'x')
+                            sscanf(&argv[ii][2], "%X", &l_occ_cmd);
+                        else
+                            sscanf(argv[ii], "%d", &l_occ_cmd);
+                    }
+                    else
+                    {
+                        cmtOutputError("ERROR: HTMGT command (-H option) requires number\n");
+                        op = OP_HELP;
+                    }
+                }
+                else if (strcmp(argv[ii], "-I") == 0) { op = OP_TMGT_INFO; }
+                else if (strcmp(argv[ii], "-S") == 0)
+                {
+                    op = OP_OCC_SENSORS;
+                    if ((ii+1 < argc) && (argv[ii+1][0] != '-'))
+                    {
+                        ++ii;
+                        char *c = strstr(argv[ii], "loc=");
+                        if (c)
+                        {
+                            if (c[5] == 'x') sscanf(c+6, "%hx", &G_sensor_loc);
+                            else sscanf(c+4, "%hu", &G_sensor_loc);
+                            printf("Sensor Loc:  0x%04X\n", G_sensor_loc);
+                        }
+                        c = strstr(argv[ii], "type=");
+                        if (c)
+                        {
+                            if (c[6] == 'x') sscanf(c+7, "%hx", &G_sensor_type);
+                            else sscanf(c+5, "%hu", &G_sensor_type);
+                            printf("Sensor Type: 0x%04X\n", G_sensor_type);
+                        }
+                        c = strstr(argv[ii], "guid=");
+                        if (c)
+                        {
+                            if (c[6] == 'x') sscanf(c+7, "%hx", &G_sensor_guid);
+                            else sscanf(c+5, "%hu", &G_sensor_guid);
+                            printf("Sensor GUID: 0x%04X\n", G_sensor_guid);
+                        }
+                    }
+                    else
+                    {
+                        G_sensor_type = 0xFFFF;
+                        G_sensor_loc  = 0xFFFF;
+                    }
+                }
+                else if (strcmp(argv[ii], "-X") == 0)
+                {
+                    op = OP_SEND_OCC_CMD;
+                    if ((ii+1 < argc) && (argv[ii+1][0] != '-'))
+                    {
+                        ++ii;
+                        if (argv[ii][1] == 'x')
+                            sscanf(&argv[ii][2], "%X", &l_occ_cmd);
+                        else
+                            sscanf(argv[ii], "%d", &l_occ_cmd);
+                    }
+                    else
+                    {
+                        cmtOutputError("ERROR: OCC command (-X option) requires number\n");
+                        op = OP_HELP;
+                    }
+                }
                 else
                 {
                     printf("WARNING: Ignoring unknown option: %s\n", argv[ii]);
@@ -266,8 +386,25 @@ int main (int argc, char *argv[])
 
             case OP_TMGT_INFO:
                 {
-                    uint8_t cmd_data[] = { 0x20 };
-                    rc = send_tmgt_command(0x01, cmd_data, sizeof(cmd_data));
+                    rc = send_tmgt_command(HTMGT_QUERY_STATE, NULL, 0);
+                }
+                break;
+
+            case OP_SET_STATE:
+                {
+                    rc = tmgt_set_state(l_state);
+                }
+                break;
+
+            case OP_SET_MODE:
+                {
+                    rc = tmgt_set_mode(l_mode, l_freq);
+                }
+                break;
+
+            case OP_QUERY_MODE_FUNCTION:
+                {
+                    rc = send_tmgt_command(HTMGT_QUERY_MODE_FUNC, NULL, 0);
                 }
                 break;
 
@@ -352,6 +489,12 @@ int main (int argc, char *argv[])
             case OP_SEND_OCC_CMD:
                 {
                     rc = send_occ_command(l_occ, l_occ_cmd, l_data, l_dataLen);
+                }
+                break;
+
+            case OP_OCC_SENSORS:
+                {
+                    rc = get_occ_sensors(l_occ);
                 }
                 break;
 
