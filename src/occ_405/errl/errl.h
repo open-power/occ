@@ -344,7 +344,7 @@ typedef enum {
     ERRH_RESERVED2C                  =  0x2C,
     ERRH_RESERVED2D                  =  0x2D,
     ERRH_RESERVED2E                  =  0x2E,
-    ERRH_RESERVED2F                  =  0x2F,
+    ERRH_SCRATCH7_READ_FAILURE       =  0x2F,
     ERR_HISTORY_SIZE                 =  0x30
 } ERR_HISTORY_INDEX;
 

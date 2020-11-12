@@ -1097,14 +1097,22 @@ bool epow_gpio_asserted(const bool i_from_slave_inbox)
     l_epow_valid = apss_gpio_get(G_sysConfigData.apss_gpio_map.nvdimm_epow,
                                  &l_epow_value);
 
-    // DEBUG TRACE
+    // DEBUG TRACES
     static bool L_trace = TRUE;
+    static bool L_trace_error = TRUE;
     if (G_injected_epow_asserted && L_trace)
     {
         TRAC_IMP("epow_gpio_asserted: G_injected_epow_asserted was set to true!");
         TRAC_IMP("epow_gpio_asserted: epow valid? %c, nvdimm epow: 0x%02X",
                  l_epow_valid?'y':'n', G_sysConfigData.apss_gpio_map.nvdimm_epow);
         L_trace = false;
+    }
+
+    // trace if there was error reading scratch 7 reg there should be a GPE0 trace with scom rc
+    if( (OCC_MASTER == G_occ_role) && (G_mboxScratch7 == SCRATCH7_READ_ERROR) && L_trace_error )
+    {
+        TRAC_ERR("epow_gpio_asserted: SCOM error reading mbox Scratch7 register");
+        L_trace_error = FALSE;
     }
 
     if (L_epow_asserted)
@@ -1178,6 +1186,11 @@ bool epow_gpio_asserted(const bool i_from_slave_inbox)
     {
         // EPOW has been detected
         L_epow_asserted = TRUE;
+
+        // trace the contents of mbox scratch 7 register so can tell if signal came from POWR or APSS
+        // this is only available on master OCC
+        if(OCC_MASTER == G_occ_role)
+            TRAC_IMP("epow_gpio_asserted: GPIO EPOW Detected! mbox Scratch7[0x%08X] ", G_mboxScratch7);
 
         // Disable 24x7 to prevent GPE halt due (24x7 main memory access after epow procedure runs)
         if ((G_internal_flags & INT_FLAG_DISABLE_24X7) == 0)
