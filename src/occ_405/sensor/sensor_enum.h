@@ -56,7 +56,7 @@ enum e_gsid
     VRT_IPCdur,        // Duration of IPC VRT command to PGPE
     WOFC_IPCdur,       // Duration of IPC WOF Control command to PGPE
     Sout_BCEdur,       // Duration of BCE for master to copy slave outbox
-    timer2dur,         // TBD
+    CORE_IPCdur,       // Duration of IPC Core data collection
     timer3dur,         // TBD
     timer4dur,         // TBD
     timer5dur,         // TBD

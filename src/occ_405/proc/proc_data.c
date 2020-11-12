@@ -134,6 +134,7 @@ void task_core_data( task_t * i_task )
     bulk_core_data_task_t * l_bulk_core_data_ptr = (bulk_core_data_task_t *)i_task->data_ptr;
     ipc_core_data_parms_t * l_parms = (ipc_core_data_parms_t*)(l_bulk_core_data_ptr->gpe_req.cmd_data);
     static uint32_t L_trace_core_failure = 0;
+    static uint32_t L_trace_complete_time = 0;
 
     do
     {
@@ -146,7 +147,10 @@ void task_core_data( task_t * i_task )
             //Trace 1 time
             if( !G_queue_not_idle_traced )
             {
-                INTR_TRAC_ERR("Previous core data task has not yet completed");
+                INTR_TRAC_ERR("Previous core data task has not yet completed (max=%dus)",
+                              AMECSENSOR_PTR(CORE_IPCdur)->sample_max);
+                // Trace next 5 completion times
+                L_trace_complete_time = 5;
                 G_queue_not_idle_traced = TRUE;
             }
             break;
@@ -170,6 +174,18 @@ void task_core_data( task_t * i_task )
             (l_parms->error.rc == 0) &&
             CORE_PRESENT(l_bulk_core_data_ptr->current_core) )
         {
+            // save time IPC took in us
+            const uint32_t l_time = (uint32_t)((l_bulk_core_data_ptr->gpe_req.request.end_time -
+                                                l_bulk_core_data_ptr->gpe_req.request.start_time) /
+                                               ( SSX_TIMEBASE_FREQUENCY_HZ / 1000000 ));
+            sensor_update( AMECSENSOR_PTR(CORE_IPCdur), (uint16_t)l_time);
+            if (L_trace_complete_time > 0)
+            {
+                INTR_TRAC_IMP("task_core_data: core%d complete time was %dus",
+                              l_bulk_core_data_ptr->current_core, l_time);
+                --L_trace_complete_time;
+            }
+
             //If the previous GPE request succeeded then swap core_data_ptr
             //with the global one. The gpe routine will write new data into
             //a buffer that is not being accessed by the RTLoop code.

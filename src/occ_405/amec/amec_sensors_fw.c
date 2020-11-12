@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -166,6 +166,10 @@ void task_gpe_timings(task_t * i_task)
                          "XSR[0x%08x]  IAR[0x%08x] IR[0x%08x] EDR[0x%08x] SPRG0[0x%08X]",
                          exi_xsr.value, exi_iar.fields.iar,
                          exi_ir.fields.ir, exi_edr.fields.edr, exi_sprg0.fields.sprg0);
+                TRAC_ERR("task_gpe_timings: core IPC max %uus, GPE0 tick max %uus, RTL tick max %uus",
+                         AMECSENSOR_PTR(CORE_IPCdur)->sample_max,
+                         AMECSENSOR_PTR(GPEtickdur0)->sample_max,
+                         AMECSENSOR_PTR(RTLtickdur)->sample_max);
                 L_consec_trace_count[0]++;
             }
         }
@@ -219,6 +223,9 @@ void task_gpe_timings(task_t * i_task)
                          "XSR[0x%08x]  IAR[0x%08x] IR[0x%08x] EDR[0x%08x] SPRG0[0x%08X]",
                          exi_xsr.value, exi_iar.fields.iar,
                          exi_ir.fields.ir, exi_edr.fields.edr, exi_sprg0.fields.sprg0);
+                TRAC_ERR("task_gpe_timings: GPE1 tick max %uus, RTL tick max %uus",
+                         AMECSENSOR_PTR(GPEtickdur1)->sample_max,
+                         AMECSENSOR_PTR(RTLtickdur)->sample_max);
                 L_consec_trace_count[1]++;
 
                 if(G_log_gpe1_error)

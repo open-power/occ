@@ -1129,8 +1129,8 @@ void amec_health_check_proc_timeout()
             if((L_read_fail_cnt == g_amec->thermalproc.temp_timeout) &&
                (g_amec->thermalproc.temp_timeout != 0xFF))
             {
-                TRAC_ERR("Timed out reading processor temperature on core_index[%u]",
-                         l_bad_core_index);
+                TRAC_ERR("Timed out reading processor temperature on core_index[%u] (core ipc min[%u] max[%u])",
+                         l_bad_core_index, AMECSENSOR_PTR(CORE_IPCdur)->sample_min, AMECSENSOR_PTR(CORE_IPCdur)->sample_max);
 
                 // Get pointer to core data
                 l_core_data_ptr = proc_get_bulk_core_data_ptr(l_bad_core_index);
