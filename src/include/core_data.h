@@ -39,7 +39,7 @@
 #define TOD_VALUE_REG           0x00040020
 #define CPMS_SDSR               0x000e0e68
 #define QME_FTXR                0x000e0178
-#define STOP_STATE_HIST_OCC_REG 0x000F0112 // TODO RTC 213673 Exist on P10?
+#define STOP_STATE_HIST_OCC_REG 0x000e0828 // SSH_OCC
 
 #define CORE_RAW_CYCLES             0x200
 

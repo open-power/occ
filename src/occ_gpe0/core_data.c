@@ -360,13 +360,12 @@ uint32_t get_core_data(uint32_t i_core,
         }
         o_data->tod_2mhz = (uint32_t)(empath_scom_data >> 8); //[24..56]
 
-        // STOP_STATE_HIST_OCC_REG TODO 213673 P10 exist?
-        //rc = getscom(coreSelect, STOP_STATE_HIST_OCC_REG, &empath_scom_data);
-        //if (rc)
-        //{
-        //    break;
-        //}
-        //o_data->stop_state_hist = empath_scom_data;
+        rc = getscom(coreSelect, STOP_STATE_HIST_OCC_REG, &empath_scom_data);
+        if (rc)
+        {
+            break;
+        }
+        o_data->stop_state_hist = empath_scom_data;
 
         o_data->empathValid = EMPATH_VALID;
 
