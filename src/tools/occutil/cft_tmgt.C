@@ -31,6 +31,7 @@
 #include "cft_utils.H"
 #include "cft_occ.H"
 #include "cft_tmgt.H"
+#include <unistd.h> // sleep
 
 
 const uint16_t  HTMGT_CMD_CLASS   = 0x00E0;
@@ -103,7 +104,8 @@ struct htmgt_query_mode_function_t
     uint8_t ffo;
     uint8_t reserved2;
     uint8_t max_perf;
-    uint8_t reserved3[5];
+    uint8_t reserved3[4];
+    uint8_t mfg_mode;
     uint32_t safe_rc;
     uint32_t safe_occ;
 } __attribute__((packed));
@@ -113,6 +115,12 @@ struct htmgt_query_mode_function_t
 uint32_t send_hbrt_command(const htmgt_command i_cmd,
                            const uint8_t* i_cmd_data,
                            const uint16_t i_len,
+                           const uint32_t i_timeout = 60 /*seconds*/);
+uint32_t send_hbrt_command(const htmgt_command i_cmd,
+                           const uint8_t* i_cmd_data,
+                           const uint16_t i_len,
+                           uint8_t * & i_rsp_data,
+                           uint32_t & i_rsp_len,
                            const uint32_t i_timeout = 60 /*seconds*/);
 
 void parse_htmgt_response(const uint8_t i_cmd,
@@ -239,7 +247,7 @@ uint32_t occ_cmd_via_tmgt(const uint8_t i_occNum,
     unsigned int cmd_index = strlen(command);
     if (i_len > 0)
     {
-        strncat(command, "-D 0x", 5);
+        strcat(command, "-D 0x");
         cmd_index += 5;
         for (unsigned int ii = 0; ii < i_len; ++ii)
         {
@@ -312,7 +320,7 @@ uint32_t send_htmgt_command(const uint8_t i_cmd,
 
     if (isFsp())
     {
-        cmtOutputError("send_htmgt_command: Not supported on FSP");
+        cmtOutputError("send_htmgt_command: Not supported on FSP\n");
         l_rc = 6;
     }
     else
@@ -325,16 +333,41 @@ uint32_t send_htmgt_command(const uint8_t i_cmd,
 } // end send_htmgt_command()
 
 
+// Send command to HBRT and parse the response
 uint32_t send_hbrt_command(const htmgt_command i_cmd,
                            const uint8_t* i_cmd_data,
                            const uint16_t i_len,
                            const uint32_t i_timeout)
 {
     uint32_t l_rc = CMT_SUCCESS;
+    uint8_t *l_rsp_data;
+    uint32_t l_rsp_len = 0;
+
+    l_rc = send_hbrt_command(i_cmd, i_cmd_data, i_len, l_rsp_data, l_rsp_len, i_timeout);
+    if (CMT_SUCCESS == l_rc)
+    {
+        if ((l_rsp_len > 0) && (l_rsp_data != NULL))
+        {
+            parse_htmgt_response(i_cmd, l_rsp_data, l_rsp_len);
+            free(l_rsp_data);
+        }
+    }
+
+    return l_rc;
+}
+
+// Send command to HBRT and return the response data
+// NOTE: caller is responsible for freeing i_rsp_data
+uint32_t send_hbrt_command(const htmgt_command i_cmd,
+                           const uint8_t* i_cmd_data,
+                           const uint16_t i_len,
+                           uint8_t * & i_rsp_data,
+                           uint32_t & i_rsp_len,
+                           const uint32_t i_timeout)
+{
+    uint32_t l_rc = CMT_SUCCESS;
 
     ecmdDataBuffer l_data;
-    uint8_t *l_responseData = NULL;
-    uint32_t l_responseSize = 0;
 
     do
     {
@@ -381,19 +414,14 @@ uint32_t send_hbrt_command(const htmgt_command i_cmd,
             break;
         }
 
-        l_rc = cmtOCCSendReceive(l_target,l_data,l_responseData,l_responseSize, i_timeout);
+        l_rc = cmtOCCSendReceive(l_target, l_data, i_rsp_data, i_rsp_len, i_timeout);
         if (l_rc)
         {
             cmtOutputError("%s : cmtOCCSendReceive() failed. RC=0x%08X\n", __FUNCTION__, l_rc);
             break;
         }
         if (G_verbose)
-            printf("HTMGT returned %d bytes (0x%04X)\n", l_responseSize, l_responseSize);
-        if ((l_responseSize > 0) && (l_responseData != NULL))
-        {
-            parse_htmgt_response(i_cmd, l_responseData, l_responseSize);
-            free(l_responseData);
-        }
+            printf("HTMGT returned %d bytes (0x%04X)\n", i_rsp_len, i_rsp_len);
 
     } while (0);
 
@@ -460,10 +488,9 @@ int parse_tmgt_info(const uint8_t *i_rsp_data, const uint16_t i_rsp_len)
             if (i_rsp_len >= (16 + (sizeof(occ_info_t)*(occ+1))))
             {
                 occ_info_t * occd = &data->occ[occ];
-                printf("OCC%d: %s %s (0x%02X) %s (0x%02X) resetCount:%d wofResets:%d flags pollRsp:0x%02X%02X%02X%02X... %s\n",
+                printf("OCC%d: %s %s (0x%02X) resetCount:%d wofResets:%d flags pollRsp:0x%02X%02X%02X%02X... %s\n",
                        occd->instance, (occd->instance == data->master)?"Master":"Slave ",
                        getStateString(occd->state), occd->state,
-                       getModeString(occd->mode), occd->mode,
                        occd->reset_count, occd->wof_reset_count, occd->last_poll[0], occd->last_poll[1], occd->last_poll[2], occd->last_poll[3],
                        getPollExtStatus(occd->last_poll[1]));
             }
@@ -496,8 +523,10 @@ int parse_query_mode_func(const uint8_t *i_rsp_data, const uint16_t i_rsp_len)
         printf("Customer Requested Mode: 0x%02X  %s\n", data->cust_mode, getModeString(data->cust_mode));
         printf("           Current Mode: 0x%02X  %s\n", data->current_mode, getModeString(data->current_mode));
         printf("          Current State: 0x%02X  %s\n", data->state, getStateString(data->state));
-        if (data->freq != 0)
-            printf("      Desired Frequency: 0x%04X (%d)\n", data->freq, data->freq);
+        if (POWERMODE_SFP == data->current_mode)
+            printf("  Static Frequncy Point: 0x%04X\n", htons(data->freq));
+        else if (POWERMODE_FFO == data->current_mode)
+            printf("        Fixed Frequency: %dMHz\n", htons(data->freq));
         else
             printf("      Desired Frequency: N/A\n");
         printf("             OCC Status: 0x%02X  %s\n", data->occ_status, data->occ_status==1?"ENABLED":"DISABLED");
@@ -506,6 +535,7 @@ int parse_query_mode_func(const uint8_t *i_rsp_data, const uint16_t i_rsp_len)
         printf("    Dynamic Performance? %c\n", data->dyn_perf?'Y':'N');
         printf("  Fixed Frequency (FFO)? %c\n", data->ffo?'Y':'N');
         printf("    Maximum Performance? %c\n", data->max_perf?'Y':'N');
+        printf("     Manufacturing Mode? %c\n", data->mfg_mode?'Y':'N');
         if (data->safe_rc)
         {
             printf("  SAFE MODE RC: 0x%04X (OCC%d)", htonl(data->safe_rc), htonl(data->safe_occ));
@@ -608,17 +638,56 @@ uint32_t tmgt_flags(const uint32_t i_flag_data,
     }
     else
     {
-       l_rc = send_hbrt_command(HTMGT_INTERNAL_FLAGS, (const uint8_t*)&i_flag_data, i_len);
+       uint8_t * rsp_ptr = NULL;
+       uint32_t rsp_len = 0;
+       l_rc = send_hbrt_command(HTMGT_INTERNAL_FLAGS, (const uint8_t*)&i_flag_data, i_len,
+                                rsp_ptr, rsp_len);
        if (i_len > 0)
        {
            // re-query flags
-           (void)send_hbrt_command(HTMGT_INTERNAL_FLAGS, NULL, 0);
+           (void)send_hbrt_command(HTMGT_INTERNAL_FLAGS, NULL, 0,
+                                   rsp_ptr, rsp_len);
+       }
+       if (rsp_len == 4)
+       {
+           uint32_t flag = UINT32_GET(rsp_ptr);
+           printf("    0x%08X : ", flag);
+           if (flag & 0x00800000) printf("HaltOnSrc0x2A%02X ", flag >> 24);
+           if (flag & 0x00001000) printf("WOFResetDisabled ");
+           if (flag & 0x00000800) printf("DisableMemConfig ");
+           //if (flag & 0x00000400) printf(" ");
+           //if (flag & 0x00000200) printf(" ");
+           if (flag & 0x00000100) printf("HaltOnResetFail ");
+           if (flag & 0x00000080) printf("ExtResetDisable ");
+           if (flag & 0x00000040) printf("DisableMemThrot ");
+           if (flag & 0x00000020) printf("IgnoreOccState ");
+           if (flag & 0x00000010) printf("HoldOccsInReset ");
+           if (flag & 0x00000008) printf("LoadDisabled ");
+           if (flag & 0x00000004) printf("TerminateOnErr ");
+           if (flag & 0x00000002) printf("ResetDisabled ");
+           if (flag & 0x00000001) printf("ExternalOverride ");
+           printf("\n");
+       }
+       else
+       {
+           dumpHex(rsp_ptr, rsp_len);
        }
     }
 
     return l_rc;
 
 } // end send_tmgt_command()
+
+
+// Return timestamp string HH:MM:SS
+char *get_timestamp()
+{
+    static char timestamp[32];
+    const time_t timer = time(NULL);
+    struct tm *tm_info = localtime(&timer);
+    strftime(timestamp, sizeof(timestamp), "%H:%M:%S", tm_info);
+    return timestamp;
+}
 
 
 uint32_t tmgt_waitforstate(const uint8_t i_state)
@@ -644,8 +713,59 @@ uint32_t tmgt_waitforstate(const uint8_t i_state)
     }
     else
     {
-        cmtOutputError("tmgt_waitforstate: Not supported!\n");
-        l_rc = CMT_INVALID_DATA;
+        bool done = false;
+        static uint8_t  L_state = 0xFF;
+        static uint32_t L_rc = CMT_SUCCESS;
+
+        printf("Waiting for the OCCs to reach %s state (%d) - %s\n",
+               getStateString(i_state), i_state, get_timestamp());
+        l_rc = CMT_TIMEOUT;
+        while (!done)
+        {
+            uint8_t * rsp_ptr = NULL;
+            uint32_t rsp_len = 0;
+            l_rc = send_hbrt_command(HTMGT_QUERY_STATE, NULL, 0, rsp_ptr, rsp_len);
+            if ((rsp_ptr != NULL) && (rsp_len > 0))
+            {
+                if (rsp_len >= 2)
+                {
+                    if (L_state != rsp_ptr[2])
+                    {
+                        printf("OCC State: %2d  (%s) - %s\n",
+                               rsp_ptr[2], getStateString(rsp_ptr[2]), get_timestamp());
+                        L_state = rsp_ptr[2];
+                    }
+                    if (rsp_ptr[2] == i_state)
+                    {
+                        done = true;
+                        l_rc = CMT_SUCCESS;
+                        break;
+                    }
+                }
+                else
+                {
+                    if (L_state != 0x89)
+                    {
+                        // HTMGT cmd must have failed
+                        printf("OCC State: ??  (UNKNOWN) - %s\n",
+                               get_timestamp());
+                        L_state = 0x89;
+                    }
+                }
+                free(rsp_ptr);
+                rsp_ptr = NULL;
+                rsp_len = 0;
+            }
+            else
+            {
+                if (L_rc != l_rc)
+                {
+                    printf("RC: %d - %s\n", l_rc, get_timestamp());
+                    L_rc = l_rc;
+                }
+            }
+            sleep(5);
+        }
     }
 
     return l_rc;

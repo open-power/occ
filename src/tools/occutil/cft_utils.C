@@ -1,7 +1,7 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/tools/cft/cftocctool.C $                                  */
+/* $Source: src/tools/occutil.C $                                         */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
@@ -23,8 +23,8 @@
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
 /**
-  @file cftocctool.C
-  @brief Main Program entry point for cmtDllClient Application
+  @file occutil.C
+  @brief Main Program entry point for occutil application
 */
 
 
@@ -63,8 +63,6 @@ const uint32_t CMT_OCC_RESPONSE_DATA_OFFSET_IN_BYTES    = offsetof(cmtOCCRespons
 
 
 #define   USE_SBE_FIFO_STR    "USE_SBE_FIFO"
-#define   CMT_SBE_FIFO_OFF    "off"
-#define   CMT_SBE_FIFO_ON     "on"
 const uint64_t HOST_PASS_THROUGH_MEM_ADDRESS      = 0x0;
 const uint64_t HOST_PASS_THROUGH_MEM_ADDRESS_128  = 0x80;
 const uint32_t CFAM_REGISTER_ADDRESS              = 0x283B;
@@ -154,6 +152,66 @@ void ecmdTargetInit(ecmdChipTarget &o_target)
 }
 
 
+bool update_sbe_fifo(ecmdChipTarget &i_target, const char *new_value)
+{
+    uint32_t l_rc = CMT_SUCCESS;
+    bool l_modifiedConfig = false;
+    static ecmdConfigValid_t l_existingConfigValid;
+    static std::string       l_existingValueAlpha;
+    static uint32_t          l_existingValueNumeric;
+
+    if (new_value != NULL)
+    {
+        if (G_verbose >= 2)
+            printf("%s: calling ecmdGetConfiguration()\n", __FUNCTION__);
+        l_rc = ecmdGetConfiguration(i_target, USE_SBE_FIFO_STR, l_existingConfigValid,
+                                    l_existingValueAlpha, l_existingValueNumeric);
+        if ( l_rc )
+        {
+            cmtOutputError("%s: unable to determine whether SBE has been configured to use FIFO. Proceeding further... RC=0x%08X\n",
+                           __FUNCTION__, l_rc);
+            l_rc = CMT_SUCCESS;
+        }
+        else
+        {
+            // If SBE FIFO does not match, then update the configuration
+            if (G_verbose >= 2)
+                printf("%s: ecmdGetConfiguration() returned %s\n",
+                       __FUNCTION__, l_existingValueAlpha.c_str());
+
+            if ( strcasecmp(l_existingValueAlpha.c_str(), new_value) != 0 )
+            {
+                if (G_verbose >= 2)
+                    printf("%s: calling ecmdGetConfiguration(USE_SBE_FIFO_STR=%s)\n",
+                           __FUNCTION__, new_value);
+                l_rc = ecmdSetConfiguration(i_target, USE_SBE_FIFO_STR, ECMD_CONFIG_VALID_FIELD_ALPHA,
+                                            new_value, 0);
+                if (l_rc)
+                {
+                    cmtOutputError("%s: update of USE_SBE_FIFO to on failed. Exiting... RC=0x%08X\n",
+                                   __FUNCTION__, l_rc);
+                }
+                l_modifiedConfig = true;
+            }
+        }
+    }
+    else // restore old value
+    {
+        //If this fails, then ignore the error
+        if (G_verbose >= 2)
+            printf("%s: calling ecmdSetConfiguration(restoring USE_SBE_FIFO_STR=%s)\n",
+                   __FUNCTION__, l_existingValueAlpha.c_str());
+        l_rc = ecmdSetConfiguration(i_target, USE_SBE_FIFO_STR, l_existingConfigValid,
+                                    l_existingValueAlpha, l_existingValueNumeric);
+        if (l_rc)
+            if (G_verbose >= 1)
+                cmtOutputError("%s: restore of USE_SBE_FIFO to %s failed with rc=%d\n",
+                               __FUNCTION__, l_existingValueAlpha.c_str(), l_rc);
+    }
+    return l_modifiedConfig;
+}
+
+
 uint32_t cmtOCCSendReceive(ecmdChipTarget &i_target,
                            ecmdDataBuffer &i_data,
                            uint8_t       *&o_responseData,
@@ -165,35 +223,8 @@ uint32_t cmtOCCSendReceive(ecmdChipTarget &i_target,
     o_responseData = NULL;
     o_responseSize = 0;
 
-    //configure ecmd to use SBE FIFO for OCC pass through commands
-    //
-    ecmdConfigValid_t l_existingConfigValid;
-    std::string       l_existingValueAlpha;
-    uint32_t          l_existingValueNumeric;
-    bool              l_modifiedConfig = false;
-    if (G_verbose >= 2)
-        printf("cmtOCCSendReceive: calling ecmdGetConfiguration()\n");
-    l_rc = ecmdGetConfiguration(i_target, USE_SBE_FIFO_STR, l_existingConfigValid, l_existingValueAlpha, l_existingValueNumeric);
-    if ( l_rc ) {
-        cmtOutputError("%s : unable to determine whether SBE has been configured to use FIFO. Proceeding further... RC=0x%08X\n",
-                       __FUNCTION__, l_rc);
-        l_rc = CMT_SUCCESS;
-    } else {
-
-        //If SBE FIFO is not on, then update the configuration to set it to on
-        if ( strcasecmp(l_existingValueAlpha.c_str(),CMT_SBE_FIFO_ON) != 0 )  {
-
-            if (G_verbose >= 2)
-                printf("cmtOCCSendReceive: calling ecmdGetConfiguration(ECMD_CONFIG_VALID_FIELD_ALPHA, CMT_SBE_FIFO_ON)\n");
-            l_rc = ecmdSetConfiguration(i_target, USE_SBE_FIFO_STR, ECMD_CONFIG_VALID_FIELD_ALPHA, CMT_SBE_FIFO_ON, 0);
-            if ( l_rc ) {
-                cmtOutputError("%s : update of USE_SBE_FIFO to on failed. Exiting... RC=0x%08X\n",
-                               __FUNCTION__, l_rc);
-                return l_rc;
-            }
-            l_modifiedConfig = true;
-        }
-    }
+    // configure ecmd to use SBE FIFO for OCC pass through commands
+    bool l_modifiedConfig = update_sbe_fifo(i_target, CMT_SBE_FIFO_ON);
 
     do
     {
@@ -317,15 +348,9 @@ uint32_t cmtOCCSendReceive(ecmdChipTarget &i_target,
         o_responseData = l_dataPtr;
     } while (0);
 
-    //In USE_SBE_FIFO was set to on, then set the original value back.
-    //If this fails, then ignore the error
-    if ( l_modifiedConfig == true ) {
-        //No need to check the rc
-        if (G_verbose >= 2)
-            printf("cmtOCCSendReceive: calling ecmdSetConfiguration(restore prior)\n");
-        ecmdSetConfiguration(i_target, USE_SBE_FIFO_STR, l_existingConfigValid,
-                             l_existingValueAlpha, l_existingValueNumeric);
-    }
+    if ( l_modifiedConfig == true )
+        update_sbe_fifo(i_target); // restore old value
+
     return l_rc;
 }
 
@@ -412,16 +437,15 @@ int convert_rsp_to_binary(const char *   i_output,
             if (s != NULL)
             {
                 sscanf(s+12, "%04X", &o_rsplen);
-
-                // print response header
-                const unsigned int hlen = s+17 - i_output;
-                printf("%.*s\n", hlen, i_output);
-
                 if (o_rsplen > 0)
                 {
                     char const *d = strstr(s, "0000:  ");
                     if (d != NULL)
                     {
+                        // print response header
+                        const unsigned int hlen = s+17 - i_output;
+                        printf("%.*s\n", hlen, i_output);
+
                         unsigned int offset = 0;
                         uint8_t *buffer = (uint8_t*)malloc(o_rsplen);
                         while (offset < o_rsplen)

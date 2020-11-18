@@ -37,14 +37,14 @@ endif
 
 BUILD_HOST_NAME := $(shell hostname)
 BUILD_HOST_IP   := $(shell hostname -I)
-BUILD_OS        := $(shell lsb_release -sd)
+BUILD_OS        := $(shell lsb_release -sd | sed 's/"//g')
 
 # Cleanup multiple //'s in the path built above
 OBJPATH                         := ../../../obj/tools/occutil/
 BINPATH                         := ../../../obj/tools/occutil/
 occtool_SOURCE                  := occutil.C cft_utils.C cft_tmgt.C cft_occ.C
 
-CFLAGS          := ${CFLAGS} -g -I/usr/include/libxml2 -Icmd -Icapi -Imnfg -Ihwp -Ijson/single_include "-DBUILD_HOST_NAME=$(BUILD_HOST_NAME)" "-DBUILD_HOST_IP=$(BUILD_HOST_IP)" -DBUILD_OS=$(BUILD_OS) $(BUILD_INFO)
+CFLAGS          := ${CFLAGS} -g -I/usr/include/libxml2 -Icmd -Icapi -Imnfg -Ihwp -Ijson/single_include "-DBUILD_HOST_NAME=$(BUILD_HOST_NAME)" "-DBUILD_HOST_IP=$(BUILD_HOST_IP)" "-DBUILD_OS=$(BUILD_OS)" $(BUILD_INFO)
 
 # Choose the eCMD Release to build against
 # Are we setup for eCMD, if so let's get our eCMD Release from there

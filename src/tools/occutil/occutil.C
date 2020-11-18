@@ -36,29 +36,15 @@
 void usage()
 {
         printf("Usage: occutil <options> <commands>\n\n");
-        printf("    Options:\n");
-        printf("        -o #           Target specified OCC instance\n");
-        printf("        -D XX...       Data for other commands (XX is a hex string)\n");
-        printf("        -v | -v2       Verbose (-v2 includes ECMD packets)\n");
         printf("    Informational Commands:\n");
         printf("        -I             Query TMGT/OCC states\n");
+        printf("        -p             Send POLL command to OCC\n");
         printf("        --driver       Display system driver level\n");
         printf("        --system       Query system state\n");
         printf("        --trace        Collect OCC trace (use -s to specify string file)\n");
         printf("           -s file     Specify occStringFile\n");
-        printf("    Commands:\n");
-        printf("        -p             Send POLL command to OCC\n");
-        printf("        --mode #       Set the Power Mode for the system\n");
-        printf("                Modes: 1=DISABLED, 3=STATIC FREQ POINT*, 5=STATIC POWER SAVE,\n");
-        printf("                       9=MAX FREQ, 10=DYNAMIC PERF, 11=FIXED FREQ*, 12=MAX PERF\n");
-        printf("           -f XXXX     Frequency point (required for * modes)\n");
-        printf("        --state #      Set the OCC state\n");
-        printf("                States: 2=OBSERVATION, 3=ACTIVE, 5=CHARACTERIZATION\n");
         printf("        --query        Query mode and function\n");
-        printf("        --reset        Reset the PM Complex (waits or OCC to go active)\n");
-        printf("        --reset_clear  Reset the PM Complex (and clear reset counts)\n");
         printf("        --active_wait  Wait for the OCCs to get to active state\n");
-        printf("        -H XX          Send HTMGT cmd (use -D to specify data)\n");
         printf("        -S guid=XX     Dump speecified OCC sensor by GUID\n");
         printf("        -S type=XX,loc=XX Dump OCC sensors (type/loc are both optional)\n");
         printf("           types: 0x1=Generic, 0x2=Current, 0x4=Voltage, 0x8=Temperature,\n");
@@ -66,8 +52,27 @@ void usage()
         printf("                  0x200=Performance, 0x400=WOF\n");
         printf("           locs:  0x1=System, 0x2=Processor, 0x4=Partition, 0x8=Memory,\n");
         printf("                  0x10=VRM, 0x20=OCC, 0x40=Core, 0x80=GPU, 0x100=Quad\n");
+        printf("    Commands:\n");
+        printf("        --mode #       Set the Power Mode for the system\n");
+        printf("                Modes: 1=DISABLED, 3=STATIC FREQ POINT*, 5=STATIC POWER SAVE,\n"
+               "                       9=MAX FREQ, 10=DYNAMIC PERF, 11=FIXED FREQ*, 12=MAX PERF\n");
+        printf("           -f XXXX     Frequency point (required for * modes)\n");
+        printf("                SFP points: 0x1000-0x1007=VPD Curve Fit Points, 0x2000=Static Power Save,\n"
+               "                       0x2001=WOF Base, 0x2002=Ultra Turbo, 0x2003=Maximum Frequency,\n"
+               "                       0x2004=Disabled, 0x4000=Bottom Throttle Space (most throttled),\n"
+               "                       0xFFpp=Specific pstate: pp\n");
+        printf("        --state #      Set the OCC state\n");
+        printf("                States: 2=OBSERVATION, 3=ACTIVE, 5=CHARACTERIZATION\n");
+        printf("        --reset        Reset the PM Complex (waits or OCC to go active)\n");
+        printf("        --reset_clear  Reset the PM Complex (and clear reset counts)\n");
+        printf("        -H XX          Send HTMGT cmd (use -D to specify data)\n");
+        printf("        --IF           Query/set TMGT/HTMGT internal flags (use -D for set)\n");
         printf("        -X XX          Send OCC command XX (use -D to specify data)\n");
-        printf("\n    last update: 16-Nov-2020\n");
+        printf("    Options:\n");
+        printf("        -o #           Target specified OCC instance\n");
+        printf("        -D XX...       Data for other commands (XX is a hex string)\n");
+        printf("        -v | -v2       Verbose (-v2 includes ECMD packets)\n");
+        printf("\n    last update: 18-Nov-2020\n");
 }
 
 

@@ -30,6 +30,7 @@
 #include "cft_utils.H"
 #include "cft_occ.H"
 #include "cft_tmgt.H"
+#include <unistd.h> // sleep
 
 char G_occ_string_file[512] = "/afs/rch/usr2/cjcain/public/occStringFile.p10";
 uint16_t G_sensor_type = 0xFFFF;
@@ -372,7 +373,8 @@ uint32_t send_occ_command(const uint8_t i_occ,
         }
         else
         {
-            printf("WARNING: No data was returned");
+            if (!isFsp()) // FSP could have already parsed data
+                printf("WARNING: No data was returned\n");
         }
     }
     else
@@ -465,10 +467,21 @@ int parse_occ_poll(const uint8_t *i_rsp_data, const uint16_t i_rsp_len)
             printf("                   SSSSSSSS FF TT LL -- (SSSS = Sensor ID, FF is FRU type, TT is temp in C, LL is throttle temp)\n");
             while (numSensors > 0)
             {
-                printf("                   %02X%02X%02X%02X %02X %02X %02X %02X (%dC %s)\n",
-                       dblock[sindex], dblock[sindex+1], dblock[sindex+2], dblock[sindex+3],
-                       dblock[sindex+4], dblock[sindex+5], dblock[sindex+6], dblock[sindex+7],
-                       dblock[sindex+5], getFruString(dblock[sindex+4]));
+                if (dblock[sindex+4] != 0xFF) // Valid FRU
+                    if (dblock[sindex+5] != 0xFF) // Valid temperature
+                        printf("                   %02X%02X%02X%02X %02X %02X %02X %02X (%dC %s)\n",
+                               dblock[sindex], dblock[sindex+1], dblock[sindex+2], dblock[sindex+3],
+                               dblock[sindex+4], dblock[sindex+5], dblock[sindex+6], dblock[sindex+7],
+                               dblock[sindex+5], getFruString(dblock[sindex+4]));
+                    else // Error temperature
+                        printf("                   %02X%02X%02X%02X %02X %02X %02X %02X  (error)  %s\n",
+                               dblock[sindex], dblock[sindex+1], dblock[sindex+2], dblock[sindex+3],
+                               dblock[sindex+4], dblock[sindex+5], dblock[sindex+6], dblock[sindex+7],
+                               getFruString(dblock[sindex+4]));
+                else // Unsupported FRU
+                    printf("                   %02X%02X%02X%02X %02X %02X %02X %02X (N/A)\n",
+                           dblock[sindex], dblock[sindex+1], dblock[sindex+2], dblock[sindex+3],
+                           dblock[sindex+4], dblock[sindex+5], dblock[sindex+6], dblock[sindex+7]);
                 sindex += sensorLen;
                 --numSensors;
             }
@@ -654,6 +667,16 @@ int parse_occ_mfg_test(const uint8_t *i_cmd_data,
     {
         switch(i_cmd_data[0])
         {
+            case 0x02: // Frequency Slew
+                if (i_rsp_len == 6)
+                {
+                    printf("    Slew Count: 0x%04X (%3d)\n", UINT16_GET(&i_rsp_data[0]), UINT16_GET(&i_rsp_data[0]));
+                    printf("  Start Pstate: 0x%04X (%3d)  (lowest frequency)\n", UINT16_GET(&i_rsp_data[2]), UINT16_GET(&i_rsp_data[2]));
+                    printf("   Stop Pstate: 0x%04X (%3d)  (highest frequency)\n", UINT16_GET(&i_rsp_data[4]), UINT16_GET(&i_rsp_data[4]));
+                    rc = 0;
+                }
+                break;
+
             case 0x06: // Get Sensor Details
                 {
                     printf("  MFG Sub Cmd: 0x%02X  (Get Sensor Details)\n\n", i_cmd_data[0]);
@@ -695,6 +718,14 @@ int parse_occ_mfg_test(const uint8_t *i_cmd_data,
                 }
                 break;
 
+            case 0x09: // Memory Slew
+                if (i_rsp_len == 2)
+                {
+                    printf("    Slew Count: 0x%04X (%3d)\n", UINT16_GET(&i_rsp_data[0]), UINT16_GET(&i_rsp_data[0]));
+                    rc = 0;
+                }
+                break;
+
             default:
                 printf("  MFG Sub Cmd: 0x%02X\n\n", i_cmd_data[0]);
                 rc = -1;
@@ -723,8 +754,23 @@ uint32_t get_occ_trace(const uint8_t i_occ)
         char command[1024];
         sprintf(command, "/afs/rch/usr2/cjcain/bin/occtoolp10 -trace -s %s -o %d",
                 G_occ_string_file, i_occ);
+
+        bool l_modifiedConfig = false;
+        ecmdChipTarget l_target;
+#if 0
+        // disable SBE FIFO for occtoolp10
+        ecmdTargetInit(l_target);
+        l_modifiedConfig = update_sbe_fifo(l_target, CMT_SBE_FIFO_OFF);
+#else
+        sprintf(command, "setconfig USE_SBE_FIFO off; "
+                "/afs/rch/usr2/cjcain/bin/occtoolp10 -trace -s %s -o %d",
+                G_occ_string_file, i_occ);
+#endif
         printf("==> %s\n", command);
         system(command);
+
+        if ( l_modifiedConfig == true )
+            update_sbe_fifo(l_target); // restore old value
     }
 
     return rc;

@@ -45,6 +45,8 @@ extern unsigned int G_verbose;
 
 #define cmtOutputError printf
 
+#define   CMT_SBE_FIFO_OFF    "off"
+#define   CMT_SBE_FIFO_ON     "on"
 
 enum cmt_status_e
 {
@@ -53,7 +55,8 @@ enum cmt_status_e
     CMT_INVALID_TARGET,
     CMT_SEND_RECEIVE_FAILURE,
     CMT_INVALID_DATA,
-    CMT_NOT_SUPPORTED
+    CMT_NOT_SUPPORTED,
+    CMT_TIMEOUT
 };
 
 struct cmtHeader
@@ -74,6 +77,7 @@ void dumpHex(const uint8_t *data, const unsigned int i_len);
 
 void initHeader(cmtHeader & i_header, uint32_t i_lengthOfMsg);
 void ecmdTargetInit(ecmdChipTarget &o_target);
+bool update_sbe_fifo(ecmdChipTarget &i_target, const char *new_value = NULL);
 uint32_t cmtOCCSendReceive(ecmdChipTarget &i_target,
                            ecmdDataBuffer &i_data,
                            uint8_t       *&o_responseData,
