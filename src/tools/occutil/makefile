@@ -43,6 +43,10 @@ BUILD_OS        := $(shell lsb_release -sd | sed 's/"//g')
 OBJPATH                         := ../../../obj/tools/occutil/
 BINPATH                         := ../../../obj/tools/occutil/
 occtool_SOURCE                  := occutil.C cft_utils.C cft_tmgt.C cft_occ.C
+KERNEL := $(shell uname -s)
+$(info KERNEL=$(KERNEL))
+MACHINE := $(shell uname -m)
+$(info MACHINE=$(MACHINE))
 
 CFLAGS          := ${CFLAGS} -g -I/usr/include/libxml2 -Icmd -Icapi -Imnfg -Ihwp -Ijson/single_include "-DBUILD_HOST_NAME=$(BUILD_HOST_NAME)" "-DBUILD_HOST_IP=$(BUILD_HOST_IP)" "-DBUILD_OS=$(BUILD_OS)" $(BUILD_INFO)
 
@@ -87,6 +91,7 @@ occtool_LDFLAGS             := ${LDFLAGS} -m64 -L${ECMD_PATH}/x86_64/lib -lecmd 
 
 LDFLAGS                     := ${LDFLAGS} -m64 -L${ECMD_PATH}/x86_64/lib -ldl -lecmd -lxml2 -lz -l:libssh2.so.1 -lssl -lcrypto -ldl -lrt
 
+ifeq ($(MACHINE), x86_64)
 all: dir occutil
 
 clean: objclean
@@ -99,6 +104,13 @@ dir:
 
 install:
 	cp -v ${BINPATH}/occutil ${HOME}/bin/
+else
+
+all:
+
+clean:
+
+endif
 
 # *****************************************************************************
 #  Object Build Targets

@@ -176,8 +176,8 @@ void dump_ffdc(ffdc_t * data)
     printf("OCB_OCCHBR: 0x%08X\n", data->ocb_occhbr);
     printf("SSX Timebase: 0x%08X\n", data->ssx_timebase);
     printf("OCC Buildname: %s\n", data->buildname);
-    printf("OCC LFIR: 0x%016X\n", data->occlfir);
-    printf("PBA FIR: 0x%016X\n", data->pbafir);
+    printf("OCC LFIR: 0x%016lX\n", data->occlfir);
+    printf("PBA FIR: 0x%016lX\n", data->pbafir);
     printf("Cores Deconfigured: 0x%08X\n", data->cores_deconf);
     print_thread_data(&data->main, "MAIN");
     print_thread_data(&data->cmdh, "CMDH");
