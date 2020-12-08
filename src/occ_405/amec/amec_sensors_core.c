@@ -473,13 +473,13 @@ void amec_calc_dts_sensors(CoreData * i_core_data_ptr, uint8_t i_core)
         // values regardless of weight.
         if (l_coreDtsCnt || l_L3DtsCnt)
         {
-            if (G_data_cnfg->thrm_thresh.proc_core_weight)
+            if( (G_data_cnfg->thrm_thresh.proc_core_weight) && (l_coreDtsCnt) )
             {
                 l_update_sensor = TRUE;
                 cWt = G_data_cnfg->thrm_thresh.proc_core_weight;
             }
 
-            if(G_data_cnfg->thrm_thresh.proc_L3_weight)
+            if( (G_data_cnfg->thrm_thresh.proc_L3_weight) && (l_L3DtsCnt) )
             {
                 l_update_sensor = TRUE;
                 l3Wt = G_data_cnfg->thrm_thresh.proc_L3_weight;
