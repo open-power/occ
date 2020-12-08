@@ -877,7 +877,8 @@ void task_24x7(task_t * i_task)
 
     // Schedule 24x7 task if it hasn't been disabled
     if ( (!G_24x7_disabled) &&
-         !(G_internal_flags & INT_FLAG_DISABLE_24X7) ) // TODO: RTC 207919
+         !(G_internal_flags & INT_FLAG_DISABLE_24X7) &&
+         (!G_simics_environment) )
     {
         // Schedule 24x7 task if idle
         if (!async_request_is_idle(&G_24x7_request.request))
