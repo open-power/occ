@@ -646,7 +646,32 @@ uint32_t calc_vrt_mainstore_addr( void )
        l_vrt_mm_offset += (g_wof->vdd_step_from_start * g_amec_sys.static_wof_data.wof_header.io_size * g_amec_sys.static_wof_data.wof_header.amb_cond_size);
        // now add number of tables skipped within this Vcs/Vdd based on IO power
        l_vrt_mm_offset += (g_wof->io_pwr_step_from_start * g_amec_sys.static_wof_data.wof_header.amb_cond_size);
+
        // now add number of tables skipped within this Vcs/Vdd/IO power based on ambient
+       // if interpolation based on ambient is enabled need to check if need to copy 1 table prior in order to do
+       // the interpolation
+       if(G_internal_flags & INT_FLAG_ENABLE_WOF_AMBIENT_INTERP)
+       {
+            // check if the VRT will need to be interpolated based on ambient
+            // no interpolation if already using lowest table or
+            // if ambient condition is greater than last table or
+            // if there is an ambient condition override set
+            if( (g_wof->ambient_step_from_start == 0) ||
+                (g_wof->ambient_condition >= g_amec_sys.static_wof_data.last_ambient_condition) ||
+                (g_wof->ambient_override_index != WOF_VRT_IDX_NO_OVERRIDE) )
+            {
+                g_wof->interpolate_ambient_vrt = 0;
+            }
+            else
+            {
+                g_wof->interpolate_ambient_vrt = 1;
+                g_wof->ambient_step_from_start--;
+            }
+       }
+       else // interpolation disabled
+       {
+           g_wof->interpolate_ambient_vrt = 0;
+       }
        l_vrt_mm_offset += g_wof->ambient_step_from_start;
 
        // We now have the total number of tables to skip multiply by the sizeof one VRT to get final offset
@@ -704,6 +729,7 @@ void copy_vrt_to_sram_callback( void )
 
     // offset needed for 128B alignment to the VRT we really want from main memory
     uint32_t  l_vrt_offset = g_wof->vrt_bce_table_offset * g_amec_sys.static_wof_data.wof_header.vrt_block_size;
+    uint8_t * l_vrt_address = (uint8_t *)(&G_vrt_temp_buff.data[0] + l_vrt_offset);
 
     // If ping buffer is currently in use then use the pong buffer
     if(g_wof->curr_ping_pong_buf == (uint32_t)G_sram_vrt_ping_buffer)
@@ -714,10 +740,24 @@ void copy_vrt_to_sram_callback( void )
     // Update global "next" ping pong buffer for callback function
     g_wof->next_ping_pong_buf = (uint32_t)l_buffer_address;
 
-    // Copy the vrt data into the buffer
-    memcpy( l_buffer_address,
-            &G_vrt_temp_buff + l_vrt_offset,
-            g_amec_sys.static_wof_data.wof_header.vrt_block_size );
+    if(g_wof->interpolate_ambient_vrt)
+    {
+        // this will do the memcpy of newly interpolated VRT into the ping/pong buffer
+        interpolate_ambient_vrt(l_buffer_address,
+                                (uint8_t *)l_vrt_address);
+    }
+    else // no interpolation needed use VRT as is
+    {
+        // Copy the vrt data into the buffer
+        memcpy( l_buffer_address,
+                l_vrt_address,
+                g_amec_sys.static_wof_data.wof_header.vrt_block_size );
+    }
+
+    // save 16B VRT contents for debug
+    memcpy( &g_wof->VRT,
+            l_buffer_address,
+            16 );
 
     // Set the parameters for the GpeRequest
     G_wof_vrt_parms.idd_vrt_ptr = (VRT_t*)l_buffer_address;
@@ -741,7 +781,7 @@ void copy_vrt_to_sram_callback( void )
         // We didn't calculate this VRT using a real Vdd set ceff ratio to 0xFF's
         G_wof_vrt_parms.vdd_ceff_ratio = 0xFFFFFFFF;
     }
-    else // send Vdd ratio used to determine VRT
+    else // set Vdd ratio used to determine VRT
     {
         G_wof_vrt_parms.vdd_ceff_ratio = g_wof->ceff_ratio_vdd;
     }
@@ -1374,7 +1414,8 @@ void calculate_ceff_ratio_vcs( void )
                                                       G_oppb.operating_points[g_wof->vpd_index1].frequency_mhz,
                                                       G_oppb.operating_points[g_wof->vpd_index2].frequency_mhz,
                                                       G_oppb.operating_points[g_wof->vpd_index1].ics_tdp_ac_10ma,
-                                                      G_oppb.operating_points[g_wof->vpd_index2].ics_tdp_ac_10ma);
+                                                      G_oppb.operating_points[g_wof->vpd_index2].ics_tdp_ac_10ma,
+                                                      FALSE); // round down
 
         // Calculate Vcs voltage average TDP by interpolating #V voltage@g_wof->avg_freq_mhz
         // *10 to convert mV to 100uV
@@ -1382,7 +1423,8 @@ void calculate_ceff_ratio_vcs( void )
                                                             G_oppb.operating_points[g_wof->vpd_index1].frequency_mhz,
                                                             G_oppb.operating_points[g_wof->vpd_index2].frequency_mhz,
                                                             G_oppb.operating_points[g_wof->vpd_index1].vcs_mv,
-                                                            G_oppb.operating_points[g_wof->vpd_index2].vcs_mv);
+                                                            G_oppb.operating_points[g_wof->vpd_index2].vcs_mv,
+                                                            FALSE); // round down);
 
         if(G_allow_trace_flags & ALLOW_CEFF_RATIO_VCS_TRACE)
         {
@@ -1482,7 +1524,8 @@ void calculate_ceff_ratio_vdd( void )
                                                            G_oppb.operating_points[g_wof->vpd_index1].frequency_mhz,
                                                            G_oppb.operating_points[g_wof->vpd_index2].frequency_mhz,
                                                            G_oppb.operating_points[g_wof->vpd_index1].idd_tdp_ac_10ma,
-                                                           G_oppb.operating_points[g_wof->vpd_index2].idd_tdp_ac_10ma);
+                                                           G_oppb.operating_points[g_wof->vpd_index2].idd_tdp_ac_10ma,
+                                                           FALSE); // round down);
 
         // Calculate Vdd voltage average TDP by interpolating #V voltage@g_wof->avg_freq_mhz
         // *10 to convert mV to 100uV
@@ -1490,7 +1533,8 @@ void calculate_ceff_ratio_vdd( void )
                                                             G_oppb.operating_points[g_wof->vpd_index1].frequency_mhz,
                                                             G_oppb.operating_points[g_wof->vpd_index2].frequency_mhz,
                                                             G_oppb.operating_points[g_wof->vpd_index1].vdd_mv,
-                                                            G_oppb.operating_points[g_wof->vpd_index2].vdd_mv);
+                                                            G_oppb.operating_points[g_wof->vpd_index2].vdd_mv,
+                                                            FALSE); // round down);
 
         // Calculate Racetrack AC Current average TDP by interpolating #V current@g_wof->avg_freq_mhz
         // *100 to convert 10ma to 100ua
@@ -1498,7 +1542,8 @@ void calculate_ceff_ratio_vdd( void )
                                                           G_oppb.operating_points[g_wof->vpd_index1].frequency_mhz,
                                                           G_oppb.operating_points[g_wof->vpd_index2].frequency_mhz,
                                                           G_oppb.operating_points[g_wof->vpd_index1].rt_tdp_ac_10ma,
-                                                          G_oppb.operating_points[g_wof->vpd_index2].rt_tdp_ac_10ma);
+                                                          G_oppb.operating_points[g_wof->vpd_index2].rt_tdp_ac_10ma,
+                                                          FALSE); // round down);
 
 
         if(G_allow_trace_flags & ALLOW_CEFF_RATIO_VDD_TRACE)
@@ -1660,11 +1705,26 @@ int32_t interpolate_linear( int32_t i_X,
                             int32_t i_x1,
                             int32_t i_x2,
                             int32_t i_y1,
-                            int32_t i_y2 )
+                            int32_t i_y2,
+                            bool    i_roundup )
 {
-    if( (i_x2 == i_x1) || (i_y2 == i_y1) )
+    if( (i_x2 == i_x1) || (i_y2 == i_y1) || (i_X == i_x1) )
     {
         return i_y1;
+    }
+    else if(i_X == i_x2)
+    {
+        return i_y2;
+    }
+    else if(i_roundup)
+    {
+        int32_t l_temp_num = (i_X - i_x1)*(i_y2 - i_y1)*10;
+        int32_t l_temp_denom = (i_x2 - i_x1);
+        int32_t l_temp = l_temp_num / l_temp_denom;
+        if(l_temp % 10) // round up
+           l_temp += 10;
+
+        return (l_temp / 10) + i_y1;
     }
     else
     {
@@ -2624,7 +2684,8 @@ uint32_t scale_and_interpolate( uint16_t * i_leak_arr,
                                (int32_t) G_iddq_voltages[i_idx],
                                (int32_t) G_iddq_voltages[i_idx+1],
                                (int32_t) scaled_lower_leak,
-                               (int32_t) scaled_upper_leak );
+                               (int32_t) scaled_upper_leak,
+                                         FALSE); // round down
 
 }
 
@@ -2893,4 +2954,57 @@ void prevent_oc_wof_off( void )
 
     return;
 }
+
+/**
+ * interpolate_ambient_vrt
+ *
+ * Description: Helper function that takes 2 VRTs and interpolates a new VRT
+ *              based on ambient condition and writes new VRT to given ping/pong buffer
+ *              NOTE: The VRT address must be the start address of the first VRT
+ *                    and the 2nd VRT must be right after.  If we selected the last
+ *                    VRT based on ambient condition we should NOT be calling this as
+ *                    no interpolation is needed.
+ *              NO TRACES!  This is called in interrupt
+ */
+void interpolate_ambient_vrt(uint8_t * i_ping_pong_buffer_address,
+                             uint8_t * i_vrt_address)
+{
+    VRT_t l_new_vrt = {{{0}}};
+    VRT_t *l_vrt1_ptr = (VRT_t *)i_vrt_address;
+    VRT_t *l_vrt2_ptr = (VRT_t *)(i_vrt_address + g_amec_sys.static_wof_data.wof_header.vrt_block_size);
+    int i;
+    uint16_t l_ac1 = 0;
+    uint16_t l_ac2 = 0;
+
+    // set VRT header to header of first VRT
+    l_new_vrt.vrtHeader.value = l_vrt1_ptr->vrtHeader.value;
+    // set msb in ambient condition index (5b field) to indicate interpolated VRT
+    l_new_vrt.vrtHeader.fields.ac_id |= 0x10;
+
+    // calculate ambient condition for 1st VRT to interpolate
+    l_ac1 = g_amec_sys.static_wof_data.wof_header.amb_cond_start +
+           (g_wof->ambient_step_from_start * g_amec_sys.static_wof_data.wof_header.amb_cond_step);
+
+    // second VRT ambient condition is one step size more
+    l_ac2 = l_ac1 + g_amec_sys.static_wof_data.wof_header.amb_cond_step;
+
+    // interpolate each VRT entry Pstate and round up (i.e. lower freq) to be safe
+    for(i = 0; i < WOF_VRT_SIZE; i++)
+    {
+        l_new_vrt.data[i] = interpolate_linear(g_wof->ambient_condition,
+                                               l_ac1,
+                                               l_ac2,
+                                               l_vrt1_ptr->data[i],
+                                               l_vrt2_ptr->data[i],
+                                               TRUE);  // round up
+    }
+
+    // Copy the new VRT into the given ping/pong buffer
+    memcpy( i_ping_pong_buffer_address,
+            &l_new_vrt,
+            g_amec_sys.static_wof_data.wof_header.vrt_block_size );
+
+    return;
+}
+
 

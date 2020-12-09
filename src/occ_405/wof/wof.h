@@ -386,7 +386,11 @@ typedef struct __attribute__ ((packed))
 
     // [690] Stop state activity counters read from XGPE
     iddq_activity_t  xgpe_activity_values;  // 128 bytes = 32 cores * 4 bytes
-} amec_wof_t;  // 818 bytes total
+    // [818] Inidcates if VRT was interpolated based on ambient
+    uint8_t interpolate_ambient_vrt;
+    // [819] VRT contents last sent to PGPE
+    uint8_t VRT[16];
+} amec_wof_t;  // 835 bytes total
 
 // Structure used in g_amec to hold static WOF data
 typedef struct __attribute__ ((packed, aligned(128)))
@@ -419,6 +423,8 @@ typedef struct __attribute__ ((packed, aligned(128)))
     uint32_t altitude_temp_adj_degCpm;
     // Altitude base in meters
     uint32_t altitude_reference_m;
+    // Last ambient condition in WOF tables
+    uint32_t last_ambient_condition;
 } amec_static_wof_t;
 
 // Structure for sensors used in g_amec for AMESTER for additional debug
@@ -493,7 +499,8 @@ int32_t interpolate_linear( int32_t i_X,
                             int32_t i_x1,
                             int32_t i_x2,
                             int32_t i_y1,
-                            int32_t i_y2 );
+                            int32_t i_y2,
+                            bool    i_roundup );
 
 void get_poundV_points( uint32_t i_freq_mhz,
                         uint8_t* o_point1_index,
@@ -543,5 +550,8 @@ uint32_t prevent_over_current( uint32_t i_ceff_ratio );
 void prevent_oc_wof_off( void );
 
 void schedule_vrt_request( void );
+
+void interpolate_ambient_vrt(uint8_t * i_ping_pong_buffer_address,
+                             uint8_t * i_vrt_address);
 
 #endif

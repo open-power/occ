@@ -523,6 +523,13 @@ void read_wof_header(void)
                                     ( g_amec->static_wof_data.wof_header.vdd_step *
                                      (g_amec->static_wof_data.wof_header.vdd_size - 1) ) );
 
+                // calculate max ambient condition from header info
+                g_amec->static_wof_data.last_ambient_condition =
+                                   g_amec->static_wof_data.wof_header.amb_cond_start +
+                                   ( g_amec->static_wof_data.wof_header.amb_cond_step *
+                                    (g_amec->static_wof_data.wof_header.amb_cond_size - 1) );
+
+
             }while( 0 );
 
         } // else 128 aligned address read WOF header
