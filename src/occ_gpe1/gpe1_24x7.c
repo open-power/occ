@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2018                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2020                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -34,6 +34,8 @@
 #include "gpe1_24x7.h"
 #include "string.h"
 
+//#define DEBUG_24X7
+
 /*
  * Function Specifications:
  *
@@ -50,7 +52,7 @@ void gpe_24x7(ipc_msg_t* cmd, void* arg)
     // Note: arg was set to 0 in ipc func table (ipc_func_tables.c), so don't use it.
     // the ipc arguments passed through the ipc_msg_t structure, has a pointer
     // to the gpe_24x7_args_t struct.
-   
+
     uint32_t rc                     = 0;
     ipc_async_cmd_t *async_cmd = (ipc_async_cmd_t*)cmd;
     gpe_24x7_args_t *args      = (gpe_24x7_args_t*)async_cmd->cmd_data;
@@ -59,18 +61,20 @@ void gpe_24x7(ipc_msg_t* cmd, void* arg)
     uint8_t ticks = args->numTicksPassed; // number of 500us ticks since last call
     static uint8_t  L_current_state = 1;  // 24x7 collection "state" to execute when called
 
+#ifdef DEBUG_24X7
     PK_TRACE (">> gpe_24x7: Called in with ticks %d", ticks);
+#endif
 
-    static uint8_t   L_DELAY_1     = 0;  
-    static uint8_t   L_DELAY_2     = 0;  
-    static uint8_t   L_DELAY_3     = 0;  
-    static uint8_t   L_DELAY_4     = 0;  
-    static uint8_t   L_DELAY_5     = 0;  
-    static uint8_t   L_DELAY_6     = 0;  
-    static uint8_t   L_DELAY_7     = 0;  
-    static uint8_t   L_CUR_DELAY   = 0;  
-    static uint64_t  L_cur_speed   = 0;  
-    static uint64_t  L_prev_status = 0;  
+    static uint8_t   L_DELAY_1     = 0;
+    static uint8_t   L_DELAY_2     = 0;
+    static uint8_t   L_DELAY_3     = 0;
+    static uint8_t   L_DELAY_4     = 0;
+    static uint8_t   L_DELAY_5     = 0;
+    static uint8_t   L_DELAY_6     = 0;
+    static uint8_t   L_DELAY_7     = 0;
+    static uint8_t   L_CUR_DELAY   = 0;
+    static uint64_t  L_cur_speed   = 0;
+    static uint64_t  L_prev_status = 0;
 
     static bool L_configure        = false;
     static bool L_DONT_RUN         = false;
@@ -99,7 +103,7 @@ void gpe_24x7(ipc_msg_t* cmd, void* arg)
     //Populate version details
     //------------------------
     /**
-     * 24x7 Version 
+     * 24x7 Version
      * [00:03] - Major revision
      * [04:11] - Minor revision
      * [12:15] - Bug fix release number
@@ -118,7 +122,7 @@ void gpe_24x7(ipc_msg_t* cmd, void* arg)
         gpe_pba_reset();
         if( ticks == 0 )  // First time 24x7 called since OCC started?
         {
-            //1. read and update the control block 
+            //1. read and update the control block
             //------------------------------------
             PK_TRACE("gpe_24x7: First call since OCC started. ticks = 0");
 
@@ -353,7 +357,9 @@ void gpe_24x7(ipc_msg_t* cmd, void* arg)
             }
 
 
+#ifdef DEBUG_24X7
             PK_TRACE("gpe_24x7: state = %d ",(int)L_current_state);
+#endif
             *L_DBG_STATE = L_current_state;
             switch (L_current_state)
             {
@@ -605,7 +611,7 @@ void gpe_24x7(ipc_msg_t* cmd, void* arg)
                         *L_status = CNTL_STATUS_RUN;
                         //*L_status = L_prev_status;
                         if(L_prev_status == CNTL_STATUS_PAUSE)
-                        { 
+                        {
                             L_DONT_RUN = true;
                             *L_status = L_prev_status;
                         }
@@ -692,7 +698,9 @@ uint32_t configure_pmu(uint8_t state, uint64_t speed, GpeErrorStruct* o_err)
     static volatile uint64_t* L_conf_last = (uint64_t*) (DBG_CONF_OFFSET | PBA_ENABLE);
     static volatile uint64_t* L_DBG_UAV   = (uint64_t*) (DBG_UAV | PBA_ENABLE);
 
+#ifdef DEBUG_24X7
     PK_TRACE (">> gpe_24x7: configure_pmu: state: 0x%02X", state);
+#endif
 
     do
     {
@@ -841,7 +849,9 @@ uint32_t configure_pmu(uint8_t state, uint64_t speed, GpeErrorStruct* o_err)
         } //for(i = start; i < end; i++)
     }while(0);
 
+#ifdef DEBUG_24X7
     PK_TRACE ("<< configure_pmu");
+#endif
     return rc;
 }
 
@@ -850,7 +860,9 @@ uint32_t configure_pmu(uint8_t state, uint64_t speed, GpeErrorStruct* o_err)
  **/
 uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
 {
+#ifdef DEBUG_24X7
     PK_TRACE (">> post_pmu_events: Group %d", grp);
+#endif
 
     uint32_t rc = 0;
 
@@ -887,9 +899,9 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
         switch (grp)
         {
             case G1A://cnpm group - always written
-                if(G_CUR_MODE == CNTL_MODE_MONITOR) 
+                if(G_CUR_MODE == CNTL_MODE_MONITOR)
                     post_addr = (uint64_t*) (POST_OFFSET_G1AH | PBA_ENABLE);
-                else if(G_CUR_MODE == CNTL_MODE_DEBUG1) 
+                else if(G_CUR_MODE == CNTL_MODE_DEBUG1)
                     post_addr = (uint64_t*) (POST_OFFSET_DBG1AH | PBA_ENABLE);
                 *L_DBG_GRP = G1A;
                 *L_DBG_UNIT = 1;
@@ -903,7 +915,7 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                 *post_addr = INC_UPD_COUNT;
                 post_addr++;
                 for(i=0; i<8; i++)
-                {   
+                {
                     rc = getScom (G_PMULETS_1A[i], &u3.pmulet, o_err);
                     if ( rc )
                     {
@@ -938,17 +950,17 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                     break;
                 }
 
-                if(G_CUR_MODE == CNTL_MODE_MONITOR) 
+                if(G_CUR_MODE == CNTL_MODE_MONITOR)
                     post_addr = (uint64_t*) (POST_OFFSET_G1AT | PBA_ENABLE);
-                else if(G_CUR_MODE == CNTL_MODE_DEBUG1) 
+                else if(G_CUR_MODE == CNTL_MODE_DEBUG1)
                     post_addr = (uint64_t*) (POST_OFFSET_DBG1AT | PBA_ENABLE);
                 *post_addr = INC_UPD_COUNT;
                 break;
 
             case G1B://cnpm group - always written
-                if(G_CUR_MODE == CNTL_MODE_MONITOR) 
+                if(G_CUR_MODE == CNTL_MODE_MONITOR)
                     post_addr = (uint64_t*) (POST_OFFSET_G1BH | PBA_ENABLE);
-                else if(G_CUR_MODE == CNTL_MODE_DEBUG1) 
+                else if(G_CUR_MODE == CNTL_MODE_DEBUG1)
                     post_addr = (uint64_t*) (POST_OFFSET_DBG1BH | PBA_ENABLE);
                 *L_DBG_GRP = G1B;
                 *L_DBG_UNIT = 1;
@@ -962,7 +974,7 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                 *post_addr = INC_UPD_COUNT;
                 post_addr++;
                 for(i=0; i<8; i++)
-                {   
+                {
                     rc = getScom (G_PMULETS_1B[i], &u3.pmulet, o_err);
                     if ( rc )
                     {
@@ -981,18 +993,18 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                     break;
                 }
 
-                if(G_CUR_MODE == CNTL_MODE_MONITOR) 
+                if(G_CUR_MODE == CNTL_MODE_MONITOR)
                     post_addr = (uint64_t*) (POST_OFFSET_G1BT | PBA_ENABLE);
-                else if(G_CUR_MODE == CNTL_MODE_DEBUG1) 
+                else if(G_CUR_MODE == CNTL_MODE_DEBUG1)
                     post_addr = (uint64_t*) (POST_OFFSET_DBG1BT | PBA_ENABLE);
                 *post_addr = INC_UPD_COUNT;
                 break;
 
             case G2A://XLINKS and ALINKS - [0:3]. Read scoms based on availability.
                 *L_DBG_GRP = G2A;
-                if ( ((G_CUR_UAV & MASK_TLPM0) == MASK_XLINK0) || 
-                     ((G_CUR_UAV & MASK_TLPM1) == MASK_XLINK1) || 
-                     ((G_CUR_UAV & MASK_TLPM2) == MASK_XLINK2) || 
+                if ( ((G_CUR_UAV & MASK_TLPM0) == MASK_XLINK0) ||
+                     ((G_CUR_UAV & MASK_TLPM1) == MASK_XLINK1) ||
+                     ((G_CUR_UAV & MASK_TLPM2) == MASK_XLINK2) ||
                      ((G_CUR_UAV & MASK_TLPM3) == MASK_XLINK3) )
                 {
                     post_addr = (uint64_t*) (POST_OFFSET_G2A_X_H | PBA_ENABLE);
@@ -1011,7 +1023,7 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                 *post_addr = INC_UPD_COUNT;
                 post_addr++;
 
-                if ( ((G_CUR_UAV & MASK_TLPM0) == MASK_XLINK0) || 
+                if ( ((G_CUR_UAV & MASK_TLPM0) == MASK_XLINK0) ||
                      ((G_CUR_UAV & MASK_TLPM0) == MASK_ALINK0) )
                 {
                     rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_DMA, o_err);
@@ -1045,7 +1057,7 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                     }
 
                     // Read counter do not reset when read.
-                    // Explicitly value 0 written to read counter after reading them. 
+                    // Explicitly value 0 written to read counter after reading them.
                     rc = putScom (G_PMULETS_2A[0], 0, o_err);
                     if ( rc )
                     {
@@ -1067,7 +1079,7 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                     }
 
                     // Read counter do not reset when read.
-                    // Explicitly value 0 written to read counter after reading them. 
+                    // Explicitly value 0 written to read counter after reading them.
                     rc = putScom (G_PMULETS_2A[1], 0, o_err);
                     if ( rc )
                     {
@@ -1082,7 +1094,7 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                     }
                 }
 
-                if ( ((G_CUR_UAV & MASK_TLPM1) == MASK_XLINK1) || 
+                if ( ((G_CUR_UAV & MASK_TLPM1) == MASK_XLINK1) ||
                      ((G_CUR_UAV & MASK_TLPM1) == MASK_ALINK1) )
                 {
                     rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_DMA, o_err);
@@ -1116,7 +1128,7 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                     }
 
                     // Read counter do not reset when read.
-                    // Explicitly value 0 written to read counter after reading them. 
+                    // Explicitly value 0 written to read counter after reading them.
                     rc = putScom (G_PMULETS_2A[2], 0, o_err);
                     if ( rc )
                     {
@@ -1138,7 +1150,7 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                     }
 
                     // Read counter do not reset when read.
-                    // Explicitly value 0 written to read counter after reading them. 
+                    // Explicitly value 0 written to read counter after reading them.
                     rc = putScom (G_PMULETS_2A[3], 0, o_err);
                     if ( rc )
                     {
@@ -1153,7 +1165,7 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                     }
                 }
 
-                if ( ((G_CUR_UAV & MASK_TLPM2) == MASK_XLINK2) || 
+                if ( ((G_CUR_UAV & MASK_TLPM2) == MASK_XLINK2) ||
                         ((G_CUR_UAV & MASK_TLPM2) == MASK_ALINK2) )
                 {
                     rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_DMA, o_err);
@@ -1187,7 +1199,7 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                     }
 
                     // Read counter do not reset when read.
-                    // Explicitly value 0 written to read counter after reading them. 
+                    // Explicitly value 0 written to read counter after reading them.
                     rc = putScom (G_PMULETS_2A[4], 0, o_err);
                     if ( rc )
                     {
@@ -1209,7 +1221,7 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                     }
 
                     // Read counter do not reset when read.
-                    // Explicitly value 0 written to read counter after reading them. 
+                    // Explicitly value 0 written to read counter after reading them.
                     rc = putScom (G_PMULETS_2A[5], 0, o_err);
                     if ( rc )
                     {
@@ -1224,7 +1236,7 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                     }
                 }
 
-                if ( ((G_CUR_UAV & MASK_TLPM3) == MASK_XLINK3) || 
+                if ( ((G_CUR_UAV & MASK_TLPM3) == MASK_XLINK3) ||
                         ((G_CUR_UAV & MASK_TLPM3) == MASK_ALINK3) )
                 {
                     rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_DMA, o_err);
@@ -1258,7 +1270,7 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                     }
 
                     // Read counter do not reset when read.
-                    // Explicitly value 0 written to read counter after reading them. 
+                    // Explicitly value 0 written to read counter after reading them.
                     rc = putScom (G_PMULETS_2A[6], 0, o_err);
                     if ( rc )
                     {
@@ -1280,7 +1292,7 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                     }
 
                     // Read counter do not reset when read.
-                    // Explicitly value 0 written to read counter after reading them. 
+                    // Explicitly value 0 written to read counter after reading them.
                     rc = putScom (G_PMULETS_2A[7], 0, o_err);
                     if ( rc )
                     {
@@ -1295,9 +1307,9 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                     }
                 }
 
-                if ( ((G_CUR_UAV & MASK_TLPM0) == MASK_XLINK0) || 
-                        ((G_CUR_UAV & MASK_TLPM1) == MASK_XLINK1) || 
-                        ((G_CUR_UAV & MASK_TLPM2) == MASK_XLINK2) || 
+                if ( ((G_CUR_UAV & MASK_TLPM0) == MASK_XLINK0) ||
+                        ((G_CUR_UAV & MASK_TLPM1) == MASK_XLINK1) ||
+                        ((G_CUR_UAV & MASK_TLPM2) == MASK_XLINK2) ||
                         ((G_CUR_UAV & MASK_TLPM3) == MASK_XLINK3) )
                 {
                     post_addr = (uint64_t*) (POST_OFFSET_G2A_X_T | PBA_ENABLE);
@@ -1311,9 +1323,9 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
 
             case G2B://XLINKS and ALINKS - [4:7]. Read scoms based on availability.
                 *L_DBG_GRP = G2B;
-                if ( ((G_CUR_UAV & MASK_TLPM4) == MASK_XLINK4) || 
-                        ((G_CUR_UAV & MASK_TLPM5) == MASK_XLINK5) || 
-                        ((G_CUR_UAV & MASK_TLPM6) == MASK_XLINK6) || 
+                if ( ((G_CUR_UAV & MASK_TLPM4) == MASK_XLINK4) ||
+                        ((G_CUR_UAV & MASK_TLPM5) == MASK_XLINK5) ||
+                        ((G_CUR_UAV & MASK_TLPM6) == MASK_XLINK6) ||
                         ((G_CUR_UAV & MASK_TLPM7) == MASK_XLINK7) )
                 {
                     post_addr = (uint64_t*) (POST_OFFSET_G2B_X_H | PBA_ENABLE);
@@ -1332,7 +1344,7 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                 *post_addr = INC_UPD_COUNT;
                 post_addr++;
 
-                if ( ((G_CUR_UAV & MASK_TLPM4) == MASK_XLINK4) || 
+                if ( ((G_CUR_UAV & MASK_TLPM4) == MASK_XLINK4) ||
                         ((G_CUR_UAV & MASK_TLPM4) == MASK_ALINK4) )
                 {
                     rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_DMA, o_err);
@@ -1366,7 +1378,7 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                     }
 
                     // Read counter do not reset when read.
-                    // Explicitly value 0 written to read counter after reading them. 
+                    // Explicitly value 0 written to read counter after reading them.
                     rc = putScom (G_PMULETS_2B[0], 0, o_err);
                     if ( rc )
                     {
@@ -1388,7 +1400,7 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                     }
 
                     // Read counter do not reset when read.
-                    // Explicitly value 0 written to read counter after reading them. 
+                    // Explicitly value 0 written to read counter after reading them.
                     rc = putScom (G_PMULETS_2B[1], 0, o_err);
                     if ( rc )
                     {
@@ -1403,7 +1415,7 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                     }
                 }
 
-                if ( ((G_CUR_UAV & MASK_TLPM5) == MASK_XLINK5) || 
+                if ( ((G_CUR_UAV & MASK_TLPM5) == MASK_XLINK5) ||
                         ((G_CUR_UAV & MASK_TLPM5) == MASK_ALINK5) )
                 {
                     rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_DMA, o_err);
@@ -1437,7 +1449,7 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                     }
 
                     // Read counter do not reset when read.
-                    // Explicitly value 0 written to read counter after reading them. 
+                    // Explicitly value 0 written to read counter after reading them.
                     rc = putScom (G_PMULETS_2B[2], 0, o_err);
                     if ( rc )
                     {
@@ -1459,7 +1471,7 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                     }
 
                     // Read counter do not reset when read.
-                    // Explicitly value 0 written to read counter after reading them. 
+                    // Explicitly value 0 written to read counter after reading them.
                     rc = putScom (G_PMULETS_2B[3], 0, o_err);
                     if ( rc )
                     {
@@ -1474,7 +1486,7 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                     }
                 }
 
-                if ( ((G_CUR_UAV & MASK_TLPM6) == MASK_XLINK6) || 
+                if ( ((G_CUR_UAV & MASK_TLPM6) == MASK_XLINK6) ||
                         ((G_CUR_UAV & MASK_TLPM6) == MASK_ALINK6) )
                 {
                     rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_DMA, o_err);
@@ -1508,7 +1520,7 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                     }
 
                     // Read counter do not reset when read.
-                    // Explicitly value 0 written to read counter after reading them. 
+                    // Explicitly value 0 written to read counter after reading them.
                     rc = putScom (G_PMULETS_2B[4], 0, o_err);
                     if ( rc )
                     {
@@ -1530,7 +1542,7 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                     }
 
                     // Read counter do not reset when read.
-                    // Explicitly value 0 written to read counter after reading them. 
+                    // Explicitly value 0 written to read counter after reading them.
                     rc = putScom (G_PMULETS_2B[5], 0, o_err);
                     if ( rc )
                     {
@@ -1545,7 +1557,7 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                     }
                 }
 
-                if ( ((G_CUR_UAV & MASK_TLPM7) == MASK_XLINK7) || 
+                if ( ((G_CUR_UAV & MASK_TLPM7) == MASK_XLINK7) ||
                         ((G_CUR_UAV & MASK_TLPM7) == MASK_ALINK7) )
                 {
                     rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_DMA, o_err);
@@ -1579,7 +1591,7 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                     }
 
                     // Read counter do not reset when read.
-                    // Explicitly value 0 written to read counter after reading them. 
+                    // Explicitly value 0 written to read counter after reading them.
                     rc = putScom (G_PMULETS_2B[6], 0, o_err);
                     if ( rc )
                     {
@@ -1601,7 +1613,7 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                     }
 
                     // Read counter do not reset when read.
-                    // Explicitly value 0 written to read counter after reading them. 
+                    // Explicitly value 0 written to read counter after reading them.
                     rc = putScom (G_PMULETS_2B[7], 0, o_err);
                     if ( rc )
                     {
@@ -1616,9 +1628,9 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                     }
                 }
 
-                if ( ((G_CUR_UAV & MASK_TLPM4) == MASK_XLINK4) || 
-                        ((G_CUR_UAV & MASK_TLPM5) == MASK_XLINK5) || 
-                        ((G_CUR_UAV & MASK_TLPM6) == MASK_XLINK6) || 
+                if ( ((G_CUR_UAV & MASK_TLPM4) == MASK_XLINK4) ||
+                        ((G_CUR_UAV & MASK_TLPM5) == MASK_XLINK5) ||
+                        ((G_CUR_UAV & MASK_TLPM6) == MASK_XLINK6) ||
                         ((G_CUR_UAV & MASK_TLPM7) == MASK_XLINK7) )
                 {
                     post_addr = (uint64_t*) (POST_OFFSET_G2B_X_T | PBA_ENABLE);
@@ -1668,7 +1680,7 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                     }
 
                     // Read counter do not reset when read.
-                    // Explicitly value 0 written to read counter after reading them. 
+                    // Explicitly value 0 written to read counter after reading them.
                     rc = putScom (G_PMULETS_3A[0], 0, o_err);
                     if ( rc )
                     {
@@ -1690,7 +1702,7 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                     }
 
                     // Read counter do not reset when read.
-                    // Explicitly value 0 written to read counter after reading them. 
+                    // Explicitly value 0 written to read counter after reading them.
                     rc = putScom (G_PMULETS_3A[1], 0, o_err);
                     if ( rc )
                     {
@@ -1731,7 +1743,7 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                     }
 
                     // Read counter do not reset when read.
-                    // Explicitly value 0 written to read counter after reading them. 
+                    // Explicitly value 0 written to read counter after reading them.
                     rc = putScom (G_PMULETS_3A[2], 0, o_err);
                     if ( rc )
                     {
@@ -1753,7 +1765,7 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                     }
 
                     // Read counter do not reset when read.
-                    // Explicitly value 0 written to read counter after reading them. 
+                    // Explicitly value 0 written to read counter after reading them.
                     rc = putScom (G_PMULETS_3A[3], 0, o_err);
                     if ( rc )
                     {
@@ -1794,7 +1806,7 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                     }
 
                     // Read counter do not reset when read.
-                    // Explicitly value 0 written to read counter after reading them. 
+                    // Explicitly value 0 written to read counter after reading them.
                     rc = putScom (G_PMULETS_3A[4], 0, o_err);
                     if ( rc )
                     {
@@ -1816,7 +1828,7 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                     }
 
                     // Read counter do not reset when read.
-                    // Explicitly value 0 written to read counter after reading them. 
+                    // Explicitly value 0 written to read counter after reading them.
                     rc = putScom (G_PMULETS_3A[5], 0, o_err);
                     if ( rc )
                     {
@@ -1857,7 +1869,7 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                     }
 
                     // Read counter do not reset when read.
-                    // Explicitly value 0 written to read counter after reading them. 
+                    // Explicitly value 0 written to read counter after reading them.
                     rc = putScom (G_PMULETS_3A[6], 0, o_err);
                     if ( rc )
                     {
@@ -1879,7 +1891,7 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                     }
 
                     // Read counter do not reset when read.
-                    // Explicitly value 0 written to read counter after reading them. 
+                    // Explicitly value 0 written to read counter after reading them.
                     rc = putScom (G_PMULETS_3A[7], 0, o_err);
                     if ( rc )
                     {
@@ -1936,7 +1948,7 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                     }
 
                     // Read counter do not reset when read.
-                    // Explicitly value 0 written to read counter after reading them. 
+                    // Explicitly value 0 written to read counter after reading them.
                     rc = putScom (G_PMULETS_3B[0], 0, o_err);
                     if ( rc )
                     {
@@ -1958,7 +1970,7 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                     }
 
                     // Read counter do not reset when read.
-                    // Explicitly value 0 written to read counter after reading them. 
+                    // Explicitly value 0 written to read counter after reading them.
                     rc = putScom (G_PMULETS_3B[1], 0, o_err);
                     if ( rc )
                     {
@@ -1973,7 +1985,7 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                     }
                 }
 
-                if ( (G_CUR_UAV & MASK_TLPM7) == MASK_OCAPI7 ) 
+                if ( (G_CUR_UAV & MASK_TLPM7) == MASK_OCAPI7 )
                 {
                     rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_DMA, o_err);
                     if ( rc )
@@ -1999,7 +2011,7 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                     }
 
                     // Read counter do not reset when read.
-                    // Explicitly value 0 written to read counter after reading them. 
+                    // Explicitly value 0 written to read counter after reading them.
                     rc = putScom (G_PMULETS_3B[2], 0, o_err);
                     if ( rc )
                     {
@@ -2021,7 +2033,7 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                     }
 
                     // Read counter do not reset when read.
-                    // Explicitly value 0 written to read counter after reading them. 
+                    // Explicitly value 0 written to read counter after reading them.
                     rc = putScom (G_PMULETS_3B[3], 0, o_err);
                     if ( rc )
                     {
@@ -2277,11 +2289,11 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                     }
 
                     // Read counter do not reset when read.
-                    // A reset pulse has to be generated by writing 1 (followed by 0) 
-                    // to Bit position 2 for registers: 
-                    // NX.PBI.CQ_WRAP.NXCQ_SCOM.NX_PMU0_CONTROL_REG and 
+                    // A reset pulse has to be generated by writing 1 (followed by 0)
+                    // to Bit position 2 for registers:
+                    // NX.PBI.CQ_WRAP.NXCQ_SCOM.NX_PMU0_CONTROL_REG and
                     // NX.PBI.CQ_WRAP.NXCQ_SCOM.NX_PMU1_CONTROL_REG
-                    // Explicitly value 0 written to read counter after reading them. 
+                    // Explicitly value 0 written to read counter after reading them.
                     rc = getScom (G_PMULETS_4[8], &u3.pmulet, o_err);
                     if ( rc )
                     {
@@ -2326,11 +2338,11 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                     }
 
                     // Read counter do not reset when read.
-                    // A reset pulse has to be generated by writing 1 (followed by 0) 
-                    // to Bit position 2 for registers: 
-                    // NX.PBI.CQ_WRAP.NXCQ_SCOM.NX_PMU0_CONTROL_REG and 
+                    // A reset pulse has to be generated by writing 1 (followed by 0)
+                    // to Bit position 2 for registers:
+                    // NX.PBI.CQ_WRAP.NXCQ_SCOM.NX_PMU0_CONTROL_REG and
                     // NX.PBI.CQ_WRAP.NXCQ_SCOM.NX_PMU1_CONTROL_REG
-                    // Explicitly value 0 written to read counter after reading them. 
+                    // Explicitly value 0 written to read counter after reading them.
                     rc = getScom (G_PMULETS_4[9], &u3.pmulet, o_err);
                     if ( rc )
                     {
@@ -2687,7 +2699,9 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
             break;
     } while (0);
 
+#ifdef DEBUG_24X7
     PK_TRACE ("<< post_pmu_events %d rc: 0x%08X", grp, rc);
+#endif
 
     return rc;
 }
