@@ -314,7 +314,12 @@ void gpe_24x7(ipc_msg_t* cmd, void* arg)
 
             L_configure = true;
             L_cur_speed = *L_speed;
-            G_CUR_UAV   = *L_uav;
+
+            // Disable PHB UAV for DD-1 as PHB scoms are broken 
+            // CQ: SW513154
+            G_CUR_UAV   = *L_uav & ~( MASK_PHB0 | MASK_PHB1 | MASK_PHB2 | MASK_PHB3 | MASK_PHB4 | MASK_PHB5 );
+            //G_CUR_UAV   = *L_uav;
+
             G_CUR_MODE  = *L_mode;
 
             *L_marker = MARKER1;
