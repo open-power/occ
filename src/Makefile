@@ -5,7 +5,7 @@
 #
 # OpenPOWER OnChipController Project
 #
-# Contributors Listed Below - COPYRIGHT 2014,2020
+# Contributors Listed Below - COPYRIGHT 2014,2021
 # [+] International Business Machines Corp.
 #
 #
@@ -110,7 +110,7 @@ endif
 all: tools $(NEEDED_IMAGES) combineImage tracehash
 
 .PHONY: tools
-tools: $(TOOLS_OBJDIR) ppetools ffdcparser wofparser occutil
+tools: $(TOOLS_OBJDIR) ppetools ffdcparser wofparser
 
 .PHONY: ppetools
 ppetools: $(PPETOOLS_OBJDIR)/ppetracepp $(PPETOOLS_OBJDIR)/ppe2fsp $(PPETOOLS_OBJDIR)/tracepp

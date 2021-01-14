@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2016,2020                        */
+/* Contributors Listed Below - COPYRIGHT 2016,2021                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -1229,9 +1229,24 @@ void calculate_core_leakage( void )
                                                                          g_wof->T_racetrack,
                                                                          g_wof->Vdd_chip_p1mv,
                                                                          l_non_core_scaling_line);
-
-        g_wof->single_core_on_vdd_chip_eqs_ua = ( (g_wof->scaled_good_eqs_on_on_vdd_chip_ua - g_wof->scaled_all_off_on_vdd_chip_ua_c)
-                                                 / G_oppb.iddq.good_normal_cores_per_EQs[l_oct_idx] ) + g_wof->single_core_off_vdd_chip_ua_c;
+        // avoid divide by 0
+        if(G_oppb.iddq.good_normal_cores_per_EQs[l_oct_idx] == 0)
+        {
+            g_wof->single_core_on_vdd_chip_eqs_ua = 0;
+        }
+        else
+        {
+            // avoid negative
+            if(g_wof->scaled_good_eqs_on_on_vdd_chip_ua < g_wof->scaled_all_off_on_vdd_chip_ua_c)
+            {
+                g_wof->single_core_on_vdd_chip_eqs_ua = g_wof->single_core_off_vdd_chip_ua_c;
+            }
+            else
+            {
+                g_wof->single_core_on_vdd_chip_eqs_ua = ( (g_wof->scaled_good_eqs_on_on_vdd_chip_ua - g_wof->scaled_all_off_on_vdd_chip_ua_c)
+                                                     / G_oppb.iddq.good_normal_cores_per_EQs[l_oct_idx] ) + g_wof->single_core_off_vdd_chip_ua_c;
+            }
+        }
 
         g_wof->scaled_good_eqs_on_on_vdd_vmin_ua = scale_and_interpolate(G_oppb.iddq.iddq_eqs_good_cores_on_good_caches_on_5ma[l_oct_idx],
                                                                          G_oppb.iddq.avgtemp_all_cores_on_good_caches_on_p5c,
@@ -1240,8 +1255,25 @@ void calculate_core_leakage( void )
                                                                          g_amec_sys.static_wof_data.Vdd_vret_p1mv,
                                                                          l_non_core_scaling_line);
 
-        l_temp32 = ( (g_wof->scaled_good_eqs_on_on_vdd_vmin_ua - g_wof->scaled_all_off_on_vdd_vmin_ua_c)
+        // avoid divide by 0
+        if(G_oppb.iddq.good_normal_cores_per_EQs[l_oct_idx] == 0)
+        {
+             l_temp32 = 0;
+        }
+        else
+        {
+            // avoid negative
+            if(g_wof->scaled_good_eqs_on_on_vdd_vmin_ua < g_wof->scaled_all_off_on_vdd_vmin_ua_c)
+            {
+                l_temp32 = g_wof->single_core_off_vdd_vmin_ua_c;
+            }
+            else
+            {
+                l_temp32 = ( (g_wof->scaled_good_eqs_on_on_vdd_vmin_ua - g_wof->scaled_all_off_on_vdd_vmin_ua_c)
                                                  / G_oppb.iddq.good_normal_cores_per_EQs[l_oct_idx] ) + g_wof->single_core_off_vdd_vmin_ua_c;
+            }
+        }
+
         // need to take away the MMA portion of the single core on at vdd vmin if the Iddq includes the MMA, Retention mode guarantees MMA OFF
         if (G_oppb.iddq.mma_not_active == 0)  // MMA on
         {
@@ -1258,8 +1290,24 @@ void calculate_core_leakage( void )
                                                                          g_wof->Vcs_chip_p1mv,
                                                                          l_non_core_scaling_line);
 
-        g_wof->single_core_on_vcs_chip_eqs_ua = ( (g_wof->scaled_good_eqs_on_on_vcs_chip_ua - g_wof->scaled_all_off_on_vcs_chip_ua_c)
+        // avoid divide by 0
+        if(G_oppb.iddq.good_normal_cores_per_EQs[l_oct_idx] == 0)
+        {
+            g_wof->single_core_on_vcs_chip_eqs_ua = 0;
+        }
+        else
+        {
+            // avoid negative
+            if(g_wof->scaled_good_eqs_on_on_vcs_chip_ua < g_wof->scaled_all_off_on_vcs_chip_ua_c)
+            {
+                g_wof->single_core_on_vcs_chip_eqs_ua = g_wof->single_core_off_vcs_chip_ua_c;
+            }
+            else
+            {
+                g_wof->single_core_on_vcs_chip_eqs_ua = ( (g_wof->scaled_good_eqs_on_on_vcs_chip_ua - g_wof->scaled_all_off_on_vcs_chip_ua_c)
                                                  / G_oppb.iddq.good_normal_cores_per_EQs[l_oct_idx] ) + g_wof->single_core_off_vcs_chip_ua_c;
+            }
+        }
 
         // Begin Loop over ALL cores per octant (l_oct_idx)
         for (l_core_idx = (l_oct_idx * 8); l_core_idx < ((l_oct_idx*8) + 8); l_core_idx++)
