@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2021                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -297,6 +297,7 @@ void amec_health_check_dimm_timeout()
     uint8_t     l_max_dimm_per_membuf = 0; // dimms per membuf
     uint8_t     l_ocm_dts_type_expired_bitmap = 0;
     bool        l_redundancy_lost = FALSE;
+    ERRL_SEVERITY l_severity = ERRL_SEV_PREDICTIVE;
 
     do
     {
@@ -477,6 +478,10 @@ void amec_health_check_dimm_timeout()
                 {
                     if(!l_err)
                     {
+                        // make this info only in simics
+                        if(G_simics_environment)
+                            l_severity = ERRL_SEV_INFORMATIONAL;
+
                         /* @
                          * @errortype
                          * @moduleid    AMEC_HEALTH_CHECK_DIMM_TIMEOUT
@@ -490,7 +495,7 @@ void amec_health_check_dimm_timeout()
                         l_err = createErrl(AMEC_HEALTH_CHECK_DIMM_TIMEOUT,    //modId
                                            FRU_TEMP_TIMEOUT,                  //reasoncode
                                            ERC_AMEC_DIMM_TEMP_TIMEOUT,        //Extended reason code
-                                           ERRL_SEV_PREDICTIVE,               //Severity
+                                           l_severity,                        //Severity
                                            NULL,                              //Trace Buf
                                            DEFAULT_TRACE_SIZE,                //Trace Size
                                            l_temp_timeout,                    //userdata1
@@ -771,6 +776,7 @@ void amec_health_check_membuf_timeout()
     uint32_t    l_callouts_count = 0;
     uint64_t    l_huid;
     static uint16_t L_trace_resume = 0;
+    ERRL_SEVERITY l_severity = ERRL_SEV_PREDICTIVE;
 
     do
     {
@@ -874,6 +880,10 @@ void amec_health_check_membuf_timeout()
 
             if(!l_err)
             {
+                // make this info only in simics
+                if(G_simics_environment)
+                     l_severity = ERRL_SEV_INFORMATIONAL;
+
                 /* @
                  * @errortype
                  * @moduleid    AMEC_HEALTH_CHECK_MEMBUF_TIMEOUT
@@ -888,7 +898,7 @@ void amec_health_check_membuf_timeout()
                 l_err = createErrl(AMEC_HEALTH_CHECK_MEMBUF_TIMEOUT,  //modId
                                    FRU_TEMP_TIMEOUT,                  //reasoncode
                                    ERC_AMEC_MEMBUF_TEMP_TIMEOUT,      //Extended reason code
-                                   ERRL_SEV_PREDICTIVE,               //Severity
+                                   l_severity,                        //Severity
                                    NULL,                              //Trace Buf
                                    DEFAULT_TRACE_SIZE,                //Trace Size
                                    g_amec->thermalmembuf.temp_timeout,  //userdata1
