@@ -147,11 +147,11 @@ void gpe_24x7(ipc_msg_t* cmd, void* arg)
 
             //set code version
             ver.val.major      = 0x1;
-            ver.val.minor      = 0x1;
+            ver.val.minor      = 0x2;
             ver.val.bugfix     = 0x0;
-            ver.val.day        = 0x20;
-            ver.val.month      = 0x11;
-            ver.val.year       = 0x2020;
+            ver.val.day        = 0x18;
+            ver.val.month      = 0x01;
+            ver.val.year       = 0x2021;
             ver.val.spec_major = 0x15;
             ver.val.spec_minor = 0x0;
             *L_version         = ver.value;
@@ -256,7 +256,7 @@ void gpe_24x7(ipc_msg_t* cmd, void* arg)
 
         //4.check for any system config changes via uav
         //---------------------------------------------
-        if ( *L_uav != G_CUR_UAV )
+        if ( (*L_uav & ~MASK_PHB) != G_CUR_UAV )
         {
             L_INIT = true;
             L_PART_INIT = true;
@@ -317,7 +317,7 @@ void gpe_24x7(ipc_msg_t* cmd, void* arg)
 
             // Disable PHB UAV for DD-1 as PHB scoms are broken 
             // CQ: SW513154
-            G_CUR_UAV   = *L_uav & ~( MASK_PHB0 | MASK_PHB1 | MASK_PHB2 | MASK_PHB3 | MASK_PHB4 | MASK_PHB5 );
+            G_CUR_UAV   = *L_uav & ~MASK_PHB;
             //G_CUR_UAV   = *L_uav;
 
             G_CUR_MODE  = *L_mode;
