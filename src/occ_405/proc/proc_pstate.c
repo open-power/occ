@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2021                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -56,6 +56,8 @@ extern uint16_t G_allow_trace_flags;
 extern bool G_gpu_config_done;
 // GPU Present bit mask
 extern uint32_t G_first_proc_gpu_config;
+
+extern uint8_t G_occ_interrupt_type;
 
 //Holds Fmax for ease of proc_freq2pstate calculation = max(fturbo,futurbo)
 uint16_t G_proc_fmax_mhz;
@@ -527,9 +529,10 @@ void check_for_opal_updates(void)
          // regardless of if we notify host we are done with this change
          G_opal_table_update_state = OPAL_TABLE_UPDATE_IDLE;
 
-         if(G_sysConfigData.system_type.kvm)  // only notify if OPAL
+         if ((G_sysConfigData.system_type.kvm) || // if OPAL or non-FSP
+             (G_occ_interrupt_type != FSP_SUPPORTED_OCC))
          {
-              notify_host(INTR_REASON_OPAL_SHARED_MEM_CHANGE);
+             notify_host(INTR_REASON_OPAL_SHARED_MEM_CHANGE);
          }
     }
 
