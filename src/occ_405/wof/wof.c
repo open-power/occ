@@ -1112,10 +1112,6 @@ void read_xgpe_values( void )
     uint16_t l_core_total_off_p1pct = 0;
     // used to trace only once getting an invalid IO power index from XGPE
     static bool L_trace_io_index_invalid = TRUE;
-    // used to trace only once getting invalid IDDQ activity from XGPE
-    static bool L_trace_iddq_activity_invalid = TRUE;
-    // used to keep track of consecutive invalid iddq activity counts
-    static uint16_t L_iddq_activity_invalid[MAX_NUM_CORES] = {0};
 
     // Read and process XGPE Produced WOF values
     l_XgpeWofValues.value = in64(g_amec_sys.static_wof_data.xgpe_values_sram_addr);
@@ -1171,26 +1167,7 @@ void read_xgpe_values( void )
        }
        else
        {
-           // should never happen
            g_wof->p1pct_on[l_core] = 0;
-           L_iddq_activity_invalid[l_core]++;
-           if( (L_trace_iddq_activity_invalid) ||
-               (L_iddq_activity_invalid[l_core] == IDDQ_ACTIVITY_ERROR_COUNT) )
-           {
-               L_trace_iddq_activity_invalid = FALSE;
-               TRAC_ERR("read_xgpe_values: Core[%d] has invalid counts CORECLK_OFF[%d] CORECACHE_OFF[%d]",
-                         l_core,
-                         g_wof->xgpe_activity_values.act_val[l_core][ACT_CNT_IDX_CORECLK_OFF],
-                         g_wof->xgpe_activity_values.act_val[l_core][ACT_CNT_IDX_CORECACHE_OFF]);
-
-               // if this core reached the max error count, log error and disable WOF
-               if(L_iddq_activity_invalid[l_core] == IDDQ_ACTIVITY_ERROR_COUNT)
-               {
-                    set_clear_wof_disabled(SET,
-                                           WOF_RC_IDDQ_ACTIVITY_INVALID,
-                                           ERC_WOF_IDDQ_ACTIVITY_INVALID);
-               }
-           }
        }
 
     } // for each core
