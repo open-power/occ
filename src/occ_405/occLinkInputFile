@@ -98,4 +98,5 @@ INPUT ( amec_amester.o
         threadSch.o
         timer.o
         trac_interface.o
-        wof.o)
+        wof.o
+        dcmcom.o)

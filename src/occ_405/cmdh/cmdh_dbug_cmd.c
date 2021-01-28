@@ -46,6 +46,7 @@
 #include "wof.h"
 #include "gpu.h"
 #include "pstates_occ.H"
+#include "dcmcom.h"
 
 //*************************************************************************/
 // Externs
@@ -1271,6 +1272,16 @@ void dbug_proc_data_dump(const cmdh_fsp_cmd_t * i_cmd_ptr,
     return;
 }
 
+void dbug_wofic_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
+                           cmdh_fsp_rsp_t * i_rsp_ptr)
+{
+    uint64_t * resp64 = (uint64_t *)(i_rsp_ptr->data);
+    *resp64 = g_current_icc_msg.value;
+    i_rsp_ptr->data_length[0] = 0;
+    i_rsp_ptr->data_length[1] = sizeof(g_current_icc_msg);
+    G_rsp_status = ERRL_RC_SUCCESS;
+}
+
 // Function Specification
 //
 // Name:  dbug_parse_cmd
@@ -1394,6 +1405,10 @@ void cmdh_dbug_cmd (const cmdh_fsp_cmd_t * i_cmd_ptr,
 
         case DBUG_DIMM_INJECT:
             cmdh_dbug_dimm_inject( i_cmd_ptr, o_rsp_ptr );
+            break;
+
+        case DBUG_WOFIC_DATA:
+            dbug_wofic_data( i_cmd_ptr, o_rsp_ptr );
             break;
 
         case DBUG_INTERNAL_FLAGS:

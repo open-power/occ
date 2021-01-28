@@ -75,7 +75,7 @@ typedef enum
     DBUG_INJECT_PGPE_ERRL     = 0x13,
     DBUG_INJECT_ERRL          = 0x14,
     DBUG_DIMM_INJECT          = 0x15,
-//  free  = 0x16
+    DBUG_WOFIC_DATA           = 0x16,
 //  free  = 0x17,
 //  free  = 0x18,
 //  free  = 0x19,

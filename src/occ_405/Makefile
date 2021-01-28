@@ -70,7 +70,8 @@ LIB_DIRS =  -L$(OBJDIR) \
             -L$(OBJDIR)/cent \
             -L$(OBJDIR)/mem \
             -L$(OBJDIR)/wof \
-            -L$(OBJDIR)/pgpe
+            -L$(OBJDIR)/pgpe \
+            -L$(OBJDIR)/dcmcom
 
 #default target is to make a binary application image
 .PHONY : all

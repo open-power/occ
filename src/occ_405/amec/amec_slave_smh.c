@@ -60,6 +60,7 @@
 #include <cmdh_fsp_cmds_datacnfg.h>     // For DATA_get_present_cnfgdata()
 #include <sensor_main_memory.h>         // For main_mem_sensors_*()
 #include <sensor_inband_cmd.h>          // For inband_command_*()
+#include <dcmcom.h>                     // For dcmicc_update
 
 //*************************************************************************/
 // Externs
@@ -399,6 +400,9 @@ void amec_slv_common_tasks_pre(void)
         // Over-subscription check
         amec_oversub_check();
     }
+
+    // update the DCM interchip com data
+    dcmicc_update();
 }
 
 // Function Specification

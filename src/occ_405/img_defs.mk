@@ -242,6 +242,7 @@ APP_INCLUDES =  -I$(IMAGE_SRCDIR)/rtls \
                 -I$(IMAGE_SRCDIR)/wof \
                 -I$(IMAGE_SRCDIR)/../common \
                 -I$(IMAGE_SRCDIR)/pgpe \
+                -I$(IMAGE_SRCDIR)/dcmcom \
 
 INCLUDES += $(IMG_INCLUDES) $(GLOBAL_INCLUDES) $(APP_INCLUDES) \
 	-I$(SSX_SRCDIR)/ssx -I$(SSX_SRCDIR)/ppc32 -I$(SSX_SRCDIR)/ppc405 \
