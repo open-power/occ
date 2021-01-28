@@ -68,6 +68,7 @@ extern dcom_slv_inbox_t G_dcom_slv_inbox_rx;
 extern opal_proc_voting_reason_t G_amec_opal_proc_throt_reason;
 extern uint16_t G_proc_fmax_mhz;
 extern GpeRequest G_wof_vrt_req;
+extern uint32_t G_present_cores;
 
 //*************************************************************************
 // Macros
@@ -391,8 +392,9 @@ void amec_slv_common_tasks_pre(void)
     // If sensors were not updated due to EPOW event, skip remaining tasks
     if (amec_update_apss_sensors())
     {
-        // Read the AVS Bus sensors
-        amec_update_avsbus_sensors();
+        // Read the AVS Bus sensors as long as there is at least one core
+        if(G_present_cores)
+            amec_update_avsbus_sensors();
 
         // Over-subscription check
         amec_oversub_check();
@@ -446,8 +448,9 @@ void amec_slv_common_tasks_post(void)
         // Call the OCC slave's performance check
         amec_slv_check_perf();
 
-        // Run WOF Algorithm every tick
-        call_wof_main();
+        // Run WOF Algorithm every tick as long as there is at least one core
+        if(G_present_cores)
+            call_wof_main();
 
         // Call the every tick trace recording if it has been configured via Amester.
         // If not configured, this call will return immediately.

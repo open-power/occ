@@ -1401,27 +1401,28 @@ void hmon_routine()
         commitErrl(&l_err);
     }
 
-    //if we are in observation, characterization, or activate state, then monitor the processor
-    //and VRM Vdd temperatures for timeout conditions
+    //if we are in observation, characterization, or activate state, then check temperatures
     if( (IS_OCC_STATE_OBSERVATION() || IS_OCC_STATE_ACTIVE() || IS_OCC_STATE_CHARACTERIZATION()) &&
         (!SMGR_is_state_transitioning()) )
     {
-        amec_health_check_proc_timeout();
-        amec_health_check_vrm_vdd_temp_timeout();
-    }
+        // if there is at least one core check processor and VRM Vdd temperatures for timeout conditions
+        if(G_present_cores)
+        {
+            amec_health_check_proc_timeout();
+            amec_health_check_vrm_vdd_temp_timeout();
+        }
 
-    //if we are in observation, characterization, or active state with memory temperature data
-    // being collected then monitor the temperature collections for overtemp and timeout conditions
-    if( (IS_OCC_STATE_OBSERVATION() || IS_OCC_STATE_ACTIVE() || IS_OCC_STATE_CHARACTERIZATION()) &&
-        (rtl_task_is_runnable(TASK_ID_MEMORY_DATA)) && (!SMGR_is_state_transitioning()) )
-    {
-        // Check for memory buffer timeout and overtemp errors
-        amec_health_check_membuf_timeout();
-        amec_health_check_membuf_temp();
+        // if memory temperature data is being collected then check memory for overtemp and timeout conditions
+        if(rtl_task_is_runnable(TASK_ID_MEMORY_DATA))
+        {
+            // Check for memory buffer timeout and overtemp errors
+            amec_health_check_membuf_timeout();
+            amec_health_check_membuf_temp();
 
-        // Check for DIMM timeout and overtemp errors
-        amec_health_check_dimm_timeout();
-        amec_health_check_dimm_temp();
+            // Check for DIMM timeout and overtemp errors
+            amec_health_check_dimm_timeout();
+            amec_health_check_dimm_temp();
+        }
     }
 }
 
