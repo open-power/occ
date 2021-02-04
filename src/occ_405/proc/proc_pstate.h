@@ -40,8 +40,29 @@
 //#include "pstates.h"
 
 // The pstate associated with highest possible frequency
-// is always 0 in POWER9.
+// is always 0 in POWER10.
 #define PMAX 0
+
+#define MAX_PARAM_DESCRIPTION_SZ  27 // including NULL
+
+// Parameter IDs
+#define PARAM_ID_MODE     0x01
+#define PARAM_ID_IPS      0x02
+#define PARAM_ID_FMIN     0x03
+#define PARAM_ID_NOMINAL  0x04
+#define PARAM_ID_BASE     0x05
+#define PARAM_ID_SYS_MAX  0x06
+#define PARAM_ID_CHIP_MAX 0x07
+
+// Unique Parameter Value IDs
+#define PARAM_VALUE_ID_NOT_SUPPORTED 0xE0
+
+// Bit masks for parameter table flags byte
+#define PARAM_FLAG_REPORT     0x80  // this parameter should be reported to the OS
+#define PARAM_FLAG_DATA       0x40  // parameter value is in the param_data field
+#define PARAM_FLAG_MASTER     0x20  // parameter only available from master OCC
+#define PARAM_FLAG_FOLD       0x10  // enable processor folding
+
 
 typedef enum
 {
@@ -84,6 +105,21 @@ typedef struct __attribute__ ((packed))
     uint32_t             freq_khz;
 } opal_pstate_data_t;
 
+typedef struct __attribute__ ((packed))
+{
+    uint8_t              param_table_version;
+    uint8_t              param_table_num_entries;
+    uint8_t              reserved[6];
+} param_table_header_t;
+
+typedef struct __attribute__ ((packed))
+{
+    uint8_t              param_id;
+    uint8_t              param_value_id;
+    uint8_t              param_flags;
+    uint16_t             param_data;
+    char                 param_description[MAX_PARAM_DESCRIPTION_SZ];
+} param_table_entry_t;
 
 typedef struct __attribute__ ((packed))
 {
@@ -101,17 +137,20 @@ typedef struct __attribute__ ((packed))
     uint16_t             max_power_cap;
     uint16_t             current_power_cap;
     uint16_t             soft_min_power_cap;
+    uint8_t              current_power_mode; // PHYP only
+    uint8_t              ips_status;         // PHYP only
 } opal_dynamic_t;
 
 // This size must be a multiple of 128
 typedef struct __attribute__ ((packed))
 {
-    opal_dynamic_t       dynamic;       // Dynamic OPAL parameters: 18B
-    uint8_t              pad[110];      // Reserved dynamic space: 110B
+    opal_dynamic_t       dynamic;       // Dynamic OPAL parameters: 20B
+    uint8_t              pad[108];      // Reserved dynamic space: 108B
 } opal_dynamic_table_t __attribute__ ((aligned (128)));
 
 #define PSTATE_ENTRIES 256    // number of generated PSTATES entries in OPAL table
-#define DYNAMIC_MINOR_V_GPU_PRESENCE 1    // OPAL Dynamic minor version for GPU support
+#define MAX_PARAM_TABLE_ENTRIES  25   // number of generated PSTATES entries in OPAL table
+#define DYNAMIC_MINOR_VERSION 2  // Current Dynamic table data minor version 
 
 // This size must be a multiple of 128
 typedef struct __attribute__ ((packed))
@@ -119,7 +158,9 @@ typedef struct __attribute__ ((packed))
     opal_config_t        config;                  // Static OPAL config parameters: 16B
     uint8_t              reserved[8];             // Reserved static space: 8B
     opal_pstate_data_t   pstates[PSTATE_ENTRIES]; // Generated Pstates Table: 2048B
-    uint8_t              pad[104];                // Padding in reserved static space for multiple 128B
+    param_table_header_t param_header;            // Parameter Table Header: 8B
+    param_table_entry_t  param_table[MAX_PARAM_TABLE_ENTRIES]; // Parameter table: 800B
+    uint8_t              pad[64];                 // Padding in reserved static space for multiple 128B
 } opal_static_table_t __attribute__ ((aligned (128)));
 
 
@@ -164,6 +205,9 @@ void populate_opal_static_pstates_data(void);
 
 // Copy config section of  opal static data to opal table
 void populate_opal_static_config_data(void);
+
+// Copy parameter table of opal static data to opal table
+void populate_parameter_table_data(void);
 
 // Copy opal static/dynamic table to mainstore memory at OPAL_OFFSET_HOMER
 void populate_opal_tbl_to_mem(opalDataType opal_data_type);

@@ -41,6 +41,7 @@
 #include <amec_sys.h>
 #include <pstate_pgpe_occ_api.h>
 #include <pstates_occ.H>
+#include "amec_master_smh.h"
 
 //OPAL processor and memory throttle reason coming from the frequency voting boxes.
 extern opal_proc_voting_reason_t G_amec_opal_proc_throt_reason;
@@ -84,7 +85,31 @@ BceRequest G_opal_dynamic_bce_req;
 DMA_BUFFER( opal_static_table_t  G_opal_static_table )  = {{0}};
 BceRequest G_opal_static_bce_req;
 
+// See OCC Interface spec for definition
+param_table_entry_t G_parameter_table[] =
+{
+  /* ID               Value_ID          Flags                                           Data  Description  */
+    {PARAM_ID_MODE,     0xFF, (PARAM_FLAG_REPORT | PARAM_FLAG_MASTER),                    0,  "Power and Performance Mode\0"},
+    {PARAM_ID_MODE,     0x01, (PARAM_FLAG_MASTER),                                        0,  "Disabled\0"},
+    {PARAM_ID_MODE,     0x04, (PARAM_FLAG_MASTER),                                        0,  "Safe\0"},
+    {PARAM_ID_MODE,     0x05, (PARAM_FLAG_MASTER | PARAM_FLAG_FOLD),                      0,  "Static Power Saver\0"},
+    {PARAM_ID_MODE,     0x09, (PARAM_FLAG_MASTER),                                        0,  "Fmax\0"},
+    {PARAM_ID_MODE,     0x0A, (PARAM_FLAG_MASTER),                                        0,  "Dynamic Performance\0"},
+    {PARAM_ID_MODE,     0x0B, (PARAM_FLAG_MASTER),                                        0,  "Fixed Frequency Override\0"},
+    {PARAM_ID_MODE,     0x0C, (PARAM_FLAG_MASTER),                                        0,  "Maximum Performance\0"},
+    {PARAM_ID_IPS,      0xFF, (PARAM_FLAG_REPORT | PARAM_FLAG_MASTER),                    0,  "Idle Power Saver Status\0"},
+    {PARAM_ID_IPS,      0x00, (PARAM_FLAG_MASTER),                                        0,  "Idle Power Saver Disabled\0"},
+    {PARAM_ID_IPS,      0x01, (PARAM_FLAG_MASTER),                                        0,  "Idle Power Saver Enabled\0"},
+    {PARAM_ID_IPS,      0x03, (PARAM_FLAG_MASTER | PARAM_FLAG_FOLD),                      0,  "Idle Power Saver Active\0"},
+    {PARAM_ID_IPS,      PARAM_VALUE_ID_NOT_SUPPORTED, (PARAM_FLAG_MASTER),                0,  "IPS Not Supported\0"},
+    {PARAM_ID_FMIN,     0xFF, (PARAM_FLAG_REPORT | PARAM_FLAG_DATA | PARAM_FLAG_MASTER),  0,  "Min Frequency (MHz)\0"},
+    {PARAM_ID_NOMINAL,  0xFF, (PARAM_FLAG_REPORT | PARAM_FLAG_DATA | PARAM_FLAG_MASTER),  0,  "Nominal Frequency (MHz)\0"},
+    {PARAM_ID_BASE,     0xFF, (PARAM_FLAG_REPORT | PARAM_FLAG_DATA | PARAM_FLAG_MASTER),  0,  "Base Frequency (MHz)\0"},
+    {PARAM_ID_SYS_MAX,  0xFF, (PARAM_FLAG_REPORT | PARAM_FLAG_DATA | PARAM_FLAG_MASTER),  0,  "System Max Frequency (MHz)\0"},
+    {PARAM_ID_CHIP_MAX, 0xFF, (PARAM_FLAG_DATA),                                          0,  "Chip Max Frequency (MHz)\0"},
+};
 
+#define NUM_PARAM_TABLE_ENTRIES sizeof(G_parameter_table) / sizeof(param_table_entry_t)
 
 volatile uint8_t G_opal_table_update_state = OPAL_TABLE_UPDATE_IDLE;
 
@@ -255,6 +280,7 @@ void opal_table_bce_callback( void )
 void populate_opal_dynamic_data()
 {
     memset(&G_opal_dynamic_table, 0, sizeof(G_opal_dynamic_table));
+    G_opal_dynamic_table.dynamic.dynamic_minor_version = DYNAMIC_MINOR_VERSION;
 
     // Dynamic OPAL runtime data
     G_opal_dynamic_table.dynamic.occ_state            = CURRENT_STATE();
@@ -262,11 +288,37 @@ void populate_opal_dynamic_data()
     // Add GPUs presence if this is a system that has GPUs OCC would monitor
     if(G_gpu_config_done)
     {
-        // set minor version to indicate OCC determined GPU presence, this is so
-        // OPAL can tell the difference between no GPUs present and fw that didn't support
-        G_opal_dynamic_table.dynamic.dynamic_minor_version = DYNAMIC_MINOR_V_GPU_PRESENCE;
         G_opal_dynamic_table.dynamic.gpus_present = G_first_proc_gpu_config;
     }
+
+    // Fill in mode and IPS if master
+    if(G_occ_role == OCC_MASTER)
+    {
+        if( isSafeStateRequested() )
+        {
+            G_opal_dynamic_table.dynamic.current_power_mode = OCC_MODE_SAFE;
+            // IPS status left as 0 for safe (will overwrite later to no support if multi node)
+        }
+        else
+        {
+            G_opal_dynamic_table.dynamic.current_power_mode = CURRENT_MODE();
+
+            // If single node (IPS supported) fill in IPS status
+            if(G_sysConfigData.system_type.single)
+            {
+                G_opal_dynamic_table.dynamic.ips_status = G_ips_config_data.iv_ipsEnabled;
+
+                if(AMEC_mst_get_ips_active_status())
+                    G_opal_dynamic_table.dynamic.ips_status |= 0x02; // set active bit
+            }
+        }
+
+        if(!G_sysConfigData.system_type.single)
+        {
+            // IPS not supported on multi-node
+            G_opal_dynamic_table.dynamic.ips_status = PARAM_VALUE_ID_NOT_SUPPORTED;
+        }
+    } // if master
 
     //If safe state is requested then that overrides anything from amec
     if(isSafeStateRequested())
@@ -304,6 +356,7 @@ void populate_opal_static_data()
 
     populate_opal_static_config_data();
     populate_opal_static_pstates_data();
+    populate_parameter_table_data();
 }
 
 
@@ -335,8 +388,7 @@ void populate_opal_static_config_data(void)
 //
 // Name:  populate_opal_static_pstates_data
 //
-// Description: populate the generated pstates table, and maximum
-//              pstates for all possible number of active cores.
+// Description: populate the generated pstates table
 //
 // End Function Specification
 void populate_opal_static_pstates_data(void)
@@ -366,6 +418,71 @@ void populate_opal_static_pstates_data(void)
             G_opal_static_table.pstates[i].valid = 1;
         }
     }
+}
+
+// Function Specification
+//
+// Name:  populate_parameter_table_data
+//
+// Description: populate the parameter table used by PHYP
+//
+// End Function Specification
+void populate_parameter_table_data(void)
+{
+    uint8_t  i;
+    uint8_t  l_num_entries = 0;
+
+    for (i=0; i < NUM_PARAM_TABLE_ENTRIES; i++)
+    {
+        // copy all entries if master OCC
+        // if not master only populate non-master parameters
+        if( (G_occ_role == OCC_MASTER) ||
+            !(G_parameter_table[i].param_flags & PARAM_FLAG_MASTER) )
+        {
+            // Copy this parameter into PHYP shared memory interface
+            // first check if the data field needs to be filled in
+            if(G_parameter_table[i].param_flags & PARAM_FLAG_DATA)
+            {
+                 // fill in the data field
+                 switch (G_parameter_table[i].param_id)
+                 {
+                     case PARAM_ID_FMIN:
+                         G_parameter_table[i].param_data = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MIN_FREQ];
+                         break;
+                     case PARAM_ID_NOMINAL:
+                         G_parameter_table[i].param_data = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_DISABLED];
+                         break;
+                     case PARAM_ID_BASE:
+                         G_parameter_table[i].param_data = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_WOF_BASE];
+                         break;
+                     case PARAM_ID_SYS_MAX:
+                         G_parameter_table[i].param_data = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_VPD_UT];
+                         break;
+                     case PARAM_ID_CHIP_MAX:
+                         G_parameter_table[i].param_data = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_FMAX];
+                         break;
+                     default:
+                         TRAC_ERR("populate_parameter_table_data: Missing data for param id 0x%02X flags[0x%02X]",
+                                   G_parameter_table[i].param_id, G_parameter_table[i].param_flags);
+                         break;
+                 }  // end switch
+            } // end if data field valid
+
+            memcpy(&G_opal_static_table.param_table[l_num_entries].param_id,
+                   &G_parameter_table[i].param_id,
+                   sizeof(param_table_entry_t));
+            l_num_entries++;
+        }
+    }
+
+    // populate the parameter table header
+    G_opal_static_table.param_header.param_table_version = 0x10;
+    G_opal_static_table.param_header.param_table_num_entries = l_num_entries;
+    TRAC_IMP("populate_parameter_table_data: Copying %d / %d parameters to PHYP static data shared memory version[0x%02X]",
+             G_opal_static_table.param_header.param_table_num_entries,
+             NUM_PARAM_TABLE_ENTRIES,
+             G_opal_static_table.param_header.param_table_version);
+
 }
 
 // Function Specification
@@ -472,32 +589,28 @@ void populate_opal_tbl_to_mem(opalDataType opal_data_type)
             G_opal_table_update_state = OPAL_TABLE_UPDATE_IDLE;
         }
 
-        // data in main mem only matters for OPAL so only log error if OPAL
-        if(G_sysConfigData.system_type.kvm)
-        {
-            errlHndl_t l_errl = createErrl(PROC_POP_OPAL_TBL_TO_MEM_MOD,  //modId
-                                           l_reasonCode,                  //reasoncode
-                                           l_extReasonCode,               //Extended reason code
-                                           ERRL_SEV_UNRECOVERABLE,        //Severity
-                                           NULL,                          //Trace Buf
-                                           0,                             //Trace Size
-                                           -l_ssxrc,                      //userdata1
-                                           0);                            //userdata2
+        errlHndl_t l_errl = createErrl(PROC_POP_OPAL_TBL_TO_MEM_MOD,  //modId
+                                       l_reasonCode,                  //reasoncode
+                                       l_extReasonCode,               //Extended reason code
+                                       ERRL_SEV_UNRECOVERABLE,        //Severity
+                                       NULL,                          //Trace Buf
+                                       0,                             //Trace Size
+                                       -l_ssxrc,                      //userdata1
+                                       0);                            //userdata2
 
-            // Callout firmware
-            addCalloutToErrl(l_errl,
-                             ERRL_CALLOUT_TYPE_COMPONENT_ID,
-                             ERRL_COMPONENT_ID_FIRMWARE,
-                             ERRL_CALLOUT_PRIORITY_HIGH);
+        // Callout firmware
+        addCalloutToErrl(l_errl,
+                         ERRL_CALLOUT_TYPE_COMPONENT_ID,
+                         ERRL_COMPONENT_ID_FIRMWARE,
+                         ERRL_CALLOUT_PRIORITY_HIGH);
 
-            // Callout processor
-            addCalloutToErrl(l_errl,
-                             ERRL_CALLOUT_TYPE_HUID,
-                             G_sysConfigData.proc_huid,
-                             ERRL_CALLOUT_PRIORITY_MED);
+        // Callout processor
+        addCalloutToErrl(l_errl,
+                         ERRL_CALLOUT_TYPE_HUID,
+                         G_sysConfigData.proc_huid,
+                         ERRL_CALLOUT_PRIORITY_MED);
 
-            commitErrl(&l_errl);
-        }
+        commitErrl(&l_errl);
     }
     else if(opal_data_type == OPAL_DYNAMIC)
     {
@@ -518,10 +631,13 @@ void check_for_opal_updates(void)
 {
     bool           dynamic_data_change = false;
     bool           l_log_crit_error = false;
+    uint8_t        l_new_ips = 0;
     static uint8_t L_num_bce_checks = 0;
     static bool    L_first_throttle_trace = true;
     static bool    L_first_unthrottle_trace = true;
     static bool    L_first_mem_trace = true;
+    static bool    L_notify_phyp = false;
+    static uint8_t L_trace_ips_change = 4;  // only trace first 4 IPS changes
 
     // check if BCE for previous change finished and now need to notify host
     if(G_opal_table_update_state == OPAL_TABLE_UPDATE_NOTIFY_HOST)
@@ -529,8 +645,10 @@ void check_for_opal_updates(void)
          // regardless of if we notify host we are done with this change
          G_opal_table_update_state = OPAL_TABLE_UPDATE_IDLE;
 
-         if ((G_sysConfigData.system_type.kvm) || // if OPAL or non-FSP
-             (G_occ_interrupt_type != FSP_SUPPORTED_OCC))
+         // only notify PHYP for changes they care about to avoid extra interrupts
+         // data that was added for PHYP don't apply to OPAL so OPAL will not see extra interrupts
+         if( (G_sysConfigData.system_type.kvm) ||
+             (!G_sysConfigData.system_type.kvm && L_notify_phyp) )
          {
              notify_host(INTR_REASON_OPAL_SHARED_MEM_CHANGE);
          }
@@ -567,6 +685,8 @@ void check_for_opal_updates(void)
 
     else  // check if any of the data changed
     {
+        L_notify_phyp = false;
+
         // check if processor throttle status changed if going to safe state check for reset status
         // else just check for any change since not in safe state
         if( isSafeStateRequested() )
@@ -574,6 +694,7 @@ void check_for_opal_updates(void)
             if(G_opal_dynamic_table.dynamic.proc_throt_status != OCC_RESET)
             {
                 dynamic_data_change = true;
+                L_notify_phyp = true;
                 TRAC_INFO("check_for_opal_updates: safe state processor throttle status change - 0x%02X->0x%02X",
                            G_opal_dynamic_table.dynamic.proc_throt_status, G_amec_opal_proc_throt_reason);
             }
@@ -633,8 +754,42 @@ void check_for_opal_updates(void)
         if(G_opal_dynamic_table.dynamic.occ_state != CURRENT_STATE())
         {
             dynamic_data_change = true;
+            L_notify_phyp = true;
             TRAC_INFO("check_for_opal_updates: OCC state change 0x%02X->0x%02X",
                        G_opal_dynamic_table.dynamic.occ_state, CURRENT_STATE());
+        }
+
+        // check for mode change
+        if(G_opal_dynamic_table.dynamic.current_power_mode != CURRENT_MODE())
+        {
+            dynamic_data_change = true;
+            L_notify_phyp = true;
+            TRAC_INFO("check_for_opal_updates: Mode change 0x%02X->0x%02X",
+                       G_opal_dynamic_table.dynamic.current_power_mode, CURRENT_MODE());
+        }
+
+        // check for IPS change on systems that support (single node PHYP systems)
+        if( (G_sysConfigData.system_type.single) &&
+            (!G_sysConfigData.system_type.kvm) )
+        {
+            l_new_ips = G_ips_config_data.iv_ipsEnabled;
+
+            if(AMEC_mst_get_ips_active_status())
+                l_new_ips |= 0x02; // set active bit
+
+            if(G_opal_dynamic_table.dynamic.ips_status != l_new_ips)
+            {
+                dynamic_data_change = true;
+                L_notify_phyp = true;
+
+                if( (G_allow_trace_flags & ALLOW_OPAL_TRACE  ) ||
+                    (L_trace_ips_change) )
+                {
+                     L_trace_ips_change--;
+                    TRAC_INFO("check_for_opal_updates: IPS Status change 0x%02X->0x%02X",
+                               G_opal_dynamic_table.dynamic.ips_status, l_new_ips);
+                }
+            }
         }
 
         // check for change in power cap data must look at slave copy
@@ -661,7 +816,7 @@ void check_for_opal_updates(void)
         }
 
         // check if GPU presence was determined
-        if( (G_opal_dynamic_table.dynamic.dynamic_minor_version != DYNAMIC_MINOR_V_GPU_PRESENCE) &&
+        if( (G_opal_dynamic_table.dynamic.dynamic_minor_version != DYNAMIC_MINOR_VERSION) &&
             (G_gpu_config_done) )
         {
             dynamic_data_change = true;
@@ -689,47 +844,42 @@ void check_for_opal_updates(void)
     }
     else if(l_log_crit_error)
     {
-         // stop trying to update dynamic data, this only really matters on OPAL systems so
-         // only log the error if OPAL
+         // stop trying to update dynamic data
          G_opal_table_update_state = OPAL_TABLE_UPDATE_CRITICAL_ERROR;
 
-         if(G_sysConfigData.system_type.kvm)
-         {
-             // Create and commit error
-             /* @
-              * @errortype
-              * @moduleid    PROC_CHECK_FOR_OPAL_UPDATES_MOD
-              * @reasoncode  OPAL_TABLE_UPDATE_ERROR
-              * @userdata1   0
-              * @userdata2   0
-              * @userdata4   ERC_GENERIC_TIMEOUT
-              * @devdesc     BCE request failure to update dynamic opal table
-              */
-             errlHndl_t l_errl = createErrl(PROC_CHECK_FOR_OPAL_UPDATES_MOD, // Module ID
-                                            OPAL_TABLE_UPDATE_ERROR,         // Reason code
-                                            ERC_GENERIC_TIMEOUT,             // Extended reason code
-                                            ERRL_SEV_UNRECOVERABLE,          // Severity
-                                            NULL,                            // Trace Buffers
-                                            DEFAULT_TRACE_SIZE,              // Trace Size
-                                            0,                               // Userdata1
-                                            0);                              // Userdata2
+         // Create and commit error
+         /* @
+          * @errortype
+          * @moduleid    PROC_CHECK_FOR_OPAL_UPDATES_MOD
+          * @reasoncode  OPAL_TABLE_UPDATE_ERROR
+          * @userdata1   0
+          * @userdata2   0
+          * @userdata4   ERC_GENERIC_TIMEOUT
+          * @devdesc     BCE request failure to update dynamic opal table
+          */
+         errlHndl_t l_errl = createErrl(PROC_CHECK_FOR_OPAL_UPDATES_MOD, // Module ID
+                                          OPAL_TABLE_UPDATE_ERROR,         // Reason code
+                                          ERC_GENERIC_TIMEOUT,             // Extended reason code
+                                          ERRL_SEV_UNRECOVERABLE,          // Severity
+                                          NULL,                            // Trace Buffers
+                                          DEFAULT_TRACE_SIZE,              // Trace Size
+                                          0,                               // Userdata1
+                                          0);                              // Userdata2
 
-            // Callout firmware
-            addCalloutToErrl(l_errl,
-                             ERRL_CALLOUT_TYPE_COMPONENT_ID,
-                             ERRL_COMPONENT_ID_FIRMWARE,
-                             ERRL_CALLOUT_PRIORITY_HIGH);
+         // Callout firmware
+         addCalloutToErrl(l_errl,
+                          ERRL_CALLOUT_TYPE_COMPONENT_ID,
+                          ERRL_COMPONENT_ID_FIRMWARE,
+                          ERRL_CALLOUT_PRIORITY_HIGH);
 
-            // Callout processor
-            addCalloutToErrl(l_errl,
-                             ERRL_CALLOUT_TYPE_HUID,
-                             G_sysConfigData.proc_huid,
-                             ERRL_CALLOUT_PRIORITY_MED);
+         // Callout processor
+         addCalloutToErrl(l_errl,
+                          ERRL_CALLOUT_TYPE_HUID,
+                          G_sysConfigData.proc_huid,
+                          ERRL_CALLOUT_PRIORITY_MED);
 
-             commitErrl(&l_errl);
-         }
+          commitErrl(&l_errl);
     }
-
 }
 
 
