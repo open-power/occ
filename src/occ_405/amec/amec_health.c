@@ -81,7 +81,24 @@ bool G_vrm_vdd_temp_expired = false;
 
 uint64_t amec_mem_get_huid(uint8_t i_membuf, uint8_t i_dimm)
 {
-    return 0;
+    uint64_t l_huid = 0;
+
+    if( (i_membuf < MAX_NUM_OCMBS) && (i_dimm < NUM_DIMMS_PER_OCMB) )
+    {
+        l_huid = (uint64_t)G_sysConfigData.dimm_huids[i_membuf][i_dimm];
+
+        if(l_huid == 0)
+        {
+            TRAC_ERR("amec_mem_get_huid: 0 HUID found for membuf[%02X] dimm[0x%02X]",
+                      i_membuf, i_dimm);
+        }
+    }
+    else
+    {
+        TRAC_ERR("amec_mem_get_huid: membuf[%02X] dimm[0x%02X] out of range",
+                  i_membuf, i_dimm);
+    }
+    return l_huid;
 }
 
 
