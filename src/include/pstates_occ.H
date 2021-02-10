@@ -202,8 +202,20 @@ typedef struct
     //    to which the system is clipped.
     uint32_t            frequency_ceiling_khz;
 
+    // Control to allow for WOF dimension disablement
+    // Bit definition:
+    //   0: VDD
+    //   1: VCS
+    //   2: IO
+    //   3: Ambient condition
+    //   4: Vratio
+    //   5: Reserved
+    //   6: Reserved
+    //   7: Reserved
+    uint8_t             wof_dimension_disable_vector;
+
     // Pad to make the structure an even 1KB
-    uint8_t             pad[36];
+    uint8_t             pad[35];
 
 } __attribute__((aligned(128))) OCCPstateParmBlock_t ;
 

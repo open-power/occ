@@ -507,13 +507,6 @@ void read_wof_header(void)
                 // Initialize wof init state to zero
                 g_amec->wof.wof_init_state  = WOF_DISABLED;
 
-                // Default to no overrides
-                g_amec->wof.vcs_override_index = WOF_VRT_IDX_NO_OVERRIDE;
-                g_amec->wof.vdd_override_index = WOF_VRT_IDX_NO_OVERRIDE;
-                g_amec->wof.io_pwr_override_index = WOF_VRT_IDX_NO_OVERRIDE;
-                g_amec->wof.ambient_override_index = WOF_VRT_IDX_NO_OVERRIDE;
-                g_amec->wof.v_ratio_override_index = WOF_VRT_IDX_NO_OVERRIDE;
-
                 // Initialize OCS increase/decrease amounts to one step
                 g_amec->wof.ocs_increase_ceff = g_amec->static_wof_data.wof_header.vdd_step;
                 g_amec->wof.ocs_decrease_ceff = g_amec->static_wof_data.wof_header.vdd_step;
@@ -529,7 +522,88 @@ void read_wof_header(void)
                                    ( g_amec->static_wof_data.wof_header.amb_cond_step *
                                     (g_amec->static_wof_data.wof_header.amb_cond_size - 1) );
 
+                // Default to no overrides
+                g_amec->wof.vcs_override_index = WOF_VRT_IDX_NO_OVERRIDE;
+                g_amec->wof.vdd_override_index = WOF_VRT_IDX_NO_OVERRIDE;
+                g_amec->wof.io_pwr_override_index = WOF_VRT_IDX_NO_OVERRIDE;
+                g_amec->wof.ambient_override_index = WOF_VRT_IDX_NO_OVERRIDE;
+                g_amec->wof.v_ratio_override_index = WOF_VRT_IDX_NO_OVERRIDE;
 
+                // If a WOF dimension is disabled use TDP default value defined in the WOF Tables header
+                // except for Vratio hardcode to 100%
+                if(G_oppb.wof_dimension_disable_vector & WOF_DIMENSION_DISABLE_VCS)
+                {
+                    if(g_amec->static_wof_data.wof_header.vcs_tdp_ceff_indx < g_amec->static_wof_data.wof_header.vcs_size)
+                    {
+                        g_amec->wof.vcs_override_index = g_amec->static_wof_data.wof_header.vcs_tdp_ceff_indx;
+                        MAIN_TRAC_IMP("read_wof_header: OPPB has VCS disabled using WOF header TDP index 0x%02X",
+                                       g_amec->wof.vcs_override_index);
+                    }
+                    else
+                    {
+                        g_amec->wof.vcs_override_index = g_amec->static_wof_data.wof_header.vcs_size - 1;
+                        MAIN_TRAC_ERR("read_wof_header: OPPB has VCS disabled but TDP index 0x%02X out of range using last index 0x%02X",
+                                       g_amec->static_wof_data.wof_header.vcs_tdp_ceff_indx,
+                                       g_amec->wof.vcs_override_index);
+                    }
+                }
+
+                if(G_oppb.wof_dimension_disable_vector & WOF_DIMENSION_DISABLE_VDD)
+                {
+                    if(g_amec->static_wof_data.wof_header.vdd_tdp_ceff_indx < g_amec->static_wof_data.wof_header.vdd_size)
+                    {
+                        g_amec->wof.vdd_override_index = g_amec->static_wof_data.wof_header.vdd_tdp_ceff_indx;
+                        MAIN_TRAC_IMP("read_wof_header: OPPB has VDD disabled using WOF header TDP index 0x%02X",
+                                       g_amec->wof.vdd_override_index);
+                    }
+                    else
+                    {
+                        g_amec->wof.vdd_override_index = g_amec->static_wof_data.wof_header.vdd_size - 1;
+                        MAIN_TRAC_ERR("read_wof_header: OPPB has VDD disabled but TDP index 0x%02X out of range using last index 0x%02X",
+                                       g_amec->static_wof_data.wof_header.vdd_tdp_ceff_indx,
+                                       g_amec->wof.vdd_override_index);
+                    }
+                }
+
+                if(G_oppb.wof_dimension_disable_vector & WOF_DIMENSION_DISABLE_IO)
+                {
+                    if(g_amec->static_wof_data.wof_header.io_tdp_pwr_indx < g_amec->static_wof_data.wof_header.io_size)
+                    {
+                        g_amec->wof.io_pwr_override_index = g_amec->static_wof_data.wof_header.io_tdp_pwr_indx;
+                        MAIN_TRAC_IMP("read_wof_header: OPPB has IO Pwr disabled using WOF header TDP index 0x%02X",
+                                       g_amec->wof.io_pwr_override_index);
+                    }
+                    else
+                    {
+                        g_amec->wof.io_pwr_override_index = g_amec->static_wof_data.wof_header.io_size - 1;
+                        MAIN_TRAC_ERR("read_wof_header: OPPB has IO Pwr disabled but TDP index 0x%02X out of range using last index 0x%02X",
+                                       g_amec->static_wof_data.wof_header.io_tdp_pwr_indx,
+                                       g_amec->wof.io_pwr_override_index);
+                    }
+                }
+
+                if(G_oppb.wof_dimension_disable_vector & WOF_DIMENSION_DISABLE_AMBIENT)
+                {
+                    if(g_amec->static_wof_data.wof_header.amb_cond_tdp_indx < g_amec->static_wof_data.wof_header.amb_cond_size)
+                    {
+                        g_amec->wof.ambient_override_index = g_amec->static_wof_data.wof_header.amb_cond_tdp_indx;
+                        MAIN_TRAC_IMP("read_wof_header: OPPB has Ambient condition disabled using WOF header TDP index 0x%02X",
+                                       g_amec->wof.ambient_override_index);
+                    }
+                    else
+                    {
+                        g_amec->wof.ambient_override_index = g_amec->static_wof_data.wof_header.amb_cond_size - 1;
+                        MAIN_TRAC_ERR("read_wof_header: OPPB has Ambient disabled but TDP index 0x%02X out of range using last index 0x%02X",
+                                       g_amec->static_wof_data.wof_header.amb_cond_tdp_indx,
+                                       g_amec->wof.ambient_override_index);
+                    }
+                }
+                if(G_oppb.wof_dimension_disable_vector & WOF_DIMENSION_DISABLE_V_RATIO)
+                {
+                    g_amec->wof.v_ratio_override_index = g_amec->static_wof_data.wof_header.vratio_size - 1;
+                    MAIN_TRAC_IMP("read_wof_header: OPPB has Vratio disabled using 100 percent index 0x%02X",
+                                   g_amec->wof.v_ratio_override_index);
+                }
             }while( 0 );
 
         } // else 128 aligned address read WOF header
@@ -1094,7 +1168,6 @@ bool read_oppb_params()
             MAIN_TRAC_INFO("OPPB Ambient Altitude adjust parms reference altitude %dm altitude_temp_adj_degCpm[%d] ",
                            g_amec->static_wof_data.altitude_reference_m,
                            g_amec->static_wof_data.altitude_temp_adj_degCpm);
-
         }
 
     } while (0);

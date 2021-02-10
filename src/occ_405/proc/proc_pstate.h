@@ -53,15 +53,19 @@
 #define PARAM_ID_BASE     0x05
 #define PARAM_ID_SYS_MAX  0x06
 #define PARAM_ID_CHIP_MAX 0x07
+#define PARAM_ID_FOLDING  0x08
 
 // Unique Parameter Value IDs
+#define PARAM_VALUE_ID_DISABLED      0x00
+#define PARAM_VALUE_ID_ENABLED       0x01
+#define PARAM_VALUE_ID_IPS_ACTIVE    0x03
 #define PARAM_VALUE_ID_NOT_SUPPORTED 0xE0
+#define PARAM_VALUE_ID_NONE          0xFF
 
 // Bit masks for parameter table flags byte
 #define PARAM_FLAG_REPORT     0x80  // this parameter should be reported to the OS
 #define PARAM_FLAG_DATA       0x40  // parameter value is in the param_data field
 #define PARAM_FLAG_MASTER     0x20  // parameter only available from master OCC
-#define PARAM_FLAG_FOLD       0x10  // enable processor folding
 
 
 typedef enum
@@ -139,13 +143,14 @@ typedef struct __attribute__ ((packed))
     uint16_t             soft_min_power_cap;
     uint8_t              current_power_mode; // PHYP only
     uint8_t              ips_status;         // PHYP only
+    uint8_t              folding_status;     // PHYP only
 } opal_dynamic_t;
 
 // This size must be a multiple of 128
 typedef struct __attribute__ ((packed))
 {
-    opal_dynamic_t       dynamic;       // Dynamic OPAL parameters: 20B
-    uint8_t              pad[108];      // Reserved dynamic space: 108B
+    opal_dynamic_t       dynamic;       // Dynamic OPAL parameters: 21B
+    uint8_t              pad[107];      // Reserved dynamic space: 107B
 } opal_dynamic_table_t __attribute__ ((aligned (128)));
 
 #define PSTATE_ENTRIES 256    // number of generated PSTATES entries in OPAL table

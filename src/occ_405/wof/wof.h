@@ -54,6 +54,12 @@ extern uint32_t G_max_ceff_ratio;
 #define OCS_PGPE_DIRTY_MASK 0x40
 #define OCS_PGPE_DIRTY_TYPE_MASK 0x20
 
+// Bit masks for wof_dimension_disable_vector
+#define WOF_DIMENSION_DISABLE_VDD     0x80
+#define WOF_DIMENSION_DISABLE_VCS     0x40
+#define WOF_DIMENSION_DISABLE_IO      0x20
+#define WOF_DIMENSION_DISABLE_AMBIENT 0x10
+#define WOF_DIMENSION_DISABLE_V_RATIO 0x08
 
 //******************************************************************************
 // WOF Reason Code Masks

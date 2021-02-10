@@ -88,25 +88,26 @@ BceRequest G_opal_static_bce_req;
 // See OCC Interface spec for definition
 param_table_entry_t G_parameter_table[] =
 {
-  /* ID               Value_ID          Flags                                           Data  Description  */
-    {PARAM_ID_MODE,     0xFF, (PARAM_FLAG_REPORT | PARAM_FLAG_MASTER),                    0,  "Power and Performance Mode\0"},
-    {PARAM_ID_MODE,     0x01, (PARAM_FLAG_MASTER),                                        0,  "Disabled\0"},
-    {PARAM_ID_MODE,     0x04, (PARAM_FLAG_MASTER),                                        0,  "Safe\0"},
-    {PARAM_ID_MODE,     0x05, (PARAM_FLAG_MASTER | PARAM_FLAG_FOLD),                      0,  "Static Power Saver\0"},
-    {PARAM_ID_MODE,     0x09, (PARAM_FLAG_MASTER),                                        0,  "Fmax\0"},
-    {PARAM_ID_MODE,     0x0A, (PARAM_FLAG_MASTER),                                        0,  "Dynamic Performance\0"},
-    {PARAM_ID_MODE,     0x0B, (PARAM_FLAG_MASTER),                                        0,  "Fixed Frequency Override\0"},
-    {PARAM_ID_MODE,     0x0C, (PARAM_FLAG_MASTER),                                        0,  "Maximum Performance\0"},
-    {PARAM_ID_IPS,      0xFF, (PARAM_FLAG_REPORT | PARAM_FLAG_MASTER),                    0,  "Idle Power Saver Status\0"},
-    {PARAM_ID_IPS,      0x00, (PARAM_FLAG_MASTER),                                        0,  "Idle Power Saver Disabled\0"},
-    {PARAM_ID_IPS,      0x01, (PARAM_FLAG_MASTER),                                        0,  "Idle Power Saver Enabled\0"},
-    {PARAM_ID_IPS,      0x03, (PARAM_FLAG_MASTER | PARAM_FLAG_FOLD),                      0,  "Idle Power Saver Active\0"},
-    {PARAM_ID_IPS,      PARAM_VALUE_ID_NOT_SUPPORTED, (PARAM_FLAG_MASTER),                0,  "IPS Not Supported\0"},
-    {PARAM_ID_FMIN,     0xFF, (PARAM_FLAG_REPORT | PARAM_FLAG_DATA | PARAM_FLAG_MASTER),  0,  "Min Frequency (MHz)\0"},
-    {PARAM_ID_NOMINAL,  0xFF, (PARAM_FLAG_REPORT | PARAM_FLAG_DATA | PARAM_FLAG_MASTER),  0,  "Nominal Frequency (MHz)\0"},
-    {PARAM_ID_BASE,     0xFF, (PARAM_FLAG_REPORT | PARAM_FLAG_DATA | PARAM_FLAG_MASTER),  0,  "Base Frequency (MHz)\0"},
-    {PARAM_ID_SYS_MAX,  0xFF, (PARAM_FLAG_REPORT | PARAM_FLAG_DATA | PARAM_FLAG_MASTER),  0,  "System Max Frequency (MHz)\0"},
-    {PARAM_ID_CHIP_MAX, 0xFF, (PARAM_FLAG_DATA),                                          0,  "Chip Max Frequency (MHz)\0"},
+  /* ID                 Value_ID              Flags                                     Data  Description  */
+    {PARAM_ID_MODE,     PARAM_VALUE_ID_NONE, (PARAM_FLAG_REPORT | PARAM_FLAG_MASTER),     0,  "Power and Performance Mode\0"},
+    {PARAM_ID_MODE,     OCC_MODE_DISABLED, (PARAM_FLAG_MASTER),                           0,  "Disabled\0"},
+    {PARAM_ID_MODE,     OCC_MODE_SAFE, (PARAM_FLAG_MASTER),                               0,  "Safe\0"},
+    {PARAM_ID_MODE,     OCC_MODE_PWRSAVE, (PARAM_FLAG_MASTER),                            0,  "Static Power Saver\0"},
+    {PARAM_ID_MODE,     OCC_MODE_FMAX, (PARAM_FLAG_MASTER),                               0,  "Fmax\0"},
+    {PARAM_ID_MODE,     OCC_MODE_DYN_PERF, (PARAM_FLAG_MASTER),                           0,  "Dynamic Performance\0"},
+    {PARAM_ID_MODE,     OCC_MODE_FFO, (PARAM_FLAG_MASTER),                                0,  "Fixed Frequency Override\0"},
+    {PARAM_ID_MODE,     OCC_MODE_MAX_PERF, (PARAM_FLAG_MASTER),                           0,  "Maximum Performance\0"},
+    {PARAM_ID_IPS,      PARAM_VALUE_ID_NONE, (PARAM_FLAG_REPORT | PARAM_FLAG_MASTER),     0,  "Idle Power Saver Status\0"},
+    {PARAM_ID_IPS,      PARAM_VALUE_ID_DISABLED, (PARAM_FLAG_MASTER),                     0,  "Idle Power Saver Disabled\0"},
+    {PARAM_ID_IPS,      PARAM_VALUE_ID_ENABLED, (PARAM_FLAG_MASTER),                      0,  "Idle Power Saver Enabled\0"},
+    {PARAM_ID_IPS,      PARAM_VALUE_ID_IPS_ACTIVE, (PARAM_FLAG_MASTER),                   0,  "Idle Power Saver Active\0"},
+    {PARAM_ID_IPS,      PARAM_VALUE_ID_NOT_SUPPORTED, (PARAM_FLAG_MASTER),                0,  "Not Supported\0"},
+    {PARAM_ID_FMIN,     PARAM_VALUE_ID_NONE, (PARAM_FLAG_REPORT | PARAM_FLAG_DATA | PARAM_FLAG_MASTER),  0,  "Min Frequency (MHz)\0"},
+    {PARAM_ID_NOMINAL,  PARAM_VALUE_ID_NONE, (PARAM_FLAG_REPORT | PARAM_FLAG_DATA | PARAM_FLAG_MASTER),  0,  "Nominal Frequency (MHz)\0"},
+    {PARAM_ID_BASE,     PARAM_VALUE_ID_NONE, (PARAM_FLAG_REPORT | PARAM_FLAG_DATA | PARAM_FLAG_MASTER),  0,  "Base Frequency (MHz)\0"},
+    {PARAM_ID_SYS_MAX,  PARAM_VALUE_ID_NONE, (PARAM_FLAG_REPORT | PARAM_FLAG_DATA | PARAM_FLAG_MASTER),  0,  "System Max Frequency (MHz)\0"},
+    {PARAM_ID_CHIP_MAX, PARAM_VALUE_ID_NONE, (PARAM_FLAG_DATA),                                          0,  "Chip Max Frequency (MHz)\0"},
+    {PARAM_ID_FOLDING,  PARAM_VALUE_ID_NONE, (PARAM_FLAG_REPORT | PARAM_FLAG_MASTER),                    0,  "Processor Folding Status\0"},
 };
 
 #define NUM_PARAM_TABLE_ENTRIES sizeof(G_parameter_table) / sizeof(param_table_entry_t)
@@ -306,10 +307,15 @@ void populate_opal_dynamic_data()
             // If single node (IPS supported) fill in IPS status
             if(G_sysConfigData.system_type.single)
             {
-                G_opal_dynamic_table.dynamic.ips_status = G_ips_config_data.iv_ipsEnabled;
-
-                if(AMEC_mst_get_ips_active_status())
-                    G_opal_dynamic_table.dynamic.ips_status |= 0x02; // set active bit
+                if(G_ips_config_data.iv_ipsEnabled)
+		{
+                    if(AMEC_mst_get_ips_active_status())
+                        G_opal_dynamic_table.dynamic.ips_status = PARAM_VALUE_ID_IPS_ACTIVE;
+                    else // IPS enabled but not active
+                        G_opal_dynamic_table.dynamic.ips_status = PARAM_VALUE_ID_ENABLED;
+		}
+                else // IPS disabled
+                    G_opal_dynamic_table.dynamic.ips_status = PARAM_VALUE_ID_DISABLED;
             }
         }
 
@@ -318,6 +324,18 @@ void populate_opal_dynamic_data()
             // IPS not supported on multi-node
             G_opal_dynamic_table.dynamic.ips_status = PARAM_VALUE_ID_NOT_SUPPORTED;
         }
+
+        // Enable folding if in SPS or if IPS is active
+        if( (CURRENT_MODE() == OCC_MODE_PWRSAVE) ||
+            (G_opal_dynamic_table.dynamic.ips_status == PARAM_VALUE_ID_IPS_ACTIVE) )
+        {
+            G_opal_dynamic_table.dynamic.folding_status = PARAM_VALUE_ID_ENABLED;
+        }
+        else
+        {
+            G_opal_dynamic_table.dynamic.folding_status = PARAM_VALUE_ID_DISABLED;
+        }
+
     } // if master
 
     //If safe state is requested then that overrides anything from amec
@@ -791,6 +809,9 @@ void check_for_opal_updates(void)
                 }
             }
         }
+
+        // don't need to check for processor folding change here since reasons (mode/IPS) for folding change
+        // were already checked and will already trigger an update
 
         // check for change in power cap data must look at slave copy
         // do NOT use G_master_pcap_data as that is not populated on slaves

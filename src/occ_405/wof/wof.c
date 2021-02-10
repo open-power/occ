@@ -497,7 +497,7 @@ void wof_main( void )
     }
 
     // Calculate how many steps from the beginning for each VRT parm that is not currently
-    // being overwritten by mfg select VRT command
+    // disabled (checked once in read_wof_header) or being overwritten by mfg select VRT command
     if(g_wof->vcs_override_index == WOF_VRT_IDX_NO_OVERRIDE)
     {
         g_wof->vcs_step_from_start =
