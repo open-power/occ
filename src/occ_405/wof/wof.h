@@ -209,190 +209,190 @@ typedef struct __attribute__ ((packed))
     // [374] Contains Vcs Vratio average roundup, read from OCC-PGPE shared SRAM
     uint16_t v_ratio_vcs;
     // [376] Contains the numerator for calculating ceff_ratio_vdd
-    uint32_t ceff_ratio_vdd_numerator;
-    // [380] Contains the denominator for calculating ceff_ratio_vdd
-    uint32_t ceff_ratio_vdd_denominator;
-    // [384] Contains the calculated effective capacitance ratio for vdd
+    uint64_t ceff_ratio_vdd_numerator;
+    // [384] Contains the denominator for calculating ceff_ratio_vdd
+    uint64_t ceff_ratio_vdd_denominator;
+    // [392] Contains the calculated effective capacitance ratio for vdd
     uint32_t ceff_ratio_vdd;
-    // [388] Contains the numerator for calculating ceff_ratio_vcs
-    uint32_t ceff_ratio_vcs_numerator;
-    // [392] Contains the denominator for calculating ceff_ratio_vcs
-    uint32_t ceff_ratio_vcs_denominator;
-    // [396] Contains the calculated effective capacitance ratio for vcs
+    // [396] Contains the numerator for calculating ceff_ratio_vcs
+    uint64_t ceff_ratio_vcs_numerator;
+    // [404] Contains the denominator for calculating ceff_ratio_vcs
+    uint64_t ceff_ratio_vcs_denominator;
+    // [412] Contains the calculated effective capacitance ratio for vcs
     uint32_t ceff_ratio_vcs;
-    // [400]
+    // [416]
     uint8_t Vdd_chip_index;
-    // [401] Contains degrees C ambient is changed by to account for higher/lower altitudes than reference altitude this may be lowering ambient
+    // [417] Contains degrees C ambient is changed by to account for higher/lower altitudes than reference altitude this may be lowering ambient
     int8_t ambient_adj_for_altitude;
-    // [402] Altitude in meters 0xffff indicates not available
+    // [418] Altitude in meters 0xffff indicates not available
     uint16_t altitude;
-    // [404]
+    // [420]
     uint8_t Vcs_chip_index;
-    // [405]
-    uint32_t scaled_all_off_off_vdd_chip_ua_nc;
-    // [409]
-    uint32_t scaled_all_off_off_vcs_chip_ua_nc;
-    // [413]
-    uint32_t racetrack_only_vcs_chip_ua;
-    // [417]
-    uint32_t scaled_all_off_off_vdd_chip_ua_c;
     // [421]
-    uint32_t scaled_all_off_off_vdd_vmin_ua_c;
+    uint32_t scaled_all_off_off_vdd_chip_ua_nc;
     // [425]
-    uint32_t racetrack_only_vdd_chip_ua;
+    uint32_t scaled_all_off_off_vcs_chip_ua_nc;
     // [429]
-    uint32_t scaled_all_off_on_vdd_chip_ua_c;
+    uint32_t racetrack_only_vcs_chip_ua;
     // [433]
-    uint32_t scaled_all_off_on_vdd_vmin_ua_c;
+    uint32_t scaled_all_off_off_vdd_chip_ua_c;
     // [437]
-    uint32_t single_core_off_vdd_chip_ua_c;
+    uint32_t scaled_all_off_off_vdd_vmin_ua_c;
     // [441]
-    uint32_t single_cache_off_vdd_chip_ua_c;
+    uint32_t racetrack_only_vdd_chip_ua;
     // [445]
-    uint32_t single_core_off_vdd_vmin_ua_c;
+    uint32_t scaled_all_off_on_vdd_chip_ua_c;
     // [449]
-    uint32_t single_cache_on_vdd_chip_ua_c;
+    uint32_t scaled_all_off_on_vdd_vmin_ua_c;
     // [453]
-    uint32_t scaled_all_off_off_vdd_vmin_ua_nc;
+    uint32_t single_core_off_vdd_chip_ua_c;
     // [457]
-    uint32_t scaled_all_off_on_vdd_chip_ua_nc;
+    uint32_t single_cache_off_vdd_chip_ua_c;
     // [461]
-    uint32_t scaled_all_off_on_vdd_vmin_ua_nc;
+    uint32_t single_core_off_vdd_vmin_ua_c;
     // [465]
-    uint32_t single_core_off_vdd_chip_ua_nc;
+    uint32_t single_cache_on_vdd_chip_ua_c;
     // [469]
-    uint32_t single_cache_off_vdd_chip_ua_nc;
+    uint32_t scaled_all_off_off_vdd_vmin_ua_nc;
     // [473]
-    uint32_t single_core_off_vdd_vmin_ua_nc;
+    uint32_t scaled_all_off_on_vdd_chip_ua_nc;
     // [477]
-    uint32_t single_cache_on_vdd_chip_ua_nc;
+    uint32_t scaled_all_off_on_vdd_vmin_ua_nc;
     // [481]
-    uint32_t scaled_all_off_off_vcs_chip_ua_c;
+    uint32_t single_core_off_vdd_chip_ua_nc;
     // [485]
-    uint32_t scaled_all_off_on_vcs_chip_ua_c;
+    uint32_t single_cache_off_vdd_chip_ua_nc;
     // [489]
-    uint32_t single_core_off_vcs_chip_ua_c;
+    uint32_t single_core_off_vdd_vmin_ua_nc;
     // [493]
-    uint32_t single_cache_off_vcs_chip_ua_c;
+    uint32_t single_cache_on_vdd_chip_ua_nc;
     // [497]
-    uint32_t single_cache_on_vcs_chip_ua_c;
+    uint32_t scaled_all_off_off_vcs_chip_ua_c;
     // [501]
-    uint32_t scaled_all_off_on_vcs_chip_ua_nc;
+    uint32_t scaled_all_off_on_vcs_chip_ua_c;
     // [505]
-    uint32_t single_core_off_vcs_chip_ua_nc;
+    uint32_t single_core_off_vcs_chip_ua_c;
     // [509]
-    uint32_t single_cache_off_vcs_chip_ua_nc;
+    uint32_t single_cache_off_vcs_chip_ua_c;
     // [513]
-    uint32_t single_cache_on_vcs_chip_ua_nc;
+    uint32_t single_cache_on_vcs_chip_ua_c;
     // [517]
-    uint32_t scaled_good_eqs_on_on_vdd_chip_ua;
+    uint32_t scaled_all_off_on_vcs_chip_ua_nc;
     // [521]
-    uint32_t single_core_on_vdd_chip_eqs_ua;
+    uint32_t single_core_off_vcs_chip_ua_nc;
     // [525]
-    uint32_t scaled_good_eqs_on_on_vdd_vmin_ua;
+    uint32_t single_cache_off_vcs_chip_ua_nc;
     // [529]
-    uint32_t single_core_on_vdd_vmin_eqs_ua;
+    uint32_t single_cache_on_vcs_chip_ua_nc;
     // [533]
-    uint32_t scaled_good_eqs_on_on_vcs_chip_ua;
+    uint32_t scaled_good_eqs_on_on_vdd_chip_ua;
     // [537]
+    uint32_t single_core_on_vdd_chip_eqs_ua;
+    // [541]
+    uint32_t scaled_good_eqs_on_on_vdd_vmin_ua;
+    // [545]
+    uint32_t single_core_on_vdd_vmin_eqs_ua;
+    // [549]
+    uint32_t scaled_good_eqs_on_on_vcs_chip_ua;
+    // [553]
     uint32_t single_core_on_vcs_chip_eqs_ua;
-    // [541] The current ping pong buffer SRAM address being used by PGPE
+    // [557] The current ping pong buffer SRAM address being used by PGPE
     uint32_t curr_ping_pong_buf;
-    // [545] The next ping pong buffer SRAM address to be used by PGPE if IPC request succeeds
+    // [561] The next ping pong buffer SRAM address to be used by PGPE if IPC request succeeds
     uint32_t next_ping_pong_buf;
-    // [549] Most recently calculated vrt Main Memory address
+    // [565] Most recently calculated vrt Main Memory address
     uint32_t vrt_main_mem_addr;
-    // [553] if vrt_main_mem_addr needed to be 128B aligned this is number of tables in the real table is
+    // [569] if vrt_main_mem_addr needed to be 128B aligned this is number of tables in the real table is
     // 0 if no adjustement required
     uint32_t vrt_bce_table_offset;
-    // [557] The state of the wof routine during initialization. states defined above
+    // [573] The state of the wof routine during initialization. states defined above
     uint8_t wof_init_state;
-    // [558] Return code of IPC request called from callback func
+    // [574] Return code of IPC request called from callback func
     uint32_t gpe_req_rc;
-    // [562] Return code of failed control message
+    // [578] Return code of failed control message
     uint32_t control_ipc_rc;
-    // [566] Keeps track of whether we got an error in wof_vrt_callback to be
+    // [582] Keeps track of whether we got an error in wof_vrt_callback to be
     // logged later
     uint8_t vrt_callback_error;
-    // [567] Keeps track of whether the 405 was the one who disabled WOF on the PGPE
+    // [583] Keeps track of whether the 405 was the one who disabled WOF on the PGPE
     uint8_t pgpe_wof_off;
-    // [568] Keeps track of whether or not the PGPE can enable WOF
+    // [584] Keeps track of whether or not the PGPE can enable WOF
     uint8_t pgpe_wof_disabled;
-    // [569] Offset into main memory with the beginning of the wof vrt data as base
+    // [585] Offset into main memory with the beginning of the wof vrt data as base
     uint32_t vrt_mm_offset;
-    // [573] Return code returned from a bad VRT request
+    // [589] Return code returned from a bad VRT request
     uint8_t wof_vrt_req_rc;
-    // [574] scaled Vdd TDP AC current to the number of active cores represented by v_ratio_vdd
+    // [590] scaled Vdd TDP AC current to the number of active cores represented by v_ratio_vdd
     uint32_t c_ratio_iac_tdp_vddp1ma;
-    // [578] Average frequency (read from PGPE) used in ceff ratio vdd and vcs calculations
+    // [594] Average frequency (read from PGPE) used in ceff ratio vdd and vcs calculations
     uint32_t avg_freq_mhz;
-    // [582] scaled Vcs TDP AC current to the number of active cores represented by v_ratio_vcs
+    // [598] scaled Vcs TDP AC current to the number of active cores represented by v_ratio_vcs
     uint32_t c_ratio_iac_tdp_vcsp1ma;
-    // [586] Contains iac_tdp_vcs(@avg F) interpolated from OPPB operating points
+    // [602] Contains iac_tdp_vcs(@avg F) interpolated from OPPB operating points
     uint32_t iac_tdp_vcs_100ua;
-    // [590] Holds the state of various async operations relating to sending a VRT
+    // [606] Holds the state of various async operations relating to sending a VRT
     uint8_t vrt_state;
 
-    // [591] PGPE Produced WOF Values
-    uint64_t pgpe_wof_values_dw0;
-    // [599] PGPE Produced WOF Values
-    uint64_t pgpe_wof_values_dw1;
     // [607] PGPE Produced WOF Values
-    uint64_t pgpe_wof_values_dw2;
+    uint64_t pgpe_wof_values_dw0;
     // [615] PGPE Produced WOF Values
+    uint64_t pgpe_wof_values_dw1;
+    // [623] PGPE Produced WOF Values
+    uint64_t pgpe_wof_values_dw2;
+    // [631] PGPE Produced WOF Values
     uint64_t pgpe_wof_values_dw3;
-    // [623] Overcurrent status dirty bits. Set by PGPE read from OCC Flag 0 register
+    // [639] Overcurrent status dirty bits. Set by PGPE read from OCC Flag 0 register
     uint8_t  ocs_dirty;
 
-    // [624] XGPE Produced WOF Values
+    // [640] XGPE Produced WOF Values
     uint64_t xgpe_wof_values_dw0;
 
     // the following two vars can be changed via debug command
-    // [632] Fixed CeffRatio increase addr defined in attribute
+    // [648] Fixed CeffRatio increase addr defined in attribute
     uint16_t ocs_increase_ceff;
-    // [634] Fixed CeffRatio decrease addr defined in attribute
+    // [650] Fixed CeffRatio decrease addr defined in attribute
     uint16_t ocs_decrease_ceff;
 
-    // [636] OCC calculated CeffRatio Addr
+    // [652] OCC calculated CeffRatio Addr
     uint16_t vdd_oc_ceff_add;
-    // [638] Final adjusted CeffRatio from previous tick
+    // [654] Final adjusted CeffRatio from previous tick
     uint16_t vdd_ceff_ratio_adj_prev;
-    // [640] count of number of times not dirty (type 0)
+    // [656] count of number of times not dirty (type 0)
     uint32_t ocs_not_dirty_count;
-    // [644] count of not dirty (type 1) this counter should be 0
+    // [660] count of not dirty (type 1) this counter should be 0
     uint32_t ocs_not_dirty_type1_count;
-    // [648] count of number of times dirty with type hold (0)
+    // [664] count of number of times dirty with type hold (0)
     uint32_t ocs_dirty_type0_count;
-    // [652] count of number of times dirty with type act (1)
+    // [668] count of number of times dirty with type act (1)
     uint32_t ocs_dirty_type1_count;
-    // [656] Ambient condition used to determine VRT
+    // [672] Ambient condition used to determine VRT
     uint32_t ambient_condition;
-    // [660] #V index 1 used for ceff ratio frequency interpolation
+    // [676] #V index 1 used for ceff ratio frequency interpolation
     uint8_t  vpd_index1;
-    // [661] #V index 2 used for ceff ratio frequency interpolation
+    // [677] #V index 2 used for ceff ratio frequency interpolation
     uint8_t  vpd_index2;
-    // [662] Vdd voltage average TDP by interpolating #V voltage@(avg F)
+    // [678] Vdd voltage average TDP by interpolating #V voltage@(avg F)
     uint32_t vdd_avg_tdp_100uv;
-    // [666] Racetrack AC current average TDP by interpolating VPD current@(avg F)
+    // [682] Racetrack AC current average TDP by interpolating VPD current@(avg F)
     uint32_t tdp_idd_rt_ac_100ua;
-    // [670] Vcs voltage average TDP by interpolating #V voltage@(avg F)
+    // [686] Vcs voltage average TDP by interpolating #V voltage@(avg F)
     uint32_t vcs_avg_tdp_100uv;
-    // [674] value of Vdd_chip_p1mv^1.3
+    // [690] value of Vdd_chip_p1mv^1.3
     uint32_t vddp1mv_exp1p3;
-    // [678] value of Vcs_chip_p1mv^1.3
+    // [694] value of Vcs_chip_p1mv^1.3
     uint32_t vcsp1mv_exp1p3;
-    // [682] value of vcs_avg_tdp_100uv^1.3
+    // [698] value of vcs_avg_tdp_100uv^1.3
     uint32_t tdpvcsp1mv_exp1p3;
-    // [686] value of vdd_avg_tdp_100uv^1.3
+    // [702] value of vdd_avg_tdp_100uv^1.3
     uint32_t tdpvddp1mv_exp1p3;
 
-    // [690] Stop state activity counters read from XGPE
+    // [706] Stop state activity counters read from XGPE
     iddq_activity_t  xgpe_activity_values;  // 128 bytes = 32 cores * 4 bytes
-    // [818] Inidcates if VRT was interpolated based on ambient
+    // [834] Inidcates if VRT was interpolated based on ambient
     uint8_t interpolate_ambient_vrt;
-    // [819] VRT contents last sent to PGPE
+    // [835] VRT contents last sent to PGPE
     uint8_t VRT[16];
-} amec_wof_t;  // 835 bytes total
+} amec_wof_t;  // 851 bytes total
 
 // Structure used in g_amec to hold static WOF data
 typedef struct __attribute__ ((packed, aligned(128)))

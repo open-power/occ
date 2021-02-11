@@ -1425,7 +1425,7 @@ uint32_t calculate_exp_1p3(uint32_t i_x)
 void calculate_ceff_ratio_vcs( void )
 {
     uint32_t l_ceff_ratio = 0;
-    uint64_t l_numerator_x10000 = 0; // ceff_ratio_vcs_numerator * 10000 to get 0.01% unit
+    uint64_t l_temp64 = 0;
 
     do
     {
@@ -1470,7 +1470,10 @@ void calculate_ceff_ratio_vcs( void )
         // Calculate ceff ratio numerator = (g_wof->iac_vcs_100ua * g_wof->vcs_avg_tdp_100uv^1.3)
         // calculate_exp_1p3() requires input to be in 0.1mv (100uv) unit
         g_wof->tdpvcsp1mv_exp1p3 = calculate_exp_1p3(g_wof->vcs_avg_tdp_100uv);
-        g_wof->ceff_ratio_vcs_numerator = g_wof->iac_vcs_100ua * g_wof->tdpvcsp1mv_exp1p3;
+        l_temp64 = (uint64_t)((uint64_t)g_wof->iac_vcs_100ua * (uint64_t)g_wof->tdpvcsp1mv_exp1p3);
+
+        // *10000 to get unit 0.01% (100->1.0% x 100->0.01%)
+        g_wof->ceff_ratio_vcs_numerator = (uint64_t)(l_temp64 * 10000);
 
        // Scale TDP AC current to the number of active cores represented by v_ratio_vcs
        // 2nd parm TRUE to indicate use v_ratio_vcs
@@ -1496,10 +1499,9 @@ void calculate_ceff_ratio_vcs( void )
         else
         {
             // Finally put pieces together and calculate Vcs ceff ratio
-            g_wof->ceff_ratio_vcs_denominator = g_wof->c_ratio_iac_tdp_vcsp1ma * g_wof->vcsp1mv_exp1p3;
-            // *10000 to get unit 0.01% (100->1.0% x 100->0.01%)
-            l_numerator_x10000 = g_wof->ceff_ratio_vcs_numerator * 10000;
-            l_ceff_ratio = (uint32_t)(l_numerator_x10000 / g_wof->ceff_ratio_vcs_denominator);
+            g_wof->ceff_ratio_vcs_denominator = (uint64_t)((uint64_t)g_wof->c_ratio_iac_tdp_vcsp1ma * (uint64_t)g_wof->vcsp1mv_exp1p3);
+            l_temp64 = (uint64_t)(g_wof->ceff_ratio_vcs_numerator / g_wof->ceff_ratio_vcs_denominator);
+            l_ceff_ratio = (uint32_t)l_temp64;
 
             // roundup to 1.0%
             if(l_ceff_ratio % 100)
@@ -1533,7 +1535,7 @@ void calculate_ceff_ratio_vdd( void )
 {
     uint32_t l_raw_ceff_ratio = 0;
     uint32_t l_temp32 = 0;
-    uint64_t l_numerator_x10000 = 0; // ceff_ratio_vdd_numerator * 10000 to get 0.01% unit
+    uint64_t l_temp64 = 0;
 
     static bool L_trace_error = TRUE;
 
@@ -1595,7 +1597,10 @@ void calculate_ceff_ratio_vdd( void )
         // Calculate ceff ratio numerator = (g_wof->iac_vdd_100ua * g_wof->vdd_avg_tdp_100uv^1.3)
         // calculate_exp_1p3() requires input to be in 0.1mv (100uv) unit
         g_wof->tdpvddp1mv_exp1p3 = calculate_exp_1p3(g_wof->vdd_avg_tdp_100uv);
-        g_wof->ceff_ratio_vdd_numerator = g_wof->iac_vdd_100ua * g_wof->tdpvddp1mv_exp1p3;
+        l_temp64 = (uint64_t)((uint64_t)g_wof->iac_vdd_100ua * (uint64_t)g_wof->tdpvddp1mv_exp1p3);
+
+        // *10000 to get unit 0.01% (100->1.0% x 100->0.01%)
+        g_wof->ceff_ratio_vdd_numerator = (uint64_t)(l_temp64 * 10000);
 
         // remove racetrack component
         if(g_wof->iac_tdp_vdd_100ua > g_wof->tdp_idd_rt_ac_100ua)
@@ -1639,10 +1644,9 @@ void calculate_ceff_ratio_vdd( void )
         else
         {
             // Finally put pieces together to calculate raw ceff ratio
-            g_wof->ceff_ratio_vdd_denominator = g_wof->c_ratio_iac_tdp_vddp1ma * g_wof->vddp1mv_exp1p3;
-            // *10000 to get unit 0.01% (100->1.0% x 100->0.01%)
-            l_numerator_x10000 = g_wof->ceff_ratio_vdd_numerator * 10000;
-            l_raw_ceff_ratio = (uint32_t)(l_numerator_x10000 / g_wof->ceff_ratio_vdd_denominator);
+            g_wof->ceff_ratio_vdd_denominator = (uint64_t)((uint64_t)g_wof->c_ratio_iac_tdp_vddp1ma * (uint64_t)g_wof->vddp1mv_exp1p3);
+            l_temp64 = (uint64_t)(g_wof->ceff_ratio_vdd_numerator / g_wof->ceff_ratio_vdd_denominator);
+            l_raw_ceff_ratio = (uint32_t)l_temp64;
 
             // roundup to 1.0%
             if(l_raw_ceff_ratio % 100)
@@ -1677,11 +1681,21 @@ uint32_t multiply_v_ratio( uint32_t i_value, bool i_vcs )
     // (v_ratio / 0xFFFF) * i_value
     // *16384 to avoid floating point math 16384 chosen so can /16384 with >>14
     // (v_ratio*16384/0xffff) * i_value / 16384
+    uint64_t l_temp64 = 0;
 
     if(i_vcs)
-        return ((((g_wof->v_ratio_vcs*16384)/0xFFFF) * i_value) >> 14);
+    {
+        l_temp64 = (uint64_t)g_wof->v_ratio_vcs * 16384;
+    }
     else
-        return ((((g_wof->v_ratio_vdd*16384)/0xFFFF) * i_value) >> 14);
+    {
+        l_temp64 = (uint64_t)g_wof->v_ratio_vdd * 16384;
+    }
+    l_temp64 = l_temp64 / 0xFFFF;
+    l_temp64 = l_temp64 * i_value;
+    l_temp64 = l_temp64 >> 14;
+    return ((uint32_t)l_temp64);
+
 }
 
 /**
@@ -1692,8 +1706,8 @@ uint32_t multiply_v_ratio( uint32_t i_value, bool i_vcs )
 void calculate_AC_currents( void )
 {
     // sensor readings are in 0.01A (10mA) unit *100 to get 100uA
-    uint16_t l_idd_avg_100ua = g_wof->curvdd_sensor * 100;
-    uint16_t l_ics_avg_100ua = g_wof->curvcs_sensor * 100;
+    uint32_t l_idd_avg_100ua = g_wof->curvdd_sensor * 100;
+    uint32_t l_ics_avg_100ua = g_wof->curvcs_sensor * 100;
 
     // avoid negative AC currents
     if(l_idd_avg_100ua > g_wof->iddq_100ua)

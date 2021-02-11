@@ -28,7 +28,7 @@
 #include <string.h>
 #include "parser_common.h"
 
-#define WOF_DATA_SIZE 818
+#define WOF_DATA_SIZE 851
 // NOTE: This tool is to be used when WOF Dynamic data is dumped by the OCC, and currently
 //       only accepts input files in binary format.
 
@@ -105,15 +105,19 @@ int main(int argc, char** argv)
     printf("iac_vdd_100ua: 0x%08X\n", get_uint32(wof_file));
     printf("iac_vcs_100ua: 0x%08X\n", get_uint32(wof_file));
     printf("iac_tdp_vdd_100ua: 0x%08X\n", get_uint32(wof_file));
-    printf("v_ratio_vdd: %d\n", get_uint16(wof_file));
+    printf("v_ratio_vdd: 0x%04X\n", get_uint16(wof_file));
     printf("f_clip_ps: %d\n", fgetc(wof_file));
-    printf("v_ratio_vcs: %d\n", get_uint16(wof_file));
-    printf("ceff_ratio_vdd_numerator: 0x%08X\n", get_uint32(wof_file));
-    printf("ceff_ratio_vdd_denominator: 0x%08X\n", get_uint32(wof_file));
-    printf("ceff_ratio_vdd: 0x%08X\n", get_uint32(wof_file));
-    printf("ceff_ratio_vcs_numerator: 0x%08X\n", get_uint32(wof_file));
-    printf("ceff_ratio_vcs_denominator: 0x%08X\n", get_uint32(wof_file));
-    printf("ceff_ratio_vcs: 0x%08X\n", get_uint32(wof_file));
+    printf("v_ratio_vcs: 0x%04X\n", get_uint16(wof_file));
+    printf("ceff_ratio_vdd_numerator: 0x%08X", get_uint32(wof_file));
+    printf("%08X\n", get_uint32(wof_file));
+    printf("ceff_ratio_vdd_denominator: 0x%08X", get_uint32(wof_file));
+    printf("%08X\n", get_uint32(wof_file));
+    printf("ceff_ratio_vdd in 0.01 percent: %d\n", get_uint32(wof_file));
+    printf("ceff_ratio_vcs_numerator: 0x%08X", get_uint32(wof_file));
+    printf("%08X\n", get_uint32(wof_file));
+    printf("ceff_ratio_vcs_denominator: 0x%08X", get_uint32(wof_file));
+    printf("%08X\n", get_uint32(wof_file));
+    printf("ceff_ratio_vcs in 0.01 percent: %d\n", get_uint32(wof_file));
     printf("Vdd_chip_index: %d\n", fgetc(wof_file));
     printf("ambient_adj_for_altitude: %d\n", fgetc(wof_file));
     printf("altitude: %d\n", get_uint16(wof_file));
@@ -224,6 +228,11 @@ int main(int argc, char** argv)
         printf("     ACT_CNT_IDX_MMA_OFF: %d\n", fgetc(wof_file));
         printf("     ACT_CNT_IDX_CORECACHE_OFF: %d\n", fgetc(wof_file));
     }
+    printf("interpolate_ambient_vrt? %d\n", fgetc(wof_file));
+    printf("VRT Contents: 0x%08X\n", get_uint32(wof_file));
+    printf("              0x%08X\n", get_uint32(wof_file));
+    printf("              0x%08X\n", get_uint32(wof_file));
+    printf("              0x%08X\n", get_uint32(wof_file));
 
     // Close the file
     if(wof_file != NULL)

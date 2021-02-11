@@ -777,39 +777,41 @@ void check_for_opal_updates(void)
                        G_opal_dynamic_table.dynamic.occ_state, CURRENT_STATE());
         }
 
-        // check for mode change
-        if(G_opal_dynamic_table.dynamic.current_power_mode != CURRENT_MODE())
-        {
-            dynamic_data_change = true;
-            L_notify_phyp = true;
-            TRAC_INFO("check_for_opal_updates: Mode change 0x%02X->0x%02X",
-                       G_opal_dynamic_table.dynamic.current_power_mode, CURRENT_MODE());
-        }
-
-        // check for IPS change on systems that support (single node PHYP systems)
-        if( (G_sysConfigData.system_type.single) &&
-            (!G_sysConfigData.system_type.kvm) )
-        {
-            l_new_ips = G_ips_config_data.iv_ipsEnabled;
-
-            if(AMEC_mst_get_ips_active_status())
-                l_new_ips |= 0x02; // set active bit
-
-            if(G_opal_dynamic_table.dynamic.ips_status != l_new_ips)
+        if(G_occ_role == OCC_MASTER)
+	{
+            // check for mode change
+            if(G_opal_dynamic_table.dynamic.current_power_mode != CURRENT_MODE())
             {
                 dynamic_data_change = true;
                 L_notify_phyp = true;
+                TRAC_INFO("check_for_opal_updates: Mode change 0x%02X->0x%02X",
+                           G_opal_dynamic_table.dynamic.current_power_mode, CURRENT_MODE());
+            }
 
-                if( (G_allow_trace_flags & ALLOW_OPAL_TRACE  ) ||
-                    (L_trace_ips_change) )
+            // check for IPS change on systems that support (single node PHYP systems)
+            if( (G_sysConfigData.system_type.single) &&
+                (!G_sysConfigData.system_type.kvm) )
+            {
+                l_new_ips = G_ips_config_data.iv_ipsEnabled;
+
+                if(AMEC_mst_get_ips_active_status())
+                    l_new_ips |= 0x02; // set active bit
+
+                if(G_opal_dynamic_table.dynamic.ips_status != l_new_ips)
                 {
-                     L_trace_ips_change--;
-                    TRAC_INFO("check_for_opal_updates: IPS Status change 0x%02X->0x%02X",
-                               G_opal_dynamic_table.dynamic.ips_status, l_new_ips);
+                    dynamic_data_change = true;
+                    L_notify_phyp = true;
+
+                    if( (G_allow_trace_flags & ALLOW_OPAL_TRACE  ) ||
+                        (L_trace_ips_change) )
+                    {
+                        L_trace_ips_change--;
+                        TRAC_INFO("check_for_opal_updates: IPS Status change 0x%02X->0x%02X",
+                                   G_opal_dynamic_table.dynamic.ips_status, l_new_ips);
+                    }
                 }
             }
-        }
-
+	} // if master
         // don't need to check for processor folding change here since reasons (mode/IPS) for folding change
         // were already checked and will already trigger an update
 
