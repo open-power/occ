@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2021                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -76,7 +76,7 @@ typedef enum
     DBUG_INJECT_ERRL          = 0x14,
     DBUG_DIMM_INJECT          = 0x15,
     DBUG_WOFIC_DATA           = 0x16,
-//  free  = 0x17,
+    DBUG_SET_SENSOR_GROUP     = 0x17,
 //  free  = 0x18,
 //  free  = 0x19,
 //  free  = 0x1A,
@@ -282,6 +282,26 @@ typedef struct __attribute__ ((packed))
     uint64_t    inject_mask;
     uint8_t     checksum[CMDH_FSP_CHECKSUM_SIZE];
 }cmdh_dbug_dimm_inject_rsp_t;
+
+// DBUG_SET_SENSOR_GROUP command struct
+typedef struct __attribute__ ((packed))
+{
+    struct   cmdh_fsp_cmd_header;  // Standard command header
+    uint8_t  sub_cmd;              // Debug sub-command
+    uint8_t  group_num;            // Sensor group to assign sensors to
+    uint8_t  num_sensors;          // Number of Sensors in list
+    uint16_t gsids[MAX_NUMBER_SENSORS_PER_DEBUG_GROUP];  // List of Sensors to assign to group_num
+} cmdh_dbug_set_sensor_group_cmd_t;
+
+// DBUG_SET_SENSOR_GROUP response struct
+typedef struct __attribute__ ((packed))
+{
+    struct        cmdh_fsp_rsp_header;               // Standard response header
+    uint16_t      group0_gsids[MAX_NUMBER_SENSORS_PER_DEBUG_GROUP];  // Sensors in group 0
+    uint16_t      group1_gsids[MAX_NUMBER_SENSORS_PER_DEBUG_GROUP];  // Sensors in group 1
+    uint16_t      group2_gsids[MAX_NUMBER_SENSORS_PER_DEBUG_GROUP];  // Sensors in group 2
+    uint8_t       checksum[CMDH_FSP_CHECKSUM_SIZE];  // Checksum
+} cmdh_dbug_set_sensor_group_rsp_t;
 
 // DBUG_INTERNAL_FLAGS command struct
 typedef struct __attribute__ ((packed))

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2021                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -54,6 +54,10 @@
 #define MAX_AMEC_SENSORS            710
 #define VECTOR_SENSOR_DEFAULT_VAL   0xFF
 
+// for debug sensor group command
+#define MAX_NUMBER_SENSORS_PER_DEBUG_GROUP 150
+#define NUM_SENSOR_DEBUG_GROUPS            3
+
 // AMEC_SENSOR_TYPE_INVALID can not be used to identify sensor type.
 // A bit vector mask is used to specify sensor types that AMESTER is
 // probed for, and hence when a new sensor type is defined, it has to
@@ -74,6 +78,9 @@ typedef enum
     AMEC_SENSOR_TYPE_POWER      = 0x0080,
     AMEC_SENSOR_TYPE_PERF       = 0x0200,
     AMEC_SENSOR_TYPE_WOF        = 0x0400,
+    AMEC_SENSOR_TYPE_DEBUG_GROUP0    = 0x2000,   // special indication for group sensors set in debug command
+    AMEC_SENSOR_TYPE_DEBUG_GROUP1    = 0x4000,   // special indication for group sensors set in debug command
+    AMEC_SENSOR_TYPE_DEBUG_GROUP2    = 0x8000,   // special indication for group sensors set in debug command
     AMEC_SENSOR_TYPE_ALL        = 0xffff,
 }AMEC_SENSOR_TYPE;
 // Changes to sensor type bits would require changes to select sensor groups command

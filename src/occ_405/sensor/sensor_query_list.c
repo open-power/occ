@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2020                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2021                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -38,29 +38,10 @@
 #include <sensor_main_memory.h>
 
 //*************************************************************************/
-// Externs
-//*************************************************************************/
-
-//*************************************************************************/
-// Macros
-//*************************************************************************/
-
-//*************************************************************************/
-// Defines/Enums
-//*************************************************************************/
-
-//*************************************************************************/
-// Structures
-//*************************************************************************/
-
-//*************************************************************************/
 // Globals
 //*************************************************************************/
 extern bool G_smf_mode;
-
-//*************************************************************************/
-// Function Prototypes
-//*************************************************************************/
+extern uint16_t G_sensor_debug_group[NUM_SENSOR_DEBUG_GROUPS][MAX_NUMBER_SENSORS_PER_DEBUG_GROUP];
 
 //*************************************************************************/
 // Functions
@@ -130,6 +111,36 @@ void printAllSensors(void)
     {
         printSensorInfo(i);
     }
+}
+
+// Function Specification
+//
+//  Name: sensorInDebugGroup
+//
+//  Description: Returns true if given sensor (Gsid) is found in the given sensor debug group
+//
+// End Function Specification
+bool sensorInDebugGroup(uint16_t i_gsid, uint8_t i_group)
+{
+    int i;
+
+    if(i_group >= NUM_SENSOR_DEBUG_GROUPS)
+    {
+        TRAC_ERR("Invalid group number %d", i_group);
+        return FALSE;
+    }
+
+    // Loop through given sensor group to check if sensor is in it
+    for(i=0; ((i < MAX_NUMBER_SENSORS_PER_DEBUG_GROUP) && (G_sensor_debug_group[i_group][i] != NUMBER_OF_SENSORS_IN_LIST)); i++)
+    {
+        if(i_gsid == G_sensor_debug_group[i_group][i])
+        {
+            return TRUE;
+        }
+    }
+
+    // sensor not in group
+    return FALSE;
 }
 
 /*****************************************************************************/
@@ -214,22 +225,40 @@ errlHndl_t querySensorList(const querySensorListArg_t * i_argPtr)
                     continue;
                 }
 
-                // If user is NOT looking for any sensor type and input type,
-                // does not match the current sensor type, then don't include
-                // current sensor in the query list
-                if ((i_type & G_sensor_info[l_cnt].sensor.type) == 0)
+                // Check if user requested ONLY reading group sensors.  Group sensors are set
+                // by debug group sensors command.  Must check for other bits set as AMESTER
+                // does a query 0xFFFF to get all sensors
+                if((i_type & (~(AMEC_SENSOR_TYPE_DEBUG_GROUP0 | AMEC_SENSOR_TYPE_DEBUG_GROUP1 | AMEC_SENSOR_TYPE_DEBUG_GROUP2))) == 0)
                 {
-                    continue;
-                }
+                    // Don't return sensor if it is not in the group being requested
+                    if(!(((i_type & AMEC_SENSOR_TYPE_DEBUG_GROUP0) && (sensorInDebugGroup((uint16_t)l_cnt, 0))) ||
+                         ((i_type & AMEC_SENSOR_TYPE_DEBUG_GROUP1) && (sensorInDebugGroup((uint16_t)l_cnt, 1))) ||
+                         ((i_type & AMEC_SENSOR_TYPE_DEBUG_GROUP2) && (sensorInDebugGroup((uint16_t)l_cnt, 2)))) )
+                    {
+                        continue;
+                    }
 
-                // If user is NOT looking for any sensor location and input loc,
-                // does not match the current sensor location, then don't include
-                // current sensor in the query list
-                if ((i_loc & G_sensor_info[l_cnt].sensor.location) == 0)
+                }
+                else // process based on other bits set
                 {
-                    continue;
-                }
 
+                    // If user is NOT looking for any sensor type and input type,
+                    // does not match the current sensor type, then don't include
+                    // current sensor in the query list
+                    if ((i_type & G_sensor_info[l_cnt].sensor.type) == 0)
+                    {
+                        continue;
+                    }
+
+                    // If user is NOT looking for any sensor location and input loc,
+                    // does not match the current sensor location, then don't include
+                    // current sensor in the query list
+                    if ((i_loc & G_sensor_info[l_cnt].sensor.location) == 0)
+                    {
+                        continue;
+                    }
+
+                }
                 if (G_smf_mode)
                 {
                     // Prevent adding sensors that are not supported in SMF mode

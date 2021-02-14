@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2021                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -33,6 +33,8 @@
 #include <sensor_service_codes.h> // sensor module ids
 #include <trac.h>                 // Trace macros
 #include <get_tod_structs.h>      // For TOD_VALUE_UNKNOWN
+
+uint16_t G_sensor_debug_group[NUM_SENSOR_DEBUG_GROUPS][MAX_NUMBER_SENSORS_PER_DEBUG_GROUP];
 
 #define UINT16_MIN                  0
 
@@ -637,6 +639,12 @@ void sensor_init_all(void)
 
       commitErrl(&l_err);
   }
+
+  // init sensor debug groups to no sensors
+  memset(&G_sensor_debug_group[0][0],0x0,sizeof(G_sensor_debug_group));
+  G_sensor_debug_group[0][0] = NUMBER_OF_SENSORS_IN_LIST;
+  G_sensor_debug_group[1][0] = NUMBER_OF_SENSORS_IN_LIST;
+  G_sensor_debug_group[2][0] = NUMBER_OF_SENSORS_IN_LIST;
 
   TRAC_IMP("Sensor Initialization Complete");
 }

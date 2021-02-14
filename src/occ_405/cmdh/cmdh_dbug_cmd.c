@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2020                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2021                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -53,6 +53,7 @@
 //*************************************************************************/
 extern gpe_shared_data_t G_shared_gpe_data;
 extern OCCPstateParmBlock_t G_oppb;
+extern uint16_t G_sensor_debug_group[NUM_SENSOR_DEBUG_GROUPS][MAX_NUMBER_SENSORS_PER_DEBUG_GROUP];
 
 //*************************************************************************/
 // Macros
@@ -1284,6 +1285,82 @@ void dbug_wofic_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
 // Function Specification
 //
+// Name: cmdh_dbug_set_sensor_group
+//
+// Description: Assigns sensors to a debug sensor group
+//
+// End Function Specification
+void cmdh_dbug_set_sensor_group(const cmdh_fsp_cmd_t * i_cmd_ptr,
+                               cmdh_fsp_rsp_t * o_rsp_ptr)
+{
+    const cmdh_dbug_set_sensor_group_cmd_t * l_cmd_ptr = (cmdh_dbug_set_sensor_group_cmd_t*) i_cmd_ptr;
+    cmdh_dbug_set_sensor_group_rsp_t *       l_rsp_ptr = (cmdh_dbug_set_sensor_group_rsp_t*) o_rsp_ptr;
+    uint8_t                                 l_rc = ERRL_RC_SUCCESS;    // Assume succeeds
+    uint16_t                                l_resp_data_length = 0;
+    uint16_t                                l_group_length = 2 * MAX_NUMBER_SENSORS_PER_DEBUG_GROUP;
+    uint8_t                                 l_group_num = l_cmd_ptr->group_num;
+    uint8_t                                 l_num_sensors = l_cmd_ptr->num_sensors;
+    uint16_t                                l_data_length = CMDH_DATALEN_FIELD_UINT16(l_cmd_ptr);
+    int i;
+
+    l_data_length -= 3; // -3 for sub_cmd, group_num and num_sensors;
+
+    // Make sure command and response pointer are valid
+    if ((l_cmd_ptr == NULL) || (l_rsp_ptr == NULL))
+    {
+        l_rc = ERRL_RC_INTERNAL_FAIL;
+    }
+    else
+    {
+        // make sure data length is valid
+        if( (l_num_sensors >= MAX_NUMBER_SENSORS_PER_DEBUG_GROUP) ||
+            (l_data_length != (l_num_sensors*2)) )
+        {
+             TRAC_ERR("cmdh_dbug_set_sensor_group: invalid length[%d] for l_num_sensors[%d] expected[%d]",
+                       l_data_length, l_num_sensors, (l_num_sensors*2));
+             l_rc = ERRL_RC_INVALID_CMD_LEN;
+        }
+        // Make sure group number is valid
+        else if(l_group_num >= NUM_SENSOR_DEBUG_GROUPS)
+        {
+             TRAC_ERR("cmdh_dbug_set_sensor_group: group number[%d] must be less than[%d]",
+                       l_group_num, NUM_SENSOR_DEBUG_GROUPS);
+            l_rc = ERRL_RC_INVALID_DATA;
+        }
+        else
+        {
+            memset(&G_sensor_debug_group[l_group_num][0], 0, l_group_length);
+            // Copy sensor ids to the group
+            for(i=0; i < l_num_sensors; i++)
+            {
+                G_sensor_debug_group[l_group_num][i] = l_cmd_ptr->gsids[i];
+            }
+
+            // if less than max then set the last entry to max sensor gsid to indicate end of group
+            if(i < MAX_NUMBER_SENSORS_PER_DEBUG_GROUP)
+                G_sensor_debug_group[l_group_num][i] = NUMBER_OF_SENSORS_IN_LIST;
+
+            // return contents of all sensor groups
+            memcpy(&(l_rsp_ptr->group0_gsids), &(G_sensor_debug_group[0][0]), l_group_length);
+            l_resp_data_length += l_group_length;
+            memcpy(&(l_rsp_ptr->group1_gsids), &(G_sensor_debug_group[1][0]), l_group_length);
+            l_resp_data_length += l_group_length;
+            memcpy(&(l_rsp_ptr->group2_gsids), &(G_sensor_debug_group[2][0]), l_group_length);
+            l_resp_data_length += l_group_length;
+        }
+    }
+
+    // Populate the response data header
+    if (l_rsp_ptr != NULL)
+    {
+        l_rsp_ptr->data_length[0] = CONVERT_UINT16_UINT8_HIGH(l_resp_data_length);
+        l_rsp_ptr->data_length[1] = CONVERT_UINT16_UINT8_LOW(l_resp_data_length);
+    }
+    G_rsp_status = l_rc;
+}
+
+// Function Specification
+//
 // Name:  dbug_parse_cmd
 //
 // Description: Process debug commands
@@ -1409,6 +1486,10 @@ void cmdh_dbug_cmd (const cmdh_fsp_cmd_t * i_cmd_ptr,
 
         case DBUG_WOFIC_DATA:
             dbug_wofic_data( i_cmd_ptr, o_rsp_ptr );
+            break;
+
+        case DBUG_SET_SENSOR_GROUP:
+            cmdh_dbug_set_sensor_group( i_cmd_ptr, o_rsp_ptr );
             break;
 
         case DBUG_INTERNAL_FLAGS:
