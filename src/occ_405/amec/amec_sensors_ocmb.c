@@ -97,13 +97,13 @@ void amec_update_ocmb_sensors(uint8_t i_membuf)
 
 // Function Specification
 //
-// Name: decode_ocmb_dts
+// Name: decode_ocmb_dimm_dts
 //
 // Description: Decode DTS readings from OCMB
 //
 // End Function Specification
 
-int32_t decode_ocmb_dts(uint16_t i_reading)
+int32_t decode_ocmb_dimm_dts(uint16_t i_reading)
 {
     int32_t l_dimm_temp = 0;
 
@@ -184,9 +184,9 @@ void amec_update_ocmb_dimm_dts_sensors(OcmbMemData * i_sensor_cache, uint8_t i_m
 
         fru_temp_t* l_fru = &l_membuf_ptr->dimm_temps[k];
 
-        // The dts reading is mangled
+        // The dimm dts reading is mangled
         // see ekb/chips/ocmb/explorer/procedures/hwp/memory/lab/sdk/temp_sensor/exp_temperature_sensor_utils.H
-        l_dimm_temp = decode_ocmb_dts(i_sensor_cache->memdts[k]);
+        l_dimm_temp = decode_ocmb_dimm_dts(i_sensor_cache->memdts[k]);
 
         l_prev_temp = l_fru->cur_temp;
         if(!l_prev_temp)
@@ -330,7 +330,9 @@ void amec_update_ocmb_dts_sensors(OcmbMemData * i_sensor_cache, uint8_t i_membuf
     int32_t  l_prev_temp;
     static uint8_t L_ran_once[MAX_NUM_OCMBS] = {FALSE};
 
-    l_sens_temp = decode_ocmb_dts(i_sensor_cache->ubdts0);
+    // The ubdts0 is in 1/100 deg C.
+    // Add 50 for rounding
+    l_sens_temp = (50l + i_sensor_cache->ubdts0)/100l;
 
     amec_membuf_t* l_membuf_ptr = &g_amec->proc[0].memctl[i_membuf].membuf;
     fru_temp_t* l_fru = &l_membuf_ptr->membuf_hottest;
