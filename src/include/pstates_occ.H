@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2019,2020                        */
+/* Contributors Listed Below - COPYRIGHT 2019,2021                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -214,8 +214,17 @@ typedef struct
     //   7: Reserved
     uint8_t             wof_dimension_disable_vector;
 
+    // Pad to a word boundary
+    uint8_t             pad_a[3];
+
+    // UltraTurbo frequency from #V
+    uint32_t ultraturbo_freq_mhz;
+
+    // Fmax frequency from #V
+    uint32_t fmax_freq_mhz;
+
     // Pad to make the structure an even 1KB
-    uint8_t             pad[35];
+    uint8_t             pad_b[24];
 
 } __attribute__((aligned(128))) OCCPstateParmBlock_t ;
 

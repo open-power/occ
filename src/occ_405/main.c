@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2021                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -238,16 +238,16 @@ void populate_sys_mode_freq_table(void)
     // do not use Pstate 0 (G_oppb.frequency_max_khz) which
     // represents the highest Fmax across all chips in the system here we want what
     // this chip is capable of
-    if(l_max_freq_index != VPD_PV_FMAX)
+    if(G_oppb.fmax_freq_mhz)
     {
-        MAIN_TRAC_ERR("populate_sys_mode_freq_table: max freq %d found at VPD index %d",
-                       l_max_freq, l_max_freq_index);
-
-        G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MAX_FREQ] = l_max_freq;
+        G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MAX_FREQ] = G_oppb.fmax_freq_mhz;
     }
     else
     {
-        G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MAX_FREQ] = G_oppb.operating_points[VPD_PV_FMAX].frequency_mhz;
+       MAIN_TRAC_ERR("populate_sys_mode_freq_table: OPPB fmax_freq_mhz is 0 using max freq %dMHz found at VPD index %d",
+                       l_max_freq,
+                       l_max_freq_index);
+        G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MAX_FREQ] = l_max_freq;
     }
     // Now verify that the system supports the chip Fmax
     if(G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MAX_FREQ] > l_system_freq_ceiling_mhz )
@@ -263,12 +263,12 @@ void populate_sys_mode_freq_table(void)
     // than VPD power save point due to uplift calculated by the PGPE
     G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MIN_FREQ] = G_oppb.frequency_min_khz / 1000;
     // sanity check if the chip's Fmin is higher need to uplift the min to the chip's min
-    if(G_oppb.operating_points[VPD_PV_PSAV].frequency_mhz > (G_oppb.frequency_min_khz / 1000) )
+    if(G_oppb.operating_points[VPD_PV_CF0].frequency_mhz > (G_oppb.frequency_min_khz / 1000) )
     {
         MAIN_TRAC_ERR("populate_sys_mode_freq_table: chip min[%dMHz] is higher than sys min[%dMHz]",
-                       G_oppb.operating_points[VPD_PV_PSAV].frequency_mhz,
+                       G_oppb.operating_points[VPD_PV_CF0].frequency_mhz,
                        G_oppb.frequency_min_khz / 1000);
-        G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MIN_FREQ] = G_oppb.operating_points[VPD_PV_PSAV].frequency_mhz;
+        G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MIN_FREQ] = G_oppb.operating_points[VPD_PV_CF0].frequency_mhz;
     }
 
     // WOF base frequency
@@ -295,7 +295,7 @@ void populate_sys_mode_freq_table(void)
     else
     {
         // WOF base frequency is 0, use first non-zero operating point +2 above min if none found use the minimum
-        i = VPD_PV_PSAV + 2;
+        i = 2;
         do
         {
             if(G_oppb.operating_points[i].frequency_mhz)
@@ -348,7 +348,14 @@ void populate_sys_mode_freq_table(void)
     }
 
     // Ultra Turbo VPD point
-    G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_VPD_UT] = G_oppb.operating_points[VPD_PV_UT].frequency_mhz;
+    if(G_oppb.ultraturbo_freq_mhz)
+        G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_VPD_UT] = G_oppb.ultraturbo_freq_mhz;
+    else
+    {
+        MAIN_TRAC_ERR("populate_sys_mode_freq_table: OPPB ultraturbo_freq_mhz is 0 using VPD CF6 freq %dMHz",
+                             G_oppb.operating_points[6].frequency_mhz);
+        G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_VPD_UT] = G_oppb.operating_points[6].frequency_mhz;
+    }
 
     if(G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_VPD_UT] == 0)
     {
