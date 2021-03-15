@@ -443,9 +443,9 @@ int gpe_ocmb_configuration_create(MemBufConfiguration_t* o_config)
             rc = getscom_abs(MI_MCSYNC[i], &mcsync);
             if (rc)
             {
-                PK_TRACE("getscom failed on MCSYNC[%d], rc = %d. The first configured "
-                         "MC will be the designated sync",i,rc);
+                // MCPORT is not enabled
                 rc = 0;
+                continue;
             }
 
             // MCS_MCSYNC_EN_SYNC_IN should be set on all non-designated ports
@@ -460,10 +460,12 @@ int gpe_ocmb_configuration_create(MemBufConfiguration_t* o_config)
         if (designated_sync < 0)
         {
             // Leave mcSyncAddr zero.
-            PK_TRACE("No designated sync found. Ocmb sync disabled.");
+            PK_TRACE("gpe_ocmb_configuration_create: No designated sync found. Ocmb mem throttling disabled.");
         }
         else
         {
+            PK_TRACE("gpe_ocmb_configuration_create: designate_sync MI_MCSYNC[%d]",
+                     designated_sync);
             o_config->mcSyncAddr = MI_MCSYNC[designated_sync];
         }
 
@@ -616,7 +618,9 @@ int ocmb_throttle_sync(MemBufConfiguration_t* i_config)
         rc = getscom_abs(i_config->mcSyncAddr,&data);
         if (rc)
         {
-            PK_TRACE("ocmb_throttle_sync: getscom failed. rc = %d",rc);
+            PK_TRACE("ocmb_throttle_sync: getscom failed. rc = %d. scom[0x%08x]",
+                     rc,
+                     i_config->mcSyncAddr);
             break;
         }
 
@@ -625,7 +629,9 @@ int ocmb_throttle_sync(MemBufConfiguration_t* i_config)
         rc = putscom_abs(i_config->mcSyncAddr, data);
         if (rc)
         {
-            PK_TRACE("ocmb_throttle_sync: reset sync putscom failed. rc = %d",rc);
+            PK_TRACE("ocmb_throttle_sync: reset sync putscom failed. rc = %d. scom[0x%08x]",
+                     rc,
+                     i_config->mcSyncAddr);
             break;
         }
 
@@ -634,7 +640,9 @@ int ocmb_throttle_sync(MemBufConfiguration_t* i_config)
         rc = putscom_abs(i_config->mcSyncAddr, data);
         if (rc)
         {
-            PK_TRACE("ocmb_throttle_sync: set sync putscom failed. rc = %d",rc);
+            PK_TRACE("ocmb_throttle_sync: set sync putscom failed. rc = %d. scom[0x%08x]",
+                     rc,
+                     i_config->mcSyncAddr);
             break;
         }
     } while (0);
