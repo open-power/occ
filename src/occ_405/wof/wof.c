@@ -284,7 +284,9 @@ void call_wof_main( void )
                             // Treat as an error only if not currently ignoring PGPE failures
                             if( (L_wof_control_last_chance == 0) && (!ignore_pgpe_error()) )
                             {
-                                INTR_TRAC_ERR("WOF Disabled! Control req timeout(1)");
+                                sensor_t *l_ipc_sensor = getSensorByGsid(WOFC_IPCdur);
+                                INTR_TRAC_ERR("INITIAL_VRT_SUCCESS: WOF Control Time Out! IPC max %dus",
+                                               l_ipc_sensor->sample_max);
                                 set_clear_wof_disabled(SET,
                                                        WOF_RC_CONTROL_REQ_TIMEOUT,
                                                        ERC_WOF_CONTROL_REQ_TIMEOUT);
@@ -293,7 +295,7 @@ void call_wof_main( void )
                             {
                                 if(L_wof_control_last_chance == 1 )
                                 {
-                                    INTR_TRAC_ERR("Last chance for WOF control request(1) out of %d chances ",
+                                    INTR_TRAC_ERR("INITIAL_VRT_SUCCESS: Last chance for WOF control request out of %d chances ",
                                                    MAX_WOF_CONTROL_CHANCES);
                                 }
                                 L_wof_control_last_chance--;
@@ -326,7 +328,9 @@ void call_wof_main( void )
                             // Treat as an error only if not currently ignoring PGPE failures
                             if( (L_wof_control_last_chance == 0) && (!ignore_pgpe_error()) )
                             {
-                                INTR_TRAC_ERR("WOF Disabled! Control req timeout(2)");
+                                sensor_t *l_ipc_sensor = getSensorByGsid(WOFC_IPCdur);
+                                INTR_TRAC_ERR("WOF Control Time Out! IPC max %dus",
+                                               l_ipc_sensor->sample_max);
                                 set_clear_wof_disabled(SET,
                                                        WOF_RC_CONTROL_REQ_TIMEOUT,
                                                        ERC_WOF_CONTROL_REQ_TIMEOUT );
@@ -335,7 +339,7 @@ void call_wof_main( void )
                             {
                                 if(L_wof_control_last_chance == 1 )
                                 {
-                                    INTR_TRAC_ERR("Last chance for WOF control request(2) out of %d chances ",
+                                    INTR_TRAC_ERR("Last chance for WOF control request out of %d chances ",
                                                    MAX_WOF_CONTROL_CHANCES);
                                 }
                                 L_wof_control_last_chance--;
@@ -2077,9 +2081,6 @@ void set_clear_wof_disabled( uint8_t i_action,
             // Set the vrt state back to standby
             g_wof->vrt_state = STANDBY;
 
-            // Set the bit
-            g_wof->wof_disabled |= i_bit_mask;
-
             // If user is trying to force a reset even though WOF is disabled,
             // Skip straight to error log creation
             if( (g_wof->wof_disabled) &&
@@ -2090,45 +2091,55 @@ void set_clear_wof_disabled( uint8_t i_action,
                 break;
             }
 
+            // Set the bit
+            g_wof->wof_disabled |= i_bit_mask;
+
             // If OCC has not yet been enabled through TMGT/HTMGT/OPPB, skip
             // error log
             if( (g_wof->wof_disabled & WOF_RC_OCC_WOF_DISABLED) ||
                 (g_wof->wof_disabled & WOF_RC_OPPB_WOF_DISABLED) )
             {
-                INTR_TRAC_ERR("OCC encountered a WOF error before TMGT/HTMGT"
-                              " enabled it. wof_disabled = 0x%08x",
-                              g_wof->wof_disabled);
+                // only trace if this was a real WOF error
+                if( i_bit_mask & ERRL_RETURN_CODES )
+                {
+                    INTR_TRAC_ERR("OCC encountered a WOF error before (H)TMGT"
+                                  " enabled it. wof_disabled = 0x%08x",
+                                  g_wof->wof_disabled);
+                }
                 break;
             }
 
             // If error has already been logged, trace and skip
             if( L_errorLogged )
             {
-                INTR_TRAC_ERR("Another WOF error was encountered!"
-                              " wof_disabled=0x%08x",
-                              g_wof->wof_disabled);
+                if( i_bit_mask & ERRL_RETURN_CODES )
+                {
+                    INTR_TRAC_ERR("Another WOF error was encountered!"
+                                  " wof_disabled=0x%08x",
+                                  g_wof->wof_disabled);
+                }
+                else
+                {
+                    INTR_TRAC_INFO("Non-error WOF disable reason was encountered!"
+                                  " wof_disabled=0x%08x",
+                                  g_wof->wof_disabled);
+                }
             }
             else
             {
-                INTR_TRAC_ERR("WOF encountered an error. wof_disabled ="
-                              " 0x%08x", g_wof->wof_disabled );
-                     // If wof is disabled in driver, skip generating all error logs
-                if( g_wof->wof_disabled & WOF_RC_DRIVER_WOF_DISABLED )
-                {
-                    static bool trace = true;
-                    if(trace)
-                    {
-                        INTR_TRAC_INFO("WOF is disabled in the driver. wof_disabled = "
-                                       "0x%08x", g_wof->wof_disabled );
-                        trace = false;
-                    }
-                    break;
-                }
                 // Make sure the reason requires an error log
-                if( g_wof->wof_disabled & ERRL_RETURN_CODES )
+                if( i_bit_mask & ERRL_RETURN_CODES )
                 {
                     l_logError = true;
+                    INTR_TRAC_ERR("WOF encountered an error. wof_disabled ="
+                                  " 0x%08x", g_wof->wof_disabled );
                 }
+                else
+                {
+                    INTR_TRAC_INFO("WOF disabled due to non-error condition. wof_disabled ="
+                                   " 0x%08x", g_wof->wof_disabled );
+                }
+
                 // if the previous wof_disabled was all zeros,
                 // send IPC command to PGPE to disable wof
                 if( !prev_wof_disabled )

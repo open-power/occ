@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2021                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -333,10 +333,6 @@ typedef struct
   //Maximum frequency allowed on this chip by the power capping and
   //performance preserving boundary algorithm. Set by amec_ppb_fmax_calc
   uint16_t  ppb_fmax;
-
-  //Maximum frequency allowed on this chip by the Pmax_clip register.
-  //Set by amec_pmax_clip_controller.
-  uint16_t  pmax_clip_freq;
 
   //Maximum frequency allowed on this chip by the Pmax_clip register.
   //Set by amec_slv_check_apss_fail

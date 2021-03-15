@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2021                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -78,6 +78,8 @@ enum occReasonCode
     AVSBUS_CRC_ERROR                = 0x52,
     /// Throttle in nominal or turbo mode due to the bulk power limit being reached with both power supplies good
     PCAP_THROTTLE_POWER_LIMIT       = 0x61,
+    /// Frequency below the modes disabled point due to power or thermal
+    PERFORMANCE_LOSS                = 0x62,
     /// Firmware Failure: equivalent to assertion failures
     INTERNAL_FW_FAILURE             = 0xA0,
 

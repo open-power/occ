@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2021                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -195,7 +195,7 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
             }
         }
 
-        if ( l_freq_reason & (AMEC_VOTING_REASON_PPB | AMEC_VOTING_REASON_PMAX | AMEC_VOTING_REASON_PWR) )
+        if ( l_freq_reason & AMEC_VOTING_REASON_PPB )
         {
             // only set DVFS bit if throttling below frequency to report throttling
             if(G_amec_opal_proc_throt_reason == POWERCAP)

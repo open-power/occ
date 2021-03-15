@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2021                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -61,35 +61,29 @@ typedef enum
 typedef enum
 {
     AMEC_VOTING_REASON_INIT             = 0x00000000,
-    AMEC_VOTING_REASON_PHYP             = 0x00000001,
-    AMEC_VOTING_REASON_PLPM             = 0x00000002,
-    AMEC_VOTING_REASON_LEGACY           = 0x00000004,
-    AMEC_VOTING_REASON_SOFT_MIN         = 0x00000008,
-    AMEC_VOTING_REASON_SOFT_MAX         = 0x00000010,
-    AMEC_VOTING_REASON_CORE_CAP         = 0x00000020,
-    AMEC_VOTING_REASON_PROC_THRM        = 0x00000040,
-    AMEC_VOTING_REASON_GXHB_THRM        = 0x00000080,
-    AMEC_VOTING_REASON_OVERSUB          = 0x00000100,
-    AMEC_VOTING_REASON_OVER_CURRENT     = 0x00000200,
-    AMEC_VOTING_REASON_OVERRIDE         = 0x00000400,
-    AMEC_VOTING_REASON_CORE_GRP_MIN     = 0x00000800,
-    AMEC_VOTING_REASON_PWR              = 0x00001000,
-    AMEC_VOTING_REASON_PPB              = 0x00002000,
-    AMEC_VOTING_REASON_PMAX             = 0x00004000,
-    AMEC_VOTING_REASON_UTIL             = 0x00008000,
-    AMEC_VOTING_REASON_CONN_OC          = 0x00010000,
-    AMEC_VOTING_REASON_OVERRIDE_CORE    = 0x00020000,
-    AMEC_VOTING_REASON_IPS              = 0x00040000,
-    AMEC_VOTING_REASON_APSS_PMAX        = 0x00080000,
-    AMEC_VOTING_REASON_VDD_THRM         = 0x00100000,
-    AMEC_VOTING_REASON_VRM_N            = 0x00200000,
+    AMEC_VOTING_REASON_SOFT_MIN         = 0x00000008, // DPM alg
+    AMEC_VOTING_REASON_SOFT_MAX         = 0x00000010, // DPM alg
+    AMEC_VOTING_REASON_PROC_THRM        = 0x00000040, // processor OT
+    AMEC_VOTING_REASON_OVER_CURRENT     = 0x00000200, // WOF off, clipping from OCS dirty bits
+    AMEC_VOTING_REASON_OVERRIDE         = 0x00000400, // mfg auto slew command
+    AMEC_VOTING_REASON_PPB              = 0x00002000, // power cap alg
+    AMEC_VOTING_REASON_UTIL             = 0x00008000, // DPM alg
+    AMEC_VOTING_REASON_OVERRIDE_CORE    = 0x00020000, // AMESTER override
+    AMEC_VOTING_REASON_IPS              = 0x00040000, // Idle Power Save
+    AMEC_VOTING_REASON_APSS_PMAX        = 0x00080000, // APSS failures
+    AMEC_VOTING_REASON_VDD_THRM         = 0x00100000, // Vdd VRM OT
 }amec_freq_voting_reason_t;
 
 
-#define NON_DPS_POWER_LIMITED ( AMEC_VOTING_REASON_PWR | \
-                                AMEC_VOTING_REASON_PPB | \
-                                AMEC_VOTING_REASON_PMAX  \
-                              )
+#define NON_DPS_POWER_LIMITED ( AMEC_VOTING_REASON_PPB )
+
+// these power/thermal reasons should result in a performance loss error
+#define FREQ_REASON_PERF_LOSS_ERROR ( AMEC_VOTING_REASON_PROC_THRM | \
+                                      AMEC_VOTING_REASON_OVER_CURRENT | \
+                                      AMEC_VOTING_REASON_PPB | \
+                                      AMEC_VOTING_REASON_APSS_PMAX | \
+                                      AMEC_VOTING_REASON_VDD_THRM \
+                                    )
 
 extern BOOLEAN G_non_dps_power_limited;
 

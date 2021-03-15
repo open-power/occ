@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2016,2020                        */
+/* Contributors Listed Below - COPYRIGHT 2016,2021                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -79,7 +79,7 @@ extern uint32_t G_max_ceff_ratio;
 #define WOF_RC_VRT_REQ_FAILURE                     0x00001000
 #define WOF_RC_CONTROL_REQ_FAILURE                 0x00002000
 #define WOF_RC_VRT_ALIGNMENT_ERROR                 0x00004000
-#define WOF_RC_DRIVER_WOF_DISABLED                 0x00008000
+//#define WOF_RC_                0x00008000
 #define WOF_RC_UTURBO_IS_ZERO                      0x00010000
 #define WOF_RC_OCC_WOF_DISABLED                    0x00020000
 #define WOF_RC_OPPB_WOF_DISABLED                   0x00040000

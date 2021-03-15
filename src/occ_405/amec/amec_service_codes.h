@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2021                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -68,6 +68,7 @@ enum occAmecModuleId
     AMEC_HEALTH_CHECK_VRM_VDD_TIMEOUT =    AMEC_COMP_ID | 0x1B,
     AMEC_VECTORIZE_PROCIO_SENSORS     =    AMEC_COMP_ID | 0x1C,
     AMEC_CALC_DTS_SENSORS             =    AMEC_COMP_ID | 0x1D,
+    AMEC_SLV_PROC_VOTING_BOX          =    AMEC_COMP_ID | 0x1E,
 };
 
 /*----------------------------------------------------------------------------*/

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2021                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -492,7 +492,6 @@ void amec_init_gamec_struct(void)
   g_amec->proc[0].core_max_freq = 0xFFFF;
 
   //Initialize processor power votes
-  g_amec->proc[0].pwr_votes.pmax_clip_freq = 0xFFFF;
   g_amec->proc[0].pwr_votes.apss_pmax_clip_freq = 0xFFFF;
   g_amec->proc[0].pwr_votes.ppb_fmax = 0xFFFF;
 
