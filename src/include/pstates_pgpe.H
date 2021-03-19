@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2019                             */
+/* Contributors Listed Below - COPYRIGHT 2019,2021                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -86,7 +86,7 @@ enum POUNDW_DDS_FIELDS
 typedef union
 {
     uint8_t value[128];
-    union
+    struct
     {
         uint8_t pstates_enabled;
         uint8_t resclk_enabled;
@@ -96,6 +96,12 @@ typedef union
         uint8_t underv_enabled;
         uint8_t overv_enabled;
         uint8_t throttle_control_enabled;
+        uint8_t rvrm_enabled;
+        uint8_t wof_disable_vdd;
+        uint8_t wof_disable_vcs;
+        uint8_t wof_disable_io;
+        uint8_t wof_disable_amb;
+        uint8_t wof_disable_vratio;
     } fields;
 } Attributes_t;
 

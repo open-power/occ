@@ -538,7 +538,7 @@ void read_wof_header(void)
 
                 // If a WOF dimension is disabled use TDP default value defined in the WOF Tables header
                 // except for Vratio hardcode to 100%
-                if(G_oppb.wof_dimension_disable_vector & WOF_DIMENSION_DISABLE_VCS)
+                if(G_oppb.attr.fields.wof_disable_vcs != 0)
                 {
                     if(g_amec->static_wof_data.wof_header.vcs_tdp_ceff_indx < g_amec->static_wof_data.wof_header.vcs_size)
                     {
@@ -555,7 +555,7 @@ void read_wof_header(void)
                     }
                 }
 
-                if(G_oppb.wof_dimension_disable_vector & WOF_DIMENSION_DISABLE_VDD)
+                if(G_oppb.attr.fields.wof_disable_vdd != 0)
                 {
                     if(g_amec->static_wof_data.wof_header.vdd_tdp_ceff_indx < g_amec->static_wof_data.wof_header.vdd_size)
                     {
@@ -572,7 +572,7 @@ void read_wof_header(void)
                     }
                 }
 
-                if(G_oppb.wof_dimension_disable_vector & WOF_DIMENSION_DISABLE_IO)
+                if(G_oppb.attr.fields.wof_disable_io != 0)
                 {
                     if(g_amec->static_wof_data.wof_header.io_tdp_pwr_indx < g_amec->static_wof_data.wof_header.io_size)
                     {
@@ -589,7 +589,7 @@ void read_wof_header(void)
                     }
                 }
 
-                if(G_oppb.wof_dimension_disable_vector & WOF_DIMENSION_DISABLE_AMBIENT)
+                if(G_oppb.attr.fields.wof_disable_amb != 0)
                 {
                     if(g_amec->static_wof_data.wof_header.amb_cond_tdp_indx < g_amec->static_wof_data.wof_header.amb_cond_size)
                     {
@@ -605,7 +605,7 @@ void read_wof_header(void)
                                        g_amec->wof.ambient_override_index);
                     }
                 }
-                if(G_oppb.wof_dimension_disable_vector & WOF_DIMENSION_DISABLE_V_RATIO)
+                if(G_oppb.attr.fields.wof_disable_vratio != 0)
                 {
                     g_amec->wof.v_ratio_override_index = g_amec->static_wof_data.wof_header.vratio_size - 1;
                     MAIN_TRAC_IMP("read_wof_header: OPPB has Vratio disabled using 100 percent index 0x%02X",
