@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2016,2020                        */
+/* Contributors Listed Below - COPYRIGHT 2016,2021                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -37,6 +37,11 @@ int main(int argc, char** argv)
 {
     FILE*       wof_file = NULL;
     uint32_t    i = 0;
+    uint8_t     l_vrt_header_byte0 = 0;
+    uint8_t     l_vrt_header_byte1 = 0;
+    uint8_t     l_vrt_header_byte2 = 0;
+    uint8_t     l_vrt_header_byte3 = 0;
+    uint8_t     l_temp_data = 0;
 
     // Verify a file was passed as an argument
     if(argc < 2)
@@ -229,10 +234,52 @@ int main(int argc, char** argv)
         printf("     ACT_CNT_IDX_CORECACHE_OFF: %d\n", fgetc(wof_file));
     }
     printf("interpolate_ambient_vrt? %d\n", fgetc(wof_file));
-    printf("VRT Contents: 0x%08X\n", get_uint32(wof_file));
-    printf("              0x%08X\n", get_uint32(wof_file));
-    printf("              0x%08X\n", get_uint32(wof_file));
-    printf("              0x%08X\n", get_uint32(wof_file));
+
+    // Parse out VRT
+    l_vrt_header_byte0 = fgetc(wof_file);
+    l_vrt_header_byte1 = fgetc(wof_file);
+    l_vrt_header_byte2 = fgetc(wof_file);
+    l_vrt_header_byte3 = fgetc(wof_file);
+    printf("Current VRT:\n");
+    printf("             Header:  0x%02X%02X%02X%02X -->\n", l_vrt_header_byte0,
+                                                             l_vrt_header_byte1,
+                                                             l_vrt_header_byte2,
+                                                             l_vrt_header_byte3);
+    if(l_vrt_header_byte0 == 0x56)
+        printf("                                    0x%02X (V Marker)\n", l_vrt_header_byte0);
+    else
+        printf("ERROR: Expected marker V (0x56) read 0x%02X\n", l_vrt_header_byte0);
+
+    if(l_vrt_header_byte1 & 0x80)
+        printf("                                    Type 1 (HOMER)\n");
+    else
+        printf("                                    Type 0 (System)\n");
+
+    if(l_vrt_header_byte1 & 0x40)
+        printf("                                    Content Type 1 (Reserved -- CeffRatio Target)\n");
+    else
+        printf("                                    Content Type 0 (CeffRatio Delta -- Overage)\n");
+
+    l_temp_data = (l_vrt_header_byte1 & 0x30) >> 4;
+        printf("                                    Version = %d\n", l_temp_data);
+
+    l_temp_data = (l_vrt_header_byte1 & 0x0F) << 1;
+    l_temp_data |= ((l_vrt_header_byte2 & 0x80) >> 7);
+        printf("                                    IO Index = %d\n", l_temp_data);
+
+    l_temp_data = (l_vrt_header_byte2 & 0x7C) >> 2;
+        printf("                                    Ambient Condition Index = %d\n", l_temp_data);
+
+    l_temp_data = (l_vrt_header_byte2 & 0x03) << 3;
+    l_temp_data |= ((l_vrt_header_byte3 & 0xE0) >> 5);
+        printf("                                    Vcs Index = %d\n", l_temp_data);
+
+    l_temp_data = l_vrt_header_byte3 & 0x1F;
+        printf("                                    Vdd Index = %d\n", l_temp_data);
+
+    printf("             Pstates: 0x%08X\n", get_uint32(wof_file));
+    printf("                      0x%08X\n", get_uint32(wof_file));
+    printf("                      0x%08X\n", get_uint32(wof_file));
 
     // Close the file
     if(wof_file != NULL)
