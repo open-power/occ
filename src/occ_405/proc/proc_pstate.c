@@ -102,10 +102,10 @@ param_table_entry_t G_parameter_table[] =
     {PARAM_ID_IPS,      PARAM_VALUE_ID_ENABLED, (PARAM_FLAG_MASTER),                      0,  "Idle Power Saver Enabled\0"},
     {PARAM_ID_IPS,      PARAM_VALUE_ID_IPS_ACTIVE, (PARAM_FLAG_MASTER),                   0,  "Idle Power Saver Active\0"},
     {PARAM_ID_IPS,      PARAM_VALUE_ID_NOT_SUPPORTED, (PARAM_FLAG_MASTER),                0,  "Not Supported\0"},
-    {PARAM_ID_FMIN,     PARAM_VALUE_ID_NONE, (PARAM_FLAG_REPORT | PARAM_FLAG_DATA | PARAM_FLAG_MASTER),  0,  "Min Frequency (MHz)\0"},
+    {PARAM_ID_FMIN,     PARAM_VALUE_ID_NONE, (PARAM_FLAG_REPORT | PARAM_FLAG_DATA | PARAM_FLAG_MASTER),  0,  "Minimum Frequency (MHz)\0"},
     {PARAM_ID_NOMINAL,  PARAM_VALUE_ID_NONE, (PARAM_FLAG_REPORT | PARAM_FLAG_DATA | PARAM_FLAG_MASTER),  0,  "Nominal Frequency (MHz)\0"},
-    {PARAM_ID_BASE,     PARAM_VALUE_ID_NONE, (PARAM_FLAG_REPORT | PARAM_FLAG_DATA | PARAM_FLAG_MASTER),  0,  "Base Frequency (MHz)\0"},
-    {PARAM_ID_SYS_MAX,  PARAM_VALUE_ID_NONE, (PARAM_FLAG_REPORT | PARAM_FLAG_DATA | PARAM_FLAG_MASTER),  0,  "System Max Frequency (MHz)\0"},
+    {PARAM_ID_BASE,     PARAM_VALUE_ID_NONE, (                    PARAM_FLAG_DATA | PARAM_FLAG_MASTER),  0,  "Base Frequency (MHz)\0"},
+    {PARAM_ID_SYS_MAX,  PARAM_VALUE_ID_NONE, (PARAM_FLAG_REPORT | PARAM_FLAG_DATA | PARAM_FLAG_MASTER),  0,  "Maximum Frequency (MHz)\0"},
     {PARAM_ID_CHIP_MAX, PARAM_VALUE_ID_NONE, (PARAM_FLAG_DATA),                                          0,  "Chip Max Frequency (MHz)\0"},
     {PARAM_ID_FOLDING,  PARAM_VALUE_ID_NONE, (PARAM_FLAG_REPORT | PARAM_FLAG_MASTER),                    0,  "Processor Folding Status\0"},
 };
