@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2021                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -54,7 +54,7 @@ bool    g_chom_reset = FALSE;
 ChomLogData_t   g_chom_log;
 ChomLogData_t * g_chom = &g_chom_log;
 
-// Make sure that the size of chom log is less than 3kB
+// Make sure that the size of chom log is less than allowed
 // otherwise cause error on the compile.
 STATIC_ASSERT( sizeof(ChomLogData_t) > CHOM_LOG_DATA_MAX );
 
@@ -100,8 +100,22 @@ const uint16_t * g_chom_sensor_table[CHOM_NUM_OF_SENSORS] =
     &G_dcom_slv_outbox_rx[1].tempdimmthrm,
     &G_dcom_slv_outbox_rx[2].tempdimmthrm,
     &G_dcom_slv_outbox_rx[3].tempdimmthrm,
+    // temperature sensors for mem controller + DRAM
+    &G_dcom_slv_outbox_rx[0].tempmcdimmthrm,
+    &G_dcom_slv_outbox_rx[1].tempmcdimmthrm,
+    &G_dcom_slv_outbox_rx[2].tempmcdimmthrm,
+    &G_dcom_slv_outbox_rx[3].tempmcdimmthrm,
+    // temperature sensors for PMIC
+    &G_dcom_slv_outbox_rx[0].temppmicthrm,
+    &G_dcom_slv_outbox_rx[1].temppmicthrm,
+    &G_dcom_slv_outbox_rx[2].temppmicthrm,
+    &G_dcom_slv_outbox_rx[3].temppmicthrm,
+    // temperature sensors for external mem controller sensor
+    &G_dcom_slv_outbox_rx[0].tempmcextthrm,
+    &G_dcom_slv_outbox_rx[1].tempmcextthrm,
+    &G_dcom_slv_outbox_rx[2].tempmcextthrm,
+    &G_dcom_slv_outbox_rx[3].tempmcextthrm,
     // VRM VDD temperatures
-    // TEMPVDDP0 ~ TEMPVDDP7
     &G_dcom_slv_outbox_rx[0].tempvdd,
     &G_dcom_slv_outbox_rx[1].tempvdd,
     &G_dcom_slv_outbox_rx[2].tempvdd,
@@ -109,14 +123,39 @@ const uint16_t * g_chom_sensor_table[CHOM_NUM_OF_SENSORS] =
     // Instructions per second sensor
     NULL,
     // Memory bandwidth for process memory controller
-    // P0M0 ~ P0M7
-    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-    // P1M0 ~ P1M7
-    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-    // P2M0 ~ P2M7
-    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-    // P3M0 ~ P3M7
-    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+    // P0M0 ~ P0M15
+    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+    // P1M0 ~ P1M15
+    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+    // P2M0 ~ P2M15
+    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+    // P3M0 ~ P3M15
+    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+    // WOF related data
+    &G_dcom_slv_outbox_rx[0].ddsAvg,
+    &G_dcom_slv_outbox_rx[1].ddsAvg,
+    &G_dcom_slv_outbox_rx[2].ddsAvg,
+    &G_dcom_slv_outbox_rx[3].ddsAvg,
+    &G_dcom_slv_outbox_rx[0].ddsMin,
+    &G_dcom_slv_outbox_rx[1].ddsMin,
+    &G_dcom_slv_outbox_rx[2].ddsMin,
+    &G_dcom_slv_outbox_rx[3].ddsMin,
+    &G_dcom_slv_outbox_rx[0].curVdd,
+    &G_dcom_slv_outbox_rx[1].curVdd,
+    &G_dcom_slv_outbox_rx[2].curVdd,
+    &G_dcom_slv_outbox_rx[3].curVdd,
+    &G_dcom_slv_outbox_rx[0].ceffRatioVdd,
+    &G_dcom_slv_outbox_rx[1].ceffRatioVdd,
+    &G_dcom_slv_outbox_rx[2].ceffRatioVdd,
+    &G_dcom_slv_outbox_rx[3].ceffRatioVdd,
+    &G_dcom_slv_outbox_rx[0].uvAvg,
+    &G_dcom_slv_outbox_rx[1].uvAvg,
+    &G_dcom_slv_outbox_rx[2].uvAvg,
+    &G_dcom_slv_outbox_rx[3].uvAvg,
+    &G_dcom_slv_outbox_rx[0].ovAvg,
+    &G_dcom_slv_outbox_rx[1].ovAvg,
+    &G_dcom_slv_outbox_rx[2].ovAvg,
+    &G_dcom_slv_outbox_rx[3].ovAvg,
 };
 
 
@@ -175,7 +214,7 @@ void chom_update_sensors()
     uint16_t l_mem_rw = 0;
     uint16_t l_sample = 0;
 
-    static uint32_t L_memBWNumSamples[NUM_CHOM_MODES][MAX_NUM_CHOM_MEM_CTRL] = {{0}};
+    static uint32_t L_memBWNumSamples[NUM_CHOM_MODES][MAX_NUM_MEM_CONTROLLERS] = {{0}};
 
     // Use FMAX as default
     static uint32_t * L_curNumSamplePtr = L_memBWNumSamples[CHOM_MODE_FMAX];
@@ -287,7 +326,7 @@ void chom_update_sensors()
         }
 
         // update memory bandwidth
-        for ( j = 0; j < MAX_NUM_CHOM_MEM_CTRL; j++)
+        for ( j = 0; j < MAX_NUM_MEM_CONTROLLERS; j++)
         {
             l_mem_rw = G_dcom_slv_outbox_rx[i].mrd[j] +
                        G_dcom_slv_outbox_rx[i].mwr[j];
@@ -358,15 +397,17 @@ void chom_update_sensors()
     }
 
     // Collect the error history data and fclip history
-    int proc_idx = 0, errh_idx = 0, slv_idx = 0, entry_idx = 0, clip_idx = 0;
+    int proc_idx = 0, errh_idx = 0, slv_idx = 0, entry_idx = 0;
 
     // get the master proc index
     uint8_t master_id = G_pbax_id.chip_id;
 
-    // Iterate through procs
+    // Iterate through procs adding node data
     for( proc_idx = 0; proc_idx < CHOM_MAX_OCCS; proc_idx++ )
     {
-        // If we are on the master proc, skip it since it is already
+        g_chom->nodeData.ddsMinCore[proc_idx] = G_dcom_slv_outbox_rx[proc_idx].ddsMinCore;
+
+        // If we are on the master proc, skip ERRH and Fclip since it is already
         // present in the call home log
         if( proc_idx == master_id )
         {
@@ -375,9 +416,8 @@ void chom_update_sensors()
         else
         {
             // Add Fclip history
-            g_chom->nodeData.fClipHist[clip_idx] =
+            g_chom->nodeData.fClipHist[slv_idx] =
                 G_dcom_slv_outbox_rx[proc_idx].fClipHist;
-            clip_idx++;
 
             // Iterate through each proc's error history counts
             for( errh_idx = 0; errh_idx < DCOM_MAX_ERRH_ENTRIES; errh_idx++)
@@ -395,10 +435,13 @@ void chom_update_sensors()
                     // Add the error history to the chom data
                     g_chom->nodeData.errhCounts[slv_idx][entry_idx] =
                         G_dcom_slv_outbox_rx[proc_idx].errhCount[errh_idx];
-                    slv_idx++;
                     entry_idx++;
                 }
             }
+
+            // next slave
+            slv_idx++;
+            entry_idx = 0;
         }
     }
 }

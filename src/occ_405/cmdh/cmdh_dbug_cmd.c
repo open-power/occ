@@ -1060,6 +1060,31 @@ void dbug_err_inject(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
         REQUEST_RESET(l_err);
     }
+    else if(!strncmp(l_cmd_ptr->comp, "WOF", OCC_TRACE_NAME_SIZE))
+    {
+        l_err = createErrl(CMDH_DBUG_MID,     //modId
+                           INTERNAL_FAILURE,             //reasoncode
+                           OCC_NO_EXTENDED_RC,           //Extended reason code
+                           ERRL_SEV_INFORMATIONAL,       //Severity
+                           NULL,                         //Trace Buf
+                           DEFAULT_TRACE_SIZE,           //Trace Size
+                           0x574F46, // WOF              //userdata1
+                           0);                           //userdata2
+        if (INVALID_ERR_HNDL == l_err)
+        {
+            G_rsp_status = ERRL_RC_INTERNAL_FAIL;
+        }
+        else
+        {
+            extern amec_sys_t g_amec_sys;
+            addUsrDtlsToErrl( l_err,
+                              (uint8_t*)&(g_amec_sys.wof),
+                              sizeof(amec_wof_t),
+                              ERRL_USR_DTL_STRUCT_VERSION_1,
+                              ERRL_USR_DTL_WOF_DATA);
+        }        // Commit Error log
+        commitErrl(&l_err);
+    }
     else
     {
         ERRL_SEVERITY l_severity = ERRL_SEV_UNRECOVERABLE;

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2018                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2021                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -115,6 +115,9 @@ uint32_t dcom_build_slv_outbox(void)
 
     // Add Frequency Clip history
     G_dcom_slv_outbox_tx.fClipHist = g_amec->proc[0].chip_f_reason_history;
+
+    // add the core number corresponding to DDS min sensor
+    G_dcom_slv_outbox_tx.ddsMinCore = (uint8_t)AMECSENSOR_PTR(DDSMIN)->status.sample_info;
 
     return l_addr_of_slv_outbox_in_main_mem;
 }

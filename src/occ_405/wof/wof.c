@@ -2762,17 +2762,15 @@ void print_oppb( void )
                        G_oppb.operating_points[i].idd_tdp_ac_10ma );
     }
 
-    CMDH_TRAC_INFO("Vdd_sysparm loadline_uohm[%d] distloss_uohm[%d]",
-                    G_oppb.vdd_sysparm.loadline_uohm,
-                    G_oppb.vdd_sysparm.distloss_uohm);
+    CMDH_TRAC_INFO("Pstate 0[%dMHz] Min Pstate %d[%dMHz]",
+                    G_oppb.frequency_max_khz / 1000,
+                    G_oppb.pstate_min,
+                    G_oppb.frequency_min_khz / 1000);
 
-    CMDH_TRAC_INFO("Vdn_sysparm loadline_uohm[%d] distloss_uohm[%d]",
-                    G_oppb.vdn_sysparm.loadline_uohm,
-                    G_oppb.vdn_sysparm.distloss_uohm);
-
-    CMDH_TRAC_INFO("Vcs_sysparm loadline_uohm[%d] distloss_uohm[%d]",
-                    G_oppb.vcs_sysparm.loadline_uohm,
-                    G_oppb.vcs_sysparm.distloss_uohm);
+    CMDH_TRAC_INFO("Ceiling[%dMHz] Ultra Turbo[%dMHz] Fmax[%d]",
+                    G_oppb.frequency_ceiling_khz / 1000,
+                    G_oppb.ultraturbo_freq_mhz,
+                    G_oppb.fmax_freq_mhz);
 }
 
 /**

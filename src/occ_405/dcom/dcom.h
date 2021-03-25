@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2021                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -100,7 +100,7 @@
 #define TOD_SIZE                 6
 #define NUM_TOD_SENSORS          3
 #define SLV_INBOX_RSV_SIZE       150
-#define SLV_OUTBOX_RSV_SIZE      454
+#define SLV_OUTBOX_RSV_SIZE      453
 #define DOORBELL_RSV_SIZE        1
 #define DCOM_MAX_ERRH_ENTRIES    8
 
@@ -213,16 +213,23 @@ typedef struct __attribute__ ((packed))
     uint16_t memReserved[MAX_NUM_MEM_CONTROLLERS];               // [196]
     uint16_t pwrproc;                                            // [228]
     uint16_t pwr250usmemp0;                                      // [230]
-    uint16_t reserved0;                                          // [232]
+    uint16_t tempmcdimmthrm;                                     // [232]
     uint16_t tempprociothermal;                                  // [234]
     uint16_t tempprocavg;                                        // [236]
     uint16_t tempprocthermal;                                    // [238]
     uint16_t utilcy[MAX_CORES];                                  // [240]
     uint16_t tempvdd;                                            // [304]
-    uint16_t reserved2;                                          // [306]
+    uint16_t temppmicthrm;                                       // [306]
     uint16_t mrd[MAX_NUM_MEM_CONTROLLERS];                       // [308]
     uint16_t mwr[MAX_NUM_MEM_CONTROLLERS];                       // [340]
-    uint16_t coreReserved[MAX_CORES];                            // [372]
+    uint16_t tempmcextthrm;                                      // [372]
+    uint16_t ddsAvg;                                             // [374]
+    uint16_t ddsMin;                                             // [376]
+    uint16_t curVdd;                                             // [378]
+    uint16_t ceffRatioVdd;                                       // [380]
+    uint16_t uvAvg;                                              // [382]
+    uint16_t ovAvg;                                              // [384]
+    uint16_t reserved[25];                                       // [386]
     uint16_t todclock[NUM_TOD_SENSORS];                          // [436]
     uint16_t tempmembufthrm;                                     // [442]
     uint16_t tempdimmthrm;                                       // [444]
@@ -241,10 +248,14 @@ typedef struct __attribute__ ((packed))
 
     // Frequency Clip History
     uint32_t fClipHist;                                          // [534] - 4 bytes
+
+    // core number corresponding to DDS min sensor
+    uint8_t ddsMinCore;                                          // [538]
+
     // Reserved Bytes
     union
     {
-        uint8_t  reserved[SLV_OUTBOX_RSV_SIZE];                  // [538] - 454 bytes
+        uint8_t  reserved[SLV_OUTBOX_RSV_SIZE];                  // [539] - 453 bytes
         struct __attribute__ ((packed))
         {
             uint8_t _reserved_1;

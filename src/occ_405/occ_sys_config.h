@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2021                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -44,7 +44,6 @@
 #define MAX_NUM_CHIP_MODULES     4
 #define MAX_NUM_MEM_CONTROLLERS  16
 #define MAX_NUM_OCMBS            16
-#define MAX_NUM_CHOM_MEM_CTRL    8  // todo allow 16 RTC: 211908
 #define MAX_GPU_PRES_SIGNALS     6
 #define GPU_PRES_SIGN_PER_OCC    3
 

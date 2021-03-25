@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2021                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -31,16 +31,17 @@
 #include <apss.h>
 
 #define  CHOM_GEN_LOG_PERIODIC_TIME     86400 // seconds in a day
-#define  CHOM_VERSION                   0x02
-// Max size of chom data log
-#define  CHOM_LOG_DATA_MAX              3072
+#define  CHOM_VERSION                   0x03
+// Max size of chom data this should be less than MAX_ERRL_CALL_HOME_SZ
+// to account for error log header/possible other data in the call home log
+#define  CHOM_LOG_DATA_MAX              (MAX_ERRL_CALL_HOME_SZ - 256)
 // Max number of memory bandwidth CHOM sensors
-#define  MAX_NUM_MEMORY_SENSORS         32
+#define  MAX_NUM_MEMORY_SENSORS         64
 // Max number of procs Call Home will get data for
 #define CHOM_MAX_OCCS                   4
 // Max number of error history entries to add to call home log
-#define CHOM_MAX_ERRH_ENTRIES            4
-// List of call home sensors (Max 126)
+#define CHOM_MAX_ERRH_ENTRIES           4
+// List of call home sensors
 enum
 {
     // Node total power (DC)
@@ -92,6 +93,21 @@ enum
     CHOMTEMPDIMMP1,
     CHOMTEMPDIMMP2,
     CHOMTEMPDIMMP3,
+    // temperature covering mem controller and DRAM for all Dimms in the node
+    CHOMTEMPMCDIMMP0,
+    CHOMTEMPMCDIMMP1,
+    CHOMTEMPMCDIMMP2,
+    CHOMTEMPMCDIMMP3,
+    // PMIC temperature read from OCMB cache line for all Dimms in the node
+    CHOMTEMPPMICP0,
+    CHOMTEMPPMICP1,
+    CHOMTEMPPMICP2,
+    CHOMTEMPPMICP3,
+    // External memory buffer temperature for all memory controllers in the node
+    CHOMTEMPMCEXTP0,
+    CHOMTEMPMCEXTP1,
+    CHOMTEMPMCEXTP2,
+    CHOMTEMPMCEXTP3,
     // VRM VDD temperature per proc
     CHOMTEMPVDDP0,
     CHOMTEMPVDDP1,
@@ -108,6 +124,14 @@ enum
     CHOMBWP0M5,
     CHOMBWP0M6,
     CHOMBWP0M7,
+    CHOMBWP0M8,
+    CHOMBWP0M9,
+    CHOMBWP0M10,
+    CHOMBWP0M11,
+    CHOMBWP0M12,
+    CHOMBWP0M13,
+    CHOMBWP0M14,
+    CHOMBWP0M15,
     CHOMBWP1M0,
     CHOMBWP1M1,
     CHOMBWP1M2,
@@ -116,6 +140,14 @@ enum
     CHOMBWP1M5,
     CHOMBWP1M6,
     CHOMBWP1M7,
+    CHOMBWP1M8,
+    CHOMBWP1M9,
+    CHOMBWP1M10,
+    CHOMBWP1M11,
+    CHOMBWP1M12,
+    CHOMBWP1M13,
+    CHOMBWP1M14,
+    CHOMBWP1M15,
     CHOMBWP2M0,
     CHOMBWP2M1,
     CHOMBWP2M2,
@@ -124,6 +156,14 @@ enum
     CHOMBWP2M5,
     CHOMBWP2M6,
     CHOMBWP2M7,
+    CHOMBWP2M8,
+    CHOMBWP2M9,
+    CHOMBWP2M10,
+    CHOMBWP2M11,
+    CHOMBWP2M12,
+    CHOMBWP2M13,
+    CHOMBWP2M14,
+    CHOMBWP2M15,
     CHOMBWP3M0,
     CHOMBWP3M1,
     CHOMBWP3M2,
@@ -132,6 +172,38 @@ enum
     CHOMBWP3M5,
     CHOMBWP3M6,
     CHOMBWP3M7,
+    CHOMBWP3M8,
+    CHOMBWP3M9,
+    CHOMBWP3M10,
+    CHOMBWP3M11,
+    CHOMBWP3M12,
+    CHOMBWP3M13,
+    CHOMBWP3M14,
+    CHOMBWP3M15,
+    CHOMDDSAVGP0,
+    CHOMDDSAVGP1,
+    CHOMDDSAVGP2,
+    CHOMDDSAVGP3,
+    CHOMDDSMINP0,
+    CHOMDDSMINP1,
+    CHOMDDSMINP2,
+    CHOMDDSMINP3,
+    CHOMCURVDDP0,
+    CHOMCURVDDP1,
+    CHOMCURVDDP2,
+    CHOMCURVDDP3,
+    CHOMCEFFRATIOVDDP0,
+    CHOMCEFFRATIOVDDP1,
+    CHOMCEFFRATIOVDDP2,
+    CHOMCEFFRATIOVDDP3,
+    CHOMUVAVGP0,
+    CHOMUVAVGP1,
+    CHOMUVAVGP2,
+    CHOMUVAVGP3,
+    CHOMOVAVGP0,
+    CHOMOVAVGP1,
+    CHOMOVAVGP2,
+    CHOMOVAVGP3,
     // The number of chom sensors reported
     CHOM_NUM_OF_SENSORS
 };
@@ -155,7 +227,7 @@ struct ChomSensor
     uint16_t    sampleMin;        // min sample value recorded during polling period
     uint16_t    sampleMax;        // max sample value recorded during polling period
     uint16_t    average;          // average sample value during polling period
-    uint32_t    accumulator;      // accumulator register to computer the average
+    uint32_t    accumulator;      // accumulator register to compute the average
 } __attribute__ ((__packed__));
 
 typedef struct ChomSensor ChomSensor_t;
@@ -183,6 +255,7 @@ struct ChomNodeData
     // error history counts. Only collect on up to 3 slaves, excluding master
     error_history_count_t errhCounts[CHOM_MAX_OCCS-1][CHOM_MAX_ERRH_ENTRIES];
     uint32_t       fClipHist[CHOM_MAX_OCCS-1];
+    uint8_t        ddsMinCore[CHOM_MAX_OCCS];     // core number that had the minimum for DDS min sensor
 } __attribute__ ((__packed__));
 
 typedef struct ChomNodeData ChomNodeData_t;

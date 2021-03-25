@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2021                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -43,8 +43,8 @@ static const uint32_t INVALID_ERR = 0xFFFFFFFF;
 // Max size of non call home data logs (3616 bytes)
 #define MAX_ERRL_ENTRY_SZ 0xE20
 
-// Max size of call home data log (3072 bytes)
-#define MAX_ERRL_CALL_HOME_SZ 0xC00
+// Max size of call home data log (4096 bytes)
+#define MAX_ERRL_CALL_HOME_SZ 0x1000
 
 // Max number of error logs (6 normal and 1 call-home)
 #define ERRL_MAX_SLOTS 7

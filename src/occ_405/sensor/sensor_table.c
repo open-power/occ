@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2021                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -530,8 +530,8 @@ const minisensor_ptr_t G_amec_mini_sensor_list[] INIT_SECTION =
   MINI_SENSOR_PTR(         PWRVIO,  NULL),
   MINI_SENSOR_PTR(   PROCPWRTHROT,  NULL),
   MINI_SENSOR_PTR(    PROCOTTHROT,  NULL),
-  MINI_SENSOR_PTR(         DDSAVG,  NULL),
-  MINI_SENSOR_PTR(         DDSMIN,  NULL),
+  MINI_SENSOR_PTR(         DDSAVG,  &G_dcom_slv_outbox_tx.ddsAvg),
+  MINI_SENSOR_PTR(         DDSMIN,  &G_dcom_slv_outbox_tx.ddsMin),
 
   // ------------------------------------------------------
   // Processor IO sensors
@@ -550,7 +550,7 @@ const minisensor_ptr_t G_amec_mini_sensor_list[] INIT_SECTION =
   MINI_SENSOR_PTR( VOLTVDN,         NULL),
   MINI_SENSOR_PTR( VOLTVCS,         NULL),
   MINI_SENSOR_PTR( VOLTVIO,         NULL),
-  MINI_SENSOR_PTR( CURVDD,          NULL),
+  MINI_SENSOR_PTR( CURVDD,          &G_dcom_slv_outbox_tx.curVdd),
   MINI_SENSOR_PTR( CURVDN,          NULL),
   MINI_SENSOR_PTR( CURVCS,          NULL),
   MINI_SENSOR_PTR( CURVIO,          NULL),
@@ -585,9 +585,9 @@ const minisensor_ptr_t G_amec_mini_sensor_list[] INIT_SECTION =
 
   MINI_SENSOR_PTR( TEMPMEMBUFTHRM,  &G_dcom_slv_outbox_tx.tempmembufthrm),
   MINI_SENSOR_PTR( TEMPDIMMTHRM,    &G_dcom_slv_outbox_tx.tempdimmthrm),
-  MINI_SENSOR_PTR( TEMPMCDIMMTHRM,  NULL), // $todo RTC: 213569 add 3 new summary sensors to call home
-  MINI_SENSOR_PTR( TEMPPMICTHRM,    NULL),
-  MINI_SENSOR_PTR( TEMPMCEXTTHRM,   NULL),
+  MINI_SENSOR_PTR( TEMPMCDIMMTHRM,  &G_dcom_slv_outbox_tx.tempmcdimmthrm),
+  MINI_SENSOR_PTR( TEMPPMICTHRM,    &G_dcom_slv_outbox_tx.temppmicthrm),
+  MINI_SENSOR_PTR( TEMPMCEXTTHRM,   &G_dcom_slv_outbox_tx.tempmcextthrm),
 
   // ------------------------------------------------------
   // GPU Sensors
@@ -607,14 +607,14 @@ const minisensor_ptr_t G_amec_mini_sensor_list[] INIT_SECTION =
   // ------------------------------------------------------
   // WOF Sensors
   // ------------------------------------------------------
-  MINI_SENSOR_PTR( CEFFVDDRATIO,   NULL),
+  MINI_SENSOR_PTR( CEFFVDDRATIO,   &G_dcom_slv_outbox_tx.ceffRatioVdd),
   MINI_SENSOR_PTR( CEFFVCSRATIO,   NULL),
   MINI_SENSOR_PTR( VRATIO_VDD,     NULL),
   MINI_SENSOR_PTR( OCS_ADDR,       NULL),
   MINI_SENSOR_PTR( CEFFVDDRATIOADJ, NULL),
   MINI_SENSOR_PTR( IO_PWR_PROXY,   NULL),
-  MINI_SENSOR_PTR( UV_AVG,         NULL),
-  MINI_SENSOR_PTR( OV_AVG,         NULL),
+  MINI_SENSOR_PTR( UV_AVG,         &G_dcom_slv_outbox_tx.uvAvg),
+  MINI_SENSOR_PTR( OV_AVG,         &G_dcom_slv_outbox_tx.ovAvg),
 };
 STATIC_ASSERT(   (NUMBER_OF_SENSORS_IN_LIST != (sizeof(G_amec_mini_sensor_list)/sizeof(uint16_t *)))   );
 STATIC_ASSERT(   (MAX_AMEC_SENSORS < (sizeof(G_amec_mini_sensor_list)/sizeof(uint16_t *)))   );
