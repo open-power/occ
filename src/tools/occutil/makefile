@@ -1,11 +1,11 @@
 # IBM_PROLOG_BEGIN_TAG
 # This is an automatically generated prolog.
 #
-# $Source: src/tools/cft/makefile $
+# $Source: src/tools/occutil/makefile $
 #
 # OpenPOWER OnChipController Project
 #
-# Contributors Listed Below - COPYRIGHT 2020
+# Contributors Listed Below - COPYRIGHT 2020,2021
 # [+] International Business Machines Corp.
 #
 #
@@ -61,7 +61,9 @@ ifeq ($(strip $(ECMD_RELEASE)),)
    endif
  else
  # If not setup for eCMD, default to rel
-   ECMD_RELEASE := rel
+   #ECMD_RELEASE := rel
+   # Compiler issue forced requirment of a new version of ecmd
+   ECMD_RELEASE := ver-14-20
  endif
 endif
 

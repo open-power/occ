@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/tools/cft/cftocctool.C $                                  */
+/* $Source: src/tools/occutil/cft_occ.C $                                 */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2020                             */
+/* Contributors Listed Below - COPYRIGHT 2020,2021                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -568,9 +568,32 @@ int parse_occ_poll(const uint8_t *i_rsp_data, const uint16_t i_rsp_len)
                         (name == ntohl(0x46424153)) || // FBAS
                         (name == ntohl(0x46555400)) || (name == ntohl(0x46555400))) // FUT/FMAX
                     {
-                        printf("\"%-4.4s\" %02X %02X %08X%04X    pSstate: %3d / %d MHz", (char*)&name, flags, dblock[sindex+5],
+                        printf("\"%-4.4s\" %02X %02X %08X%04X    pState: %3d / %d MHz", (char*)&name, flags, dblock[sindex+5],
                                           htonl(*(uint32_t*)&dblock[sindex+6]), htons(*(uint16_t*)&dblock[sindex+10]),
-                                          dblock[sindex+6], UINT16_GET(&dblock[sindex+7]));
+                                          dblock[sindex+6], htons(*(uint16_t*)&dblock[sindex+7]));
+                    }
+                    else if (name == ntohl(0x434C4950)) // CLIP
+                    {
+                        const char *clip_string = "(OCC NOT clipping)";
+                        if (dblock[sindex+7] != 0x00) clip_string = "(OCC clipping)";
+                        printf("\"%-4.4s\" %02X %02X %02X %02X %08X  pState: %3d, count: %d, history  %s",
+                               (char*)&name, flags, dblock[sindex+5],
+                               dblock[sindex+6], dblock[sindex+7], htonl(*(uint32_t*)&dblock[sindex+8]),
+                               dblock[sindex+6], dblock[sindex+7], clip_string);
+                    }
+                    else if (name == ntohl(0x574F4643)) // WOFC
+                    {
+                        if (dblock[sindex+6] != 0xFF)
+                            printf("\"%-4.4s\" %02X %02X %02X%04X %04X %02X  pState: %3d, vRatio: 0x%04X",
+                                   (char*)&name, flags, dblock[sindex+5],
+                                   dblock[sindex+6], htons(*(uint16_t*)&dblock[sindex+7]),
+                                   htons(*(uint16_t*)&dblock[sindex+9]), dblock[sindex+11],
+                                   dblock[sindex+6], htons(*(uint16_t*)&dblock[sindex+9]));
+                        else
+                            printf("\"%-4.4s\" %02X %02X %02X%02X %08X   WOF disabled, reason",
+                                   (char*)&name, flags, dblock[sindex+5],
+                                   dblock[sindex+6], dblock[sindex+7],
+                                   htonl(*(uint32_t*)&dblock[sindex+8]));
                     }
                     else if (name == ntohl(0x45525248)) // ERRH
                     {
