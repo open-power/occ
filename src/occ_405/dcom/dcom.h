@@ -255,11 +255,11 @@ typedef struct __attribute__ ((packed))
     // Reserved Bytes
     union
     {
-        uint8_t  reserved[SLV_OUTBOX_RSV_SIZE];                  // [539] - 453 bytes
+        uint8_t  reserved2[SLV_OUTBOX_RSV_SIZE];                 // [539] - 453 bytes
         struct __attribute__ ((packed))
         {
-            uint8_t _reserved_1;
-            uint8_t _reserved_2;
+            uint8_t _reserved2_1;
+            uint8_t _reserved2_2;
             uint32_t counter;
         };
     };
