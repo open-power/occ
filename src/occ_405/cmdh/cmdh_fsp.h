@@ -323,7 +323,7 @@ extern uint32_t G_internal_flags;
 #define INT_FLAG_ENABLE_OCS_HOLD_NEW        0x00000010  // keep calculated ceff on dirty block action
 #define INT_FLAG_ENABLE_WOF_AMBIENT_INTERP  0x00000020  // enable VRT interpolation based on ambient condition
 #define INT_FLAG_ENABLE_WOF_CHAR_TEST       0x00000080  // special WOF testing mode requested by Frank
-#define INT_FLAG_ENABLE_MEMORY_CONFIG       0x00000100  // temporary flag to re-enable memory until testing completed
+//                                          0x00000100  // reserved, was memory config enable
 #define INT_FLAG_DISABLE_OC_WOF_OFF         0x00000800  // Disable OC protection when WOF is off
 
 void notifyCmdhWakeupCondition(eCmdhWakeupThreadMask i_cond);

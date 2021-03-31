@@ -1081,10 +1081,9 @@ bool read_oppb_params()
 
         // Validate frequencies
         // frequency_min_khz frequency_max_khz frequency_step_khz pstate_min
-        if ((G_oppb.frequency_min_khz == 0) || (G_oppb.frequency_max_khz == 0) ||
-            (G_oppb.frequency_step_khz == 0) ||
-            (G_oppb.pstate_min == 0) || (G_oppb.pstate_min > 0xFF) ||
-            (G_oppb.frequency_min_khz > G_oppb.frequency_max_khz))
+        if( (G_oppb.frequency_min_khz == 0) || (G_oppb.frequency_max_khz == 0) ||
+            (G_oppb.frequency_step_khz == 0) || (G_oppb.pstate_min > 0xFF) ||
+            (G_oppb.frequency_min_khz > G_oppb.frequency_max_khz) )
         {
             // Frequency data is invalid
             MAIN_TRAC_ERR("read_oppb_params: Invalid frequency data: min[%d], max[%d], step[%d] kHZ, pmin[0x%02X]",

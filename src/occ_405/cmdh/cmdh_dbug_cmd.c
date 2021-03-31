@@ -71,7 +71,7 @@ extern uint16_t G_sensor_debug_group[NUM_SENSOR_DEBUG_GROUPS][MAX_NUMBER_SENSORS
 // Globals
 //*************************************************************************/
 uint16_t G_allow_trace_flags = 0x0000;
-uint32_t G_internal_flags    = INT_FLAG_DISABLE_OC_WOF_OFF | INT_FLAG_ENABLE_MEMORY_CONFIG;
+uint32_t G_internal_flags    = 0;
 extern bool G_smf_mode;
 uint64_t G_inject_dimm = 0;
 uint32_t G_inject_dimm_trace[MAX_NUM_OCMBS][NUM_DIMMS_PER_OCMB] = {{0}};
