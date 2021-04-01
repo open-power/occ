@@ -64,7 +64,7 @@ typedef union ocb_occflg {
     uint32_t value;
     struct {
 #ifdef _BIG_ENDIAN
-    uint32_t reserved_gpe : 16;
+    uint32_t reserved_gpe          : 16;
     uint32_t i2c_engine1_lock_host : 1;
     uint32_t i2c_engine1_lock_occ  : 1;
     uint32_t i2c_engine2_lock_host : 1;
@@ -74,17 +74,19 @@ typedef union ocb_occflg {
     uint32_t gpu0_reset_status     : 1;
     uint32_t gpu1_reset_status     : 1;
     uint32_t gpu2_reset_status     : 1;
-    uint32_t reserved_occ          : 2;
+    uint32_t ocs_dirty             : 1; // bit 25 OverCurrent sensor dirty
+    uint32_t ocs_dirty_type        : 1; // bit 26 OverCurrent sensor dirty type
     uint32_t pm_reset_suppress     : 1;
-    uint32_t wof_hcode_mode        : 2;
-    uint32_t active_quad_update    : 1;
-    uint32_t request_occ_safe      : 1;
+    uint32_t occ_started           : 1;
+    uint32_t undefined             : 2;
+    uint32_t request_occ_safe      : 1; // bit 31 currently not checked
 #else
     uint32_t request_occ_safe      : 1;
-    uint32_t active_quad_update    : 1;
-    uint32_t wof_hcode_mode        : 2;
+    uint32_t undefined             : 2;
+    uint32_t occ_started           : 1;
     uint32_t pm_reset_suppress     : 1;
-    uint32_t reserved_occ          : 2;
+    uint32_t ocs_dirty_type        : 1;
+    uint32_t ocs_dirty             : 1;
     uint32_t gpu2_reset_status     : 1;
     uint32_t gpu1_reset_status     : 1;
     uint32_t gpu0_reset_status     : 1;
@@ -94,7 +96,7 @@ typedef union ocb_occflg {
     uint32_t i2c_engine2_lock_host : 1;
     uint32_t i2c_engine1_lock_occ  : 1;
     uint32_t i2c_engine1_lock_host : 1;
-    uint32_t reserved_gpe : 16;
+    uint32_t reserved_gpe          : 16;
 #endif // _BIG_ENDIAN
     } fields;
 } ocb_occflg_t;

@@ -1946,6 +1946,13 @@ int main(int argc, char **argv)
     int l_ssxrc = 0;
     int l_ssxrc2 = 0;
 
+    // Set indication that OCC was started.  The HWP starting OCC checks for this bit
+    // to be set to know that the OCC was successfully started.  Any failure after
+    // this point will be handled by (H)TMGT seeing OCC not getting to final checkpoint
+    ocb_occflg_t occ_flags = {0};
+    occ_flags.fields.occ_started = 1;
+    out32(OCB_OCCFLG0_OR, occ_flags.value);
+
     // First, check what environment we are running on (Simics vs. HW).
     check_runtime_environment();
 
