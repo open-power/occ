@@ -345,6 +345,80 @@ void amec_vectorize_procio_sensor(sensor_t * l_sensor,
   }
 }
 
+void amec_vectorize_membuf_sensor(sensor_t * l_sensor,
+                                  vectorSensor_t * l_vector,
+                                  const VECTOR_SENSOR_OP l_op,
+                                  uint16_t l_sensor_elem_array_gsid)
+{
+  int l_idx = 0;    // Used to index the for loops for vector create
+  int l_rc  = 0;    // Indicates failure to add a sensor to vector
+  uint16_t l_gsid  = l_sensor->gsid; // Grab GSID for errl in case of failure
+  errlHndl_t l_err = NULL;
+
+  do
+  {
+    // Vectorize the sensor
+    sensor_vectorize(l_sensor,
+        l_vector,
+        l_op);
+
+    // If vectorize worked, add elements to the vector sensor
+    if(NULL != l_sensor->vector)
+    {
+      for(l_idx = 0; l_idx < MAX_NUM_MEM_CONTROLLERS; l_idx++)
+      {
+        // Add elements to the vector sensor
+        sensor_vector_elem_add(l_sensor->vector,
+                               l_idx,
+                               AMECSENSOR_ARRAY_PTR(l_sensor_elem_array_gsid, l_idx));
+      }
+
+      // Sanity check, we should have MAX_NUM_MEM_CONTROLLERS entries in
+      // vector sensor
+      if(l_sensor->vector->size != MAX_NUM_MEM_CONTROLLERS)
+      {
+        // Set l_rc and break out so that we can create an errl
+        l_rc = VECTOR_ADD_ELEM_FAILURE;
+        break;
+      }
+    }
+    else
+    {
+      // Set l_rc and break out so that we can create an errl
+      l_rc = VECTOR_CREATE_FAILURE;
+      break;
+    }
+  }while(0);
+
+  if(l_rc)
+  {
+    //If fail to create pore flex object then there is a problem.
+    TRAC_ERR("amec_vectorize_membuf_sensor: Failed to vectorize sensor[0x%x, 0x%x]", l_gsid, l_rc );
+
+    /* @
+     * @errortype
+     * @moduleid    AMEC_VECTORIZE_MEMBUF_SENSORS
+     * @reasoncode  SSX_GENERIC_FAILURE
+     * @userdata1   return code
+     * @userdata2   gsid of failed sensor
+     * @userdata4   OCC_NO_EXTENDED_RC
+     * @devdesc     Firmware failure in call to vectorize sensor
+     */
+    l_err = createErrl(
+        AMEC_VECTORIZE_MEMBUF_SENSORS,  //modId
+        SSX_GENERIC_FAILURE,            //reasoncode
+        OCC_NO_EXTENDED_RC,             //Extended reason code
+        ERRL_SEV_UNRECOVERABLE,         //Severity
+        NULL,                           //Trace Buf
+        DEFAULT_TRACE_SIZE,             //Trace Size
+        l_rc,                           //userdata1
+        l_gsid                          //userdata2
+        );
+
+    REQUEST_RESET(l_err);
+  }
+}
+
 
 void amec_init_vector_sensors(void)
 {
@@ -407,6 +481,14 @@ void amec_init_vector_sensors(void)
       &g_amec_sys.proc[0].util_vector,
       VECTOR_OP_AVG,
       UTILC0);
+
+  //-----------------------------------------------------
+  // TEMPMEMBUFTHRM Vector Sensor
+  //-----------------------------------------------------
+  amec_vectorize_membuf_sensor(AMECSENSOR_PTR(TEMPMEMBUFTHRM),
+      &g_amec_sys.proc[0].tempmembufthrm_vector,
+      VECTOR_OP_MAX,
+      TEMPMEMBUF0);
 
 }
 

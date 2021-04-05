@@ -69,6 +69,7 @@ enum occAmecModuleId
     AMEC_VECTORIZE_PROCIO_SENSORS     =    AMEC_COMP_ID | 0x1C,
     AMEC_CALC_DTS_SENSORS             =    AMEC_COMP_ID | 0x1D,
     AMEC_SLV_PROC_VOTING_BOX          =    AMEC_COMP_ID | 0x1E,
+    AMEC_VECTORIZE_MEMBUF_SENSORS     =    AMEC_COMP_ID | 0x1F,
 };
 
 /*----------------------------------------------------------------------------*/

@@ -504,7 +504,10 @@ void amec_slv_state_0(void)
   {
       amec_update_ocmb_sensors(MEMBUF_0+L_membuf_addr);
       if(L_membuf_addr)
+      {
+          sensor_vector_update(AMECSENSOR_PTR(TEMPMEMBUFTHRM), 1);
           L_membuf_addr = 0;
+      }
       else
           L_membuf_addr = 8;
   }

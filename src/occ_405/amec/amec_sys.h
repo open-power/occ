@@ -458,6 +458,7 @@ typedef struct
 
   // Memory Summary Sensors
   sensor_t tempmembufthrm;
+  vectorSensor_t tempmembufthrm_vector;
   sensor_t tempdimmthrm;
   sensor_t tempmcdimmthrm; // hottest of all DATA_FRU_MEMCTRL_DRAM monitored by this OCC
   sensor_t temppmicthrm;   // hottest of all DATA_FRU_PMIC monitored by this OCC
