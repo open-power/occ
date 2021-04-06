@@ -109,4 +109,22 @@ typedef union ocmb_therm
     } fields;
 } ocmb_therm_t;
 
+typedef union ocmb_mbastr0q
+{
+    uint64_t value;
+    struct
+    {
+        uint32_t high_order;
+        uint32_t low_order;
+    } words;
+
+    struct
+    {
+        uint64_t dont_care0:        57;
+        uint64_t deadman_timer_sel:  4;
+        uint64_t deadman_tb_sel:     1;
+        uint64_t dont_care1:         2;
+    } fields;
+}ocmb_mbastr0q_t;
+
 #endif

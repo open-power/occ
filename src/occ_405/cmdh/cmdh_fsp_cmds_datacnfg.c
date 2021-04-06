@@ -1878,7 +1878,7 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
                 break;
             }
 
-            l_ocmb_update_time_ms = 1000;
+            l_ocmb_update_time_ms = 640;
 
             // Store the mem config data
             G_sysConfigData.ips_mem_pwr_ctl = l_cmd_ptr_old->header.ips_mem_pwr_ctl;
@@ -2055,18 +2055,26 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
         else
         {
             // calculate how often memory will be read based on how often OCMB is updating
-            // the cache line.  OCC shouldn't be reading faster than OCMB update time
-            // add 128ms to ocmb time to allow for slop in timing between OCC and OCMB
-            l_ocmb_update_time_ms += 128;
+            // the cache line.  OCC shouldn't be reading faster than OCMB update time, but faster
+            // than the deadman timer.
+            // MAX deadman timer is 668 ms (for P10 l_max_num_8ms_ticks is 5)
+            int l_max_dead_8ms_ticks = 640/(8*MAX_NUM_OCMBS);
+
             // task to read 1 OCMB is called every 8ms
             // divide by (8ms * #OCMBs) to get number of 8ms ticks to read 1 OCMB
-            // i.e. 1000ms OCMB update time gives (1000+128)/(8*16) = 8 -> every 8 8ms calls (64ms) 1 OCMB read
-            // each OCMB read 64ms*16= 1,024ms
-            G_read_ocmb_num_8ms_ticks = l_ocmb_update_time_ms / (8*MAX_NUM_OCMBS);
+            // Add  1 to ocmb sensor cache read is less frequent than ocmb update.
+            G_read_ocmb_num_8ms_ticks = 1 + ((l_ocmb_update_time_ms) / (8*MAX_NUM_OCMBS));
+
+            // i.e. 500ms OCMB update time gives 1 + (500)/(8*16) = 4 -> every 4 8ms calls (32ms) 1 OCMB read
+            // each OCMB read 32ms*16= 512ms
 
             // don't allow 0
             if(G_read_ocmb_num_8ms_ticks == 0)
                G_read_ocmb_num_8ms_ticks = 1;
+
+            // G_read_ocmb_num_8ms_ticks can't be greater than the deadman timer (668ms)
+            if(G_read_ocmb_num_8ms_ticks > l_max_dead_8ms_ticks)
+                G_read_ocmb_num_8ms_ticks = l_max_dead_8ms_ticks;
 
             CMDH_TRAC_IMP("1 OCMB will be read every %dms Each OCMB read every %dms",
                           G_read_ocmb_num_8ms_ticks * 8,

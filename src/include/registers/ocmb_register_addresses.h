@@ -33,10 +33,11 @@
 #define MMIO_D0THERM  0x08010852
 #define MMIO_D1THERM  0x08010853
 
-
-
 // N/M Throtling Control
 #define OCMB_MBA_FARB3Q 0x08011418
+#define OCMB_MBA_FARB7Q 0x0801141d
+// Deadman timer setup
+#define OCMB_MBASTR0Q   0x08011437
 
 #define OCMB_IB_SENSOR_CACHE_ADDR (0x40084200 >> 3)
 #define OCMB_IB_BAR_B_BIT (0x0000000080000000ull)

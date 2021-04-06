@@ -31,9 +31,14 @@
 #include "memory.h"
 #include "memory_data.h" 
 #include "amec_sys.h"
+#include "ocmb_register_addresses.h"
 
 // Used for specifing buffer allocations
 #define NUM_DATA_EMPTY_BUF  1
+
+#define OCMB_DEADMAN_TIMER_FIELD    0xf
+#define OCMB_DEADMAN_TIMER_SEL_MAX  0x8
+#define OCMB_DEADMAN_TIMEBASE_SEL   0
 
 //Notes MemData is defined @
 // /afs/awd/proj/p9/eclipz/KnowledgeBase/eclipz/chips/p8/working/procedures/lib/gpe_data.h
@@ -151,6 +156,10 @@ void ocmb_init(void)
     int membuf_idx = 0;
     int l_reset_on_error = 1;
     uint32_t missing_membuf_bitmap = 0;
+    GpeRequest l_gpe_request;
+    static scomList_t L_scomList[2] SECTION_ATTRIBUTE(".noncacheable");
+    static MemBufScomParms_t L_ocmb_reg_parms SECTION_ATTRIBUTE(".noncacheable");
+
     do
     {
         TRAC_INFO("ocmb_init: Initializing Memory Data Controller");
@@ -239,6 +248,63 @@ void ocmb_init(void)
                  (uint32_t)G_dimm_enabled_sensors.dw[0],
                  (uint32_t)(G_dimm_enabled_sensors.dw[1]>>32),
                  (uint32_t)G_dimm_enabled_sensors.dw[1]);
+
+        // Setup the OCMB deadman timer
+        L_scomList[0].scom = OCMB_MBASTR0Q;
+        L_scomList[0].commandType = MEMBUF_SCOM_RMW_ALL;
+
+        ocmb_mbastr0q_t l_mbascfg;
+        l_mbascfg.value = 0;
+
+        // setup the mask bits
+        l_mbascfg.fields.deadman_timer_sel = OCMB_DEADMAN_TIMER_FIELD;
+        l_mbascfg.fields.deadman_tb_sel = 1;
+        L_scomList[0].mask = l_mbascfg.value;
+
+        // setup the deadman config data
+        l_mbascfg.fields.deadman_timer_sel = OCMB_DEADMAN_TIMER_SEL_MAX;
+        l_mbascfg.fields.deadman_tb_sel    = OCMB_DEADMAN_TIMEBASE_SEL;
+        L_scomList[0].data = l_mbascfg.value;
+
+        L_scomList[1].scom = OCMB_MBA_FARB7Q;
+        L_scomList[1].commandType = MEMBUF_SCOM_WRITE_ALL;
+        L_scomList[1].data = 0; // Emergency throttle reset
+
+        L_ocmb_reg_parms.scomList = &L_scomList[0];
+        L_ocmb_reg_parms.entries = 2;
+        L_ocmb_reg_parms.error.ffdc = 0;
+
+
+        rc = gpe_request_create(
+                                &l_gpe_request,                 //gpe_reqest
+                                &G_async_gpe_queue1,            //gpe1 queue
+                                IPC_ST_MEMBUF_SCOM_FUNCID,      //function id
+                                &L_ocmb_reg_parms,              //parms
+                                SSX_SECONDS(5),                 //timeout
+                                NULL,                           //callback
+                                NULL,                           //callback args
+                                ASYNC_REQUEST_BLOCKING );       // wait
+        if(rc)
+        {
+            TRAC_ERR("ocmb_init: gpe_request_create failed. rc = 0x%08x", rc);
+            break;
+        }
+
+        rc = gpe_request_schedule(&l_gpe_request);
+
+        if(rc || L_ocmb_reg_parms.error.rc)
+        {
+            TRAC_ERR("ocmb_init: IPC_ST_MEMBUF_SCOM failure. rc = 0x%08x, "
+                     "gpe_rc = 0x%08x, address = 0x%08x",
+                     rc,
+                     L_ocmb_reg_parms.error.rc,
+                     L_ocmb_reg_parms.error.addr);
+            if(!rc)
+            {
+                rc = L_ocmb_reg_parms.error.rc;
+            }
+            break;
+        }
 
         // Setup the GPE request to do sensor data collection
         G_membuf_data_parms.error.ffdc = 0;
