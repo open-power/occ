@@ -90,11 +90,11 @@ param_table_entry_t G_parameter_table[] =
 {
   /* ID                 Value_ID              Flags                                     Data  Description  */
     {PARAM_ID_MODE,     PARAM_VALUE_ID_NONE, (PARAM_FLAG_REPORT | PARAM_FLAG_MASTER),     0,  "Power and Performance Mode\0"},
-    {PARAM_ID_MODE,     OCC_MODE_DISABLED, (PARAM_FLAG_MASTER),                           0,  "Disabled\0"},
+    {PARAM_ID_MODE,     OCC_MODE_DISABLED, (PARAM_FLAG_MASTER),                           0,  "Static\0"},
     {PARAM_ID_MODE,     OCC_MODE_SAFE, (PARAM_FLAG_MASTER),                               0,  "Safe\0"},
-    {PARAM_ID_MODE,     OCC_MODE_PWRSAVE, (PARAM_FLAG_MASTER),                            0,  "Static Power Saver\0"},
+    {PARAM_ID_MODE,     OCC_MODE_PWRSAVE, (PARAM_FLAG_MASTER),                            0,  "Power Saving\0"},
     {PARAM_ID_MODE,     OCC_MODE_FMAX, (PARAM_FLAG_MASTER),                               0,  "Fmax\0"},
-    {PARAM_ID_MODE,     OCC_MODE_DYN_PERF, (PARAM_FLAG_MASTER),                           0,  "Dynamic Performance\0"},
+    {PARAM_ID_MODE,     OCC_MODE_DYN_PERF, (PARAM_FLAG_MASTER),                           0,  "Balanced Performance\0"},
     {PARAM_ID_MODE,     OCC_MODE_FFO, (PARAM_FLAG_MASTER),                                0,  "Fixed Frequency Override\0"},
     {PARAM_ID_MODE,     OCC_MODE_MAX_PERF, (PARAM_FLAG_MASTER),                           0,  "Maximum Performance\0"},
     {PARAM_ID_IPS,      PARAM_VALUE_ID_NONE, (PARAM_FLAG_REPORT | PARAM_FLAG_MASTER),     0,  "Idle Power Saver Status\0"},
@@ -103,7 +103,7 @@ param_table_entry_t G_parameter_table[] =
     {PARAM_ID_IPS,      PARAM_VALUE_ID_IPS_ACTIVE, (PARAM_FLAG_MASTER),                   0,  "Idle Power Saver Active\0"},
     {PARAM_ID_IPS,      PARAM_VALUE_ID_NOT_SUPPORTED, (PARAM_FLAG_MASTER),                0,  "Not Supported\0"},
     {PARAM_ID_FMIN,     PARAM_VALUE_ID_NONE, (PARAM_FLAG_REPORT | PARAM_FLAG_DATA | PARAM_FLAG_MASTER),  0,  "Minimum Frequency (MHz)\0"},
-    {PARAM_ID_NOMINAL,  PARAM_VALUE_ID_NONE, (PARAM_FLAG_REPORT | PARAM_FLAG_DATA | PARAM_FLAG_MASTER),  0,  "Nominal Frequency (MHz)\0"},
+    {PARAM_ID_NOMINAL,  PARAM_VALUE_ID_NONE, (PARAM_FLAG_REPORT | PARAM_FLAG_DATA | PARAM_FLAG_MASTER),  0,  "Static Frequency (MHz)\0"},
     {PARAM_ID_BASE,     PARAM_VALUE_ID_NONE, (                    PARAM_FLAG_DATA | PARAM_FLAG_MASTER),  0,  "Base Frequency (MHz)\0"},
     {PARAM_ID_SYS_MAX,  PARAM_VALUE_ID_NONE, (PARAM_FLAG_REPORT | PARAM_FLAG_DATA | PARAM_FLAG_MASTER),  0,  "Maximum Frequency (MHz)\0"},
     {PARAM_ID_CHIP_MAX, PARAM_VALUE_ID_NONE, (PARAM_FLAG_DATA),                                          0,  "Chip Max Frequency (MHz)\0"},
