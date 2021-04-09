@@ -2646,6 +2646,7 @@ uint32_t scale( uint16_t i_target_temp,
                 uint16_t i_reference_temp,
                 bool i_non_core_scaling_line )
 {
+    static bool L_traced = FALSE;
     int32_t  l_iddqt1 = 0;
     int32_t  l_iddqt2 = 0;
     uint32_t l_result = 0;
@@ -2653,19 +2654,18 @@ uint32_t scale( uint16_t i_target_temp,
     // Temperature scaling lines are 3rd degree polynomials: aT^3 + bT^2 + cT + d
     // default coefficients a, b, c, d for core scaling line
     // coefficients are in 0.00001 unit
-    int32_t l_coeff_a = 9;
-    int32_t l_coeff_b = -450;
-    int32_t l_coeff_c = 46170;
-    int32_t l_coeff_d = -63370;
+    int32_t l_coeff_a = 31;      //   0.000306435182
+    int32_t l_coeff_b = -869;    //  -0.00869469445
+    int32_t l_coeff_c = 97938;   //   0.979379065
+    int32_t l_coeff_d = 1429459; //  14.2945863
 
+/*
+    // currently we will use the same coefficients for non-core
     if(i_non_core_scaling_line)
     {
        // change coefficients for non-core temperature scaling line
-       l_coeff_a = 2;
-       l_coeff_b = -70;
-       l_coeff_c = 6340;
-       l_coeff_d = 16080;
     }
+*/
 
     l_iddqt1 = (l_coeff_a * (i_target_temp * i_target_temp * i_target_temp));
     l_iddqt1 += (l_coeff_b * (i_target_temp * i_target_temp));
@@ -2677,8 +2677,23 @@ uint32_t scale( uint16_t i_target_temp,
     l_iddqt2 += l_coeff_c * i_reference_temp;
     l_iddqt2 += l_coeff_d;
 
-    // is there a guarantee that l_iddqt1 > l_iddqt2?
-    l_result = (l_iddqt1 - l_iddqt2) / l_iddqt2;
+    // avoid negative and divide by 0
+    if( (l_iddqt1 >= l_iddqt2) && (l_iddqt2 != 0) )
+    {
+        l_result = (l_iddqt1 - l_iddqt2) / l_iddqt2;
+    }
+    else
+    {
+        l_result = 0;
+        if(!L_traced)
+        {
+            INTR_TRAC_INFO("scale: leakage temp scaling ref temp[%d] iddqt2[%d] > iddqt1[%d] target temp[%d]",
+                            i_reference_temp, l_iddqt2, l_iddqt1, i_target_temp);
+            INTR_TRAC_INFO("scale: coefficients a[%d] b[%d] c[%d] d[%d]",
+                            l_coeff_a, l_coeff_b, l_coeff_c, l_coeff_d);
+            L_traced = TRUE;
+        }
+    }
 
     // divide by 100 to account for coefficients in 0.00001 unit and leave result in .001 unit
     l_result /= 100;
