@@ -134,11 +134,6 @@ amec_parm_t g_amec_parm_list[] = {
     AMEC_PARM_UINT16(PARM_SYS_THRM_SPEED,"sys_thrm_speed",&g_amec_sys.thermalproc.speed_request),
     AMEC_PARM_UINT16(PARM_SYS_THRM_FREQ,"sys_thrm_freq",&g_amec_sys.thermalproc.freq_request),
 
-    // Partition related parameters
-    AMEC_PARM_UINT16(PARM_SOFT_FMIN,"part_soft_fmin",&g_amec_sys.part_config.part_list[0].soft_fmin),
-    AMEC_PARM_UINT16(PARM_SOFT_FMAX,"part_soft_fmax",&g_amec_sys.part_config.part_list[0].soft_fmax),
-    AMEC_PARM_RAW(PARM_TOD,"apss_tod",&G_dcom_slv_inbox_doorbell_rx.tod,8),
-
     // Begin WOF parameters
     AMEC_PARM_UINT32(PARM_WOF_DISABLED, "wof_disabled", &g_amec_sys.wof.wof_disabled),
     AMEC_PARM_UINT16(PARM_VDD_STEP_FROM_START, "vddStpFrmStart", &g_amec_sys.wof.vdd_step_from_start),

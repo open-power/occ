@@ -53,7 +53,6 @@ typedef enum
     CMDH_AME_PASS_THROUGH       = 0x41,
     CMDH_GET_FIELD_DEBUG_DATA   = 0x42,
     CMDH_MFG_TEST_CMD           = 0x53,
-    CMDH_TUNABLE_PARMS          = 0x60,
     CMDH_CLEAR_SENSOR_DATA      = 0xD0,
     CMDH_SET_PCAP_INBAND        = 0xD1,
     CMDH_WRITE_PSR              = 0xD2,
@@ -436,41 +435,6 @@ typedef struct __attribute__ ((packed))
     uint8_t    version;
 }cmdh_get_field_debug_data_query_t;
 
-
-//---------------------------------------------------------
-// Tunable Parameter Command
-//---------------------------------------------------------
-
-// Default number of tunable parameters available
-// NOTE: update this value if any new tunable parameter is added into the table
-#define CMDH_DEFAULT_TUNABLE_PARAM_NUM   10
-// Max size for string containing the tunable parameter name
-#define CMDH_TUNABLE_PARAM_NAME_MAX_SIZE 60
-
-typedef struct cmdh_tunable_param_table
-{
-    uint8_t             id;
-    char                name[CMDH_TUNABLE_PARAM_NAME_MAX_SIZE];
-    uint8_t             unit_type;
-    uint16_t            flag;
-    uint16_t            value;
-    uint16_t            min;
-    uint16_t            max;
-}cmdh_tunable_param_table_t;
-
-typedef struct cmdh_tunable_param_table_ext
-{
-    // Default value for this parameter
-    uint16_t            def_value;
-    // Multiplier to convert the input value to correct internal resolution
-    uint16_t            multiplier;
-    // Adjusted value for this parameter (adjusted for internal resolution)
-    uint16_t            adj_value;
-}cmdh_tunable_param_table_ext_t;
-
-extern uint8_t G_mst_tunable_parameter_overwrite;
-extern cmdh_tunable_param_table_ext_t G_mst_tunable_parameter_table_ext[CMDH_DEFAULT_TUNABLE_PARAM_NUM];
-extern cmdh_tunable_param_table_t G_mst_tunable_parameter_table[CMDH_DEFAULT_TUNABLE_PARAM_NUM];
 
 #define CMDH_SET_USER_PCAP_DATALEN 2
 

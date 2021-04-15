@@ -323,48 +323,19 @@ void amec_dps_main(void)
     // First, update the utilization variables for all cores
     amec_dps_update_core_util();
 
-    // Loop through all core groups and apply energy-savings policy
-    for (l_idx=0; l_idx<AMEC_PART_MAX_PART; l_idx++)
+    if(CURRENT_MODE() == OCC_MODE_DYN_PERF)
     {
-        if (!g_amec->part_config.part_list[l_idx].valid)
-        {
-            continue;
-        }
-
-        if (g_amec->part_config.part_list[l_idx].ncores == 0)
-        {
-            continue;
-        }
-
-        switch (g_amec->part_config.part_list[l_idx].es_policy)
-        {
-            case OCC_MODE_DYN_PERF:
-                amec_dps_partition_update_sensors(l_idx);
-                amec_dps_partition_alg(l_idx);
-                break;
-
-            default:
-                // No energy-savings policy: DPS vote is already disabled when
-                // policy first selected for partition or core ownership
-                // changes (amec_part.c)
-                break;
-        }
-    }
-
-    // For GA1, we need to send the Fwish to the Master OCC
-    if (g_amec->part_config.part_list[0].es_policy == OCC_MODE_DYN_PERF)
-    {
-        // If this core group policy is one of the DPS modes, then send the
-        // frequency request from the DPS algorithm
-        G_dcom_slv_outbox_tx.fwish =
-            g_amec->part_config.part_list[0].dpsalg.freq_request;
+        amec_dps_partition_update_sensors(0);
+        amec_dps_partition_alg(0);
+        // send the frequency request from the DPS algorithm
+        G_dcom_slv_outbox_tx.fwish = g_amec->part_config.part_list[0].dpsalg.freq_request;
     }
     else
     {
         // Else, send wof base frequency of the system
-        G_dcom_slv_outbox_tx.fwish =
-            G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_WOF_BASE];
+        G_dcom_slv_outbox_tx.fwish = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_WOF_BASE];
     }
+
     // We also need to send the Factual to the Master OCC
     for (l_idx=0; l_idx<MAX_NUM_CORES; l_idx++)
     {

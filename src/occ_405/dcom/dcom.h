@@ -99,7 +99,7 @@
 // general defines
 #define TOD_SIZE                 6
 #define NUM_TOD_SENSORS          3
-#define SLV_INBOX_RSV_SIZE       150
+#define SLV_INBOX_RSV_SIZE       170
 #define SLV_OUTBOX_RSV_SIZE      453
 #define DOORBELL_RSV_SIZE        1
 #define DCOM_MAX_ERRH_ENTRIES    8
@@ -165,21 +165,6 @@ typedef struct __attribute__ ((packed))
     // Idle Power Saver parameters
     uint16_t ips_freq_request;                                      // [52] -  2 bytes
 
-    // DPS Tunable Parameters
-    uint16_t alpha_up;                                              // [54] -  2 bytes
-    uint16_t alpha_down;                                            // [56] -  2 bytes
-    uint16_t sample_count_util;                                     // [58] -  2 bytes
-    uint16_t step_up;                                               // [60] -  2 bytes
-    uint16_t step_down;                                             // [62] -  2 bytes
-    uint16_t epsilon_perc;                                          // [64] -  2 bytes
-    uint16_t tlutil;                                                // [66] -  2 bytes
-    uint8_t  wof_enable;                                            // [68] -  1 byte
-    uint8_t  tunable_param_overwrite;                               // [69] -  1 byte
-
-    // Soft frequency boundaries
-    uint16_t soft_fmin;                                             // [70] -  2 bytes
-    uint16_t soft_fmax;                                             // [72] -  2 bytes
-
     // Reserved Bytes
     union
     {
@@ -188,7 +173,7 @@ typedef struct __attribute__ ((packed))
           uint32_t     counter;
           uint8_t      tb_record;
       };
-      uint8_t  reserved[ SLV_INBOX_RSV_SIZE ];                      // [74] - 150 bytes
+      uint8_t  reserved[ SLV_INBOX_RSV_SIZE ];                      // [54] - 170 bytes
     };
 
     // General Firmware Message Passing

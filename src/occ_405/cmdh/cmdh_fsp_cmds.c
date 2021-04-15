@@ -66,41 +66,6 @@ extern bool G_htmgt_notified_of_error;
 extern bool G_smf_mode;
 
 extern data_cnfg_t * G_data_cnfg;
-// This table contains tunable parameter information that can be exposed to
-// customers (only Master OCC should access/control this table)
-cmdh_tunable_param_table_t G_mst_tunable_parameter_table[CMDH_DEFAULT_TUNABLE_PARAM_NUM] =
-{
-    {1,   "Utilization threshold for increasing frequency",              3,  0,  980,  0,    1000},
-    {2,   "Utilization threshold for decreasing frequency",              3,  0,  980,  0,    1000},
-    {3,   "Number of samples for computing utilization statistics",      4,  0,  16,   1,    1024},
-    {4,   "Step size for going up in frequency",                         3,  0,  8,    1,    1000},
-    {5,   "Step size for going down in frequency",                       3,  0,  8,    1,    1000},
-    {6,   "Delta percentage for determining active cores",               2,  0,  18,   0,    100 },
-    {7,   "Utilization threshold to determine active cores with slack",  3,  0,  980,  0,    1000},
-    {8,   "Enable/disable frequency delta between cores",                0,  0,  0,    0,    1   },
-    {9,   "Maximum frequency delta between cores",                       2,  0,  10,   10,   100 },
-    {10,  "Enable/disable Workload Optimized Frequency",                 0,  0,  1,    0,    1   },
-};
-
-// The first two columns of this table are the default tunable parameter values
-// and mutipliers.
-cmdh_tunable_param_table_ext_t G_mst_tunable_parameter_table_ext[CMDH_DEFAULT_TUNABLE_PARAM_NUM] =
-{
-    {980, 10,  9800},
-    {980, 10,  9800},
-    {16,  1,   16  },
-    {8,   1,   8   },
-    {8,   1,   8   },
-    {18,  100, 1800},
-    {980, 10,  980 },
-    {0,   1,   0   },
-    {10,  1,   10  },
-    {1,   1,   1   },
-};
-
-// Flag to indicate that new tunable parameter values need to be written
-// (=0: no new values available; =1: new values need to be written; =2: restore defaults)
-uint8_t G_mst_tunable_parameter_overwrite = 0;
 
 //Reverse association of channel to function.
 uint8_t G_apss_ch_to_function[MAX_APSS_ADC_CHANNELS] = {0};

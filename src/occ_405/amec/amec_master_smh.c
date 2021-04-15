@@ -82,10 +82,6 @@ uint32_t G_ips_exit_count[MAX_OCCS][MAX_CORES] = {{0}};
 //Array that stores the entry counts for the IPS algorithm
 uint32_t G_ips_entry_count = 0;
 
-//Soft Fmin to be sent to Slave OCCs
-uint16_t G_mst_soft_fmin = 0;
-//Soft Fmax to be sent to Slave OCCs
-uint16_t G_mst_soft_fmax = 0xFFFF;
 //Counter of committed violations by the Slave OCCs
 uint8_t  G_mst_violation_cnt[MAX_OCCS] = {0};
 
@@ -581,169 +577,6 @@ uint8_t AMEC_mst_get_ips_active_status()
     return g_amec->mst_ips_parms.active;
 }
 
-// Function Specification
-//
-// Name: amec_mst_gen_soft_freq
-//
-// Description: This function executes the algorithm that generates the soft
-// frequency boundaries to be sent to the Slave OCCs. This is the strategy
-// to be used for P8 GA1.
-//
-// End Function Specification
-void amec_mst_gen_soft_freq(void)
-{
-    /*------------------------------------------------------------------------*/
-    /*  Local Variables                                                       */
-    /*------------------------------------------------------------------------*/
-    uint8_t                     i = 0;
-    uint16_t                    l_ftarget = 0;
-    uint16_t                    l_fdelta = 0;
-    uint16_t                    l_lowest_fwish = 0;
-    uint16_t                    l_highest_fwish = 0;
-    BOOLEAN                     l_need_reset = FALSE;
-
-    /*------------------------------------------------------------------------*/
-    /*  Code                                                                  */
-    /*------------------------------------------------------------------------*/
-
-    do
-    {
-        // First, check if frequency delta has been enabled
-        if (G_mst_tunable_parameter_table_ext[7].adj_value == 0)
-        {
-            // If it hasn't been enabled, then use the full frequency range and
-            // break
-            G_mst_soft_fmin = 0x0000;
-            G_mst_soft_fmax = 0xFFFF;
-
-            break;
-        }
-
-        // Use the frequency delta sent by the customer
-        l_fdelta = (G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_DISABLED] *
-                    G_mst_tunable_parameter_table_ext[8].adj_value/2) / 100;
-
-        // Check if all OCCs are operating inside the soft frequency boundaries
-        for (i=0; i<MAX_OCCS; i++)
-        {
-            // Ignore OCCs that are sending zeros for factual or fwish
-            if ((G_dcom_slv_outbox_rx[i].factual == 0) ||
-                (G_dcom_slv_outbox_rx[i].fwish == 0))
-            {
-                continue;
-            }
-
-            // Compare factual against the soft frequency boundaries
-            if ((G_dcom_slv_outbox_rx[i].factual < G_mst_soft_fmin) ||
-                (G_dcom_slv_outbox_rx[i].factual > G_mst_soft_fmax))
-            {
-                G_mst_violation_cnt[i]++;
-            }
-            else
-            {
-                G_mst_violation_cnt[i] = 0;
-            }
-
-            // Now check if the violation count has exceeded the threshold
-            if (G_mst_violation_cnt[i] > 3)
-            {
-                // The new target frequency is the violator's factual
-                l_need_reset = TRUE;
-                l_ftarget = G_dcom_slv_outbox_rx[i].factual;
-            }
-        }
-
-        // If all OCCs are inside the soft frequency boundaries, select the
-        // target frequeny based on the power mode
-        if (!l_need_reset)
-        {
-            if(CURRENT_MODE() == OCC_MODE_DYN_PERF)
-            {
-                // For DPS modes, calculate the highest Fwish sent
-                // by all slave OCCs
-                l_highest_fwish = 0;
-                for (i=0; i<MAX_OCCS; i++)
-                {
-                    // Ignore OCCs that are sending zeros for factual or fwish
-                    if ((G_dcom_slv_outbox_rx[i].factual == 0) ||
-                        (G_dcom_slv_outbox_rx[i].fwish == 0))
-                    {
-                        continue;
-                    }
-                    if (G_dcom_slv_outbox_rx[i].fwish > l_highest_fwish)
-                    {
-                        l_highest_fwish = G_dcom_slv_outbox_rx[i].fwish;
-                    }
-                }
-
-                // If the highest Fwish is in range, go for it. Otherwise, step
-                // towards it in small steps
-                if ((l_highest_fwish >= G_mst_soft_fmin) &&
-                    (l_highest_fwish <= G_mst_soft_fmax))
-                {
-                    l_ftarget = l_highest_fwish;
-                }
-                else if (l_highest_fwish > G_mst_soft_fmax)
-                {
-                    // Fwish is too high for range, step up (new target is the
-                    // old soft Fmax)
-                    l_ftarget = G_mst_soft_fmax;
-                }
-                else
-                {
-                    // Fwish is too low for range, step down (new target is the
-                    // old soft Fmin)
-                    l_ftarget = G_mst_soft_fmin;
-                }
-            }
-            else
-            {
-                // For other system power modes, calculate the lowest Fwish sent
-                // by all slave OCCs
-                l_lowest_fwish = 0xFFFF;
-                for (i=0; i<MAX_OCCS; i++)
-                {
-                    // Ignore OCCs that are sending zeros for factual or fwish
-                    if ((G_dcom_slv_outbox_rx[i].factual == 0) ||
-                        (G_dcom_slv_outbox_rx[i].fwish == 0))
-                    {
-                        continue;
-                    }
-                    if ((G_dcom_slv_outbox_rx[i].fwish < l_lowest_fwish) &&
-                        (G_dcom_slv_outbox_rx[i].fwish != 0))
-                    {
-                        l_lowest_fwish = G_dcom_slv_outbox_rx[i].fwish;
-                    }
-                }
-
-                // If the lowest Fwish is in range, go for it. Otherwise, step
-                // towards it in small steps
-                if ((l_lowest_fwish >= G_mst_soft_fmin) &&
-                    (l_lowest_fwish <= G_mst_soft_fmax))
-                {
-                    l_ftarget = l_lowest_fwish;
-                }
-                else if (l_lowest_fwish > G_mst_soft_fmax)
-                {
-                    // Fwish is too high for range, step up (new target is the
-                    // old soft Fmax)
-                    l_ftarget = G_mst_soft_fmax;
-                }
-                else
-                {
-                    // Fwish is too low for range, step down (new target is the
-                    // old soft Fmin)
-                    l_ftarget = G_mst_soft_fmin;
-                }
-            }
-        }
-
-        // Calculate the new soft frequency boundaries
-        G_mst_soft_fmin = l_ftarget - l_fdelta;
-        G_mst_soft_fmax = l_ftarget + l_fdelta;
-
-    } while(0);
-}
 
 
 // Function Specification
@@ -821,10 +654,6 @@ void amec_mst_state_6(void)
     /*------------------------------------------------------------------------*/
     AMEC_DBG("\tAMEC Master State 6\n");
 
-    if ( IS_OCC_STATE_ACTIVE() )
-    {
-        amec_mst_gen_soft_freq();
-    }
 }
 
 void amec_mst_state_7(void){AMEC_DBG("\tAMEC Master State 7\n");}

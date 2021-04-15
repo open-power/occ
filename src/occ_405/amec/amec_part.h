@@ -64,10 +64,6 @@
 
 typedef struct amec_part
 {
-    ///Flag to indicate if the core group should follow the system power policy
-    BOOLEAN                     follow_sysmode;
-    ///EnergyScale power savings policy
-    OCC_MODE                    es_policy;
     ///Total number of cores in this core group.
     uint8_t                     ncores;
     ///List of cores group. Indices 0 to ncores-1 are valid. Valid values: 0 to
@@ -77,10 +73,6 @@ typedef struct amec_part
     uint8_t                     id;
     ///Valid bit (=1 in use, =0 not in use)
     uint8_t                     valid;
-    ///Soft min frequency boundary sent by PHYP
-    uint16_t                    soft_fmin;
-    ///Soft max frequency boundary sent by PHYP
-    uint16_t                    soft_fmax;
     ///Power saving state
     amec_dps_t                  dpsalg;
     ///slack utilization sensor
@@ -122,26 +114,5 @@ void amec_part_add(uint8_t i_id);
  *  
  */
 void amec_part_init(void);
-
-/**
- * Update the parameter values depending on the DPS mode that 
- * has been selected (Favor Energy or Favor Performance). 
- *
- */
-void amec_part_update_dps_parameter(amec_part_t* io_part);
-
-/**
- * Update the internal performance settings for those cores that 
- * belong to the input partition. 
- *
- */
-void amec_part_update_perf_settings(amec_part_t* io_part);
-
-/**
- * Overwrite the tunable parameters used by the DPS algorithms 
- * whenever the Master OCC sends them. 
- *
- */
-void AMEC_part_overwrite_dps_parameters(void);
 
 #endif //_AMEC_PART_H

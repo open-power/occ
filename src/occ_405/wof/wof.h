@@ -58,30 +58,30 @@ extern uint32_t G_max_ceff_ratio;
 // WOF Reason Code Masks
 //******************************************************************************
 #define WOF_RC_NO_WOF_HEADER_MASK                  0x00000001
-//#define WOF_RC_                                    0x00000002
+//                                                 0x00000002
 #define WOF_RC_INVALID_VDD_VDN                     0x00000004
-//#define WOF_RC_                                    0x00000008
+//                                                 0x00000008
 #define WOF_RC_PGPE_WOF_DISABLED                   0x00000010
 #define WOF_RC_PSTATE_PROTOCOL_OFF                 0x00000020
 #define WOF_RC_VRT_REQ_TIMEOUT                     0x00000040
 #define WOF_RC_CONTROL_REQ_TIMEOUT                 0x00000080
 #define WOF_RC_STATE_CHANGE                        0x00000100
-//#define WOF_RC_                                    0x00000200
+//                                                 0x00000200
 #define WOF_RC_MODE_NO_SUPPORT_MASK                0x00000400
 #define WOF_RC_DIVIDE_BY_ZERO_VDD                  0x00000800
 #define WOF_RC_VRT_REQ_FAILURE                     0x00001000
 #define WOF_RC_CONTROL_REQ_FAILURE                 0x00002000
 #define WOF_RC_VRT_ALIGNMENT_ERROR                 0x00004000
-//#define WOF_RC_                0x00008000
+//                                                 0x00008000
 #define WOF_RC_UTURBO_IS_ZERO                      0x00010000
 #define WOF_RC_OCC_WOF_DISABLED                    0x00020000
 #define WOF_RC_OPPB_WOF_DISABLED                   0x00040000
 #define WOF_RC_SYSTEM_WOF_DISABLE                  0x00080000
 #define WOF_RC_RESET_LIMIT_REACHED                 0x00100000
-//#define WOF_RC_                                    0x00200000
+//                                                 0x00200000
 #define WOF_RC_NO_CONFIGURED_CORES                 0x00400000
 #define WOF_RC_IPC_FAILURE                         0x00800000
-#define WOF_RC_USER_DISABLED_WOF                   0x01000000
+//                                                 0x01000000
 #define WOF_RC_RESET_DEBUG_CMD                     0x02000000
 #define WOF_RC_DIVIDE_BY_ZERO_VCS                  0x04000000
 #define WOF_RC_INVALID_IDDQ_SAMPLE_DEPTH           0x08000000
@@ -97,8 +97,7 @@ extern uint32_t G_max_ceff_ratio;
                             WOF_RC_NO_CONFIGURED_CORES | \
                             WOF_RC_RESET_LIMIT_REACHED | \
                             WOF_RC_UTURBO_IS_ZERO | \
-                            WOF_RC_PSTATE_PROTOCOL_OFF | \
-                            WOF_RC_USER_DISABLED_WOF )
+                            WOF_RC_PSTATE_PROTOCOL_OFF )
 
 // Reason codes that should NOT request a reset should be added here
 #define IGNORE_WOF_RESET (WOF_RC_SYSTEM_WOF_DISABLE )

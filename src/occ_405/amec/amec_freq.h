@@ -61,8 +61,6 @@ typedef enum
 typedef enum
 {
     AMEC_VOTING_REASON_INIT             = 0x00000000,
-    AMEC_VOTING_REASON_SOFT_MIN         = 0x00000008, // DPM alg
-    AMEC_VOTING_REASON_SOFT_MAX         = 0x00000010, // DPM alg
     AMEC_VOTING_REASON_PROC_THRM        = 0x00000040, // processor OT
     AMEC_VOTING_REASON_OVER_CURRENT     = 0x00000200, // WOF off, clipping from OCS dirty bits
     AMEC_VOTING_REASON_OVERRIDE         = 0x00000400, // mfg auto slew command

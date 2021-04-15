@@ -49,7 +49,6 @@ TOP-C-SOURCES = amec/amec_controller.c \
                 cmdh/cmdh_fsp.c \
                 cmdh/cmdh_mnfg_intf.c \
                 cmdh/cmdh_thread.c \
-                cmdh/cmdh_tunable_parms.c \
                 cmdh/ffdc.c \
                 common.c \
                 dcom/dcom.c \

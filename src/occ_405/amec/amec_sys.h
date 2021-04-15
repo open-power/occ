@@ -567,8 +567,6 @@ typedef struct
 
   // Idle Power Saver frequency request sent by Master OCC
   uint16_t              slv_ips_freq_request;
-  // Flag to indicate that the DPS parameters were overwritten by user
-  BOOLEAN               slv_dps_param_overwrite;
 
   //---------------------------------------------------------
   //

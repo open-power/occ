@@ -83,8 +83,6 @@ typedef struct
 
 extern slave_pcap_info_t G_slave_active_pcaps[MAX_OCCS];
 extern uint8_t G_over_cap_count;
-extern uint16_t G_mst_soft_fmin;
-extern uint16_t G_mst_soft_fmax;
 
 //*************************************************************************
 // Function Prototypes
@@ -104,7 +102,6 @@ void amex_mst_check_under_pcap(void);
 void amec_mst_ips_main(void);
 // Get the current Idle Power Saver active status
 uint8_t AMEC_mst_get_ips_active_status();
-void amec_mst_gen_soft_freq(void);
 
 // Master States
 void amec_mst_state_0(void);

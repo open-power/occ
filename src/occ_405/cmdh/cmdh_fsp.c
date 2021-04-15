@@ -34,7 +34,6 @@
 #include "cmdh_fsp.h"
 #include "cmdh_fsp_cmds.h"
 #include "cmdh_mnfg_intf.h"
-#include "cmdh_tunable_parms.h"
 #include "homer.h"
 
 // OCB Channel Setup Defines
@@ -940,10 +939,6 @@ errlHndl_t cmdh_processTmgtRequest (const cmdh_fsp_cmd_t * i_cmd_ptr,
 
         case CMDH_GET_FIELD_DEBUG_DATA:
             l_err = cmdh_tmgt_get_field_debug_data(i_cmd_ptr,i_rsp_ptr);
-            break;
-
-        case CMDH_TUNABLE_PARMS:
-            l_err = cmdh_tunable_parms(i_cmd_ptr,i_rsp_ptr);
             break;
 
         case CMDH_SET_USER_PCAP:

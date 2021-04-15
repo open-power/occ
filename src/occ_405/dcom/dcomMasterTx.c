@@ -147,32 +147,12 @@ uint32_t dcom_build_slv_inbox(void)
         // Collect Idle Power Saver parameters to be sent to slaves
         G_dcom_slv_inbox_tx[l_slv_idx].ips_freq_request = g_amec->mst_ips_parms.freq_request;
 
-        // Collect Tunable Paramaters to be sent to slaves
-        // Tunable IDs defined in G_mst_tunable_parameter_table[]
-        // G_mst_tunable_parameter_table_ext index = Tunable ID - 1
-        G_dcom_slv_inbox_tx[l_slv_idx].alpha_up = G_mst_tunable_parameter_table_ext[0].adj_value;
-        G_dcom_slv_inbox_tx[l_slv_idx].alpha_down = G_mst_tunable_parameter_table_ext[1].adj_value;
-        G_dcom_slv_inbox_tx[l_slv_idx].sample_count_util = G_mst_tunable_parameter_table_ext[2].adj_value;
-        G_dcom_slv_inbox_tx[l_slv_idx].step_up = G_mst_tunable_parameter_table_ext[3].adj_value;
-        G_dcom_slv_inbox_tx[l_slv_idx].step_down = G_mst_tunable_parameter_table_ext[4].adj_value;
-        G_dcom_slv_inbox_tx[l_slv_idx].epsilon_perc = G_mst_tunable_parameter_table_ext[5].adj_value;
-        G_dcom_slv_inbox_tx[l_slv_idx].tlutil = G_mst_tunable_parameter_table_ext[6].adj_value;
-        // parameters at index 7 and 8 (f delta between cores) are used by master only and not sent to slaves
-        G_dcom_slv_inbox_tx[l_slv_idx].wof_enable = G_mst_tunable_parameter_table_ext[9].adj_value;
-        G_dcom_slv_inbox_tx[l_slv_idx].tunable_param_overwrite = G_mst_tunable_parameter_overwrite;
-
-        // Collect soft frequency bondaries to be sent to slaves
-        G_dcom_slv_inbox_tx[l_slv_idx].soft_fmin = G_mst_soft_fmin;
-        G_dcom_slv_inbox_tx[l_slv_idx].soft_fmax = G_mst_soft_fmax;
-
         // Send trace recording bit to slaves for synchronized tracing.
         G_dcom_slv_inbox_tx[l_slv_idx].tb_record = g_amec_tb_record;
 
         G_dcom_slv_inbox_tx[l_slv_idx].counter++;
     }
 
-    // Clear the tunable parameter overwrite once we collect the new values
-    G_mst_tunable_parameter_overwrite = 0;
     dcom_build_occfw_msg( SLAVE_INBOX );
 
     l_addr_of_slv_inbox_in_main_mem = dcom_which_buffer();

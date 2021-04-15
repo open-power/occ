@@ -250,19 +250,29 @@ errlHndl_t SMGR_set_mode( const OCC_MODE i_mode )
                  break;
              }
 
-             // there is only one core group possible
-             g_amec->part_config.part_list[0].es_policy = CURRENT_MODE();
-/* TODO RTC 246412
-             // Update the DPS parameters based on the power policy
-             if (g_amec->part_config.part_list[0].es_policy == OCC_MODE_DYN_PERF)
+             // reset variables for Dynamic Performance mode
+             if(CURRENT_MODE() == OCC_MODE_DYN_PERF)
              {
-                amec_part_update_dps_parameters(&(g_amec->part_config.part_list[0]));
+                 // reset the internal performance settings of the cores
+                 for (jj=0; jj<MAX_NUM_CORES; jj++)
+                 {
+                   memset(&g_amec->proc[0].core[jj].core_perf.ptr_util_slack_avg_buffer, 0, 2*MAX_UTIL_SLACK_AVG_LEN);
+                   memset(&g_amec->proc[0].core[jj].core_perf.ptr_util_active_avg_buffer, 0, 2*MAX_UTIL_SLACK_AVG_LEN);
+                   g_amec->proc[0].core[jj].core_perf.util_active_core_counter = 0;
+                   g_amec->proc[0].core[jj].core_perf.util_slack_core_counter = 0;
+                   g_amec->proc[0].core[jj].core_perf.util_slack_accumulator = 0;
+                   g_amec->proc[0].core[jj].core_perf.util_active_accumulator = 0;
+                   g_amec->proc[0].core[jj].core_perf.ptr_putUtilslack = 0;
+                 }
              }
-
-             // Update internal performance settings for this partition
-             amec_part_update_perf_settings(&(g_amec->part_config.part_list[0]));
-*/
-
+             else
+             {
+                 // reset the DPS frequency request
+                 for (jj=0; jj<MAX_NUM_CORES; jj++)
+                 {
+                     g_amec->proc[0].core[jj].core_perf.dps_freq_request = 0xFFFF;
+                 }
+             }
          }
          while(0);
 

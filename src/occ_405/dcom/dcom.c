@@ -502,48 +502,6 @@ void task_dcom_parse_occfwmsg(task_t *i_self)
     // Copy IPS parameters sent by Master OCC
     g_amec->slv_ips_freq_request = G_dcom_slv_inbox_rx.ips_freq_request;
 
-    // Copy DPS tunable parameters sent by Master OCC if required
-    if(G_dcom_slv_inbox_rx.tunable_param_overwrite)
-    {
-        AMEC_part_overwrite_dps_parameters();
-
-        if(G_dcom_slv_inbox_rx.tunable_param_overwrite == 1)
-        {
-            // parameter(s) overwritten by user
-            g_amec->slv_dps_param_overwrite = TRUE;
-        }
-        else // ==2 use defaults for all parameters
-        {
-            g_amec->slv_dps_param_overwrite = FALSE;
-        }
-
-        // check if user has WOF enabled
-        if(G_dcom_slv_inbox_rx.wof_enable)
-        {
-            if(g_amec->wof.wof_disabled & WOF_RC_USER_DISABLED_WOF)
-            {
-               set_clear_wof_disabled( CLEAR,
-                                       WOF_RC_USER_DISABLED_WOF,
-                                       ERC_WOF_USER_DISABLED_WOF );
-               TRAC_INFO("User enabled WOF! wof_disabled = 0x%08X", g_amec->wof.wof_disabled);
-            }
-        }
-        else // user has WOF disabled
-        {
-            if(!(g_amec->wof.wof_disabled & WOF_RC_USER_DISABLED_WOF))
-            {
-               set_clear_wof_disabled( SET,
-                                       WOF_RC_USER_DISABLED_WOF,
-                                       ERC_WOF_USER_DISABLED_WOF );
-               TRAC_INFO("User disabled WOF! wof_disabled = 0x%08X", g_amec->wof.wof_disabled);
-            }
-        }
-    }
-
-    // Copy soft frequency boundaries sent by Master OCC
-    g_amec->part_config.part_list[0].soft_fmin = G_dcom_slv_inbox_rx.soft_fmin;
-    g_amec->part_config.part_list[0].soft_fmax = G_dcom_slv_inbox_rx.soft_fmax;
-
     // acknowledge all masters event flags
     G_master_event_flags_ack = G_dcom_slv_inbox_rx.occ_fw_mailbox.master_event_flags;
 

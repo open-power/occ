@@ -76,7 +76,7 @@ static amec_part_t* amec_part_find_by_id(amec_part_config_t* i_config,
 
 // Function Specification
 //
-// Name: amec_isr_speed_to_freq
+// Name: amec_part_find_by_core
 //
 // Description: Given a core, return a valid partition that owns it, or NULL.
 //
@@ -177,11 +177,7 @@ void amec_part_add(uint8_t i_id)
             }
         }
 
-        // Set default soft frequency boundaries to use full frequency range
-        l_part->soft_fmin = 0x0000;
-        l_part->soft_fmax = 0xFFFF;
-
-        // Set default values for DPS parameters (Favor Energy)
+        // Set default values for Dynamic Performance
         l_part->dpsalg.step_up = 8;
         l_part->dpsalg.step_down = 8;
         l_part->dpsalg.tlutil = 9800;
@@ -191,9 +187,6 @@ void amec_part_add(uint8_t i_id)
         l_part->dpsalg.alpha_down = 9800;
         l_part->dpsalg.type = 0; //No algorithm is selected yet
         l_part->dpsalg.freq_request = UINT16_MAX;
-
-        l_part->es_policy = OCC_MODE_DYN_PERF;
-        l_part->follow_sysmode = TRUE;
     }
     while (0);
 
@@ -229,147 +222,6 @@ void amec_part_init()
     }
 }
 
-void amec_part_update_dps_parameters(amec_part_t* io_part)
-{
-    /*------------------------------------------------------------------------*/
-    /*  Local Variables                                                       */
-    /*------------------------------------------------------------------------*/
-
-    /*------------------------------------------------------------------------*/
-    /*  Code                                                                  */
-    /*------------------------------------------------------------------------*/
-
-    // If partition doesn't exist, just exit
-    if (io_part == NULL)
-    {
-        return;
-    }
-
-    // Check to see if parameter values have been overwritten by user
-    if (g_amec->slv_dps_param_overwrite == TRUE)
-    {
-        // Then, exit right away
-        return;
-    }
-
-    // By default, let's use the DPS-Favor Energy settings
-    io_part->dpsalg.step_up = 8;
-    io_part->dpsalg.step_down = 8;
-    io_part->dpsalg.tlutil = 9800;
-    io_part->dpsalg.sample_count_util = 16;
-    io_part->dpsalg.epsilon_perc = 1800;
-    io_part->dpsalg.alpha_up = 9800;
-    io_part->dpsalg.alpha_down = 9800;
-    io_part->dpsalg.type = 41;
-
-}
-
-void amec_part_update_perf_settings(amec_part_t* io_part)
-{
-    /*------------------------------------------------------------------------*/
-    /*  Local Variables                                                       */
-    /*------------------------------------------------------------------------*/
-    uint16_t                    j = 0;
-    uint16_t                    l_core_index = 0;
-    amec_core_perf_counter_t*   l_perf;
-
-    /*------------------------------------------------------------------------*/
-    /*  Code                                                                  */
-    /*------------------------------------------------------------------------*/
-
-    // If partition doesn't exist, just exit
-    if (io_part == NULL)
-    {
-        return;
-    }
-
-    switch (io_part->es_policy)
-    {
-        case OCC_MODE_DYN_PERF:
-            // These policies require that we reset the internal performance
-            // settings of the cores in the partition
-            for (j=0; j<io_part->ncores; j++)
-            {
-                l_core_index = io_part->core_list[j];
-                l_perf = &g_amec->proc[0].core[l_core_index % MAX_NUM_CORES].core_perf;
-
-                memset(l_perf->ptr_util_slack_avg_buffer, 0, 2*MAX_UTIL_SLACK_AVG_LEN);
-                memset(l_perf->ptr_util_active_avg_buffer, 0, 2*MAX_UTIL_SLACK_AVG_LEN);
-                l_perf->util_active_core_counter = 0;
-                l_perf->util_slack_core_counter = 0;
-                l_perf->util_slack_accumulator = 0;
-                l_perf->util_active_accumulator = 0;
-                l_perf->ptr_putUtilslack = 0;
-            }
-            break;
-
-        default:
-            // For all other policies, reset the DPS frequency request
-            for (j=0; j<io_part->ncores; j++)
-            {
-                l_core_index = io_part->core_list[j];
-                g_amec->proc[0].core[l_core_index % MAX_NUM_CORES]
-                    .core_perf.dps_freq_request = UINT16_MAX;
-            }
-            break;
-    }
-}
-
-void AMEC_part_overwrite_dps_parameters(void)
-{
-    /*------------------------------------------------------------------------*/
-    /*  Local Variables                                                       */
-    /*------------------------------------------------------------------------*/
-    uint16_t                    i = 0;
-    uint16_t                    j = 0;
-    uint16_t                    l_core_index = 0;
-    amec_part_t*                l_part = NULL;
-    amec_core_perf_counter_t*   l_perf = NULL;
-
-    /*------------------------------------------------------------------------*/
-    /*  Code                                                                  */
-    /*------------------------------------------------------------------------*/
-    for (i=0; i<AMEC_PART_MAX_PART; i++)
-    {
-        // If a core group is not valid, skip it
-        if (!g_amec->part_config.part_list[i].valid)
-        {
-            continue;
-        }
-        // If a core group has no cores assigned, skip it
-        if (g_amec->part_config.part_list[i].ncores == 0)
-        {
-            continue;
-        }
-
-        // Overwrite the DPS parameters based on values sent by Master OCC
-        l_part = &(g_amec->part_config.part_list[i]);
-        l_part->dpsalg.alpha_up = G_dcom_slv_inbox_rx.alpha_up;
-        l_part->dpsalg.alpha_down = G_dcom_slv_inbox_rx.alpha_down;
-        l_part->dpsalg.sample_count_util = G_dcom_slv_inbox_rx.sample_count_util;
-        l_part->dpsalg.step_up = G_dcom_slv_inbox_rx.step_up;
-        l_part->dpsalg.step_down = G_dcom_slv_inbox_rx.step_down;
-        l_part->dpsalg.epsilon_perc = G_dcom_slv_inbox_rx.epsilon_perc;
-        l_part->dpsalg.tlutil = G_dcom_slv_inbox_rx.tlutil;
-        // The algorithm type cannot be selected by customer, hardcoded here.
-        l_part->dpsalg.type = 41;
-
-        // Update internal performance settings for each core on this partition
-        for (j=0; j<l_part->ncores; j++)
-        {
-            l_core_index = l_part->core_list[j];
-            l_perf = &g_amec->proc[0].core[l_core_index % MAX_NUM_CORES].core_perf;
-
-            memset(l_perf->ptr_util_slack_avg_buffer, 0, 2*MAX_UTIL_SLACK_AVG_LEN);
-            memset(l_perf->ptr_util_active_avg_buffer, 0, 2*MAX_UTIL_SLACK_AVG_LEN);
-            l_perf->util_active_core_counter = 0;
-            l_perf->util_slack_core_counter = 0;
-            l_perf->util_slack_accumulator = 0;
-            l_perf->util_active_accumulator = 0;
-            l_perf->ptr_putUtilslack = 0;
-        }
-    }
-}
 
 /*----------------------------------------------------------------------------*/
 /* End                                                                        */
