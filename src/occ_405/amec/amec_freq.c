@@ -67,6 +67,8 @@ extern OCCPstateParmBlock_t G_oppb;
 //*************************************************************************
 // Defines/Enums
 //*************************************************************************
+// give time for frequency to come up after boot/throttle event
+#define NUM_TICKS_LOG_PGPE_PERF_LOSS 10  // 5ms
 
 //*************************************************************************
 // Structures
@@ -292,6 +294,7 @@ void amec_slv_proc_voting_box(void)
     bool                            l_log_error = FALSE; // indicates if should log perf loss error
     static bool                     L_perf_loss_error_logged = FALSE; // indicates if perf loss error was logged
     errlHndl_t                      l_err = NULL;
+    static uint8_t                  L_ticks_below_disabled_freq = 0;
 
     // frequency threshold for reporting throttling
     OCC_FREQ_POINT l_freq_point = OCC_FREQ_PT_WOF_BASE;
@@ -568,13 +571,19 @@ void amec_slv_proc_voting_box(void)
                        l_current_reason);
             l_log_error = TRUE;
         }
+        // if OCC is not voting for freq drop (reason 0) then it must be PGPE
+        // only log when below for NUM_TICKS_LOG_PGPE_PERF_LOSS consecutive ticks
         else if( (L_last_reason == 0) && (l_current_reason == 0) )
         {
-            TRAC_ERR("Current freq %dMHz is below disabled freq %dMHz NO OCC CLIP REASON!  System max %dMHz",
-                       g_amec->wof.avg_freq_mhz,
-                       G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_DISABLED],
-                       g_amec->sys.fmax);
-            l_log_error = TRUE;
+            L_ticks_below_disabled_freq++;
+            if(L_ticks_below_disabled_freq == NUM_TICKS_LOG_PGPE_PERF_LOSS)
+	    {
+                TRAC_ERR("Current freq %dMHz is below disabled freq %dMHz NO OCC CLIP REASON!  System max %dMHz",
+                           g_amec->wof.avg_freq_mhz,
+                           G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_DISABLED],
+                           g_amec->sys.fmax);
+                l_log_error = TRUE;
+            }
         }
 
         if(l_log_error)
@@ -619,6 +628,10 @@ void amec_slv_proc_voting_box(void)
         }
 
     } // if freq below disabled point and error not logged
+    else
+    {
+        L_ticks_below_disabled_freq = 0;
+    }
 
     // For debug... if lower than max update vars returned in poll response to give clipping reason
     g_amec->proc[0].core_min_freq = l_core_freq_min;

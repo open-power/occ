@@ -612,6 +612,8 @@ typedef struct
   amec_controller_t     thermalmcext;
   // Thermal Controller based on VRM Vdd temperatures
   amec_controller_t     thermalvdd;
+  // Thermal Controller based on Processor IO temperatures
+  amec_controller_t     thermalprocio;
 
   // OC controller when WOF is off based on dirty bits from PGPE
   oc_wof_off_t          oc_wof_off;

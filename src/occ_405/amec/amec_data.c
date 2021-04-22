@@ -237,6 +237,28 @@ errlHndl_t AMEC_data_write_thrm_thresholds(const OCC_MODE i_mode)
         TRAC_INFO("AMEC_data_write_thrm_thresholds: VRM Vdd setpoints - DVFS: %u, Error: %u",
                   l_dvfs_temp, l_error);
 
+        // Store the Processor IO thermal data
+        //
+
+        l_dvfs_temp = l_frudata[DATA_FRU_PROC_IO].dvfs;
+        if(OCC_MODE_STATIC_FREQ_POINT == i_mode)
+        {
+            l_error = l_dvfs_temp;
+        }
+        else
+        {
+            l_error = l_frudata[DATA_FRU_PROC_IO].error;
+        }
+        // Store the DVFS thermal setpoint in 0.1 degrees C
+        g_amec->thermalprocio.setpoint = l_dvfs_temp * 10;
+        // Store the error temperature for OT detection
+        g_amec->thermalprocio.ot_error = l_error;
+        // Store the temperature timeout value
+        g_amec->thermalprocio.temp_timeout = l_frudata[DATA_FRU_PROC_IO].max_read_timeout;
+
+        TRAC_INFO("AMEC_data_write_thrm_thresholds: Processor IO setpoints - DVFS: %u, Error: %u",
+                  l_dvfs_temp, l_error);
+
     } while(0);
 
     return l_err;

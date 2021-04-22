@@ -120,8 +120,9 @@ uint32_t dcom_build_slv_inbox(void)
                 G_apss_pwr_meas.gpio,
                 sizeof( G_dcom_slv_inbox_tx[l_slv_idx].gpio));
 
-        // Trace APSS GPIOs if any changed, these should not change very often
-        if( (IS_OCC_STATE_OBSERVATION() || IS_OCC_STATE_ACTIVE() || IS_OCC_STATE_CHARACTERIZATION()) &&
+        // Trace APSS GPIOs if any changed and trace enabled
+        if( (G_allow_trace_flags & ALLOW_APSS_GPIO_TRACE) &&
+            (IS_OCC_STATE_OBSERVATION() || IS_OCC_STATE_ACTIVE() || IS_OCC_STATE_CHARACTERIZATION()) &&
             ((L_last_gpio0 != G_apss_pwr_meas.gpio[0]) ||
              (L_last_gpio1 != G_apss_pwr_meas.gpio[1])) )
         {

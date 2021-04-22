@@ -1664,7 +1664,12 @@ errlHndl_t data_store_thrm_thresholds(const cmdh_fsp_cmd_t * i_cmd_ptr,
     uint8_t                         l_frutype = 0;
     cmdh_thrm_thresholds_v30_t*     l_cmd_ptr = (cmdh_thrm_thresholds_v30_t*)i_cmd_ptr;
     uint8_t                         l_num_data_sets = 0;
+    uint8_t                         l_dvfs = 0;
+    uint8_t                         l_error = 0;
+    uint8_t                         l_temperature = 0;
     bool                            l_invalid_input = TRUE; //Assume bad input
+    bool                            l_data_valid = FALSE;
+
 
     do
     {
@@ -1737,6 +1742,55 @@ errlHndl_t data_store_thrm_thresholds(const cmdh_fsp_cmd_t * i_cmd_ptr,
                 //          G_data_cnfg->thrm_thresh.data[l_frutype].dvfs,
                 //          G_data_cnfg->thrm_thresh.data[l_frutype].error);
             }
+            else if((l_frutype == DATA_FRU_PROC_DELTAS) || (l_frutype == DATA_FRU_PROC_IO_DELTAS))
+            {
+                // FRU data for ERROR and DVFS are deltas applied to VPD #V TDP value
+                if(l_frutype == DATA_FRU_PROC_DELTAS)
+                    l_temperature = G_oppb.tdp_sort_power_temp_0p5C / 2;
+
+                else // DATA_FRU_PROC_IO_DELTAS
+                    l_temperature = G_oppb.io_throttle_temp_0p5C / 2;
+
+                // only save if we have a temperature from VPD
+                if(l_temperature != 0)
+                {
+                    l_data_valid = TRUE;
+
+                    // prevent overflow if applying negative delta
+                    if( (l_cmd_ptr->data[i].dvfs > 0) || (l_temperature >= -l_cmd_ptr->data[i].dvfs) )
+                        l_dvfs = l_temperature + l_cmd_ptr->data[i].dvfs;
+                    else
+                        l_dvfs = l_temperature;
+
+                    if( (l_cmd_ptr->data[i].error > 0) || (l_temperature >= -l_cmd_ptr->data[i].error) )
+                        l_error = l_temperature + l_cmd_ptr->data[i].error;
+                    else
+                        l_error = l_temperature;
+
+                    CMDH_TRAC_INFO("data_store_thrm_thresholds: FRU_type[0x%02X] DVFS Delta[%d] Error Delta[%d]",
+                                   l_frutype, l_cmd_ptr->data[i].dvfs, l_cmd_ptr->data[i].error);
+                    CMDH_TRAC_INFO("data_store_thrm_thresholds: FRU_type[0x%02X] VPD Temp[%d] DVFS[%d] Error[%d]",
+                                   l_frutype, l_temperature, l_dvfs, l_error);
+                }
+                else
+                {
+                    l_data_valid = FALSE;
+                    CMDH_TRAC_ERR("data_store_thrm_thresholds: No VPD temp for FRU_type[0x%02X]", l_frutype);
+                }
+
+                if(l_data_valid)
+                {
+                    // mask off upper nibble used to indicate deltas
+                    l_frutype &= 0x0F;
+
+                    G_data_cnfg->thrm_thresh.data[l_frutype].fru_type = l_frutype;
+                    G_data_cnfg->thrm_thresh.data[l_frutype].dvfs     = l_dvfs;
+                    G_data_cnfg->thrm_thresh.data[l_frutype].error    = l_error;
+                    G_data_cnfg->thrm_thresh.data[l_frutype].max_read_timeout =
+                    l_cmd_ptr->data[i].max_read_timeout;
+                }
+            }
+
             else
             {
                 // We got an invalid FRU type

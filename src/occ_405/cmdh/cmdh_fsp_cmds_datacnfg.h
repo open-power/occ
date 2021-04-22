@@ -82,7 +82,10 @@ typedef enum
     DATA_FRU_PMIC               = 0x07,
     DATA_FRU_MEMCTRL_EXT        = 0x08,  // External memory controller sensor
     DATA_FRU_PROC_IO            = 0x09,  // Processor IO
-    DATA_FRU_MAX,
+    DATA_FRU_MAX                = 0x0A,
+// special FRU types not counted in the MAX
+    DATA_FRU_PROC_DELTAS        = 0xF0,  // DVFS/ERROR fields are deltas applied to VPD value for DATA_FRU_PROC
+    DATA_FRU_PROC_IO_DELTAS     = 0xF9,  // DVFS/ERROR fields are deltas applied to VPD value for DATA_FRU_PROC_IO
 } eConfigDataFruType;
 
 // For OCM the mapping of sensors to fru type comes in mem config data from (H)TMGT and some may not be used
@@ -281,16 +284,14 @@ extern cmdh_ips_config_data_t   G_ips_config_data;
 
 typedef struct __attribute__ ((packed))
 {
-    // 0: proc, 1: membuf, 2: dimm, 3: vrm, 4: gpu core, 5: gpu mem,
-    // 6: VRM Vdd, 7: PMIC, 8: External memory controller sensor
-    uint8_t              fru_type;
+    uint8_t              fru_type;  // eConfigDataFruType
 
     //  dvfs and error fields define the temperature trigger
     //  points for DVFS/Throttling and error/FRU callouts, respectively.
     //  a 0xFF entry indicates that the coresponding temperature trigger
     //  point is undefined.
-    uint8_t              dvfs;              // OS Controlled sys/PowerVM nominal
-    uint8_t              error;             // OS Controlled sys/PowerVM nominal
+    int8_t              dvfs;              // OS Controlled sys/PowerVM nominal
+    int8_t              error;             // OS Controlled sys/PowerVM nominal
 
     // Max time (s) allowed without having new temp readings before throttling
     uint8_t              max_read_timeout;
@@ -307,7 +308,7 @@ typedef struct __attribute__ ((packed))
     uint8_t              proc_racetrack_weight;
     uint8_t              proc_L3_weight;
     uint8_t              num_data_sets;
-    cmdh_thrm_thresholds_set_v30_t data[DATA_FRU_MAX];
+    cmdh_thrm_thresholds_set_v30_t data[DATA_FRU_MAX + 2]; // allow for extra delta thresholds
 }cmdh_thrm_thresholds_v30_t;
 
 // Header data for mem cfg packet

@@ -1003,9 +1003,11 @@ void amec_health_check_proc_temp()
     /*  Local Variables                                                       */
     /*------------------------------------------------------------------------*/
     uint16_t                    l_ot_error;
+    uint16_t                    l_io_ot_error;
     static uint32_t             L_error_count = 0;
     static BOOLEAN              L_ot_error_logged = FALSE;
     sensor_t                    *l_sensor;
+    sensor_t                    *l_io_sensor;
     errlHndl_t                  l_err = NULL;
 
     /*------------------------------------------------------------------------*/
@@ -1018,9 +1020,17 @@ void amec_health_check_proc_temp()
         l_sensor = getSensorByGsid(TEMPPROCTHRM);
         l_ot_error = g_amec->thermalproc.ot_error;
 
+        // Get TEMPPROCIOTHRM sensor, which is hottest IO temperature
+        // in OCC processor
+        l_io_sensor = getSensorByGsid(TEMPPROCIOTHRM);
+        l_io_ot_error = g_amec->thermalprocio.ot_error;
+
+
         // Check to see if we exceeded our error temperature
-        if (l_sensor->sample > l_ot_error)
+        if( (l_sensor->sample > l_ot_error) || (l_io_sensor->sample > l_io_ot_error) )
         {
+            // same callouts for processor and processor IO so treat the same and only
+            // log one error for either being OT
             // Increment the error counter for this FRU
             L_error_count++;
 
@@ -1035,17 +1045,26 @@ void amec_health_check_proc_temp()
 
                 L_ot_error_logged = TRUE;
 
-                TRAC_ERR("amec_health_check_error_temp: processor has exceeded OT error! temp[%u] ot_error[%u]",
-                         l_sensor->sample,
-                         l_ot_error);
+                if(l_sensor->sample > l_ot_error)
+                {
+                    TRAC_ERR("amec_health_check_error_temp: processor has exceeded OT error! temp[%u] ot_error[%u]",
+                             l_sensor->sample,
+                             l_ot_error);
+                }
+                if(l_io_sensor->sample > l_io_ot_error)
+                {
+                    TRAC_ERR("amec_health_check_error_temp: processor IO has exceeded OT error! temp[%u] ot_error[%u]",
+                             l_io_sensor->sample,
+                             l_io_ot_error);
+                }
 
                 // Log an OT error
                 /* @
                  * @errortype
                  * @moduleid    AMEC_HEALTH_CHECK_PROC_TEMP
                  * @reasoncode  PROC_ERROR_TEMP
-                 * @userdata1   0
-                 * @userdata2   Fru peak temperature sensor
+                 * @userdata1   Fru peak procesor IO temperature sensor
+                 * @userdata2   Fru peak procesor temperature sensor
                  * @devdesc     Processor FRU has reached error temperature
                  *              threshold and is called out in this error log.
                  *
@@ -1056,7 +1075,7 @@ void amec_health_check_proc_temp()
                                    ERRL_SEV_PREDICTIVE,
                                    NULL,
                                    DEFAULT_TRACE_SIZE,
-                                   0,
+                                   l_io_sensor->sample_max,
                                    l_sensor->sample_max);
 
                 // Callout the Ambient procedure
