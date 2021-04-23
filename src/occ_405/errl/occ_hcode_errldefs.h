@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2020                             */
+/* Contributors Listed Below - COPYRIGHT 2020,2021                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -203,8 +203,10 @@ struct ErrlUserDetails
     uint64_t    iv_timeStamp;           // Time Stamp
     union
     {
-        uint16_t    iv_occId: 8;        // OCC ID
-        uint16_t    iv_occRole: 8;      // OCC Role
+        struct {
+            uint8_t    iv_occId;        // OCC ID
+            uint8_t    iv_occRole;      // OCC Role
+        };
         uint16_t    iv_ppeId;           // PPE Instance in Chip
     };
     union
