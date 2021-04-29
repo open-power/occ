@@ -2646,10 +2646,13 @@ uint32_t scale( uint16_t i_target_temp,
                 uint16_t i_reference_temp,
                 bool i_non_core_scaling_line )
 {
-    static bool L_traced = FALSE;
+    static bool L_traced_zero = FALSE;
+    static bool L_traced_negative = FALSE;
+    static uint8_t L_trace_count = 2;
     int32_t  l_iddqt1 = 0;
     int32_t  l_iddqt2 = 0;
-    uint32_t l_result = 0;
+    int32_t  l_result = 0;
+    int32_t  l_temp32 = 0;
 
     // Temperature scaling lines are 3rd degree polynomials: aT^3 + bT^2 + cT + d
     // default coefficients a, b, c, d for core scaling line
@@ -2677,29 +2680,67 @@ uint32_t scale( uint16_t i_target_temp,
     l_iddqt2 += l_coeff_c * i_reference_temp;
     l_iddqt2 += l_coeff_d;
 
-    // avoid negative and divide by 0
-    if( (l_iddqt1 >= l_iddqt2) && (l_iddqt2 != 0) )
+    // avoid divide by 0
+    if(l_iddqt2 != 0)
     {
-        l_result = (l_iddqt1 - l_iddqt2) / l_iddqt2;
+        // l_iddqt's are in 0.00001 unit we want result in 0.001 unit so divide by only
+        // 1000 (not 100,000) to account for the /100 needed to convert 0.00001-->0.001
+        l_temp32 = l_iddqt2 / 1000;
+        l_result = (l_iddqt1 - l_iddqt2) / l_temp32;
+
+
+        if( (G_allow_trace_flags & ALLOW_WOF_SCALE_TRACE) && (L_trace_count) )
+        {
+            INTR_TRAC_INFO("scale: target temp(t1)[%d] ref temp(t2)[%d]",
+                           i_target_temp, i_reference_temp);
+
+            INTR_TRAC_INFO("scale: iddqt1[%d] iddqt2[%d]",
+                            l_iddqt1, l_iddqt2);
+
+            INTR_TRAC_INFO("scale: l_temp32[%d] result[%d]", l_temp32, l_result);
+        }
+
+        // add one
+        l_result += 1000;
+        if(G_allow_trace_flags & ALLOW_WOF_SCALE_TRACE)
+        {
+            if(L_trace_count)
+            {
+               L_trace_count--;
+               INTR_TRAC_INFO("scale: FINAL RESULT += 1000 = %d (0.001 unit)", l_result);
+            }
+        }
+        else
+           L_trace_count = 2; // reset for ALLOW_WOF_SCALE_TRACE to be set
     }
     else
     {
         l_result = 0;
-        if(!L_traced)
+        if(!L_traced_zero)
         {
-            INTR_TRAC_INFO("scale: leakage temp scaling ref temp[%d] iddqt2[%d] > iddqt1[%d] target temp[%d]",
-                            i_reference_temp, l_iddqt2, l_iddqt1, i_target_temp);
-            INTR_TRAC_INFO("scale: coefficients a[%d] b[%d] c[%d] d[%d]",
+            INTR_TRAC_ERR("scale: leakage temp scaling iddqt2 is 0! ref temp[%d] iddqt1[%d] target temp[%d]",
+                            i_reference_temp, l_iddqt1, i_target_temp);
+            INTR_TRAC_ERR("scale: coefficients a[%d] b[%d] c[%d] d[%d]",
                             l_coeff_a, l_coeff_b, l_coeff_c, l_coeff_d);
-            L_traced = TRUE;
+            L_traced_zero = TRUE;
         }
     }
 
-    // divide by 100 to account for coefficients in 0.00001 unit and leave result in .001 unit
-    l_result /= 100;
-
-    // add one
-    l_result += 1000;
+    // check for negative
+    if(l_result < 0)
+    {
+        if(!L_traced_negative)
+        {
+            INTR_TRAC_ERR("scale: leakage temp scaling negative result[%d]! iddqt1[%d] iddqt2[%d]",
+                            l_result, l_iddqt1, l_iddqt2);
+            INTR_TRAC_ERR("scale: coefficients a[%d] b[%d] c[%d] d[%d]",
+                            l_coeff_a, l_coeff_b, l_coeff_c, l_coeff_d);
+            INTR_TRAC_ERR("scale: leakage temp scaling ref temp[%d] target temp[%d]",
+                            i_reference_temp, i_target_temp);
+            L_traced_negative = TRUE;
+        }
+        l_result = 0;
+    }
 
     return l_result;
 }
