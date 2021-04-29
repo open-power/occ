@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2021                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -44,6 +44,7 @@ errlHndl_t SMGR_mode_transition_to_fmax();
 errlHndl_t SMGR_mode_transition_to_dyn_perf();
 errlHndl_t SMGR_mode_transition_to_max_perf();
 
+extern uint32_t G_present_cores;
 
 // Mode that OCC is currently in
 OCC_MODE           G_occ_internal_mode      = OCC_MODE_NOCHANGE;
@@ -207,12 +208,21 @@ errlHndl_t SMGR_set_mode( const OCC_MODE i_mode )
                      // that is associated with that state transition.
                      if(NULL != G_smgr_mode_trans[jj].trans_func_ptr)
                      {
-                         // Signal that we are now in a mode transition
-                         G_mode_transition_occuring = TRUE;
-                         // Run transition function
-                         l_errlHndl = (G_smgr_mode_trans[jj].trans_func_ptr)();
-                         // Signal that we are done with the transition
-                         G_mode_transition_occuring = FALSE;
+                         if(G_present_cores > 0)
+                         {
+                             // Signal that we are now in a mode transition
+                             G_mode_transition_occuring = TRUE;
+                             // Run transition function
+                             l_errlHndl = (G_smgr_mode_trans[jj].trans_func_ptr)();
+                             // Signal that we are done with the transition
+                             G_mode_transition_occuring = FALSE;
+                         }
+                         else
+                         {
+                             TRAC_IMP("SMGR: Skipping mode %d change due to no cores present", l_mode);
+                             CURRENT_MODE() = l_mode;
+                             G_occ_internal_mode_parm = G_occ_master_mode_parm;
+                         }
                          break;
                      }
                  }
@@ -368,7 +378,7 @@ errlHndl_t SMGR_mode_transition_to_static_freq_point()
     int                     i=0;
 
     TRAC_IMP("SMGR: Mode to Static Frequency Point with parm[0x%04X] Transition Started",
-               G_occ_master_mode_parm);
+             G_occ_master_mode_parm);
 
     if( (G_occ_master_mode_parm & OCC_FREQ_PT_PARM_PSTATE) == OCC_FREQ_PT_PARM_PSTATE )
     {
@@ -400,30 +410,30 @@ errlHndl_t SMGR_mode_transition_to_static_freq_point()
                     l_freq = G_sysConfigData.sys_mode_freq.table[l_freq_pt];
                     if(l_freq)
                     {
-                         // Set the user defined frequency to be used by AMEC
-                         if(G_smgr_sfp_mode_parm_trans[i].freq_pt_parm == OCC_FREQ_PT_PARM_BOTTOM_THROTTLE)
-                         {
-                              // ok for freq to be below min don't clip
-                         }
-                         else if(l_freq < G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MIN_FREQ])
-                         {
-                              TRAC_IMP("SMGR_mode_transition_to_static_freq_point: freq pt freq %dMHz is below min freq %dMHz",
-                                        l_freq,
-                                        G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MIN_FREQ]);
-                              l_freq = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MIN_FREQ];
-                         }
-                         else if(l_freq > G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MAX_FREQ])
-                         {
-                              TRAC_IMP("SMGR_mode_transition_to_static_freq_point: freq pt freq %dMHz is above max freq %dMHz",
-                                        l_freq,
-                                        G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MAX_FREQ]);
-                              l_freq = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MAX_FREQ];
-                         }
-                         G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_USER] = l_freq;
+                        // Set the user defined frequency to be used by AMEC
+                        if(G_smgr_sfp_mode_parm_trans[i].freq_pt_parm == OCC_FREQ_PT_PARM_BOTTOM_THROTTLE)
+                        {
+                            // ok for freq to be below min don't clip
+                        }
+                        else if(l_freq < G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MIN_FREQ])
+                        {
+                            TRAC_IMP("SMGR_mode_transition_to_static_freq_point: freq pt freq %dMHz is below min freq %dMHz",
+                                     l_freq,
+                                     G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MIN_FREQ]);
+                            l_freq = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MIN_FREQ];
+                        }
+                        else if(l_freq > G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MAX_FREQ])
+                        {
+                            TRAC_IMP("SMGR_mode_transition_to_static_freq_point: freq pt freq %dMHz is above max freq %dMHz",
+                                     l_freq,
+                                     G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MAX_FREQ]);
+                            l_freq = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MAX_FREQ];
+                        }
+                        G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_USER] = l_freq;
 
-                         // update this OCCs internal mode parm that it now matches what was sent
-                         // from master
-                         G_occ_internal_mode_parm = G_occ_master_mode_parm;
+                        // update this OCCs internal mode parm that it now matches what was sent
+                        // from master
+                        G_occ_internal_mode_parm = G_occ_master_mode_parm;
                     }
                     else
                     {
@@ -435,7 +445,7 @@ errlHndl_t SMGR_mode_transition_to_static_freq_point()
                 else
                 {
                     TRAC_ERR("SMGR_mode_transition_to_static_freq_point: Invalid freq point[0x%02X] found for mode parameter[0x%04X]",
-                              l_freq_pt, G_occ_master_mode_parm);
+                             l_freq_pt, G_occ_master_mode_parm);
                     l_fail = TRUE;
                 }
                 break;
@@ -447,32 +457,32 @@ errlHndl_t SMGR_mode_transition_to_static_freq_point()
     // frequency.  If we did, log an internal error.
     if( (G_smgr_sfp_parm_trans_count == i) || (l_fail) )
     {
-         if(G_smgr_sfp_parm_trans_count == i)
-             TRAC_ERR("SMGR_mode_transition_to_static_freq_point: Mode parameter[0x%04X] not found",
-                       G_occ_master_mode_parm);
+        if(G_smgr_sfp_parm_trans_count == i)
+            TRAC_ERR("SMGR_mode_transition_to_static_freq_point: Mode parameter[0x%04X] not found",
+                     G_occ_master_mode_parm);
 
-         /* @
-          * @errortype
-          * @moduleid    MAIN_MODE_TRANSITION_MID
-          * @reasoncode  INTERNAL_FAILURE
-          * @userdata1   G_occ_master_mode_parm
-          * @userdata2   0
-          * @userdata4   ERC_SMGR_NO_VALID_FREQ_PT
-          * @devdesc     no valid frequency point found
-          */
-          l_errlHndl = createErrl(MAIN_MODE_TRANSITION_MID,    //modId
-                                  INTERNAL_FAILURE,            //reasoncode
-                                  ERC_SMGR_NO_VALID_FREQ_PT,   //Extended reason code
-                                  ERRL_SEV_UNRECOVERABLE,      //Severity
-                                  NULL,                        //Trace Buf
-                                  DEFAULT_TRACE_SIZE,          //Trace Size
-                                  G_occ_master_mode_parm,      //userdata1
-                                  0);                          //userdata2
+        /* @
+         * @errortype
+         * @moduleid    MAIN_MODE_TRANSITION_MID
+         * @reasoncode  INTERNAL_FAILURE
+         * @userdata1   G_occ_master_mode_parm
+         * @userdata2   0
+         * @userdata4   ERC_SMGR_NO_VALID_FREQ_PT
+         * @devdesc     no valid frequency point found
+         */
+        l_errlHndl = createErrl(MAIN_MODE_TRANSITION_MID,    //modId
+                                INTERNAL_FAILURE,            //reasoncode
+                                ERC_SMGR_NO_VALID_FREQ_PT,   //Extended reason code
+                                ERRL_SEV_UNRECOVERABLE,      //Severity
+                                NULL,                        //Trace Buf
+                                DEFAULT_TRACE_SIZE,          //Trace Size
+                                G_occ_master_mode_parm,      //userdata1
+                                0);                          //userdata2
 
-          addCalloutToErrl(l_errlHndl,
-                           ERRL_CALLOUT_TYPE_COMPONENT_ID,
-                           ERRL_COMPONENT_ID_FIRMWARE,
-                           ERRL_CALLOUT_PRIORITY_HIGH);
+        addCalloutToErrl(l_errlHndl,
+                         ERRL_CALLOUT_TYPE_COMPONENT_ID,
+                         ERRL_COMPONENT_ID_FIRMWARE,
+                         ERRL_CALLOUT_PRIORITY_HIGH);
 
     }  // if failure found
     else // so far so good, finish the mode change
@@ -539,28 +549,28 @@ errlHndl_t SMGR_mode_transition_to_ffo()
                  G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MIN_FREQ],
                  G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_VPD_UT]);
 
-         /* @
-          * @errortype
-          * @moduleid    MAIN_MODE_TRANSITION_MID
-          * @reasoncode  INTERNAL_FAILURE
-          * @userdata1   G_occ_master_mode_parm
-          * @userdata2   0
-          * @userdata4   ERC_SMGR_FREQ_OUT_OF_RANGE
-          * @devdesc     Requested FFO frequency not within range
-          */
-          l_errlHndl = createErrl(MAIN_MODE_TRANSITION_MID,    //modId
-                                  INTERNAL_FAILURE,            //reasoncode
-                                  ERC_SMGR_FREQ_OUT_OF_RANGE,  //Extended reason code
-                                  ERRL_SEV_UNRECOVERABLE,      //Severity
-                                  NULL,                        //Trace Buf
-                                  DEFAULT_TRACE_SIZE,          //Trace Size
-                                  G_occ_master_mode_parm,      //userdata1
-                                  0);                          //userdata2
+        /* @
+         * @errortype
+         * @moduleid    MAIN_MODE_TRANSITION_MID
+         * @reasoncode  INTERNAL_FAILURE
+         * @userdata1   G_occ_master_mode_parm
+         * @userdata2   0
+         * @userdata4   ERC_SMGR_FREQ_OUT_OF_RANGE
+         * @devdesc     Requested FFO frequency not within range
+         */
+        l_errlHndl = createErrl(MAIN_MODE_TRANSITION_MID,    //modId
+                                INTERNAL_FAILURE,            //reasoncode
+                                ERC_SMGR_FREQ_OUT_OF_RANGE,  //Extended reason code
+                                ERRL_SEV_UNRECOVERABLE,      //Severity
+                                NULL,                        //Trace Buf
+                                DEFAULT_TRACE_SIZE,          //Trace Size
+                                G_occ_master_mode_parm,      //userdata1
+                                0);                          //userdata2
 
-          addCalloutToErrl(l_errlHndl,
-                           ERRL_CALLOUT_TYPE_COMPONENT_ID,
-                           ERRL_COMPONENT_ID_FIRMWARE,
-                           ERRL_CALLOUT_PRIORITY_HIGH);
+        addCalloutToErrl(l_errlHndl,
+                         ERRL_CALLOUT_TYPE_COMPONENT_ID,
+                         ERRL_COMPONENT_ID_FIRMWARE,
+                         ERRL_CALLOUT_PRIORITY_HIGH);
     }
     return l_errlHndl;
 }
