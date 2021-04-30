@@ -460,6 +460,8 @@ void amec_health_check_dimm_timeout()
                                  FRU_SENSOR_STATUS_REDUNDANCY_LOST) )
                            {
                                l_redundancy_lost = TRUE;
+                               // since there is another sensor mark that this DIMM sensor is no longer enabled
+                               G_dimm_enabled_sensors.bytes[l_membuf] &= ( ~(DIMM_SENSOR0 >> l_dimm) );
                            }
                        }
                     }

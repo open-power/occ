@@ -361,8 +361,13 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
                     l_tempSensorList[l_sensorHeader.count].fru_type = l_fru_type;
                     l_tempSensorList[l_sensorHeader.count].throttle = G_data_cnfg->thrm_thresh.data[l_fru_type].dvfs;
 
+                    // Set temperature to 0 (unavailable) if sensor is not enabled
+                    if ( !(G_dimm_enabled_sensors.bytes[l_membuf] & (DIMM_SENSOR0 >> l_dimm)) )
+                    {
+                        l_tempSensorList[l_sensorHeader.count].value = 0;
+                    }
                     //If a dimm timed out long enough, we should return 0xFF for that sensor.
-                    if (G_dimm_temp_expired_bitmap.bytes[l_membuf] & (DIMM_SENSOR0 >> l_dimm))
+                    else if (G_dimm_temp_expired_bitmap.bytes[l_membuf] & (DIMM_SENSOR0 >> l_dimm))
                     {
                         l_tempSensorList[l_sensorHeader.count].value = 0xFF;
                     }

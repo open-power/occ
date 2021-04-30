@@ -738,9 +738,10 @@ void amec_slv_mem_voting_box(void)
     /*------------------------------------------------------------------------*/
     UINT16                   l_vote;
     amec_mem_voting_reason_t l_reason;
-    opal_mem_voting_reason_t  kvm_reason;
+    opal_mem_voting_reason_t kvm_reason;
     static INT16             l_slew_step = AMEC_MEMORY_STEP_SIZE;
     static bool              L_throttle_traced = FALSE;
+    sensor_t                *l_sensor = NULL;
 
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
@@ -756,6 +757,7 @@ void amec_slv_mem_voting_box(void)
         l_vote = g_amec->thermalmembuf.speed_request;
         l_reason = AMEC_MEM_VOTING_REASON_MEMBUF;
         kvm_reason = MEMORY_OVER_TEMP;
+        l_sensor = getSensorByGsid(TEMPMEMBUFTHRM);
     }
 
     // Check vote from DIMM thermal control loop
@@ -764,6 +766,7 @@ void amec_slv_mem_voting_box(void)
         l_vote = g_amec->thermaldimm.speed_request;
         l_reason = AMEC_MEM_VOTING_REASON_DIMM;
         kvm_reason = MEMORY_OVER_TEMP;
+        l_sensor = getSensorByGsid(TEMPDIMMTHRM);
     }
 
     // Check vote from Mem ctrl+DIMM thermal control loop
@@ -772,6 +775,7 @@ void amec_slv_mem_voting_box(void)
         l_vote = g_amec->thermalmcdimm.speed_request;
         l_reason = AMEC_MEM_VOTING_REASON_MCDIMM;
         kvm_reason = MEMORY_OVER_TEMP;
+        l_sensor = getSensorByGsid(TEMPMCDIMMTHRM);
     }
 
     // Check vote from Pmic thermal control loop
@@ -780,6 +784,7 @@ void amec_slv_mem_voting_box(void)
         l_vote = g_amec->thermalpmic.speed_request;
         l_reason = AMEC_MEM_VOTING_REASON_PMIC;
         kvm_reason = MEMORY_OVER_TEMP;
+        l_sensor = getSensorByGsid(TEMPPMICTHRM);
     }
 
     // Check vote from external mem controller thermal control loop
@@ -788,6 +793,7 @@ void amec_slv_mem_voting_box(void)
         l_vote = g_amec->thermalmcext.speed_request;
         l_reason = AMEC_MEM_VOTING_REASON_MC_EXT;
         kvm_reason = MEMORY_OVER_TEMP;
+        l_sensor = getSensorByGsid(TEMPMCEXTTHRM);
     }
 
     // Check if memory autoslewing is enabled
@@ -816,18 +822,39 @@ void amec_slv_mem_voting_box(void)
     g_amec->mem_speed_request = l_vote;
 
     //trace changes in memory throttling
-    if(l_reason != AMEC_MEM_VOTING_REASON_INIT)
+    if( (l_reason != AMEC_MEM_VOTING_REASON_INIT) &&
+        (l_reason != AMEC_MEM_VOTING_REASON_SLEW) )
     {
         if(!L_throttle_traced)
         {
-            L_throttle_traced = TRUE;
-            TRAC_INFO("Memory is being throttled. reason[%d] vote[%d] "
-                      "membuf_expired[0x%02x] dimm_expired[0x%08x%08x]",
-                       l_reason,
-                       l_vote,
-                       G_membuf_temp_expired_bitmap,
-                       (uint32_t)(G_dimm_temp_expired_bitmap.dw[0] >> 32),
-                       (uint32_t)G_dimm_temp_expired_bitmap.dw[0]);
+           L_throttle_traced = TRUE;
+
+           if(G_membuf_temp_expired_bitmap || G_dimm_temp_expired_bitmap.dw[0])
+           {
+               TRAC_INFO("Memory is being throttled due to timeout reason[%d] vote[%d] "
+                         "membuf_expired[0x%02x] dimm_expired[0x%08x%08x]",
+                          l_reason,
+                          l_vote,
+                          G_membuf_temp_expired_bitmap,
+                          (uint32_t)(G_dimm_temp_expired_bitmap.dw[0] >> 32),
+                          (uint32_t)G_dimm_temp_expired_bitmap.dw[0]);
+           }
+           else if(l_sensor)
+           {
+                TRAC_INFO("Memory is being throttled due to OT reason[%d] vote[%d] "
+                          "current temp[0x%02x] max temp[0x%02x]",
+                          l_reason,
+                          l_vote,
+                          l_sensor->sample,
+                          l_sensor->sample_max);
+           }
+           else
+           {
+                TRAC_INFO("Memory is being throttled due to OT reason[%d] vote[%d] "
+                          "NO SENSOR!!!",
+                          l_reason,
+                          l_vote);
+           }
         }
     }
     else
