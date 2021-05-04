@@ -290,7 +290,7 @@ void ocmb_init(void)
             break;
         }
 
-        rc = gpe_request_schedule(&l_gpe_request);
+        //rc = gpe_request_schedule(&l_gpe_request);
 
         if(rc || L_ocmb_reg_parms.error.rc)
         {
