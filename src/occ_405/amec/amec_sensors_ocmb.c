@@ -44,6 +44,7 @@
 #include "amec_service_codes.h"
 #include "amec_sensors_ocmb.h"
 #include "ocmb_mem_data.h"
+#include "common.h"
 
 /******************************************************************************/
 /* Globals                                                                    */
@@ -56,9 +57,14 @@ uint16_t            G_membuf_temp_updated_bitmap = 0;
 extern uint8_t      G_membuf_needs_recovery;
 extern uint64_t G_inject_dimm;
 extern uint32_t G_inject_dimm_trace[MAX_NUM_OCMBS][NUM_DIMMS_PER_OCMB];
+extern uint16_t G_num_ocmb_reads_per_1000s;
+extern uint16_t G_allow_trace_flags;
 
 uint32_t amec_diff_adjust_for_overflow(uint32_t i_new_value, uint32_t i_old_value);
 
+// number of times OCMB cache line must be read before starting to update bandwidth sensors
+// this is required to have a good starting accumulator
+#define MIN_OCMB_READS_FOR_BW_SENSOR 5
 /******************************************************************************/
 /* Forward Declarations                                                       */
 /******************************************************************************/
@@ -572,14 +578,14 @@ void amec_perfcount_ocmb_getmc( OcmbMemData * i_sensor_cache,
     /*------------------------------------------------------------------------*/
     /*  Local Variables                                                       */
     /*------------------------------------------------------------------------*/
-    uint32_t                    tempu       = 0;
-    uint32_t                    templ       = 0;
-    uint32_t                    temp32new   = 0;
-    uint32_t                    temp32      = 0;
-    uint32_t                    tempreg     = 0;
-
-    #define AMECSENSOR_PORTPAIR_PTR(sensor_base,idx,idx2) \
-        (&(g_amec->proc[0].memctl[idx].membuf.portpair[idx2].sensor_base))
+    uint32_t                    l_cache_read  = 0;
+    uint32_t                    l_cache_write = 0;
+    uint32_t                    l_prev_read   = 0;
+    uint32_t                    l_prev_write  = 0;
+    uint32_t                    temp32        = 0;
+    uint64_t                    temp64        = 0;
+    uint32_t                    tempreg       = 0;
+    static uint8_t              L_accumulator_reads[MAX_NUM_OCMBS] = {0};
 
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
@@ -587,54 +593,79 @@ void amec_perfcount_ocmb_getmc( OcmbMemData * i_sensor_cache,
 
     OcmbMemData * l_sensor_cache = i_sensor_cache;
 
-    tempu = l_sensor_cache->mba_rd;
-    templ = l_sensor_cache->mba_wr;
-
     // ---------------------------------------------------------------------------
-    //  Interim Calculation:  MWRMx (0.01 Mrps) Memory write requests per sec
+    //  MWR/MRD sensors = [ ((difference in accumulator) * (1000/read time in ms)) / 10000 ]
+    //  For better precision with read time (no floating point) for (1000/read time in ms)
+    //  we use G_num_ocmb_reads_per_1000s calculated in data_store_mem_cfg()
+    //  MWR/MRD sensors = [ ((difference in accumulator) * G_num_ocmb_reads_per_1000s) / 10000000 ]
     // ---------------------------------------------------------------------------
 
-    // Extract write bandwidth
-    temp32new = (templ);
+    // -------------------------------------------------------------------------
+    // MWRMx (0.0001 Memory write requests per sec)
+    // -------------------------------------------------------------------------
 
-    temp32 = g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].perf.wr_cnt_accum;
-    temp32 = amec_diff_adjust_for_overflow(temp32new, temp32);
-    g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].perf.wr_cnt_accum = temp32new;  // Save latest accumulator away for next time
+    l_cache_write = l_sensor_cache->mba_wr;
+    l_prev_write = g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].perf.wr_cnt_accum;
+    temp32 = amec_diff_adjust_for_overflow(l_cache_write, l_prev_write);
 
-    // Read every 8 ms....to convert to 0.01 Mrps = ((8ms read * 125)/10000)
-    tempreg = ((temp32*125)/10000);
+    // Save latest accumulator away for next time
+    g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].perf.wr_cnt_accum = l_cache_write;
+
+    temp64 = (uint64_t)(temp32 * G_num_ocmb_reads_per_1000s);
+    tempreg = (uint32_t)(temp64 / 10000000);
 
     g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].perf.memwrite2ms = tempreg;
 
     // -------------------------------------------------------------------------
-    // Interim Calculation:  MRDMx (0.01 Mrps) Memory read requests per sec
+    // MRDMx (0.0001 Memory read requests per sec)
     // -------------------------------------------------------------------------
 
-    // Extract read bandwidth
-    temp32new = (tempu);
+    l_cache_read = l_sensor_cache->mba_rd;
+    l_prev_read = g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].perf.rd_cnt_accum;
+    temp32 = amec_diff_adjust_for_overflow(l_cache_read, l_prev_read);
 
-    temp32 = g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].perf.rd_cnt_accum;
-    temp32 = amec_diff_adjust_for_overflow(temp32new, temp32);
-    g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].perf.rd_cnt_accum = temp32new;  // Save latest accumulator away for next time
+    // Save latest accumulator away for next time
+    g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].perf.rd_cnt_accum = l_cache_read;
 
-    // Read every 8 ms....to convert to 0.01 Mrps = ((8ms read * 125)/10000)
-    tempreg = ((temp32*125)/10000);
+    temp64 = (uint64_t)(temp32 * G_num_ocmb_reads_per_1000s);
+    tempreg = (uint32_t)(temp64 / 10000000);
 
     g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].perf.memread2ms = tempreg;
 
-    // ------------------------------------------------------------
-    // Sensor:  MRDMx (0.01 Mrps) Memory read requests per sec
-    // ------------------------------------------------------------
-    tempreg = g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].perf.memread2ms;
-    tempreg += g_amec->proc[0].memctl[i_membuf].membuf.portpair[1].perf.memread2ms;
-    sensor_update( (&(g_amec->proc[0].memctl[i_membuf].mrd)), tempreg);
+    // only update sensors if have done defined minimum cache line reads to have a good starting accumulator
+    if(L_accumulator_reads[i_membuf] >= MIN_OCMB_READS_FOR_BW_SENSOR)
+    {
+        if(G_allow_trace_flags & ALLOW_MEM_TRACE)
+        {
+            TRAC_INFO("amec_perfcount_ocmb_getmc: Updating M%d sensors MRD[%d] MWR[%d]",
+                       i_membuf, g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].perf.memread2ms,
+                       g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].perf.memwrite2ms);
+            TRAC_INFO("amec_perfcount_ocmb_getmc: MRDM%d Raw sensor cache Read data NEW[%d] PREVIOUS[%d]",
+                     i_membuf, l_cache_read, l_prev_read);
+            TRAC_INFO("amec_perfcount_ocmb_getmc: MWRM%d Raw sensor cache Write data NEW[%d] PREVIOUS[%d]",
+                     i_membuf, l_cache_write, l_prev_write);
+        }
+        sensor_update( (&(g_amec->proc[0].memctl[i_membuf].mrd)),
+                        g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].perf.memread2ms);
 
-    // -------------------------------------------------------------
-    // Sensor:  MWRMx (0.01 Mrps) Memory write requests per sec
-    // -------------------------------------------------------------
-    tempreg = g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].perf.memwrite2ms;
-    tempreg += g_amec->proc[0].memctl[i_membuf].membuf.portpair[1].perf.memwrite2ms;
-    sensor_update( (&(g_amec->proc[0].memctl[i_membuf].mwr)), tempreg);
+        sensor_update( (&(g_amec->proc[0].memctl[i_membuf].mwr)),
+                       g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].perf.memwrite2ms);
+    }
+    else
+    {
+        L_accumulator_reads[i_membuf]++;
+
+        if(G_allow_trace_flags & ALLOW_MEM_TRACE)
+        {
+            TRAC_INFO("amec_perfcount_ocmb_getmc: Skiping Membuf%d read[%d] write[%d] sensor updates",
+                       i_membuf, g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].perf.memread2ms,
+                       g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].perf.memwrite2ms);
+            TRAC_INFO("amec_perfcount_ocmb_getmc: MRDM%d Raw sensor cache Read data NEW[%d] PREVIOUS[%d]",
+                       i_membuf, l_cache_read, l_prev_read);
+            TRAC_INFO("amec_perfcount_ocmb_getmc: MWRM%d Raw sensor cache Write data NEW[%d] PREVIOUS[%d]",
+                       i_membuf, l_cache_write, l_prev_write);
+        }
+    }
 
     return;
 }

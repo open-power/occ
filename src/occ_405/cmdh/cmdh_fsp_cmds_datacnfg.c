@@ -107,6 +107,7 @@ cmdh_ips_config_data_t G_ips_config_data = {0};
 bool G_mem_monitoring_allowed = FALSE;
 
 uint8_t G_read_ocmb_num_8ms_ticks = 1;
+uint16_t G_num_ocmb_reads_per_1000s = 3906;  // default assuming 200us update time (256ms reads)
 
 // Save which voltage the GPU is using (1 = default (12V), 2 = 2nd voltage (54V))
 uint8_t G_gpu_volt_type[MAX_GPU_DOMAINS][MAX_NUM_GPU_PER_DOMAIN] = {{0}};
@@ -1832,7 +1833,7 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
     cmdh_mem_cfg_v30_t*             l_cmd_ptr = (cmdh_mem_cfg_v30_t*)i_cmd_ptr;
     uint16_t                        l_data_length = 0;
     uint16_t                        l_exp_data_length = 0;
-    uint16_t                        l_ocmb_update_time_ms = 0;
+    uint16_t                        l_ocmb_update_time_ms = 200;
     uint8_t                         l_num_mem_bufs = 0;
     uint8_t                         l_num_dimms = 0;
     uint8_t                         l_dimm_num = 0;
@@ -1877,8 +1878,6 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
                 cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
                 break;
             }
-
-            l_ocmb_update_time_ms = 640;
 
             // Store the mem config data
             G_sysConfigData.ips_mem_pwr_ctl = l_cmd_ptr_old->header.ips_mem_pwr_ctl;
@@ -2076,9 +2075,13 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
             if(G_read_ocmb_num_8ms_ticks > l_max_dead_8ms_ticks)
                 G_read_ocmb_num_8ms_ticks = l_max_dead_8ms_ticks;
 
-            CMDH_TRAC_IMP("1 OCMB will be read every %dms Each OCMB read every %dms",
+            // determine number of reads done in 1000s
+            // using 1000 for better precision to calculate memory bandwidth sensors
+            G_num_ocmb_reads_per_1000s = 1000000 / (G_read_ocmb_num_8ms_ticks * 8 * MAX_NUM_OCMBS);
+            CMDH_TRAC_IMP("1 OCMB will be read every %dms Each OCMB read every %dms (%d reads/1000s)",
                           G_read_ocmb_num_8ms_ticks * 8,
-                          G_read_ocmb_num_8ms_ticks * 8 * MAX_NUM_OCMBS);
+                          G_read_ocmb_num_8ms_ticks * 8 * MAX_NUM_OCMBS,
+                          G_num_ocmb_reads_per_1000s);
 
             // This notifies other code that we need to request the mem throttle packet
             // and we need to enable memory monitoring when we enter observation state
