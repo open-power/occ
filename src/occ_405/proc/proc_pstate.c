@@ -60,6 +60,8 @@ extern uint32_t G_first_proc_gpu_config;
 
 extern uint8_t G_occ_interrupt_type;
 
+extern bool G_reset_prep;
+
 //Holds Fmax for ease of proc_freq2pstate calculation = max(fturbo,futurbo)
 uint16_t G_proc_fmax_mhz;
 
@@ -284,7 +286,10 @@ void populate_opal_dynamic_data()
     G_opal_dynamic_table.dynamic.dynamic_minor_version = DYNAMIC_MINOR_VERSION;
 
     // Dynamic OPAL runtime data
-    G_opal_dynamic_table.dynamic.occ_state            = CURRENT_STATE();
+    if(G_reset_prep)
+        G_opal_dynamic_table.dynamic.occ_state = OCC_STATE_SAFE;
+    else
+        G_opal_dynamic_table.dynamic.occ_state = CURRENT_STATE();
 
     // Add GPUs presence if this is a system that has GPUs OCC would monitor
     if(G_gpu_config_done)
@@ -713,6 +718,7 @@ void check_for_opal_updates(void)
             {
                 dynamic_data_change = true;
                 L_notify_phyp = true;
+                G_amec_opal_proc_throt_reason = OCC_RESET;
                 TRAC_INFO("check_for_opal_updates: safe state processor throttle status change - 0x%02X->0x%02X",
                            G_opal_dynamic_table.dynamic.proc_throt_status, G_amec_opal_proc_throt_reason);
             }
@@ -769,7 +775,8 @@ void check_for_opal_updates(void)
         }
 
         // check for OCC state change
-        if(G_opal_dynamic_table.dynamic.occ_state != CURRENT_STATE())
+        if( (G_opal_dynamic_table.dynamic.occ_state != CURRENT_STATE()) ||
+            (G_reset_prep) )
         {
             dynamic_data_change = true;
             L_notify_phyp = true;
@@ -778,7 +785,7 @@ void check_for_opal_updates(void)
         }
 
         if(G_occ_role == OCC_MASTER)
-	{
+        {
             // check for mode change
             if(G_opal_dynamic_table.dynamic.current_power_mode != CURRENT_MODE())
             {

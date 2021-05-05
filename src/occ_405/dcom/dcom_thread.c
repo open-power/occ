@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2021                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -99,19 +99,6 @@ void Dcom_thread_routine(void *arg)
         G_dcom_thread_counter++;
 
         // --------------------------------------------------
-        // Check if we need to update the opal table
-        // only start checking after OCC has gone thru state change
-        // --------------------------------------------------
-        if( (CURRENT_STATE() >= OCC_STATE_OBSERVATION) || (isSafeStateRequested()) )
-        {
-            // stop checking if we hit a critical error trying to update memory
-            if(G_opal_table_update_state != OPAL_TABLE_UPDATE_CRITICAL_ERROR)
-            {
-                check_for_opal_updates();
-            }
-        }
-
-        // --------------------------------------------------
         // Set Mode and State Based on Master
         // --------------------------------------------------
         l_newOccState = (G_occ_master_state == CURRENT_STATE()) ? OCC_STATE_NOCHANGE : G_occ_master_state;
@@ -142,16 +129,22 @@ void Dcom_thread_routine(void *arg)
         // Override State if we are in SAFE state already
         l_newOccState = ( OCC_STATE_SAFE == CURRENT_STATE() ) ? OCC_STATE_NOCHANGE : l_newOccState;
 
-        // Don't allow state change if reset prep was recieved
-        l_newOccState = G_reset_prep ? OCC_STATE_NOCHANGE : l_newOccState;
-
-        if( (OCC_STATE_NOCHANGE != l_newOccState)
-            || (OCC_MODE_NOCHANGE != l_newOccMode)
-            || (OCC_FREQ_PT_PARM_NONE != l_newOccModeParm) )
+        // Don't allow state or mode change if reset prep was recieved
+        if(!G_reset_prep)
         {
-            // If we're active, then we should always process the mode change first
-            // If we're not active, then we should always process the state change first
-            if(OCC_STATE_ACTIVE == CURRENT_STATE())
+            // we should always process the state change first
+            if(OCC_STATE_NOCHANGE != l_newOccState)
+            {
+               // Set the new state
+               l_errlHndl = SMGR_set_state(l_newOccState);
+               if(l_errlHndl)
+               {
+                    commitErrl(&l_errlHndl);
+               }
+            }
+            // If we're active process mode change if needed
+            if( (OCC_STATE_ACTIVE == CURRENT_STATE()) &&
+                (OCC_MODE_NOCHANGE != l_newOccMode) )
             {
                 // Set the new mode
                 l_errlHndl = SMGR_set_mode(l_newOccMode);
@@ -159,34 +152,22 @@ void Dcom_thread_routine(void *arg)
                 {
                     commitErrl(&l_errlHndl);
                 }
-                // Set the new state
-                l_errlHndl = SMGR_set_state(l_newOccState);
-                if(l_errlHndl)
-                {
-                    commitErrl(&l_errlHndl);
-                }
-            }
-            else
-            {
-                // Set the new state
-                l_errlHndl = SMGR_set_state(l_newOccState);
-                                if(l_errlHndl)
-                {
-                    commitErrl(&l_errlHndl);
-                }
-
-                // Set the new mode if active
-                if(OCC_STATE_ACTIVE == CURRENT_STATE())
-                {
-                    l_errlHndl = SMGR_set_mode(l_newOccMode);
-                    if(l_errlHndl)
-                    {
-                        commitErrl(&l_errlHndl);
-                    }
-                }
             }
         }
 
+
+        // --------------------------------------------------
+        // Check if we need to update the opal table
+        // only start checking after OCC has gone thru state change
+        // --------------------------------------------------
+        if(CURRENT_STATE() != OCC_STATE_NOCHANGE)
+        {
+            // stop checking if we hit a critical error trying to update memory
+            if(G_opal_table_update_state != OPAL_TABLE_UPDATE_CRITICAL_ERROR)
+            {
+                check_for_opal_updates();
+            }
+        }
 
         // --------------------------------------------------
         // SSX Sleep

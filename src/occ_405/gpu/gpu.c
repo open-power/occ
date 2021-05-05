@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2021                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -523,8 +523,6 @@ void disable_all_gpus(void)
 {
     uint8_t i = 0;
 
-    // release I2C lock to the host for this engine and stop monitoring
-    occ_i2c_lock_release(GPU_I2C_ENGINE);
     G_gpu_monitoring_allowed = FALSE;
 
     // mark all GPUs as disabled

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2021                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -358,9 +358,6 @@ errlHndl_t SMGR_all_to_standby()
 
     // Stop reading DIMM temps
     disable_all_dimms();
-
-    // Stop monitoring GPUs
-    disable_all_gpus();
 
     // Set the actual STATE now that we have finished everything else
     CURRENT_STATE() = OCC_STATE_STANDBY;
@@ -1196,9 +1193,6 @@ errlHndl_t SMGR_all_to_safe()
 
     // Stop reading DIMM temps
     disable_all_dimms();
-
-    // Stop monitoring GPUs
-    disable_all_gpus();
 
     // Notes:
     //  - We can still talk to FSP

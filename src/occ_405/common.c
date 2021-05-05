@@ -175,7 +175,11 @@ bool notify_host(const ext_intr_reason_t i_reason)
 {
     bool notify_success = false;
     static uint16_t L_traced_once = 0;
-    //TRAC_INFO("notify_host(0x%02X) called (G_host_notifications_pending=0x%02X)", i_reason, G_host_notifications_pending);
+
+    if( (G_allow_trace_flags & ALLOW_OPAL_TRACE) && G_host_notifications_pending)
+    {
+        TRAC_INFO("notify_host(0x%02X) called (G_host_notifications_pending=0x%02X)", i_reason, G_host_notifications_pending);
+    }
 
     // Use input reason unless there are outstanding notifications pending
     uint8_t notifyReason = i_reason;
@@ -192,15 +196,11 @@ bool notify_host(const ext_intr_reason_t i_reason)
         {
             notifyReason = INTR_REASON_HTMGT_SERVICE_REQUIRED;
         }
-        else if (notifyReason & INTR_REASON_I2C_OWNERSHIP_CHANGE)
-        {
-            notifyReason = INTR_REASON_I2C_OWNERSHIP_CHANGE;
-        }
         else
         {
             INTR_TRAC_ERR("notify_host: G_host_notification_pending has unrecognized value: 0x%02X",
                           notifyReason);
-            notifyReason = i_reason;
+            notifyReason = 0;
         }
     }
 
@@ -211,9 +211,6 @@ bool notify_host(const ext_intr_reason_t i_reason)
     {
         case INTR_REASON_HTMGT_SERVICE_REQUIRED:
             new_occmisc.fields.ext_intr_reason = INTR_REASON_HTMGT_SERVICE_REQUIRED;
-            break;
-        case INTR_REASON_I2C_OWNERSHIP_CHANGE:
-            new_occmisc.fields.ext_intr_reason = INTR_REASON_I2C_OWNERSHIP_CHANGE;
             break;
         case INTR_REASON_OPAL_SHARED_MEM_CHANGE:
             new_occmisc.fields.ext_intr_reason = INTR_REASON_OPAL_SHARED_MEM_CHANGE;
