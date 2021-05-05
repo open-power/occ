@@ -36,6 +36,7 @@
 // N/M Throtling Control
 #define OCMB_MBA_FARB3Q 0x08011418
 #define OCMB_MBA_FARB7Q 0x0801141d
+#define OCMB_MBA_FARB8Q 0x08011420
 // Deadman timer setup
 #define OCMB_MBASTR0Q   0x08011437
 

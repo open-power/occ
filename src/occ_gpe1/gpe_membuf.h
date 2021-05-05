@@ -108,7 +108,7 @@ int gpe_ocmb_configuration_create(MemBufConfiguration_t * o_config);
  * Send SYNC to ocmb to effectuate the thottle values
  * @param[in] the membuf configuration
  */
-int ocmb_throttle_sync(MemBufConfiguration_t* i_config);
+int ocmb_throttle_sync(MemBufConfiguration_t* i_config, uint32_t i_sync_type);
 
 int get_ocmb_sensorcache(MemBufConfiguration_t* i_config,
                              MemBufGetMemDataParms_t* i_parms);

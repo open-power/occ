@@ -157,7 +157,7 @@ void ocmb_init(void)
     int l_reset_on_error = 1;
     uint32_t missing_membuf_bitmap = 0;
     GpeRequest l_gpe_request;
-    static scomList_t L_scomList[2] SECTION_ATTRIBUTE(".noncacheable");
+    static scomList_t L_scomList[5] SECTION_ATTRIBUTE(".noncacheable");
     static MemBufScomParms_t L_ocmb_reg_parms SECTION_ATTRIBUTE(".noncacheable");
 
     do
@@ -249,9 +249,14 @@ void ocmb_init(void)
                  (uint32_t)(G_dimm_enabled_sensors.dw[1]>>32),
                  (uint32_t)G_dimm_enabled_sensors.dw[1]);
 
+        // Reset the deadman timer
+        L_scomList[0].commandType = MEMBUF_SCOM_MEMBUF_RESET_DEADMAN;
+
         // Setup the OCMB deadman timer
-        L_scomList[0].scom = OCMB_MBASTR0Q;
-        L_scomList[0].commandType = MEMBUF_SCOM_RMW_ALL;
+        L_scomList[1].scom = OCMB_MBASTR0Q;
+        L_scomList[4].scom = OCMB_MBASTR0Q;
+        L_scomList[1].commandType = MEMBUF_SCOM_RMW_ALL;
+        L_scomList[4].commandType = MEMBUF_SCOM_RMW_ALL;
 
         ocmb_mbastr0q_t l_mbascfg;
         l_mbascfg.value = 0;
@@ -259,19 +264,29 @@ void ocmb_init(void)
         // setup the mask bits
         l_mbascfg.fields.deadman_timer_sel = OCMB_DEADMAN_TIMER_FIELD;
         l_mbascfg.fields.deadman_tb_sel = 1;
-        L_scomList[0].mask = l_mbascfg.value;
+        L_scomList[1].mask = l_mbascfg.value;
+        L_scomList[4].mask = l_mbascfg.value;
 
-        // setup the deadman config data
+        // setup config data to disable the deadman timer
+        l_mbascfg.fields.deadman_timer_sel = 0;
+        l_mbascfg.fields.deadman_tb_sel    = 0;
+        L_scomList[1].data = l_mbascfg.value;
+
+        // setup config data to enable the deadman timer
         l_mbascfg.fields.deadman_timer_sel = OCMB_DEADMAN_TIMER_SEL_MAX;
         l_mbascfg.fields.deadman_tb_sel    = OCMB_DEADMAN_TIMEBASE_SEL;
-        L_scomList[0].data = l_mbascfg.value;
+        L_scomList[4].data = l_mbascfg.value;
 
-        L_scomList[1].scom = OCMB_MBA_FARB7Q;
-        L_scomList[1].commandType = MEMBUF_SCOM_WRITE_ALL;
-        L_scomList[1].data = 0; // Emergency throttle reset
+        L_scomList[2].scom = OCMB_MBA_FARB7Q;
+        L_scomList[2].commandType = MEMBUF_SCOM_WRITE_ALL;
+        L_scomList[2].data = 0; // Emergency throttle reset
+
+        L_scomList[3].scom = OCMB_MBA_FARB8Q;
+        L_scomList[3].commandType = MEMBUF_SCOM_WRITE_ALL;
+        L_scomList[3].data = 0; // SAFE_REFRESH_MODE off
 
         L_ocmb_reg_parms.scomList = &L_scomList[0];
-        L_ocmb_reg_parms.entries = 2;
+        L_ocmb_reg_parms.entries = 5;
         L_ocmb_reg_parms.error.ffdc = 0;
 
 
@@ -290,7 +305,7 @@ void ocmb_init(void)
             break;
         }
 
-        //rc = gpe_request_schedule(&l_gpe_request);
+        rc = gpe_request_schedule(&l_gpe_request);
 
         if(rc || L_ocmb_reg_parms.error.rc)
         {
@@ -309,7 +324,7 @@ void ocmb_init(void)
         // Setup the GPE request to do sensor data collection
         G_membuf_data_parms.error.ffdc = 0;
         G_membuf_data_parms.collect = -1;
-        G_membuf_data_parms.update = -1;
+        G_membuf_data_parms.touch = 1;  // OCC touch to reset ocmb deadman timer
         G_membuf_data_parms.data = 0;
 
         gpe_request_rc = 
@@ -544,9 +559,7 @@ void ocmb_data( void )
         // ------------------------------------------
         // Data Task Variable Initial State
         // ------------------------------------------
-        // ->current_membuf:  the one that was just 'written' to last tick to
-        //                     kick off the sensor cache population in the
-        //                     membuf.  It will be 'read from' during this tick.
+        // ->current_membuf:  The one 'read from' during this tick.
         //
         // ->prev_membuf:     the one that was 'read from' during the last tick
         //                     and will be used to update the
@@ -749,11 +762,13 @@ void ocmb_data( void )
         {
             l_membuf_data_ptr->prev_membuf = l_membuf_data_ptr->current_membuf;
             l_membuf_data_ptr->current_membuf = l_membuf_data_ptr->start_membuf;
+            l_parms->touch = 1;
         }
         else
         {
             l_membuf_data_ptr->prev_membuf = l_membuf_data_ptr->current_membuf;
             l_membuf_data_ptr->current_membuf++;
+            l_parms->touch = 0;
         }
 
         // ------------------------------------------
@@ -785,16 +800,6 @@ void ocmb_data( void )
             else{
               // If prev membuf is not present, don't do the read of the sensor cache.
               l_parms->collect = -1;
-            }
-
-            // ->config_update controls which membuf we are writing to
-            if( MEMBUF_PRESENT(l_membuf_data_ptr->current_membuf) ){
-              // If cur membuf is present, do the write to kick off the sensor cache collect
-              l_parms->update = l_membuf_data_ptr->current_membuf;
-            }
-            else{
-              // If cur membuf is not present, don't do the write to kick off the sensor cache collect
-              l_parms->update = -1;
             }
 
             l_parms->data = (uint64_t *)(l_membuf_data_ptr->membuf_data_ptr);

@@ -546,6 +546,7 @@ int gpe_ocmb_configuration_create(MemBufConfiguration_t* o_config)
         PK_TRACE("OCMB dts_config: %08x%08x",
                  (uint32_t)(o_config->dts_config >> 32),
                  (uint32_t)(o_config->dts_config));
+        PK_TRACE("OCMB_config: %08x",o_config->config);
     }
     while( 0 );
 
@@ -599,7 +600,7 @@ int check_and_reset_mmio_fir(MemBufConfiguration_t* i_config, unsigned int i_mem
     return rc;
 }
 
-int ocmb_throttle_sync(MemBufConfiguration_t* i_config)
+int ocmb_throttle_sync(MemBufConfiguration_t* i_config, uint32_t i_sync_type)
 {
     // see
     // https://farm3802.rtp.stglabs.ibm.com/regdb/entire_table.php?db=FIGDB_cb1_25_36_DB&name=MB_SIM.SRQ.MBA_FARB3Q
@@ -624,7 +625,8 @@ int ocmb_throttle_sync(MemBufConfiguration_t* i_config)
             break;
         }
 
-        data &= ~MCS_MCSYNC_SYNC_GO;
+        data &= ~(MCS_MCSYNC_SYNC_GO|MCS_MCSYNC_SYNC_TYPE_FIELD);
+        data |= ((uint64_t)i_sync_type) << 32;
 
         rc = putscom_abs(i_config->mcSyncAddr, data);
         if (rc)
@@ -784,10 +786,15 @@ int get_ocmb_sensorcache(MemBufConfiguration_t* i_config,
             }
         }
     }
-    // if(i_parms->update != -1) {}  -- not used for Ocmb
-
     pbaslvctl_reset(&(i_config->dataParms));
     PPE_STVD((i_config->dataParms).slvctl_address, pba_slvctln_save);
+
+    if(i_parms->touch != 0)
+    {
+        // Reset OCMB deadman timer.
+        ocmb_throttle_sync(i_config, MCS_MCSYNC_SYNC_TYPE_OCC_TOUCH);
+    }
+
 
     i_parms->error.rc = rc;
     return rc;

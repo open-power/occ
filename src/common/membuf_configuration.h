@@ -200,10 +200,16 @@ typedef enum
     // Send SYNC to broadcast new throttle values.
     MEMBUF_SCOM_MEMBUF_SYNC,
 
+    // Send SYNC to broadcast OCC_TOUCH cmd and reset the deadman timer
+    MEMBUF_SCOM_MEMBUF_RESET_DEADMAN,
+
 }  membuf_scom_operation_t;
 
-#define MCS_MCSYNC_SYNC_GO 0x0000800000000000ull
-#define MCS_MCSYNC_EN_SYNC_IN 0x0000400000000000ull
+#define MCS_MCSYNC_SYNC_TYPE_SYNC      0x00000000ul
+#define MCS_MCSYNC_SYNC_TYPE_OCC_TOUCH 0x00700000ul
+#define MCS_MCSYNC_SYNC_TYPE_FIELD     0x00f0000000000000ull
+#define MCS_MCSYNC_SYNC_GO             0x0000800000000000ull
+#define MCS_MCSYNC_EN_SYNC_IN          0x0000400000000000ull
 
 // BAR and PBA_SLAVE assigned to gpe1 membuf
 //  - @see POWER Energy Management Hcode/HWP spec

@@ -75,11 +75,10 @@ typedef struct
     int collect;
 
     /**
-     * The index (0 .. NMEMBUF - 1) of the MemBuf to "poke" to cause it
-     * to begin collecting the next round of data into its sensor cache, or
-     * -1 to bypass updating
+     * Send the OCC_TOUCH cmd to the OCMB to reset the OCMB deadman timer
+     * if not 0.
      */
-    int update;
+    int touch;
 
     /**
      * Pointer to data collected.  Needs to be set if collect != -1

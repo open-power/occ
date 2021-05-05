@@ -524,6 +524,7 @@ void gpe_inband_scom(MemBufConfiguration_t* i_config,
 
     for(i = 0; i < i_parms->entries; ++i)
     {
+        PK_TRACE("gpe_inband_scom. cmdtype %d",i_parms->scomList[i].commandType);
         switch(i_parms->scomList[i].commandType)
         {
             case MEMBUF_SCOM_NOP:
@@ -544,6 +545,13 @@ void gpe_inband_scom(MemBufConfiguration_t* i_config,
                 break;
 
             case MEMBUF_SCOM_RMW:
+
+                PK_TRACE("MEMBUF_SCOM_RMW. OCMB %d, addr(%08x) mask[0:31](%08x) data[0:31](%08x)",
+                         i_parms->scomList[i].instanceNumber,
+                         i_parms->scomList[i].scom,
+                         (i_parms->scomList[i].mask) >> 32,
+                         (i_parms->scomList[i].data) >> 32);
+
                 rc = membuf_scom_rmw(i_config,
                                       i_parms->scomList[i].instanceNumber,
                                       i_parms->scomList[i].scom,
@@ -559,6 +567,12 @@ void gpe_inband_scom(MemBufConfiguration_t* i_config,
                 break;
 
             case MEMBUF_SCOM_WRITE_ALL:
+
+                PK_TRACE("MEMBUF_SCOM_WRITE_ALL addr(%08x) data(%08x%08x)",
+                         i_parms->scomList[i].scom,
+                         (i_parms->scomList[i].data) >> 32,
+                         (i_parms->scomList[i].data));
+
                 rc = membuf_put_scom_all(i_config,
                                           i_parms->scomList[i].scom,
                                           i_parms->scomList[i].data);
@@ -572,7 +586,11 @@ void gpe_inband_scom(MemBufConfiguration_t* i_config,
                 break;
 
             case MEMBUF_SCOM_MEMBUF_SYNC:
-                rc = ocmb_throttle_sync(i_config);
+                rc = ocmb_throttle_sync(i_config, MCS_MCSYNC_SYNC_TYPE_SYNC);
+                break;
+
+            case MEMBUF_SCOM_MEMBUF_RESET_DEADMAN:
+                rc = ocmb_throttle_sync(i_config, MCS_MCSYNC_SYNC_TYPE_OCC_TOUCH);
                 break;
 
             default:
