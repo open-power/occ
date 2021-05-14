@@ -655,6 +655,10 @@ bool read_pgpe_header(void)
     memcpy(&G_pgpe_header.magic_number,
            (const void*)PGPE_HEADER_ADDR,
            sizeof(pgpe_header_data_t));
+
+    // Make sure shared_sram_add is non-cacheable
+    G_pgpe_header.shared_sram_addr &= 0xf7ffffff;
+
     do
     {
         // verify the validity of the magic number
