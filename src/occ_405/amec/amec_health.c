@@ -1001,115 +1001,168 @@ void amec_health_check_membuf_timeout()
 // End Function Specification
 void amec_health_check_proc_temp()
 {
+    #define NUM_PROC_SENSOR_TYPES 2
+    #define CORE_DTS_INDEX        0
+    #define IO_DTS_INDEX          1
     /*------------------------------------------------------------------------*/
     /*  Local Variables                                                       */
     /*------------------------------------------------------------------------*/
     uint16_t                    l_ot_error;
     uint16_t                    l_io_ot_error;
-    static uint32_t             L_error_count = 0;
+    uint16_t                    l_cur_temp;
+    uint16_t                    l_cur_io_temp;
+    uint8_t                     l_core_num;
+    uint8_t                     l_quad;
+    static uint32_t             L_error_count[NUM_PROC_SENSOR_TYPES] = {0};
+    // history of core and IO temperatures for tracing when logging OT error
+    static uint16_t             L_temp_history[AMEC_HEALTH_ERROR_TIMER][NUM_PROC_SENSOR_TYPES] = {{0}};
     static BOOLEAN              L_ot_error_logged = FALSE;
     sensor_t                    *l_sensor;
     sensor_t                    *l_io_sensor;
+    sensor_t                    *l_temp_sensor;
     errlHndl_t                  l_err = NULL;
 
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
-    do
+    // Only check for OT if we haven't already logged an OT error
+    if (L_ot_error_logged == FALSE)
     {
         // Get TEMPPROCTHRM sensor, which is hottest core temperature
         // in OCC processor
         l_sensor = getSensorByGsid(TEMPPROCTHRM);
+        l_cur_temp = l_sensor->sample;
+        l_core_num = l_sensor->vector->max_pos;
         l_ot_error = g_amec->thermalproc.ot_error;
 
         // Get TEMPPROCIOTHRM sensor, which is hottest IO temperature
         // in OCC processor
         l_io_sensor = getSensorByGsid(TEMPPROCIOTHRM);
+        l_cur_io_temp = l_io_sensor->sample;
         l_io_ot_error = g_amec->thermalprocio.ot_error;
 
 
-        // Check to see if we exceeded our error temperature
-        if( (l_sensor->sample > l_ot_error) || (l_io_sensor->sample > l_io_ot_error) )
+        // Check to see if we exceeded our error temperature for the core
+        if(l_cur_temp > l_ot_error)
         {
-            // same callouts for processor and processor IO so treat the same and only
-            // log one error for either being OT
+            // save the temperatures for tracing later
+            L_temp_history[L_error_count[CORE_DTS_INDEX]][CORE_DTS_INDEX] = l_cur_temp;
+
             // Increment the error counter for this FRU
-            L_error_count++;
-
-            // Trace and log error the first time this occurs
-            if (L_error_count == AMEC_HEALTH_ERROR_TIMER)
-            {
-                // Have we logged an OT error for this FRU already?
-                if (L_ot_error_logged == TRUE)
-                {
-                    break;
-                }
-
-                L_ot_error_logged = TRUE;
-
-                if(l_sensor->sample > l_ot_error)
-                {
-                    TRAC_ERR("amec_health_check_error_temp: processor has exceeded OT error! temp[%u] ot_error[%u]",
-                             l_sensor->sample,
-                             l_ot_error);
-                }
-                if(l_io_sensor->sample > l_io_ot_error)
-                {
-                    TRAC_ERR("amec_health_check_error_temp: processor IO has exceeded OT error! temp[%u] ot_error[%u]",
-                             l_io_sensor->sample,
-                             l_io_ot_error);
-                }
-
-                // Log an OT error
-                /* @
-                 * @errortype
-                 * @moduleid    AMEC_HEALTH_CHECK_PROC_TEMP
-                 * @reasoncode  PROC_ERROR_TEMP
-                 * @userdata1   Fru peak procesor IO temperature sensor
-                 * @userdata2   Fru peak procesor temperature sensor
-                 * @devdesc     Processor FRU has reached error temperature
-                 *              threshold and is called out in this error log.
-                 *
-                 */
-                l_err = createErrl(AMEC_HEALTH_CHECK_PROC_TEMP,
-                                   PROC_ERROR_TEMP,
-                                   ERC_AMEC_PROC_ERROR_OVER_TEMPERATURE,
-                                   ERRL_SEV_PREDICTIVE,
-                                   NULL,
-                                   DEFAULT_TRACE_SIZE,
-                                   l_io_sensor->sample_max,
-                                   l_sensor->sample_max);
-
-                // Callout the Ambient procedure
-                addCalloutToErrl(l_err,
-                                 ERRL_CALLOUT_TYPE_COMPONENT_ID,
-                                 ERRL_COMPONENT_ID_OVER_TEMPERATURE,
-                                 ERRL_CALLOUT_PRIORITY_HIGH);
-
-                // Callout to processor
-                addCalloutToErrl(l_err,
-                                 ERRL_CALLOUT_TYPE_HUID,
-                                 G_sysConfigData.proc_huid,
-                                 ERRL_CALLOUT_PRIORITY_MED);
-
-                // Commit Error
-                commitErrl(&l_err);
-            }
+            L_error_count[CORE_DTS_INDEX]++;
         }
         else
         {
-            // Trace that we have now dropped below the error threshold
-            if (L_error_count >= AMEC_HEALTH_ERROR_TIMER)
+            // Reset the error counter for this FRU
+            L_error_count[CORE_DTS_INDEX] = 0;
+        }
+
+        // Check to see if we exceeded our error temperature for IO
+        if(l_cur_io_temp > l_io_ot_error)
+        {
+            // save the temperatures for tracing later
+            L_temp_history[L_error_count[IO_DTS_INDEX]][IO_DTS_INDEX] = l_cur_io_temp;
+
+            // Increment the error counter for this FRU
+            L_error_count[IO_DTS_INDEX]++;
+        }
+        else
+        {
+            // Reset the error counter for this FRU
+            L_error_count[IO_DTS_INDEX] = 0;
+        }
+
+        // Trace and log error the first time this occurs
+        // same callouts for processor and processor IO so treat the same and only
+        // log one error for either being OT
+        if( (L_error_count[CORE_DTS_INDEX] == AMEC_HEALTH_ERROR_TIMER) ||
+            (L_error_count[IO_DTS_INDEX] == AMEC_HEALTH_ERROR_TIMER) )
+        {
+            L_ot_error_logged = TRUE;
+
+            if(L_error_count[CORE_DTS_INDEX] == AMEC_HEALTH_ERROR_TIMER)
             {
-                TRAC_INFO("amec_health_check_proc_temp: We have dropped below error threshold for processors. error_count[%u]",
-                          L_error_count);
+                TRAC_ERR("amec_health_check_error_temp: processor has exceeded OT error! core[%u] is hottest current temp[%u] ot_error[%u]",
+                         l_core_num,
+                         l_cur_temp,
+                         l_ot_error);
+                TRAC_ERR("amec_health_check_error_temp: previous 4 readings [%u] [%u] [%u] [%u]",
+                         L_temp_history[3][CORE_DTS_INDEX], L_temp_history[2][CORE_DTS_INDEX],
+                         L_temp_history[1][CORE_DTS_INDEX], L_temp_history[0][CORE_DTS_INDEX]);
+
+                // trace the individual temps used to calculate the current hottest core temp
+                // non-weighted avg of 2 core DTS and 1 L3 DTS
+                l_temp_sensor = getSensorByGsid((uint16_t)(TEMPC0 + l_core_num));
+                TRAC_ERR("amec_health_check_error_temp: Avg core and L3 DTS Current temp[%u] max temp[%u]",
+                         l_temp_sensor->sample, l_temp_sensor->sample_max);
+
+                // non-weighted racetrack DTS
+                // Determine the quad this core resides in.
+                l_quad = l_core_num / 4;
+                l_temp_sensor = getSensorByGsid((uint16_t)(TEMPQ0 + l_quad));
+                TRAC_ERR("amec_health_check_error_temp: Quad[%u] Racetrack current temp[%u] max temp[%u]",
+                         l_quad, l_temp_sensor->sample, l_temp_sensor->sample_max);
+            }
+            if(L_error_count[IO_DTS_INDEX] == AMEC_HEALTH_ERROR_TIMER)
+            {
+                TRAC_ERR("amec_health_check_error_temp: processor IO has exceeded OT error! current max IO temp[%u] ot_error[%u]",
+                         l_cur_io_temp,
+                         l_io_ot_error);
+                TRAC_ERR("amec_health_check_error_temp: previous 4 IO readings [%u] [%u] [%u] [%u]",
+                         L_temp_history[3][IO_DTS_INDEX], L_temp_history[2][IO_DTS_INDEX],
+                         L_temp_history[1][IO_DTS_INDEX], L_temp_history[0][IO_DTS_INDEX]);
+
+                // trace the 4 individual IO temps so it is known which one is hot
+                l_temp_sensor = getSensorByGsid(TEMPPROCIO00);
+                TRAC_ERR("amec_health_check_error_temp: SE PAU Current temp[%u] max temp[%u]",
+                         l_temp_sensor->sample, l_temp_sensor->sample_max);
+                l_temp_sensor = getSensorByGsid(TEMPPROCIO01);
+                TRAC_ERR("amec_health_check_error_temp: NE PAU Current temp[%u] max temp[%u]",
+                         l_temp_sensor->sample, l_temp_sensor->sample_max);
+                l_temp_sensor = getSensorByGsid(TEMPPROCIO10);
+                TRAC_ERR("amec_health_check_error_temp: SW PAU Current temp[%u] max temp[%u]",
+                         l_temp_sensor->sample, l_temp_sensor->sample_max);
+                l_temp_sensor = getSensorByGsid(TEMPPROCIO11);
+                TRAC_ERR("amec_health_check_error_temp: NW PAU Current temp[%u] max temp[%u]",
+                         l_temp_sensor->sample, l_temp_sensor->sample_max);
             }
 
-            // Reset the error counter for this FRU
-            L_error_count = 0;
-        }
-    }while (0);
+            // Log an OT error
+            /* @
+             * @errortype
+             * @moduleid    AMEC_HEALTH_CHECK_PROC_TEMP
+             * @reasoncode  PROC_ERROR_TEMP
+             * @userdata1   Fru peak procesor IO temperature sensor
+             * @userdata2   Fru peak procesor temperature sensor
+             * @devdesc     Processor FRU has reached error temperature
+             *              threshold and is called out in this error log.
+             *
+             */
+            l_err = createErrl(AMEC_HEALTH_CHECK_PROC_TEMP,
+                               PROC_ERROR_TEMP,
+                               ERC_AMEC_PROC_ERROR_OVER_TEMPERATURE,
+                               ERRL_SEV_PREDICTIVE,
+                               NULL,
+                               DEFAULT_TRACE_SIZE,
+                               l_io_sensor->sample_max,
+                               l_sensor->sample_max);
 
+            // Callout the Ambient procedure
+            addCalloutToErrl(l_err,
+                             ERRL_CALLOUT_TYPE_COMPONENT_ID,
+                             ERRL_COMPONENT_ID_OVER_TEMPERATURE,
+                             ERRL_CALLOUT_PRIORITY_HIGH);
+            // Callout to processor
+            addCalloutToErrl(l_err,
+                             ERRL_CALLOUT_TYPE_HUID,
+                             G_sysConfigData.proc_huid,
+                             ERRL_CALLOUT_PRIORITY_MED);
+
+            // Commit Error
+            commitErrl(&l_err);
+        }
+
+    } // if OT error not logged
 }
 
 // Function Specification
