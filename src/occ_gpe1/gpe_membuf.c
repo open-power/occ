@@ -58,6 +58,12 @@ void gpe_membuf_init(ipc_msg_t* i_cmd, void* i_arg)
         }
         // Must set membuf_type AFTER config created!
         G_membuf_config->membuf_type = payload->mem_type;
+
+        // Initialize/reset ocmb related
+        if(!rc)
+        {
+            rc = gpe_ocmb_init(G_membuf_config);
+        }
     }
 
     payload->error.rc = rc;

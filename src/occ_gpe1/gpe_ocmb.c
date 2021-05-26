@@ -69,6 +69,9 @@ int membuf_put_scom(MemBufConfiguration_t* i_config,
                      uint32_t i_scom_address,
                      uint64_t i_data);
 
+int membuf_put_scom_all(MemBufConfiguration_t* i_config,
+                         uint32_t i_scom_address,
+                         uint64_t i_data);
 
 int check_and_reset_mmio_fir(MemBufConfiguration_t * i_config,unsigned int i_membuf);
 
@@ -608,6 +611,8 @@ int ocmb_throttle_sync(MemBufConfiguration_t* i_config, uint32_t i_sync_type)
     // HWP programs this.
     uint64_t data;
     int rc = 0;
+    int i;
+
     do
     {
         // No designated sync addr, therefore Sync not enabled.
@@ -616,6 +621,39 @@ int ocmb_throttle_sync(MemBufConfiguration_t* i_config, uint32_t i_sync_type)
             break;
         }
 
+        // Setup non-designated sync regs
+        for(i = 0; i < (OCCHW_N_MC_PORT); ++i)
+        {
+            // If ether MCS channel is configured then port is configured
+            uint32_t port_config = CHIP_CONFIG_MCS(i*2) | CHIP_CONFIG_MCS((i*2)+1);
+            if((i_config->config & port_config) &&
+               (MI_MCSYNC[i] != i_config->mcSyncAddr))
+            {
+                rc = getscom_abs(MI_MCSYNC[i],&data);
+                if (rc)
+                {
+                    PK_TRACE("ocmb_throttle_sync: getscom failed. rc = %d. scom[0x%08x]",
+                             rc,
+                             MI_MCSYNC[i]);
+                    break;
+                }
+
+                data &= ~(MCS_MCSYNC_SYNC_TYPE_FIELD);
+                data |= ((uint64_t)i_sync_type) << 32;
+
+                rc = putscom_abs(MI_MCSYNC[i], data);
+                if (rc)
+                {
+                    PK_TRACE("ocmb_throttle_sync: putscom failed. rc = %d. scom[0x%08x]",
+                             rc,
+                             MI_MCSYNC[i]);
+                    break;
+                }
+            }
+        }
+        if (rc) break;
+
+        // setup designated sync and toggle go
         rc = getscom_abs(i_config->mcSyncAddr,&data);
         if (rc)
         {
@@ -624,7 +662,6 @@ int ocmb_throttle_sync(MemBufConfiguration_t* i_config, uint32_t i_sync_type)
                      i_config->mcSyncAddr);
             break;
         }
-
         data &= ~(MCS_MCSYNC_SYNC_GO|MCS_MCSYNC_SYNC_TYPE_FIELD);
         data |= ((uint64_t)i_sync_type) << 32;
 
@@ -642,7 +679,7 @@ int ocmb_throttle_sync(MemBufConfiguration_t* i_config, uint32_t i_sync_type)
         rc = putscom_abs(i_config->mcSyncAddr, data);
         if (rc)
         {
-            PK_TRACE("ocmb_throttle_sync: set sync putscom failed. rc = %d. scom[0x%08x]",
+            PK_TRACE("ocmb_throttle_sync: putscom failed. rc = %d. scom[0x%08x]",
                      rc,
                      i_config->mcSyncAddr);
             break;
@@ -800,4 +837,49 @@ int get_ocmb_sensorcache(MemBufConfiguration_t* i_config,
     return rc;
 }
 
+
+int gpe_ocmb_init(MemBufConfiguration_t * i_config)
+{
+    uint64_t data64 = 0;
+    int instance = 0;
+    // Issue occ touch sync (resets deadman timer count)
+    // Any errors will already be traced
+    PK_TRACE("gpe_ocmb_init: Issue OCCO_TOUCH");
+    ocmb_throttle_sync(i_config, MCS_MCSYNC_SYNC_TYPE_OCC_TOUCH);
+
+    // Clear emergency trottle
+    PK_TRACE("gpe_ocmb_init: Clear emergency throttle");
+    membuf_put_scom_all(i_config, OCMB_MBA_FARB7Q, 0);
+
+    // Clear safe refresh mode
+    PK_TRACE("gpe_ocmb_init: Clear safe refresh mode");
+    membuf_put_scom_all(i_config, OCMB_MBA_FARB8Q, 0);
+
+    // verify clear and retry as needed.
+    for(instance = 0; instance < OCCHW_N_MEMBUF; ++instance)
+    {
+        if(0 != ( CHIP_CONFIG_MEMBUF(instance) & (i_config->config)))
+        {
+            PK_TRACE("gpe_ocmb_init Verify instance %d",instance);
+            membuf_get_scom(i_config, instance, OCMB_MBA_FARB7Q, &data64);
+            if(0 != (data64 & 0x8000000000000000ull))
+            {
+                PK_TRACE("gpe_ocmb_init: Retry clear emergency throttle");
+                data64 = 0;
+                membuf_put_scom(i_config, instance, OCMB_MBA_FARB7Q, data64);
+            }
+
+            membuf_get_scom(i_config, instance, OCMB_MBA_FARB8Q, &data64);
+            if(0 != (data64 & 0x8000000000000000ull))
+            {
+                PK_TRACE("gpe_ocmb_init: Retry clear safe refresh");
+                data64 = 0;
+                membuf_put_scom(i_config, instance, OCMB_MBA_FARB8Q, data64);
+            }
+        }
+    }
+
+    // Any errors sould have been traced
+    return 0;
+}
 

@@ -50,8 +50,8 @@ memory_throttle_t G_memoryThrottleLimits[MAX_NUM_MEM_CONTROLLERS] = {{0}};
 memory_control_task_t G_memory_control_task =
 {
     .startMemIndex        = 0,                            // First Memory Control Index (membuf/MC_pair|port)
-    .prevMemIndex         = (MAX_NUM_MEM_CONTROLLERS-1),  // Previous Memory Control Index written to
-    .curMemIndex          = 0,                            // Current Memory Control Index
+    .prevMemIndex         = (MAX_NUM_MEM_CONTROLLERS-2),  // Previous Memory Control Index written to
+    .curMemIndex          = (MAX_NUM_MEM_CONTROLLERS-1),  // Current Memory Control Index
     .endMemIndex          = (MAX_NUM_MEM_CONTROLLERS-1),  // Last Memory Control Index
     .traceThresholdFlags  = 0,                            // Trace Throttle Flags
 };
@@ -77,6 +77,7 @@ void task_memory_control( task_t * i_task )
 
     errlHndl_t     l_err     = NULL;    // Error handler
     int            rc        = 0;       // Return code
+    bool           change_requested  = FALSE;
     uint8_t        memIndex;
     static bool    L_gpe_scheduled   = FALSE;
     static bool    L_gpe_idle_traced = FALSE;
@@ -127,6 +128,8 @@ void task_memory_control( task_t * i_task )
             {
                 //Request failed. Keep count of failures and request a reset if we reach a
                 //max retry count
+                //Assume the requested speed didn't take effect, so clear it so it gets resent.
+                g_amec->proc[0].memctl[memIndex].membuf.portpair[0].last_mem_speed_sent.word32 = 0;
                 L_scom_timeout[memIndex]++;
                 if(L_scom_timeout[memIndex] == MEMORY_CONTROL_SCOM_TIMEOUT)
                 {
@@ -161,8 +164,8 @@ void task_memory_control( task_t * i_task )
             break;
         }
 
-        rc = ocmb_control(memControlTask);
-        if(rc)
+        change_requested = ocmb_control(memControlTask);
+        if(change_requested)
         {
             rc = gpe_request_schedule(&G_memory_control_task.gpe_req);
 

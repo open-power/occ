@@ -157,7 +157,7 @@ void ocmb_init(void)
     int l_reset_on_error = 1;
     uint32_t missing_membuf_bitmap = 0;
     GpeRequest l_gpe_request;
-    static scomList_t L_scomList[5] SECTION_ATTRIBUTE(".noncacheable");
+    static scomList_t L_scomList[1] SECTION_ATTRIBUTE(".noncacheable");
     static MemBufScomParms_t L_ocmb_reg_parms SECTION_ATTRIBUTE(".noncacheable");
 
     do
@@ -249,14 +249,9 @@ void ocmb_init(void)
                  (uint32_t)(G_dimm_enabled_sensors.dw[1]>>32),
                  (uint32_t)G_dimm_enabled_sensors.dw[1]);
 
-        // Reset the deadman timer
-        L_scomList[0].commandType = MEMBUF_SCOM_MEMBUF_RESET_DEADMAN;
-
         // Setup the OCMB deadman timer
-        L_scomList[1].scom = OCMB_MBASTR0Q;
-        L_scomList[4].scom = OCMB_MBASTR0Q;
-        L_scomList[1].commandType = MEMBUF_SCOM_RMW_ALL;
-        L_scomList[4].commandType = MEMBUF_SCOM_RMW_ALL;
+        L_scomList[0].scom = OCMB_MBASTR0Q;
+        L_scomList[0].commandType = MEMBUF_SCOM_RMW_ALL;
 
         ocmb_mbastr0q_t l_mbascfg;
         l_mbascfg.value = 0;
@@ -264,29 +259,16 @@ void ocmb_init(void)
         // setup the mask bits
         l_mbascfg.fields.deadman_timer_sel = OCMB_DEADMAN_TIMER_FIELD;
         l_mbascfg.fields.deadman_tb_sel = 1;
-        L_scomList[1].mask = l_mbascfg.value;
-        L_scomList[4].mask = l_mbascfg.value;
-
-        // setup config data to disable the deadman timer
-        l_mbascfg.fields.deadman_timer_sel = 0;
-        l_mbascfg.fields.deadman_tb_sel    = 0;
-        L_scomList[1].data = l_mbascfg.value;
+        L_scomList[0].mask = l_mbascfg.value;
 
         // setup config data to enable the deadman timer
         l_mbascfg.fields.deadman_timer_sel = OCMB_DEADMAN_TIMER_SEL_MAX;
         l_mbascfg.fields.deadman_tb_sel    = OCMB_DEADMAN_TIMEBASE_SEL;
-        L_scomList[4].data = l_mbascfg.value;
+        L_scomList[0].data = l_mbascfg.value;
 
-        L_scomList[2].scom = OCMB_MBA_FARB7Q;
-        L_scomList[2].commandType = MEMBUF_SCOM_WRITE_ALL;
-        L_scomList[2].data = 0; // Emergency throttle reset
-
-        L_scomList[3].scom = OCMB_MBA_FARB8Q;
-        L_scomList[3].commandType = MEMBUF_SCOM_WRITE_ALL;
-        L_scomList[3].data = 0; // SAFE_REFRESH_MODE off
 
         L_ocmb_reg_parms.scomList = &L_scomList[0];
-        L_ocmb_reg_parms.entries = 5;
+        L_ocmb_reg_parms.entries = 1;
         L_ocmb_reg_parms.error.ffdc = 0;
 
 

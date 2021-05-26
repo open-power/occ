@@ -105,6 +105,12 @@ void gpe_inband_scom(MemBufConfiguration_t* i_config,
 int gpe_ocmb_configuration_create(MemBufConfiguration_t * o_config);
 
 /**
+ * Reset ocmb deadman timer count and emergency throttles
+ * @param[in] The MemBufConfiguration
+ */
+int gpe_ocmb_init(MemBufConfiguration_t * i_config);
+
+/**
  * Send SYNC to ocmb to effectuate the thottle values
  * @param[in] the membuf configuration
  */
