@@ -146,14 +146,15 @@ void gpe_24x7(ipc_msg_t* cmd, void* arg)
             }
 
             //set code version
-            ver.val.major      = 0x1;
-            ver.val.minor      = 0x3;
-            ver.val.bugfix     = 0x1;
-            ver.val.day        = 0x03;
+            ver.val.major      = 0x0;
+            ver.val.minor      = 0x0;
+            ver.val.bugfix     = 0x0;
+            ver.val.day        = 0x15;
             ver.val.month      = 0x06;
             ver.val.year       = 0x2021;
-            ver.val.spec_major = 0x15;
-            ver.val.spec_minor = 0x0;
+            ver.val.spec_major = 0x1;
+            ver.val.spec_minor = 0x1;
+            ver.val.dd_level   = 0x2;
             *L_version         = ver.value;
 
             //set status as initializing
@@ -256,7 +257,7 @@ void gpe_24x7(ipc_msg_t* cmd, void* arg)
 
         //4.check for any system config changes via uav
         //---------------------------------------------
-        if ( (*L_uav & ~MASK_PHB) != G_CUR_UAV )
+        if ( *L_uav != G_CUR_UAV )
         {
             L_INIT = true;
             L_PART_INIT = true;
@@ -315,10 +316,11 @@ void gpe_24x7(ipc_msg_t* cmd, void* arg)
             L_configure = true;
             L_cur_speed = *L_speed;
 
-            // Disable PHB UAV for DD-1 as PHB scoms are broken 
+            // Disable PHB UAV for DD-1 as PHB scoms are broken
             // CQ: SW513154
-            G_CUR_UAV   = *L_uav & ~MASK_PHB;
-            //G_CUR_UAV   = *L_uav;
+            //G_CUR_UAV   = *L_uav & ~MASK_PHB;
+
+            G_CUR_UAV   = *L_uav;
 
             G_CUR_MODE  = *L_mode;
 
@@ -699,7 +701,7 @@ uint32_t configure_pmu(uint8_t state, uint64_t speed, GpeErrorStruct* o_err)
     uint32_t rc = 0;
     uint64_t ocmbInstChk, ocmbUAV, val;
     //write the configuration SCOMs for all pmus.
-    int i,j,start = (state - 1) * 16,end = state * 16;
+    int i,j,start = (state - 1) * 17,end = state * 17;
     static volatile uint64_t* L_conf_last = (uint64_t*) (DBG_CONF_OFFSET | PBA_ENABLE);
     static volatile uint64_t* L_DBG_UAV   = (uint64_t*) (DBG_UAV | PBA_ENABLE);
 
@@ -767,36 +769,42 @@ uint32_t configure_pmu(uint8_t state, uint64_t speed, GpeErrorStruct* o_err)
                 continue;
             else if( ((i==80) || (i==81)) && (!((G_CUR_UAV & MASK_TLPM7) == MASK_XLINK7)) && (!((G_CUR_UAV & MASK_TLPM7) == MASK_ALINK7)) )
                 continue;
-            else if( ((i>=82) && (i<=85)) && (!((G_CUR_UAV & MASK_TLPM0) == MASK_OCAPI0)) )
+            else if( ((i>=82) && (i<=87)) && (!((G_CUR_UAV & MASK_TLPM0) == MASK_OCAPI0)) )
                 continue;
-            else if( ((i>=86) && (i<=89)) && (!((G_CUR_UAV & MASK_TLPM3) == MASK_OCAPI3)) )
+            else if( ((i>=88) && (i<=93)) && (!((G_CUR_UAV & MASK_TLPM3) == MASK_OCAPI3)) )
                 continue;
-            else if( ((i>=90) && (i<=93)) && (!((G_CUR_UAV & MASK_TLPM4) == MASK_OCAPI4)) )
+            else if( ((i>=94) && (i<=99)) && (!((G_CUR_UAV & MASK_TLPM4) == MASK_OCAPI4)) )
                 continue;
-            else if( ((i>=94) && (i<=97)) && (!((G_CUR_UAV & MASK_TLPM5) == MASK_OCAPI5)) )
+            else if( ((i>=100) && (i<=105)) && (!((G_CUR_UAV & MASK_TLPM5) == MASK_OCAPI5)) )
                 continue;
-            else if( ((i>=98) && (i<=101)) && (!((G_CUR_UAV & MASK_TLPM6) == MASK_OCAPI6)) )
+            else if( ((i>=106) && (i<=111)) && (!((G_CUR_UAV & MASK_TLPM6) == MASK_OCAPI6)) )
                 continue;
-            else if( ((i>=102) && (i<=105)) && (!((G_CUR_UAV & MASK_TLPM7) == MASK_OCAPI7)) )
+            else if( ((i>=112) && (i<=117)) && (!((G_CUR_UAV & MASK_TLPM7) == MASK_OCAPI7)) )
                 continue;
-            else if( ((i==106) || (i==107)) && !(G_CUR_UAV & MASK_PHB0) )
+            // PHYP would be doing the configuration for PHBs and 24x7 would 
+            // be directly reading the counters
+            else if( (i>=118) && (i<=129) )
                 continue;
-            else if( ((i==108) || (i==109)) && !(G_CUR_UAV & MASK_PHB1) )
+#if 0
+            else if( ((i==118) || (i==119)) && !(G_CUR_UAV & MASK_PHB0) )
                 continue;
-            else if( ((i==110) || (i==111)) && !(G_CUR_UAV & MASK_PHB2) )
+            else if( ((i==120) || (i==121)) && !(G_CUR_UAV & MASK_PHB1) )
                 continue;
-            else if( ((i==112) || (i==113)) && !(G_CUR_UAV & MASK_PHB3) )
+            else if( ((i==122) || (i==123)) && !(G_CUR_UAV & MASK_PHB2) )
                 continue;
-            else if( ((i==114) || (i==115)) && !(G_CUR_UAV & MASK_PHB4) )
+            else if( ((i==124) || (i==125)) && !(G_CUR_UAV & MASK_PHB3) )
                 continue;
-            else if( ((i==116) || (i==117)) && !(G_CUR_UAV & MASK_PHB5) )
+            else if( ((i==126) || (i==127)) && !(G_CUR_UAV & MASK_PHB4) )
                 continue;
-            else if( (i==118) && !(G_CUR_UAV & MASK_OCMB) )
+            else if( ((i==128) || (i==129)) && !(G_CUR_UAV & MASK_PHB5) )
                 continue;
-            else if( ((i>=119) && (i<=122)) && !(G_CUR_UAV & MASK_NX) )
+#endif
+            else if( (i==130) && !(G_CUR_UAV & MASK_OCMB) )
+                continue;
+            else if( ((i>=131) && (i<=134)) && !(G_CUR_UAV & MASK_NX) )
                 continue;
 
-            else if( i>=123 && i<=128 ) //Not supported
+            else if( i>=135 ) //Not supported
                 continue;
             else
             {
@@ -804,7 +812,7 @@ uint32_t configure_pmu(uint8_t state, uint64_t speed, GpeErrorStruct* o_err)
                 //for speeds >=1MS && <=2048MS
                 if((speed >= CNTL_SPEED_1MS) && (speed <= CNTL_SPEED_2048MS))
                 {
-                    if ( i != 118 )
+                    if ( i != 130 )
                     {
                         // For defect SW526292 - Write only bits [24:30] for 24x7 usage
                         if ( i >= 24 && i <= 39 )
