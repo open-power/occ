@@ -615,7 +615,7 @@ errlHndl_t SMGR_observation_to_active()
                 {
                     // OCC controls frequency with PMCR so ok to set clips wide open
                     // the OCC won't actually write PMCR with Pstates higher than base unless WOF is fully enabled
-                    l_pstate = proc_freq2pstate(G_proc_fmax_mhz, &l_steps);
+                    l_pstate = 0;
                 }
                 l_rc = pgpe_set_clip_blocking(l_pstate);
 
