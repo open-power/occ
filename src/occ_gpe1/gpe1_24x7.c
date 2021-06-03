@@ -147,10 +147,10 @@ void gpe_24x7(ipc_msg_t* cmd, void* arg)
 
             //set code version
             ver.val.major      = 0x1;
-            ver.val.minor      = 0x2;
-            ver.val.bugfix     = 0x0;
-            ver.val.day        = 0x18;
-            ver.val.month      = 0x01;
+            ver.val.minor      = 0x3;
+            ver.val.bugfix     = 0x1;
+            ver.val.day        = 0x03;
+            ver.val.month      = 0x06;
             ver.val.year       = 0x2021;
             ver.val.spec_major = 0x15;
             ver.val.spec_minor = 0x0;
@@ -697,7 +697,7 @@ void gpe_24x7(ipc_msg_t* cmd, void* arg)
 uint32_t configure_pmu(uint8_t state, uint64_t speed, GpeErrorStruct* o_err)
 {
     uint32_t rc = 0;
-    uint64_t ocmbInstChk, ocmbUAV;
+    uint64_t ocmbInstChk, ocmbUAV, val;
     //write the configuration SCOMs for all pmus.
     int i,j,start = (state - 1) * 16,end = state * 16;
     static volatile uint64_t* L_conf_last = (uint64_t*) (DBG_CONF_OFFSET | PBA_ENABLE);
@@ -806,7 +806,23 @@ uint32_t configure_pmu(uint8_t state, uint64_t speed, GpeErrorStruct* o_err)
                 {
                     if ( i != 118 )
                     {
-                        rc = putScom (G_PMU_CONFIGS_8[i][0], G_PMU_CONFIGS_8[i][1], o_err);
+                        // For defect SW526292 - Write only bits [24:30] for 24x7 usage
+                        if ( i >= 24 && i <= 39 )
+                        {
+                            rc = getScom (G_PMU_CONFIGS_8[i][0], &val, o_err);
+                            if ( rc )
+                            {
+                                PK_TRACE("configure_pmu:: 0x%08x getscom failed. rc = 0x%x", G_PMU_CONFIGS_8[i][0], rc);
+                                break;
+                            }
+                            val &= (~0x000000FE00000000);
+                            val |= G_PMU_CONFIGS_8[i][1];
+                            rc = putScom (G_PMU_CONFIGS_8[i][0], val, o_err);
+                        }
+                        else
+                        {
+                            rc = putScom (G_PMU_CONFIGS_8[i][0], G_PMU_CONFIGS_8[i][1], o_err);
+                        }
                         if ( rc )
                         {
                             PK_TRACE("configure_pmu: 0x%08x putscom failed. rc = 0x%x", G_PMU_CONFIGS_8[i][0], rc);
