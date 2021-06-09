@@ -67,6 +67,13 @@ int get_ocmb_sensorcache(MemBufConfiguration_t* i_config,
 int main(int argc, char **argv)
 {
     int rc;
+    if(G_gpe_shared_data == NULL)
+    {
+        // This should never happen  If the trace is never seen after a while
+        // then remove this "if" block.
+        G_gpe_shared_data = (gpe_shared_data_t*) GPE_SHARED_DATA_ADDR;
+        PK_TRACE("GPE1 main found G_gpe_shared_data ptr NULL!");
+    }
     uint32_t l_timebase = G_gpe_shared_data->occ_freq_div;
 
     // Don't initialize with a 0

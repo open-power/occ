@@ -1325,6 +1325,7 @@ void set_shared_gpe_data()
         G_shared_gpe_data.gpe1_tb_sz =
             *((uint32_t *)(sram_addr + PK_TRACE_SIZE_OFFSET));
     }
+    dcache_flush(&G_shared_gpe_data, sizeof(G_shared_gpe_data));
 }
 
 /*
@@ -2022,6 +2023,7 @@ int main(int argc, char **argv)
     // This counter runs at (OCC freq)/64.  The 405 timebase frequency runs at
     // (OCC freq)/4, so divide this by 16 to get the gpe timebase frequency.
     G_shared_gpe_data.occ_freq_div = l_tb_freq_hz/16;
+    dcache_flush_line(&G_shared_gpe_data);
 
     CHECKPOINT(SSX_INITIALIZED);
     // TRAC_XXX needs ssx services, traces can only be done after ssx_initialize

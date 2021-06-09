@@ -860,7 +860,6 @@ int gpe_ocmb_init(MemBufConfiguration_t * i_config)
     {
         if(0 != ( CHIP_CONFIG_MEMBUF(instance) & (i_config->config)))
         {
-            PK_TRACE("gpe_ocmb_init Verify instance %d",instance);
             membuf_get_scom(i_config, instance, OCMB_MBA_FARB7Q, &data64);
             if(0 != (data64 & 0x8000000000000000ull))
             {

@@ -771,7 +771,8 @@ void ocmb_data( void )
         //If membuf is not present then skip it. This task assigned to this membuf will
         //be idle during this time it would have collected the data.
         if( MEMBUF_PRESENT(l_membuf_data_ptr->current_membuf)
-            || MEMBUF_PRESENT(l_membuf_data_ptr->prev_membuf) )
+            || MEMBUF_PRESENT(l_membuf_data_ptr->prev_membuf)
+            || l_parms->touch == 1)
         {
             // Setup the 'get membuf data' parms
             // ->config controls which membuf we are reading from
