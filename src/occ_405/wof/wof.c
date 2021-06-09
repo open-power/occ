@@ -1123,8 +1123,8 @@ void read_xgpe_values( void )
     // update IO Power Proxy sensor
     sensor_update(AMECSENSOR_PTR(IO_PWR_PROXY), (uint16_t)l_XgpeWofValues.fields.io_power_proxy_0p01w);
 
-    // Set IO Power index bits 2:3 of io_index
-    g_wof->io_pwr_step_from_start = (uint16_t)((l_XgpeWofValues.fields.io_index & 0x30) >> 4);
+    // Set IO Power index bits 1:3 of io_index
+    g_wof->io_pwr_step_from_start = (uint16_t)((l_XgpeWofValues.fields.io_index & 0x70) >> 4);
 
     // make sure we didn't get something out of range
     if(g_wof->io_pwr_step_from_start > l_max_io_index)
