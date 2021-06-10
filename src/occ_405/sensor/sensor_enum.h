@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2021                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -146,7 +146,7 @@ enum e_gsid
     CURVDD,
     CURVDN,
     CURVCS,
-    CURVIO,
+    RESERVED,  // Was CURVIO, re-use in future (don't delete so sensor ids after this don't change)
     TEMPVDD,        // VRM Vdd temperature
 
     // ------------------------------------------------------

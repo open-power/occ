@@ -376,7 +376,7 @@ const sensor_ptr_t G_amec_sensor_list[] =
   SENSOR_PTR( CURVDD,               &g_amec_sys.proc[0].curvdd),
   SENSOR_PTR( CURVDN,               &g_amec_sys.proc[0].curvdn),
   SENSOR_PTR( CURVCS,               &g_amec_sys.proc[0].curvcs),
-  SENSOR_PTR( CURVIO,               &g_amec_sys.proc[0].curvio),
+  SENSOR_PTR( RESERVED,             &g_amec_sys.proc[0].reserved),
   SENSOR_PTR( TEMPVDD,              &g_amec_sys.sys.tempvdd),
 
 
@@ -553,7 +553,7 @@ const minisensor_ptr_t G_amec_mini_sensor_list[] INIT_SECTION =
   MINI_SENSOR_PTR( CURVDD,          &G_dcom_slv_outbox_tx.curVdd),
   MINI_SENSOR_PTR( CURVDN,          NULL),
   MINI_SENSOR_PTR( CURVCS,          NULL),
-  MINI_SENSOR_PTR( CURVIO,          NULL),
+  MINI_SENSOR_PTR( RESERVED,        NULL),
   MINI_SENSOR_PTR( TEMPVDD,         &G_dcom_slv_outbox_tx.tempvdd),
 
   // ------------------------------------------------------

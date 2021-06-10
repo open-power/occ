@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2021                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -289,7 +289,7 @@ const sensor_info_t G_sensor_info[]   =
   SENSOR_INFO_T_ENTRY(         CURVDD,  "A\0", AMEC_SENSOR_TYPE_CURRENT,  AMEC_SENSOR_LOC_VRM, AMEC_SENSOR_NONUM, AMEEFP_EVERY_4TH_TICK_HZ, AMEFP(  1,-2)  ),
   SENSOR_INFO_T_ENTRY(         CURVDN,  "A\0", AMEC_SENSOR_TYPE_CURRENT,  AMEC_SENSOR_LOC_VRM, AMEC_SENSOR_NONUM, AMEEFP_EVERY_4TH_TICK_HZ, AMEFP(  1,-2)  ),
   SENSOR_INFO_T_ENTRY(         CURVCS,  "A\0", AMEC_SENSOR_TYPE_CURRENT,  AMEC_SENSOR_LOC_VRM, AMEC_SENSOR_NONUM, AMEEFP_EVERY_4TH_TICK_HZ, AMEFP(  1,-2)  ),
-  SENSOR_INFO_T_ENTRY(         CURVIO,  "A\0", AMEC_SENSOR_TYPE_CURRENT,  AMEC_SENSOR_LOC_VRM, AMEC_SENSOR_NONUM, AMEEFP_EVERY_4TH_TICK_HZ, AMEFP(  1,-2)  ),
+  SENSOR_INFO_T_ENTRY(       RESERVED,  " \0", AMEC_SENSOR_TYPE_GENERIC,  AMEC_SENSOR_LOC_OCC, AMEC_SENSOR_NONUM, AMEEFP_EVERY_4TH_TICK_HZ, AMEFP(  1, 0)  ),
   SENSOR_INFO_T_ENTRY(        TEMPVDD,  "C\0",    AMEC_SENSOR_TYPE_TEMP,  AMEC_SENSOR_LOC_VRM, AMEC_SENSOR_NONUM, AMEEFP_EVERY_4TH_TICK_HZ, AMEFP(  1, 0)  ),
 
   /* ==CoreSensors==       NameString  Units                      Type              Location             Number                Freq          ScaleFactor   */

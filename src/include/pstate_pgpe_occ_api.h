@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2016,2020                        */
+/* Contributors Listed Below - COPYRIGHT 2016,2021                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -213,7 +213,7 @@ typedef struct
             uint64_t idd_avg_10ma               : 16;
             uint64_t ics_avg_10ma               : 16;
             uint64_t idn_avg_10ma               : 16;
-            uint64_t iio_avg_10ma               : 16;
+            uint64_t rdp_limit_10ma             : 16;
 
         } fields;
     } dw1;
@@ -250,6 +250,31 @@ typedef struct
             uint64_t ov_avg_0p1pct              :  8;
         } fields;
     } dw3;
+    union
+    {
+        uint64_t value;
+        struct
+        {
+            uint32_t high_order;
+            uint32_t low_order;
+        } words;
+        struct
+        {
+            uint64_t max_vdd_current_100ma      : 16;
+            uint64_t max_vcs_current_100ma      : 16;
+            uint64_t max_idd_ocs_avg_10ma       : 16;
+            uint64_t dirty_current_10ma         : 16;
+        } fields;
+    } dw4;
+    union
+    {
+        uint64_t value;
+        struct
+        {
+            uint32_t high_order;
+            uint32_t low_order;
+        } words;
+    } dw5;
 } pgpe_wof_values_t;
 
 typedef union

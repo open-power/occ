@@ -442,7 +442,7 @@ typedef struct
   sensor_t curvdd;
   sensor_t curvdn;
   sensor_t curvcs;
-  sensor_t curvio;
+  sensor_t reserved;
   sensor_t voltvdd;
   sensor_t voltvdn;
   sensor_t voltvcs;

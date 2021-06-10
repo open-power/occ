@@ -189,7 +189,7 @@ int main(int argc, char** argv)
     printf("     VDD current 10mA: %d\n", get_uint16(wof_file));
     printf("     VCS Current 10mA: %d\n", get_uint16(wof_file));
     printf("     VDN Current 10mA: %d\n", get_uint16(wof_file));
-    printf("     VIO Current 10mA: %d\n", get_uint16(wof_file));
+    printf("     RDP Limit 10ma for OCS: %d\n", get_uint16(wof_file));
     printf("pgpe_wof_values_dw2:\n");
     printf("     VDD Voltage mV: %d\n", get_uint16(wof_file));
     printf("     VCS Voltage mV: %d\n", get_uint16(wof_file));

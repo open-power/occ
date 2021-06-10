@@ -63,6 +63,7 @@ extern uint16_t G_proc_fmax_mhz;
 extern uint16_t G_allow_trace_flags;
 extern bool G_allowPstates;
 extern OCCPstateParmBlock_t G_oppb;
+extern amec_sys_t g_amec_sys;
 
 //*************************************************************************
 // Defines/Enums
@@ -582,6 +583,20 @@ void amec_slv_proc_voting_box(void)
                        G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_DISABLED],
                        l_current_reason);
             l_log_error = TRUE;
+
+            // additional traces if due to OCS
+            if(l_current_reason == AMEC_VOTING_REASON_OVER_CURRENT)
+            {
+               pgpe_wof_values_t l_PgpeWofValues;
+               l_PgpeWofValues.dw1.value = in64(g_amec_sys.static_wof_data.pgpe_values_sram_addr + 0x08);
+               l_PgpeWofValues.dw4.value = in64(g_amec_sys.static_wof_data.pgpe_values_sram_addr + 0x20);
+               l_PgpeWofValues.dw5.value = in64(g_amec_sys.static_wof_data.pgpe_values_sram_addr + 0x28);
+               TRAC_ERR("Low frequency due to OCS dirty act rdp_limit_10ma[%d] dirty_current_10ma[%d]",
+                        l_PgpeWofValues.dw1.fields.rdp_limit_10ma,
+                        l_PgpeWofValues.dw4.fields.dirty_current_10ma);
+               TRAC_ERR("dirty_ttsr[0x%08X%08X] ",
+                        l_PgpeWofValues.dw5.words.high_order, l_PgpeWofValues.dw5.words.low_order);
+            }
         }
         // if OCC is not voting for freq drop (reason 0) then it must be PGPE
         // only log when below for NUM_TICKS_LOG_PGPE_PERF_LOSS consecutive ticks

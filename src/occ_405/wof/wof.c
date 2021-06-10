@@ -1032,16 +1032,6 @@ void read_pgpe_produced_wof_values( void )
         l_update_pwr_sensors |= AVSBUS_PGPE_VCS;
     }
 
-    // Save Vio current to sensor
-    l_current = (uint16_t)l_PgpeWofValues.dw1.fields.iio_avg_10ma;
-    if (l_current != 0)
-    {
-        // Current value stored in the sensor should be in 10mA (A scale -2)
-        // Reading from SRAM is already in 10mA
-        sensor_update(AMECSENSOR_PTR(CURVIO), l_current);
-        l_update_pwr_sensors |= AVSBUS_PGPE_VIO;
-    }
-
     // Update the chip voltage and power sensors
     if(l_update_pwr_sensors)
     {

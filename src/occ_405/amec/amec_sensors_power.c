@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2021                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -469,7 +469,6 @@ void update_avsbus_power_sensors(const uint8_t i_types)
     static bool L_throttle_vdd = FALSE;
     static bool L_throttle_vcs = FALSE;
     static bool L_throttle_vdn = FALSE;
-    static bool L_throttle_vio = FALSE;
     static bool L_traced_invalid_type = FALSE;
     bool * L_throttle = &L_throttle_vdd;
     uint32_t l_loadline = G_oppb.vdd_sysparm.loadline_uohm;
@@ -504,20 +503,6 @@ void update_avsbus_power_sensors(const uint8_t i_types)
            l_powerSensor = PWRVCS;
 
            l_updated_types |= AVSBUS_PGPE_VCS;
-        }
-        else if( (i_types & AVSBUS_PGPE_VIO) &&
-            !(l_updated_types & AVSBUS_PGPE_VIO) )
-        {
-           // setup for Vio. no loadline or distloss defined in OPPB
-           L_throttle = &L_throttle_vio;
-           l_loadline = 0;
-           l_distloss = 0;
-           l_currentSensor = CURVIO;
-           l_voltageSensor = VOLTVIO;
-           l_voltageChip = VOLTVIOSENSE;
-           l_powerSensor = PWRVIO;
-
-           l_updated_types |= AVSBUS_PGPE_VIO;
         }
         else if( (i_types & AVSBUS_PGPE_VDN) &&
             !(l_updated_types & AVSBUS_PGPE_VDN) )

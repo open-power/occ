@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2021                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -48,7 +48,6 @@ typedef enum
 // bitmask for types that PGPE is reading via AVSBUS and then OCC reads from OCC-PGPE shared memory
 #define    AVSBUS_PGPE_VDD 0x01
 #define    AVSBUS_PGPE_VCS 0x02
-#define    AVSBUS_PGPE_VIO 0x04
 #define    AVSBUS_PGPE_VDN 0x08
 
 typedef enum
