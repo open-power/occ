@@ -218,6 +218,7 @@ GCC-CFLAGS += -fdata-sections
 GCC-CFLAGS += -msoft-float
 GCC-CFLAGS += -mcpu=ppe42x
 GCC-CFLAGS += -meabi
+GCC-CFLAGS += -msdata=eabi
 GCC-CFLAGS += -ffreestanding
 GCC-CFLAGS += -fno-common
 GCC-CFLAGS += -fno-inline-functions-called-once

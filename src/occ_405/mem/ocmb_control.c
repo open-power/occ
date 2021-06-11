@@ -133,61 +133,90 @@ void ocmb_control_init( void )
 // End Function Specification
 bool ocmb_control( memory_control_task_t * i_memControlTask )
 {
-    bool    throttle_updated = TRUE;
+    static bool G_throttle_update_since_last_sync = FALSE;
+    bool    throttle_updated = FALSE;
     int     l_membuf = i_memControlTask->curMemIndex;
     amec_membuf_t * l_membuf_ptr = NULL;
 
     MemBufScomParms_t * l_parms =
         (MemBufScomParms_t *)(i_memControlTask->gpe_req.cmd_data);
 
-    l_membuf_ptr = &g_amec->proc[0].memctl[l_membuf].membuf;
-
-    // update min/max settings
-    update_nlimits(l_membuf);
-
-    // calculate new N values
-    ocmb_mba_farb3q_t l_mbafarbq;
-    uint16_t l_nm_n_per_slot =
-        throttle_convert_2_numerator(g_amec->mem_speed_request, l_membuf);
-
-    uint16_t l_nm_n_per_chip = G_memoryThrottleLimits[l_membuf].max_n_per_chip;
-    amec_mem_speed_t l_nm_speed;
-
-    //combine port and slot(mba) settings (16 bit) in to a single 32bit value
-    l_nm_speed.mba_n = l_nm_n_per_slot;
-    l_nm_speed.chip_n = l_nm_n_per_chip;
-
-
-    // Check if the throttle value has been updated since the last
-    // time we sent it.  If it has, then send a new value, otherwise
-    // do nothing.
-    if ( l_nm_speed.word32 != l_membuf_ptr->portpair[0].last_mem_speed_sent.word32 )
+    if(MEMBUF_PRESENT(l_membuf))
     {
-        /// Set up Scom Registers - array of Scoms
+        l_membuf_ptr = &g_amec->proc[0].memctl[l_membuf].membuf;
 
-        /// [0]: Set up N/M throttle MBA
-        G_memThrottle[NM_THROTTLE_MBA].commandType = MEMBUF_SCOM_RMW;
-        G_memThrottle[NM_THROTTLE_MBA].instanceNumber = l_membuf;
-        // Set up value to be written
-        l_mbafarbq.fields.cfg_nm_n_per_slot = l_nm_n_per_slot;
-        l_mbafarbq.fields.cfg_nm_n_per_port = l_nm_n_per_chip;
-        G_memThrottle[NM_THROTTLE_MBA].data = l_mbafarbq.value;
+        // update min/max settings
+        update_nlimits(l_membuf);
 
+        // calculate new N values
+        ocmb_mba_farb3q_t l_mbafarbq;
+        uint16_t l_nm_n_per_slot =
+            throttle_convert_2_numerator(g_amec->mem_speed_request, l_membuf);
+
+        uint16_t l_nm_n_per_chip = G_memoryThrottleLimits[l_membuf].max_n_per_chip;
+        amec_mem_speed_t l_nm_speed;
+
+        //combine port and slot(mba) settings (16 bit) in to a single 32bit value
+        l_nm_speed.mba_n = l_nm_n_per_slot;
+        l_nm_speed.chip_n = l_nm_n_per_chip;
+
+
+        // Check if the throttle value has been updated since the last
+        // time we sent it.  If it has, then send a new value, otherwise
+        // do nothing.
+        if ( l_nm_speed.word32 != l_membuf_ptr->portpair[0].last_mem_speed_sent.word32 )
+        {
+            G_throttle_update_since_last_sync = TRUE;
+            throttle_updated = TRUE;
+            /// Set up Scom Registers - array of Scoms
+
+            /// [0]: Set up N/M throttle MBA
+            G_memThrottle[NM_THROTTLE_MBA].commandType = MEMBUF_SCOM_RMW;
+            G_memThrottle[NM_THROTTLE_MBA].instanceNumber = l_membuf;
+            // Set up value to be written
+            l_mbafarbq.fields.cfg_nm_n_per_slot = l_nm_n_per_slot;
+            l_mbafarbq.fields.cfg_nm_n_per_port = l_nm_n_per_chip;
+            G_memThrottle[NM_THROTTLE_MBA].data = l_mbafarbq.value;
+
+            /// [1]: throttle sync
+            G_memThrottle[NM_THROTTLE_SYNC].commandType = MEMBUF_SCOM_MEMBUF_SYNC;
+
+
+            // Update the last sent throttle value, this will get
+            // cleared if the GPE does not complete successfully.
+            l_membuf_ptr->portpair[0].last_mem_speed_sent.word32 = l_nm_speed.word32;
+        }
+        else // no throttle change
+        {
+            G_memThrottle[NM_THROTTLE_MBA].commandType = MEMBUF_SCOM_NOP;
+        }
+    }
+    else // membuf is not present
+    {
+        G_memThrottle[NM_THROTTLE_MBA].commandType = MEMBUF_SCOM_NOP;
+    }
+
+    // Only send sync if last membuf possition and any throttles changed since
+    // last sync sent, even if this membuf does not exist
+    if(l_membuf == i_memControlTask->endMemIndex &&
+       G_throttle_update_since_last_sync)
+    {
         /// [1]: throttle sync
         G_memThrottle[NM_THROTTLE_SYNC].commandType = MEMBUF_SCOM_MEMBUF_SYNC;
+        G_throttle_update_since_last_sync = FALSE;
+        throttle_updated = TRUE;
+    }
+    else // No sync needed.
+    {
+        G_memThrottle[NM_THROTTLE_SYNC].commandType = MEMBUF_SCOM_NOP;
+    }
 
+    if(throttle_updated)
+    {
         /// Set up GPE parameters
         l_parms->scomList     = G_memThrottle;
         l_parms->entries      = NUM_THROTTLE_SCOMS;
         l_parms->error.ffdc   = 0;
-
-        // Update the last sent throttle value, this will get
-        // cleared if the GPE does not complete successfully.
-        l_membuf_ptr->portpair[0].last_mem_speed_sent.word32 = l_nm_speed.word32;
-    }
-    else
-    {
-        throttle_updated = FALSE;
     }
 
     return throttle_updated;

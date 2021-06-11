@@ -158,12 +158,6 @@ void task_memory_control( task_t * i_task )
         }
         memControlTask->curMemIndex = memIndex;
 
-        if(!MEMBUF_PRESENT(memIndex) ||
-           !MBA_CONFIGURED(memIndex))
-        {
-            break;
-        }
-
         change_requested = ocmb_control(memControlTask);
         if(change_requested)
         {
