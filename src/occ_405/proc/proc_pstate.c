@@ -88,11 +88,13 @@ DMA_BUFFER( opal_static_table_t  G_opal_static_table )  = {{0}};
 BceRequest G_opal_static_bce_req;
 
 // See OCC Interface spec for definition
+// this table currently can not be larger than 25 entries
 param_table_entry_t G_parameter_table[] =
 {
   /* ID                 Value_ID              Flags                                     Data  Description  */
     {PARAM_ID_MODE,     PARAM_VALUE_ID_NONE, (PARAM_FLAG_REPORT | PARAM_FLAG_MASTER),     0,  "Power and Performance Mode\0"},
     {PARAM_ID_MODE,     OCC_MODE_DISABLED, (PARAM_FLAG_MASTER),                           0,  "Static\0"},
+    {PARAM_ID_MODE,     OCC_MODE_STATIC_FREQ_POINT, (PARAM_FLAG_MASTER),                  0,  "SFP lab only\0"},
     {PARAM_ID_MODE,     OCC_MODE_SAFE, (PARAM_FLAG_MASTER),                               0,  "Safe\0"},
     {PARAM_ID_MODE,     OCC_MODE_PWRSAVE, (PARAM_FLAG_MASTER),                            0,  "Power Saving\0"},
     {PARAM_ID_MODE,     OCC_MODE_FMAX, (PARAM_FLAG_MASTER),                               0,  "Fmax\0"},
@@ -775,13 +777,18 @@ void check_for_opal_updates(void)
         }
 
         // check for OCC state change
-        if( (G_opal_dynamic_table.dynamic.occ_state != CURRENT_STATE()) ||
-            (G_reset_prep) )
+        if( ( (!G_reset_prep) && (G_opal_dynamic_table.dynamic.occ_state != CURRENT_STATE()) ) ||
+            ( (G_reset_prep) && (G_opal_dynamic_table.dynamic.occ_state != OCC_STATE_SAFE) ) )
         {
             dynamic_data_change = true;
             L_notify_phyp = true;
-            TRAC_INFO("check_for_opal_updates: OCC state change 0x%02X->0x%02X",
-                       G_opal_dynamic_table.dynamic.occ_state, CURRENT_STATE());
+
+            if(!G_reset_prep)
+                TRAC_INFO("check_for_opal_updates: OCC state change 0x%02X->0x%02X",
+                           G_opal_dynamic_table.dynamic.occ_state, CURRENT_STATE());
+            else
+                TRAC_INFO("check_for_opal_updates: Reset prep OCC state change 0x%02X->0x%02X",
+                           G_opal_dynamic_table.dynamic.occ_state, OCC_STATE_SAFE);
         }
 
         if(G_occ_role == OCC_MASTER)
