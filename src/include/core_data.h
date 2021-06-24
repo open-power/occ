@@ -36,10 +36,15 @@
 
 #define PC_OCC_SPRC             0x00020410
 #define PC_OCC_SPRD             0x00020411
+#define PC_ERR_MASK_REG         0x00010002
+#define PC_STATUS_REG           0x00010001
 #define TOD_VALUE_REG           0x00040020
 #define CPMS_SDSR               0x000e0e68
 #define QME_FTXR                0x000e0178
 #define STOP_STATE_HIST_OCC_REG 0x000e0828 // SSH_OCC
+
+#define PC_ERR_MASK_DATA        0x0021000000000000ull
+#define PC_STAT_TIMEOUT         0x0020000000000000ull
 
 #define CORE_RAW_CYCLES             0x200
 
