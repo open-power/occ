@@ -37,7 +37,7 @@
 #include <mem_structs.h>
 #include <p10_hcd_memmap_base.H>
 
-#define MAX_NUM_OCC              4
+#define MAX_NUM_OCC              8
 #define MAX_NUM_NODES            4
 #define MAX_NUM_CORES           32
 #define NUM_CORES_PER_QUAD       4

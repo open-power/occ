@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2015                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2021                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -68,7 +68,7 @@ typedef struct amec_part
     uint8_t                     ncores;
     ///List of cores group. Indices 0 to ncores-1 are valid. Valid values: 0 to
     ///AMEC_PART_NUM_CORES-1.
-    uint8_t                     core_list[AMEC_PART_NUM_CORES];
+    uint16_t                    core_list[AMEC_PART_NUM_CORES];
     ///Partition ID
     uint8_t                     id;
     ///Valid bit (=1 in use, =0 not in use)
@@ -97,7 +97,7 @@ typedef struct amec_part_config
 
 /**
  * Given a core, return a valid partition that owns it, or NULL.
- *  
+ *
  */
 amec_part_t* amec_part_find_by_core(amec_part_config_t* i_config,
                                     const uint16_t i_core_index);
@@ -110,8 +110,8 @@ amec_part_t* amec_part_find_by_core(amec_part_config_t* i_config,
 void amec_part_add(uint8_t i_id);
 
 /**
- * Add a core group. 
- *  
+ * Add a core group.
+ *
  */
 void amec_part_init(void);
 
