@@ -64,12 +64,13 @@ extern uint16_t G_allow_trace_flags;
 extern bool G_allowPstates;
 extern OCCPstateParmBlock_t G_oppb;
 extern amec_sys_t g_amec_sys;
+extern uint32_t G_present_cores;
 
 //*************************************************************************
 // Defines/Enums
 //*************************************************************************
 // give time for frequency to come up after boot/throttle event
-#define NUM_TICKS_LOG_PGPE_PERF_LOSS 10  // 5ms
+#define NUM_TICKS_LOG_PGPE_PERF_LOSS 16  // 8ms
 
 //*************************************************************************
 // Structures
@@ -571,7 +572,8 @@ void amec_slv_proc_voting_box(void)
     if( (g_amec->wof.avg_freq_mhz) && (!G_sysConfigData.system_type.kvm) && (!L_perf_loss_error_logged) &&
         (CURRENT_MODE() != OCC_MODE_NOCHANGE) && // must check that mode was set since state change is processed first
         (g_amec->sys.fmax >= G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_DISABLED]) &&
-        (g_amec->wof.avg_freq_mhz < l_temp_freq) )
+        (g_amec->wof.avg_freq_mhz < l_temp_freq) &&
+        (G_present_cores != 0) && (!ignore_pgpe_error()) )   // make sure there are cores and freq update could be sent to PGPE
     {
         // log error if OCC reason is one that should result in perf loss error or
         // if OCC is not voting for any clipping which would indicate PGPE driving freq low
@@ -612,6 +614,9 @@ void amec_slv_proc_voting_box(void)
                 l_log_error = TRUE;
             }
         }
+        else
+            L_ticks_below_disabled_freq = 0;
+
 
         if(l_log_error)
         {

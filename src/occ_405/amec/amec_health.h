@@ -34,9 +34,14 @@
 //*************************************************************************
 // Defines/Enums
 //*************************************************************************
-// Error threshold check is done every 16msec. Error timer is 5x16 = 80msec
-#define AMEC_HEALTH_ERROR_TIMER 5
+// Processor Error threshold check is done every 32ms
+#define AMEC_HEALTH_PROC_ERROR_TIMER 156 // ~5 seconds to give fan control time
 
+// Vdd VRM Error threshold check is done every 2ms
+#define AMEC_HEALTH_VDD_ERROR_TIMER 2500 // ~5 seconds to give fan control time
+
+// number of Proc/Vdd OT readings to store and trace
+#define TEMP_HISTORY_SIZE 5
 /*******************************************************************/
 /* Function Definitions                                            */
 /*******************************************************************/

@@ -609,12 +609,13 @@ void update_avsbus_power_sensors(const uint8_t i_types)
 //
 // Description: Read AVS Bus data and update sensors (called every tick)
 //  reading V/I from OCC-PGPE Shared SRAM, only need to read Vdd temperature directly from AVSbus
-//   Tick 0: start Vdd temp read
-//   Tick 1: process Vdd temp, start status read (Vdd)
-//   Tick 2: process status, start Vdd temp read
-//   (back to tick 1)
+//   Tick 0: idle
+//   Tick 1: start Vdd temp read
+//   Tick 2: process Vdd temp, start status read (Vdd)
+//   Tick 3: process status
+//   (back to tick 0)
 //
-//   Vdd temperature and status is read every 2 ticks
+//   Vdd temperature and status is read every 4 ticks (2ms)
 //
 // Thread: RealTime Loop
 //
@@ -659,13 +660,14 @@ void amec_update_avsbus_sensors(void)
                 // Process the status
                 process_avsbus_status();
 
-                // Initiate read of Vdd temperature
-                avsbus_read_start(AVSBUS_VDD, AVSBUS_TEMPERATURE);
-                L_avsbus_state = AVSBUS_STATE_PROCESS_TEMPERATURE;
+                // Do nothing on next tick
+                L_avsbus_state = AVSBUS_STATE_DISABLED;
             }
             break;
 
         case AVSBUS_STATE_DISABLED:
+            // do nothing this tick, start temperature read on next tick
+            L_avsbus_state = AVSBUS_STATE_INITIATE_READ;
             break;
 
         default:

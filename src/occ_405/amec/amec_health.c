@@ -997,13 +997,23 @@ void amec_health_check_membuf_timeout()
 //
 // Description: This function checks if the proc temperature has
 // exceeded the error temperature as define in data format 0x13.
+// called from AMEC slave state 7.7 (every 32ms)
 //
 // End Function Specification
 void amec_health_check_proc_temp()
 {
+    // size of array for keeping error counters per type
     #define NUM_PROC_SENSOR_TYPES 2
-    #define CORE_DTS_INDEX        0
-    #define IO_DTS_INDEX          1
+
+    // number of additional pieces of info for each OT history
+    #define NUM_HISTORY_FIELDS    4
+
+    // these are used for both L_error_count and L_temp_history, types (core, IO) must be first
+    #define CORE_DTS_INDEX        0  // core temperature
+    #define IO_DTS_INDEX          1  // IO temperature
+    #define CORE_NUM_INDEX        2  // core number corresponding to core temp
+    #define FREQ_INDEX            3  // current processor frequency
+
     /*------------------------------------------------------------------------*/
     /*  Local Variables                                                       */
     /*------------------------------------------------------------------------*/
@@ -1013,10 +1023,14 @@ void amec_health_check_proc_temp()
     uint16_t                    l_cur_io_temp;
     uint8_t                     l_core_num;
     uint8_t                     l_quad;
+    uint16_t                    l_idx = 0;
+    uint16_t                    l_freq = 0;
     static uint32_t             L_error_count[NUM_PROC_SENSOR_TYPES] = {0};
     // history of core and IO temperatures for tracing when logging OT error
-    static uint16_t             L_temp_history[AMEC_HEALTH_ERROR_TIMER][NUM_PROC_SENSOR_TYPES] = {{0}};
+    static uint16_t             L_temp_history[TEMP_HISTORY_SIZE][NUM_HISTORY_FIELDS] = {{0}};
     static BOOLEAN              L_ot_error_logged = FALSE;
+    static BOOLEAN              L_first_core_ot_traced = FALSE;
+    static BOOLEAN              L_first_io_ot_traced = FALSE;
     sensor_t                    *l_sensor;
     sensor_t                    *l_io_sensor;
     sensor_t                    *l_temp_sensor;
@@ -1034,6 +1048,7 @@ void amec_health_check_proc_temp()
         l_cur_temp = l_sensor->sample;
         l_core_num = l_sensor->vector->max_pos;
         l_ot_error = g_amec->thermalproc.ot_error;
+        l_freq = (uint16_t)g_amec->wof.avg_freq_mhz;
 
         // Get TEMPPROCIOTHRM sensor, which is hottest IO temperature
         // in OCC processor
@@ -1045,11 +1060,51 @@ void amec_health_check_proc_temp()
         // Check to see if we exceeded our error temperature for the core
         if(l_cur_temp > l_ot_error)
         {
-            // save the temperatures for tracing later
-            L_temp_history[L_error_count[CORE_DTS_INDEX]][CORE_DTS_INDEX] = l_cur_temp;
+            // save the last TEMP_HISTORY_SIZE readings (index 0 oldest first time above error)
+            // before the OT error will be logged
+            if(AMEC_HEALTH_PROC_ERROR_TIMER > L_error_count[CORE_DTS_INDEX])
+            {
+               // always save the first observence in index 0 the remaining history will
+               // be the last readings leading up to logging the error
+               if(L_error_count[CORE_DTS_INDEX] == 0)
+               {
+                   l_idx = TEMP_HISTORY_SIZE;
+               }
+               else
+               {
+                   l_idx = AMEC_HEALTH_PROC_ERROR_TIMER - L_error_count[CORE_DTS_INDEX];
 
+                   // don't overwrite index 0
+                   if(l_idx == TEMP_HISTORY_SIZE)
+                   {
+                       // don't save this reading
+                       l_idx = TEMP_HISTORY_SIZE + 1;
+                   }
+               }
+
+               if(l_idx <= TEMP_HISTORY_SIZE)
+               {
+                  l_idx = TEMP_HISTORY_SIZE - l_idx;
+
+                  // save the temperature and other debug data for tracing later
+                  L_temp_history[l_idx][CORE_NUM_INDEX] = l_core_num;
+                  L_temp_history[l_idx][CORE_DTS_INDEX] = l_cur_temp;
+                  L_temp_history[l_idx][FREQ_INDEX] = l_freq;
+               }
+            }
             // Increment the error counter for this FRU
             L_error_count[CORE_DTS_INDEX]++;
+
+            // since error timer is so long and may not stay OT, trace very first time we ever see
+            // reading above error limit
+            if((L_error_count[CORE_DTS_INDEX] == 1) && (L_first_core_ot_traced == FALSE))
+            {
+                L_first_core_ot_traced = TRUE;
+                TRAC_IMP("amec_health_check_error_temp: first time proc core above error! Core[%u] Current temp[%u] frequency[%u]",
+                         l_core_num,
+                         l_cur_temp,
+                         l_freq);
+            }
         }
         else
         {
@@ -1060,11 +1115,49 @@ void amec_health_check_proc_temp()
         // Check to see if we exceeded our error temperature for IO
         if(l_cur_io_temp > l_io_ot_error)
         {
-            // save the temperatures for tracing later
-            L_temp_history[L_error_count[IO_DTS_INDEX]][IO_DTS_INDEX] = l_cur_io_temp;
+            // save the last TEMP_HISTORY_SIZE readings (index 0 oldest first time above error)
+            // before the OT error will be logged
+            if(AMEC_HEALTH_PROC_ERROR_TIMER > L_error_count[IO_DTS_INDEX])
+            {
+               // always save the first observence in index 0 the remaining history will
+               // be the last readings leading up to logging the error
+               if(L_error_count[IO_DTS_INDEX] == 0)
+               {
+                   l_idx = TEMP_HISTORY_SIZE;
+               }
+               else
+               {
+                   l_idx = AMEC_HEALTH_PROC_ERROR_TIMER - L_error_count[IO_DTS_INDEX];
 
+                   // don't overwrite index 0
+                   if(l_idx == TEMP_HISTORY_SIZE)
+                   {
+                       // don't save this reading
+                       l_idx = TEMP_HISTORY_SIZE + 1;
+                   }
+               }
+
+               if(l_idx <= TEMP_HISTORY_SIZE)
+               {
+                  l_idx = TEMP_HISTORY_SIZE - l_idx;
+
+                  // save the temperature and other debug data for tracing later
+                  L_temp_history[l_idx][IO_DTS_INDEX] = l_cur_io_temp;
+                  L_temp_history[l_idx][FREQ_INDEX] = l_freq;
+               }
+            }
             // Increment the error counter for this FRU
             L_error_count[IO_DTS_INDEX]++;
+
+            // since error timer is so long and may not stay OT, trace very first time we ever see
+            // reading above error limit
+            if((L_error_count[IO_DTS_INDEX] == 1) && (L_first_io_ot_traced == FALSE))
+            {
+                L_first_io_ot_traced = TRUE;
+                TRAC_IMP("amec_health_check_error_temp: first time proc IO above error! Current temp[%u] frequency[%u]",
+                         l_cur_temp,
+                         l_freq);
+            }
         }
         else
         {
@@ -1075,20 +1168,26 @@ void amec_health_check_proc_temp()
         // Trace and log error the first time this occurs
         // same callouts for processor and processor IO so treat the same and only
         // log one error for either being OT
-        if( (L_error_count[CORE_DTS_INDEX] == AMEC_HEALTH_ERROR_TIMER) ||
-            (L_error_count[IO_DTS_INDEX] == AMEC_HEALTH_ERROR_TIMER) )
+        if( (L_error_count[CORE_DTS_INDEX] == AMEC_HEALTH_PROC_ERROR_TIMER) ||
+            (L_error_count[IO_DTS_INDEX] == AMEC_HEALTH_PROC_ERROR_TIMER) )
         {
             L_ot_error_logged = TRUE;
 
-            if(L_error_count[CORE_DTS_INDEX] == AMEC_HEALTH_ERROR_TIMER)
+            if(L_error_count[CORE_DTS_INDEX] == AMEC_HEALTH_PROC_ERROR_TIMER)
             {
                 TRAC_ERR("amec_health_check_error_temp: processor has exceeded OT error! core[%u] is hottest current temp[%u] ot_error[%u]",
                          l_core_num,
                          l_cur_temp,
                          l_ot_error);
-                TRAC_ERR("amec_health_check_error_temp: previous 4 readings [%u] [%u] [%u] [%u]",
-                         L_temp_history[3][CORE_DTS_INDEX], L_temp_history[2][CORE_DTS_INDEX],
-                         L_temp_history[1][CORE_DTS_INDEX], L_temp_history[0][CORE_DTS_INDEX]);
+                TRAC_ERR("amec_health_check_error_temp: previous hottest core[%u] temp[%u]; hottest core[%u] temp[%u]",
+                         L_temp_history[3][CORE_NUM_INDEX], L_temp_history[3][CORE_DTS_INDEX],
+                         L_temp_history[2][CORE_NUM_INDEX], L_temp_history[2][CORE_DTS_INDEX]);
+                TRAC_ERR("amec_health_check_error_temp: previous hottest core[%u] temp[%u]; hottest core[%u] temp[%u]",
+                         L_temp_history[1][CORE_NUM_INDEX], L_temp_history[1][CORE_DTS_INDEX],
+                         L_temp_history[0][CORE_NUM_INDEX], L_temp_history[0][CORE_DTS_INDEX]);
+                TRAC_ERR("amec_health_check_error_temp: frequency history current[%u] [%u] [%u] [%u] [%u]",
+                         L_temp_history[4][FREQ_INDEX], L_temp_history[3][FREQ_INDEX], L_temp_history[2][FREQ_INDEX],
+                         L_temp_history[1][FREQ_INDEX], L_temp_history[0][FREQ_INDEX]);
 
                 // trace the individual temps used to calculate the current hottest core temp
                 // non-weighted avg of 2 core DTS and 1 L3 DTS
@@ -1103,14 +1202,17 @@ void amec_health_check_proc_temp()
                 TRAC_ERR("amec_health_check_error_temp: Quad[%u] Racetrack current temp[%u] max temp[%u]",
                          l_quad, l_temp_sensor->sample, l_temp_sensor->sample_max);
             }
-            if(L_error_count[IO_DTS_INDEX] == AMEC_HEALTH_ERROR_TIMER)
+            if(L_error_count[IO_DTS_INDEX] == AMEC_HEALTH_PROC_ERROR_TIMER)
             {
                 TRAC_ERR("amec_health_check_error_temp: processor IO has exceeded OT error! current max IO temp[%u] ot_error[%u]",
                          l_cur_io_temp,
                          l_io_ot_error);
-                TRAC_ERR("amec_health_check_error_temp: previous 4 IO readings [%u] [%u] [%u] [%u]",
+                TRAC_ERR("amec_health_check_error_temp: previous IO readings [%u] [%u] [%u] [%u]",
                          L_temp_history[3][IO_DTS_INDEX], L_temp_history[2][IO_DTS_INDEX],
                          L_temp_history[1][IO_DTS_INDEX], L_temp_history[0][IO_DTS_INDEX]);
+                TRAC_ERR("amec_health_check_error_temp: frequency history current[%u] [%u] [%u] [%u] [%u]",
+                         L_temp_history[4][FREQ_INDEX], L_temp_history[3][FREQ_INDEX], L_temp_history[2][FREQ_INDEX],
+                         L_temp_history[1][FREQ_INDEX], L_temp_history[0][FREQ_INDEX]);
 
                 // trace the 4 individual IO temps so it is known which one is hot
                 l_temp_sensor = getSensorByGsid(TEMPPROCIO00);
@@ -1281,6 +1383,7 @@ void amec_health_check_proc_timeout()
 //
 // Description: This function checks if the VRM Vdd temperature has
 // exceeded the error temperature sent in data format 0x13.
+// called from avsbus_read (every 1ms)
 //
 // End Function Specification
 void amec_health_check_vrm_vdd_temp(const sensor_t *i_sensor)
@@ -1289,24 +1392,33 @@ void amec_health_check_vrm_vdd_temp(const sensor_t *i_sensor)
     /*  Local Variables                                                       */
     /*------------------------------------------------------------------------*/
     uint16_t                    l_ot_error;
+    uint16_t                    l_cur_temp;
+    uint16_t                    l_idx = 0;
+    uint16_t                    l_freq = 0;
     static uint32_t             L_error_count = 0;
     static BOOLEAN              L_ot_error_logged = FALSE;
+    static BOOLEAN              L_first_ot_traced = FALSE;
+    // temperature and frequency history
+    static uint16_t             L_temp_history[TEMP_HISTORY_SIZE][2] = {{0}};
     errlHndl_t                  l_err = NULL;
 
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
-    do
+    // Only check for OT if we haven't already logged an OT error
+    if (L_ot_error_logged == FALSE)
     {
         l_ot_error = g_amec->thermalvdd.ot_error;
+        l_cur_temp = i_sensor->sample;
+        l_freq = (uint16_t)g_amec->wof.avg_freq_mhz;
 
         static bool L_logged_invalid = false;
-        if (i_sensor->sample > 255)
+        if (l_cur_temp > 255)
         {
             if (!L_logged_invalid)
             {
                 TRAC_ERR("amec_health_check_vrm_vdd_temp: VRM vdd temp was out of range: temp[%u] ot_error[%u]",
-                         i_sensor->sample,
+                         l_cur_temp,
                          l_ot_error);
                 L_logged_invalid = true;
             }
@@ -1317,25 +1429,67 @@ void amec_health_check_vrm_vdd_temp(const sensor_t *i_sensor)
         }
 
         // Check to see if we exceeded our error temperature
-        if ((l_ot_error != 0) && (i_sensor->sample > l_ot_error))
+        if ((l_ot_error != 0) && (l_cur_temp > l_ot_error))
         {
+            // save the last TEMP_HISTORY_SIZE readings (index 0 oldest first time above error)
+            // before the OT error will be logged
+            if(AMEC_HEALTH_VDD_ERROR_TIMER > L_error_count)
+            {
+               // always save the first observence in index 0 the remaining history will
+               // be the last readings leading up to logging the error
+               if(L_error_count == 0)
+               {
+                   l_idx = TEMP_HISTORY_SIZE;
+               }
+               else
+               {
+                   l_idx = AMEC_HEALTH_VDD_ERROR_TIMER - L_error_count;
+
+                   // don't overwrite index 0
+                   if(l_idx == TEMP_HISTORY_SIZE)
+                   {
+                       // don't save this reading
+                       l_idx = TEMP_HISTORY_SIZE + 1;
+                   }
+               }
+
+               if(l_idx <= TEMP_HISTORY_SIZE)
+               {
+                  l_idx = TEMP_HISTORY_SIZE - l_idx;
+
+                  // save the temperature and other debug data for tracing later
+                  L_temp_history[l_idx][0] = l_cur_temp;
+                  L_temp_history[l_idx][1] = l_freq;
+               }
+            }
+
             // Increment the error counter for this FRU
             L_error_count++;
 
-            // Trace and log error the first time this occurs
-            if (L_error_count == AMEC_HEALTH_ERROR_TIMER)
+            // since error timer is so long and may not stay OT, trace only first time we ever see
+            // reading above error limit
+            if((L_error_count == 1) && (L_first_ot_traced == FALSE))
             {
-                // Have we logged an OT error for this FRU already?
-                if (L_ot_error_logged == TRUE)
-                {
-                    break;
-                }
+                L_first_ot_traced = TRUE;
+                TRAC_IMP("amec_health_check_vrm_vdd_temp: first time Vdd above error! Current temp[%u] frequency[%u]",
+                         l_cur_temp,
+                         l_freq);
+            }
 
+            // Trace and log error when reached error timer (consecutive readings OT)
+            if (L_error_count == AMEC_HEALTH_VDD_ERROR_TIMER)
+            {
                 L_ot_error_logged = TRUE;
 
                 TRAC_ERR("amec_health_check_vrm_vdd_temp: VRM vdd has exceeded OT error! temp[%u] ot_error[%u]",
-                         i_sensor->sample,
+                         l_cur_temp,
                          l_ot_error);
+                TRAC_ERR("amec_health_check_vrm_vdd_temp: temperature history [%u] [%u] [%u] [%u]",
+                         L_temp_history[3][0], L_temp_history[2][0],
+                         L_temp_history[1][0], L_temp_history[0][0]);
+                TRAC_ERR("amec_health_check_vrm_vdd_temp: frequency history current[%u] [%u] [%u] [%u] [%u]",
+                         L_temp_history[4][1], L_temp_history[3][1], L_temp_history[2][1],
+                         L_temp_history[1][1], L_temp_history[0][1]);
 
                 // Log an OT error
                 /* @
@@ -1372,21 +1526,13 @@ void amec_health_check_vrm_vdd_temp(const sensor_t *i_sensor)
                 // Commit Error
                 commitErrl(&l_err);
             }
-        }
+        } // if OT
         else
         {
-            // Trace that we have now dropped below the error threshold
-            if (L_error_count >= AMEC_HEALTH_ERROR_TIMER)
-            {
-                TRAC_INFO("amec_health_check_vrm_vdd_temp: VRM Vdd temp [%u] now below error temp [%u] after error_count [%u]",
-                          i_sensor->sample, l_ot_error, L_error_count);
-            }
-
             // Reset the error counter for this FRU
             L_error_count = 0;
         }
-    }while (0);
-
+    } // if !L_ot_error_logged
 }
 
 // Function Specification
