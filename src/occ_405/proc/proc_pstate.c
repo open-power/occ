@@ -205,7 +205,10 @@ Pstate_t proc_freq2pstate(uint32_t i_freq_mhz, uint32_t *o_additional_steps)
     if(l_freq_khz < G_oppb.frequency_max_khz)
     {
         // First, calculate the delta between passed in freq, and Pmax
-        const int32_t l_delta_freq_khz = G_oppb.frequency_max_khz - l_freq_khz;
+        int32_t l_delta_freq_khz = G_oppb.frequency_max_khz - l_freq_khz;
+
+        // Rounding to nearest
+        l_delta_freq_khz += ((int32_t) G_oppb.frequency_step_khz)/2;
 
         // Next, calculate how many Pstate steps there are in that delta
         const int8_t l_delta_pstates = l_delta_freq_khz / (int32_t) G_oppb.frequency_step_khz;
