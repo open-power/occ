@@ -464,7 +464,7 @@ enum
     DBG_STATE                   = 0x001AFC38,
     DBG_CONF_I                  = 0x001AFC40,
     DBG_UAV                     = 0x001AFC48,
-    DBG_0                       = 0x001AFC50,
+    DBG_COMMIT                  = 0x001AFC50,
     DBG_1                       = 0x001AFC58,
     DBG_2                       = 0x001AFC60,
     DBG_3                       = 0x001AFC68,
@@ -603,6 +603,17 @@ typedef union version {
         uint64_t  reserved:6;
     } val;
 } version_t;
+
+//
+//commit structure
+//
+typedef union commit {
+    uint64_t value;
+    struct {
+        uint64_t change_id:32;
+        uint64_t reserved:32;
+    } val;
+} commit_t;
 
 //
 //function declarations below.
