@@ -107,7 +107,7 @@ cmdh_ips_config_data_t G_ips_config_data = {0};
 bool G_mem_monitoring_allowed = FALSE;
 
 uint8_t G_read_ocmb_num_8ms_ticks = 1;
-uint16_t G_num_ocmb_reads_per_1000s = 3906;  // default assuming 200us update time (256ms reads)
+uint32_t G_num_ocmb_reads_per_1000s = 3906;  // default assuming 200us update time (256ms reads)
 
 // Save which voltage the GPU is using (1 = default (12V), 2 = 2nd voltage (54V))
 uint8_t G_gpu_volt_type[MAX_GPU_DOMAINS][MAX_NUM_GPU_PER_DOMAIN] = {{0}};
