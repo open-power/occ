@@ -306,9 +306,12 @@ void amec_slv_proc_voting_box(void)
     uint32_t                        l_steps_in_freq = 0;
     uint32_t                        l_temp_freq = 0;
     bool                            l_log_error = FALSE; // indicates if should log perf loss error
+    bool                            l_pgpe_error = FALSE; // indicates if perf loss due to PGPE
     static bool                     L_perf_loss_error_logged = FALSE; // indicates if perf loss error was logged
+    static bool                     L_pgpe_perf_loss_error_logged = FALSE; // indicates if perf loss error due to pgpe was logged
     errlHndl_t                      l_err = NULL;
-    static uint8_t                  L_ticks_below_disabled_freq = 0;
+    static uint16_t                 L_ticks_below_disabled_freq = 0;
+    sensor_t                        *l_sensor = NULL;
 
     // frequency threshold for reporting throttling
     OCC_FREQ_POINT l_freq_point = OCC_FREQ_PT_WOF_BASE;
@@ -340,7 +343,15 @@ void amec_slv_proc_voting_box(void)
     if(g_amec->proc[0].pwr_votes.ppb_fmax < l_chip_fmax)
     {
         l_chip_fmax = g_amec->proc[0].pwr_votes.ppb_fmax;
-        l_chip_reason = AMEC_VOTING_REASON_PPB;
+        // set reason based on if hard or soft power cap
+        if(g_amec->pcap.active_node_pcap >= G_sysConfigData.pcap.hard_min_pcap)
+        {
+            l_chip_reason = AMEC_VOTING_REASON_PPB_HARD_CAP;
+        }
+        else // soft power cap
+        {
+            l_chip_reason = AMEC_VOTING_REASON_PPB;
+        }
 
         if(l_report_throttle_freq <= l_chip_fmax)
         {
@@ -580,38 +591,84 @@ void amec_slv_proc_voting_box(void)
         if( (L_last_reason & FREQ_REASON_PERF_LOSS_ERROR) &&
             (l_current_reason & FREQ_REASON_PERF_LOSS_ERROR) )
         {
-            TRAC_ERR("Current freq %dMHz is below disabled freq %dMHz due to OCC Reason 0x%08X",
-                       g_amec->wof.avg_freq_mhz,
-                       G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_DISABLED],
-                       l_current_reason);
-            l_log_error = TRUE;
-
-            // additional traces if due to OCS
-            if(l_current_reason == AMEC_VOTING_REASON_OVER_CURRENT)
+            // only log power cap error on master OCC since it is the one that determined the lower freq
+            // and sent to all other OCCs
+            if( (l_current_reason != AMEC_VOTING_REASON_PPB_HARD_CAP) ||
+                (OCC_MASTER == G_occ_role) )
             {
-               pgpe_wof_values_t l_PgpeWofValues;
-               l_PgpeWofValues.dw1.value = in64(g_amec_sys.static_wof_data.pgpe_values_sram_addr + 0x08);
-               l_PgpeWofValues.dw4.value = in64(g_amec_sys.static_wof_data.pgpe_values_sram_addr + 0x20);
-               l_PgpeWofValues.dw5.value = in64(g_amec_sys.static_wof_data.pgpe_values_sram_addr + 0x28);
-               TRAC_ERR("Low frequency due to OCS dirty act rdp_limit_10ma[%d] dirty_current_10ma[%d]",
-                        l_PgpeWofValues.dw1.fields.rdp_limit_10ma,
-                        l_PgpeWofValues.dw4.fields.dirty_current_10ma);
-               TRAC_ERR("dirty_ttsr[0x%08X%08X] ",
-                        l_PgpeWofValues.dw5.words.high_order, l_PgpeWofValues.dw5.words.low_order);
-            }
+                TRAC_ERR("Current freq %dMHz is below disabled freq %dMHz due to OCC Reason 0x%08X",
+                           g_amec->wof.avg_freq_mhz,
+                           G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_DISABLED],
+                           l_current_reason);
+                l_log_error = TRUE;
+
+                // additional debug traces
+                if(l_current_reason == AMEC_VOTING_REASON_OVER_CURRENT)
+                {
+                   pgpe_wof_values_t l_PgpeWofValues;
+                   l_PgpeWofValues.dw1.value = in64(g_amec_sys.static_wof_data.pgpe_values_sram_addr + 0x08);
+                   l_PgpeWofValues.dw4.value = in64(g_amec_sys.static_wof_data.pgpe_values_sram_addr + 0x20);
+                   l_PgpeWofValues.dw5.value = in64(g_amec_sys.static_wof_data.pgpe_values_sram_addr + 0x28);
+                   TRAC_ERR("Low frequency due to OCS dirty act rdp_limit_10ma[%d] dirty_current_10ma[%d]",
+                            l_PgpeWofValues.dw1.fields.rdp_limit_10ma,
+                            l_PgpeWofValues.dw4.fields.dirty_current_10ma);
+                   TRAC_ERR("dirty_ttsr[0x%08X%08X] ",
+                            l_PgpeWofValues.dw5.words.high_order, l_PgpeWofValues.dw5.words.low_order);
+                }
+                else if(l_current_reason == AMEC_VOTING_REASON_PROC_THRM)
+                {
+                   l_sensor = getSensorByGsid(TEMPPROCTHRM);
+                   TRAC_ERR("Low frequency due to processor OT current temp[%d] max temp[%d]",
+                             l_sensor->sample, l_sensor->sample_max);
+                }
+                else if(l_current_reason == AMEC_VOTING_REASON_VDD_THRM)
+                {
+                   l_sensor = getSensorByGsid(TEMPVDD);
+                   TRAC_ERR("Low frequency due to Vdd VRM OT current temp[%d] max temp[%d]",
+                             l_sensor->sample, l_sensor->sample_max);
+                }
+                else if(l_current_reason == AMEC_VOTING_REASON_PPB_HARD_CAP)
+                {
+                   l_sensor = getSensorByGsid(PWRSYS);
+                   TRAC_ERR("Low frequency due to power capping current node power[%d] max node power[%d]",
+                             l_sensor->sample, l_sensor->sample_max);
+                   TRAC_ERR("Current power cap[%d] hard pcap min[%d]",
+                             g_amec->pcap.active_node_pcap, G_sysConfigData.pcap.hard_min_pcap);
+                }
+            }  // if OCC reason not power cap or this OCC is master and reason pcap
         }
         // if OCC is not voting for freq drop (reason 0) then it must be PGPE
-        // only log when below for NUM_TICKS_LOG_PGPE_PERF_LOSS consecutive ticks
         else if( (L_last_reason == 0) && (l_current_reason == 0) )
         {
-            L_ticks_below_disabled_freq++;
-            if(L_ticks_below_disabled_freq == NUM_TICKS_LOG_PGPE_PERF_LOSS)
-	    {
+            if(L_ticks_below_disabled_freq != 0xFFFF) // avoid wrapping
+                L_ticks_below_disabled_freq++;
+
+            // only log when below for NUM_TICKS_LOG_PGPE_PERF_LOSS consecutive ticks and haven't previously logged
+            if( (L_ticks_below_disabled_freq == NUM_TICKS_LOG_PGPE_PERF_LOSS) &&
+                (!L_pgpe_perf_loss_error_logged) )
+            {
                 TRAC_ERR("Current freq %dMHz is below disabled freq %dMHz NO OCC CLIP REASON!  System max %dMHz",
                            g_amec->wof.avg_freq_mhz,
                            G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_DISABLED],
                            g_amec->sys.fmax);
+                TRAC_ERR("PGPE dw0[0x%08X%08X]",
+                           (uint32_t)(g_amec->wof.pgpe_wof_values_dw0 >>32),
+                           (uint32_t)(g_amec->wof.pgpe_wof_values_dw0) );
+                l_sensor = getSensorByGsid(FREQA);
+                TRAC_ERR("OCC requested Pstate[0x%02X] EMPATH counter FREQA sensor[%d]",
+                          G_desired_pstate, l_sensor->sample);
+
                 l_log_error = TRUE;
+                l_pgpe_error = TRUE;
+            }
+            // periodically trace frequency
+            else if( (L_ticks_below_disabled_freq % 250) == 0)
+            {
+                l_sensor = getSensorByGsid(FREQA);
+                TRAC_ERR("Current freq still low after %d ticks from PGPE dw0 %dMHz EMPATH counter FREQA sensor %dMHz",
+                           L_ticks_below_disabled_freq,
+                           g_amec->wof.avg_freq_mhz,
+                           l_sensor->sample);
             }
         }
         else
@@ -629,15 +686,29 @@ void amec_slv_proc_voting_box(void)
             * @userdata4   OCC_NO_EXTENDED_RC
             * @devdesc     Frequency below nominal due to power or thermal
             */
-            l_err = createErrl(AMEC_SLV_PROC_VOTING_BOX,      //modId
-                               PERFORMANCE_LOSS,              //reasoncode
-                               OCC_NO_EXTENDED_RC,            //Extended reason code
-                               ERRL_SEV_INFORMATIONAL,        //Severity
-                               NULL,                          //Trace Buf
-                               DEFAULT_TRACE_SIZE,            //Trace Size
-                               g_amec->wof.avg_freq_mhz,      //userdata1
-                               g_amec->proc[0].chip_f_reason_history); //userdata2
+            if(l_pgpe_error) // add PGPE trace?
+            {
+                l_err = createPgpeErrl(AMEC_SLV_PROC_VOTING_BOX,      //modId
+                                       PERFORMANCE_LOSS,              //reasoncode
+                                       OCC_NO_EXTENDED_RC,            //Extended reason code
+                                       ERRL_SEV_INFORMATIONAL,        //Severity
+                                       g_amec->wof.avg_freq_mhz,      //userdata1
+                                       g_amec->proc[0].chip_f_reason_history); //userdata2
 
+               L_pgpe_perf_loss_error_logged = TRUE;
+            }
+            else
+            {
+                l_err = createErrl(AMEC_SLV_PROC_VOTING_BOX,      //modId
+                                   PERFORMANCE_LOSS,              //reasoncode
+                                   OCC_NO_EXTENDED_RC,            //Extended reason code
+                                   ERRL_SEV_INFORMATIONAL,        //Severity
+                                   NULL,                          //Trace Buf
+                                   DEFAULT_TRACE_SIZE,            //Trace Size
+                                   g_amec->wof.avg_freq_mhz,      //userdata1
+                                   g_amec->proc[0].chip_f_reason_history); //userdata2
+            }
+          
             // set the mfg action flag (allows callout to be added to info error)
             setErrlActions(l_err, ERRL_ACTIONS_MANUFACTURING_ERROR);
 
@@ -652,16 +723,25 @@ void amec_slv_proc_voting_box(void)
                              ERRL_CALLOUT_TYPE_HUID,
                              G_sysConfigData.proc_huid,
                              ERRL_CALLOUT_PRIORITY_LOW);
+            L_perf_loss_error_logged = TRUE;
 
             // Commit Error
             commitErrl(&l_err);
-
-            L_perf_loss_error_logged = TRUE;
         }
 
     } // if freq below disabled point and error not logged
     else
     {
+        if( (L_ticks_below_disabled_freq >= NUM_TICKS_LOG_PGPE_PERF_LOSS) &&
+            (g_amec->wof.avg_freq_mhz >= l_temp_freq) )
+        {
+            TRAC_IMP("Current freq %dMHz is now above disabled freq %dMHz!  After %d ticks",
+                      g_amec->wof.avg_freq_mhz,
+                      G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_DISABLED],
+                      L_ticks_below_disabled_freq);
+
+        }
+
         L_ticks_below_disabled_freq = 0;
     }
 

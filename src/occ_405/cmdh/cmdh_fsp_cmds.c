@@ -160,7 +160,8 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
             }
         }
 
-        if ( l_freq_reason & AMEC_VOTING_REASON_PPB )
+        if( ( l_freq_reason & AMEC_VOTING_REASON_PPB ) ||
+            ( l_freq_reason & AMEC_VOTING_REASON_PPB_HARD_CAP ) )
         {
             // only set DVFS bit if throttling below frequency to report throttling
             if(G_amec_opal_proc_throt_reason == POWERCAP)
