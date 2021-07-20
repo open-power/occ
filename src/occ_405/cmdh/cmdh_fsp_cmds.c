@@ -287,7 +287,7 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
     // Set up the header
     memset((void*) &l_sensorHeader, 0, (size_t)sizeof(cmdh_poll_sensor_db_t));
     memcpy ((void *) &(l_sensorHeader.eyecatcher[0]), SENSOR_TEMP, 4);
-    l_sensorHeader.format = 0x02;
+    l_sensorHeader.format = 0x10;
     l_sensorHeader.length = sizeof(cmdh_poll_temp_sensor_t);
     l_sensorHeader.count  = 0;
 
