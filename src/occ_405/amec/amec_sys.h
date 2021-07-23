@@ -232,9 +232,7 @@ typedef struct
   //-----------------------------------
   uint32_t prev_PC_RAW_CYCLES;
   uint32_t prev_PC_RUN_CYCLES;
-  uint32_t prev_PC_DISPATCH;
   uint32_t prev_PC_COMPLETED;
-  uint32_t prev_PC_RAW_Th_CYCLES;
   uint32_t prev_tod_2mhz;
   uint32_t prev_FREQ_SENS_BUSY;
   uint32_t prev_FREQ_SENS_FINISH;
@@ -242,12 +240,6 @@ typedef struct
   //-----------------------------------
   // Calculations & Interim Data
   //-----------------------------------
-  // Dispatched Instructions per Second
-  uint16_t dps;
-  // Dispatched Instruction per Cycle
-  uint16_t dpc;
-  // Instructions per Cycle
-  uint16_t ipc;
   // Hottest DTS sensor per core
   uint16_t dts_hottest;
   // Counter of number of samples for calculating average utilization & frequency

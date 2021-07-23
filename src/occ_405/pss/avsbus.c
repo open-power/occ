@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2021                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -62,7 +62,6 @@ static bool G_trace_scoms = TRUE;
 // AVS Bus usage will be determined after receiving config data from TMGT
 bool G_avsbus_vdd_monitoring = FALSE;
 
-extern uint16_t G_allow_trace_flags;
 extern uint32_t G_occ_frequency_mhz;
 #define AVSBUS_FREQUENCY_MHZ 10
 
@@ -882,9 +881,6 @@ void process_avsbus_status()
                 if (L_vdd_oc_found)
                 {
                     L_vdd_oc_found = FALSE;
-
-                    if(G_allow_trace_flags & ALLOW_AVSBUS_TRACE)
-                        TRAC_INFO("process_avsbus_status: Vdd OC cleared");
                 }
             }
             else // Over current warning bit is set

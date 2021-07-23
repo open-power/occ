@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2021                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -44,11 +44,13 @@
 #include <amec_sensors_core.h>
 #include "amec_perfcount.h"
 #include "proc_shared.h"
+#include "common.h"
 
 /******************************************************************************/
 /* Globals                                                                    */
 /******************************************************************************/
 extern data_cnfg_t * G_data_cnfg;
+extern uint16_t G_allow_trace_flags;
 
 /******************************************************************************/
 /* Forward Declarations                                                       */
@@ -83,6 +85,8 @@ void amec_update_proc_core_sensors(uint8_t i_core)
   uint16_t  l_time_interval = 0;
   uint8_t   i = 0;
   uint8_t   l_quad = i_core / 4;     // Quad this core resides in
+  // track if previous readings were updated in order to do differentials
+  static bool L_prev_updated[MAX_NUM_CORES] = {FALSE};
 
   // Make sure the core is present, and that it has updated data.
   if(CORE_PRESENT(i_core) && CORE_UPDATED(i_core))
@@ -99,12 +103,17 @@ void amec_update_proc_core_sensors(uint8_t i_core)
     amec_calc_dts_sensors(l_core_data_ptr, i_core);
 
     //-------------------------------------------------------
-    // Util / Freq
+    // Util / Freq   IPS
     //-------------------------------------------------------
     // Skip this update if there was an empath collection error or if previously offline
-    if (!CORE_EMPATH_ERROR(i_core) && !CORE_OFFLINE(i_core))
+    if( (!CORE_EMPATH_ERROR(i_core) && !CORE_OFFLINE(i_core)) &&
+        (L_prev_updated[i_core]) )
     {
         amec_calc_freq_and_util_sensors(l_core_data_ptr,i_core);
+        amec_calc_ips_sensors(l_core_data_ptr,i_core);
+
+        // just used the previous readings, make sure next update is with new previous readings
+        L_prev_updated[i_core] = FALSE;
     }
 
     //-------------------------------------------------------
@@ -117,15 +126,6 @@ void amec_update_proc_core_sensors(uint8_t i_core)
     }
 
     //-------------------------------------------------------
-    // IPS
-    //-------------------------------------------------------
-    // Skip this update if there was an empath collection error
-    if (!CORE_EMPATH_ERROR(i_core) && !CORE_OFFLINE(i_core))
-    {
-        amec_calc_ips_sensors(l_core_data_ptr,i_core);
-    }
-
-    //-------------------------------------------------------
     // Update voltage droop counters
     //-------------------------------------------------------
     amec_calc_droop_sensors(l_core_data_ptr, i_core);
@@ -134,22 +134,21 @@ void amec_update_proc_core_sensors(uint8_t i_core)
     // Update PREVIOUS values for next time
     // ------------------------------------------------------
 
-    // Thread raw cycles are equivalent to core raw cycles.
-    g_amec->proc[0].core[i_core].prev_PC_RAW_Th_CYCLES = l_core_data_ptr->empath.raw_cycles;
-
     // Skip empath updates if there was an empath collection error on this core
-    if (!CORE_EMPATH_ERROR(i_core))
+    if(!CORE_EMPATH_ERROR(i_core))
     {
         g_amec->proc[0].core[i_core].prev_PC_RAW_CYCLES    = l_core_data_ptr->empath.raw_cycles;
         g_amec->proc[0].core[i_core].prev_PC_RUN_CYCLES    = l_core_data_ptr->empath.run_cycles;
+        g_amec->proc[0].core[i_core].prev_PC_COMPLETED     = l_core_data_ptr->empath.complete;
+        if(G_allow_trace_flags & ALLOW_EMPATH_TRACE)
+            TRAC_IMP("core[0x%02X] EMPATH Complete 0x%08X", i_core, l_core_data_ptr->empath.complete);
         g_amec->proc[0].core[i_core].prev_tod_2mhz         = l_core_data_ptr->tod_2mhz;
         g_amec->proc[0].core[i_core].prev_FREQ_SENS_BUSY   = l_core_data_ptr->empath.freq_sens_busy;
         g_amec->proc[0].core[i_core].prev_FREQ_SENS_FINISH = l_core_data_ptr->empath.freq_sens_finish;
+        // indicate that the previous values were updated
+        L_prev_updated[i_core] = TRUE;
     }
 
-    // Need to sum up all thread data for full core data
-    g_amec->proc[0].core[i_core].prev_PC_COMPLETED = 0;
-    g_amec->proc[0].core[i_core].prev_PC_DISPATCH = 0;
     // Final step is to update TOD sensors
     // Extract 32 bits with 16usec resolution
     l_temp32 = (uint32_t)(G_dcom_slv_inbox_doorbell_rx.tod>>13);
@@ -688,7 +687,7 @@ void amec_calc_freq_and_util_sensors(CoreData * i_core_data_ptr, uint8_t i_core)
   // Get RAW CYCLES for Thread
   // Thread raw cycles are the same as core raw cycles
   temp32  = i_core_data_ptr->empath.raw_cycles;
-  temp32a = g_amec->proc[0].core[i_core].prev_PC_RAW_Th_CYCLES;
+  temp32a = g_amec->proc[0].core[i_core].prev_PC_RAW_CYCLES;
   l_cycles4ms = temp32 - temp32a;
 
   // ------------------------------------------------------
@@ -820,141 +819,57 @@ void amec_calc_freq_and_util_sensors(CoreData * i_core_data_ptr, uint8_t i_core)
 
 void amec_calc_ips_sensors(CoreData * i_core_data_ptr, uint8_t i_core)
 {
-#define     TWO_PWR_24_MASK                 0x00FFFFFF
-#define     TWO_PWR_20_MASK                 0x000FFFFF
-
   /*------------------------------------------------------------------------*/
   /*  Local Variables                                                       */
   /*------------------------------------------------------------------------*/
-  INT32                       cyc1 = 0;   //cycle counts
-  INT32                       cyc2 = 0;
   UINT32                      fin1 = 0;   //finished instruction counts
   UINT32                      fin2 = 0;
-  INT32                       disp1 = 0;  //dispatched instruction counts
-  INT32                       disp2 = 0;
   UINT32                      temp32 = 0;
   UINT32                      ticks_2mhz = 0; // IPS sensor interval in 2mhz ticks
-  BOOLEAN                     l_core_sleep_winkle = FALSE;
   uint32_t                    l_stop_state_hist_reg = 0;
 
   // Read the high-order bytes of OCC Stop State History Register
   l_stop_state_hist_reg = (uint32_t) (i_core_data_ptr->stop_state_hist >> 32);
 
-  // If core is in fast/deep sleep mode or fast/winkle mode, then set a flag
-  // indicating this
-  if(l_stop_state_hist_reg & OCC_CORE_STOP_GATED)
+  // Only calculate if core is not in a stop state
+  if( !(l_stop_state_hist_reg & OCC_CORE_STOP_GATED) )
   {
-      l_core_sleep_winkle = TRUE;
+      // Calculate delta of completed instructions
+      fin1 = i_core_data_ptr->empath.complete;
+      fin2 = g_amec->proc[0].core[i_core].prev_PC_COMPLETED;
+
+      if(fin1 >= fin2)
+          fin2 = fin1 - fin2;
+      else // wrapped
+          fin2 = fin1 + (0xFFFF - fin2);
+
+      // ------------------------------------------------------
+      // Per Core IPS Calculation
+      // ------------------------------------------------------
+      // <amec_formula>
+      // Result: Calculated Instructions per Second
+      // Sensor: IPSC0
+      // Timescale: CORE_DATA_COLLECTION_US
+      // Units: 0.2Mips
+      // Min/Max: ?
+      // Formula:
+      //    comp_delta = (INST_COMPLETE[t=now] - INST_COMPLETE[t=-CORE_DATA_COLLECTION_US])
+      //    ticks_delta = (TOD[t=now] - TOD[t=-CORE_DATA_COLLECTION_US])
+      //    MIPS = comp_delta (insns/interval) * (1 interval per ticks_delta 2mhz ticks) * (2M 2mhz ticks / s) / 1M
+      //         = (2* fin2) / ticks_2mhz
+      //
+      // Note: For best resolution do multiply first and division last.
+      // Note: For an explanation regarding the multiply by 2, see the note under FREQAC0.
+      // </amec_formula>
+
+      ticks_2mhz = i_core_data_ptr->tod_2mhz - g_amec->proc[0].core[i_core].prev_tod_2mhz;
+
+      if (0 == ticks_2mhz)
+          temp32 = 0;
+      else
+          temp32 = (fin2 << 1) / ticks_2mhz;
   }
 
-  /*------------------------------------------------------------------------*/
-  /*  Code                                                                  */
-  /*------------------------------------------------------------------------*/
-
-  // Get current and last run Cycles
-  cyc1 = i_core_data_ptr->empath.run_cycles;
-  cyc2 = g_amec->proc[0].core[i_core].prev_PC_RUN_CYCLES;
-  cyc2 = cyc1 - cyc2;
-
-  // Calculate delta of completed instructions
-  fin2 = g_amec->proc[0].core[i_core].prev_PC_COMPLETED;
-  fin2 = fin1 - fin2;
-
-  // Calculate delta of dispatched instructions
-  disp2 = g_amec->proc[0].core[i_core].prev_PC_DISPATCH;
-  disp2 = disp1 - disp2;
-
-  // ------------------------------------------------------
-  // Per Core IPC Calculation
-  // ------------------------------------------------------
-  // <amec_formula>
-  // Result: Calculated Instructions per Cycle
-  // Sensor: None
-  // Timescale: CORE_DATA_COLLECTION_US
-  // Units: 0.01 IPC
-  // Min/Max: ?
-  // Formula: ipc_delta = (INST_COMPLETE[t=now] - INST_COMPLETE[t=-CORE_DATA_COLLECTION_US])
-  //          run_cycles = (RUN_CYCLES[t=now] - RUN_CYCLES[t=-CORE_DATA_COLLECTION_US])
-  //          100 = Convert 0.01 IPC
-  //
-  //          IPC(in 0.01 IPC) = (ipc_delta * 100) / run_cycles
-  // </amec_formula>
-  temp32 = (fin2 * 100);        // Number of instructions completed (x100)
-  if (0 == cyc2) temp32 = 0;    // Prevent divide by zero
-  else temp32 = temp32 / cyc2;  // In units of 0.01 IPC
-  g_amec->proc[0].core[i_core].ipc = temp32; // Currently unused
-
-
-  // ------------------------------------------------------
-  // Per Core DPC Calculation
-  // ------------------------------------------------------
-  // <amec_formula>
-  // Result: Calculated dispatched Instructions per Cycle
-  // Sensor: None
-  // Timescale: CORE_DATA_COLLECTION_US
-  // Units: 0.01 DPC
-  // Min/Max: ?
-  // Formula: dpc_delta  = (INST_DISPATCH[t=now] - INST_DISPATCH[t=-CORE_DATA_COLLECTION_US])
-  //          run_cycles = (RUN_CYCLES[t=now] - RUN_CYCLES[t=-CORE_DATA_COLLECTION_US])
-  //          100        = Convert 0.01 DPC
-  //
-  //          DPC(in 0.01DPC) = (dpc_delta * 100) / run_cycles
-  // </amec_formula>
-  temp32 = (disp2 * 100);       // Number of instructions dispatched (x100)
-  if (0 == cyc2) temp32 = 0;    // Prevent divide by zero
-  else temp32 = temp32 / cyc2;  // In units of 0.01 DPC
-  g_amec->proc[0].core[i_core].dpc = temp32; // Currently unused
-
-  // ------------------------------------------------------
-  // Per Core DPS Calculation
-  // ------------------------------------------------------
-  // <amec_formula>
-  // Result: Calculated dispatched Instructions per Second
-  // Sensor: None
-  // Timescale: CORE_DATA_COLLECTION_US
-  // Units: 0.2Mips
-  // Min/Max: ?
-  // Formula: dps_delta = (INST_DISPATCH[t=now] - INST_DISPATCH[t=-CORE_DATA_COLLECTION_US])
-  //          250       = # of CORE_DATA_COLLECTION_US periods in 1 second
-  //          50,000    = Convert IPS to 0.2MIPS
-  //
-  //          DPS(in 0.2Mips) = (dps_delta * 250) / 50,000
-  // </amec_formula>
-
-  temp32 = (disp2 * AMEC_CORE_COLLECTION_1SEC); // Number of instructions dispatched extrapolated to 1s.
-  temp32 = temp32 / 50000;                      // In units of 0.2Mips (max 327675 Mips for uint16_t)
-  g_amec->proc[0].core[i_core].dps = temp32;    // Currently unused
-
-  // ------------------------------------------------------
-  // Per Core IPS Calculation
-  // ------------------------------------------------------
-  // <amec_formula>
-  // Result: Calculated Instructions per Second
-  // Sensor: IPSC0
-  // Timescale: CORE_DATA_COLLECTION_US
-  // Units: 0.2Mips
-  // Min/Max: ?
-  // Formula:
-  //    comp_delta = (INST_COMPLETE[t=now] - INST_COMPLETE[t=-CORE_DATA_COLLECTION_US])
-  //    ticks_delta = (TOD[t=now] - TOD[t=-CORE_DATA_COLLECTION_US])
-  //    MIPS = comp_delta (insns/interval) * (1 interval per ticks_delta 2mhz ticks) * (2M 2mhz ticks / s) / 1M
-  //         = (2* fin2) / ticks_2mhz
-  //
-  // Note: For best resolution do multiply first and division last.
-  // Note: For an explanation regarding the multiply by 2, see the note under FREQAC0.
-  // </amec_formula>
-
-  ticks_2mhz = i_core_data_ptr->tod_2mhz -
-      g_amec->proc[0].core[i_core].prev_tod_2mhz;
-
-  if (0 == ticks_2mhz) temp32 = 0;
-  else temp32 = (fin2 << 1) / ticks_2mhz;
-
-  // See if core is sleeping/winkled
-  if(l_core_sleep_winkle)
-  {
-      temp32 = 0;
-  }
   sensor_update( AMECSENSOR_ARRAY_PTR(IPSC0,i_core), (uint16_t) temp32);
 }
 
