@@ -41,6 +41,6 @@ typedef struct
 } gpe_24x7_args_t;
 
 // Number of "states" 24x7 collection code is broken up into
-#define MAX_24x7_STATES   8
+#define MAX_24x7_STATES   16
 
 #endif // _GPE_24X7_STRUCTS_H

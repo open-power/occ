@@ -167,7 +167,7 @@ void gpe_24x7(ipc_msg_t* cmd, void* arg)
             *L_version         = ver.value;
 
             // set change-Id
-            com.val.change_id = 0x0195809b;
+            com.val.change_id = 0x2b502bcb;
             *L_commit         = com.value;
 
             //set status as initializing
@@ -393,26 +393,7 @@ void gpe_24x7(ipc_msg_t* cmd, void* arg)
                         if(L_DELAY_1 == 0)
                         {
                             rc = post_pmu_events(G1A, pError);
-                            if ( rc )
-                            {
-                                break;
-                            }
-                            L_DELAY_1 = L_CUR_DELAY;
                         }
-                        else
-                            L_DELAY_1--;
-
-                        if(L_DELAY_2 == 0)
-                        {
-                            rc = post_pmu_events(G2A, pError);
-                            if ( rc )
-                            {
-                                break;
-                            }
-                            L_DELAY_2 = L_CUR_DELAY;
-                        }
-                        else
-                            L_DELAY_2--;
                     }
                     break;
 
@@ -423,30 +404,10 @@ void gpe_24x7(ipc_msg_t* cmd, void* arg)
                     }
                     else
                     {
-                        if(L_DELAY_3 == 0)
+                        if(L_DELAY_2 == 0)
                         {
-                            rc = post_pmu_events(G3A, pError);
-                            if ( rc )
-                            {
-                                break;
-                            }
-                            L_DELAY_3 = L_CUR_DELAY;
+                            rc = post_pmu_events(G2A, pError);
                         }
-                        else
-                            L_DELAY_3--;
-
-                        if(L_DELAY_4 == 0)
-                        {
-                            rc = post_pmu_events(G4, pError);
-                            if ( rc )
-                            {
-                                break;
-                            }
-                            //for groups 4,5,6,7 8ms is the fastest possible collection speed.
-                            L_DELAY_4 = L_CUR_DELAY/8;
-                        }
-                        else
-                            L_DELAY_4--;
                     }
                     break;
 
@@ -457,33 +418,168 @@ void gpe_24x7(ipc_msg_t* cmd, void* arg)
                     }
                     else
                     {
-                        if(L_DELAY_1 == 0)
+                        if(L_DELAY_3 == 0)
                         {
-                            rc = post_pmu_events(G1B, pError);
-                            if ( rc )
-                            {
-                                break;
-                            }
-                            L_DELAY_1 = L_CUR_DELAY;
+                            rc = post_pmu_events(G3A, pError);
                         }
-                        else
-                            L_DELAY_1--;
-
-                        if(L_DELAY_2 == 0)
-                        {
-                            rc = post_pmu_events(G2B, pError);
-                            if ( rc )
-                            {
-                                break;
-                            }
-                            L_DELAY_2 = L_CUR_DELAY;
-                        }
-                        else
-                            L_DELAY_2--;
                     }
                     break;
 
                 case 4:
+                    if(L_configure)
+                    {
+                        rc = configure_pmu(L_current_state, L_cur_speed, pError);
+                    }
+                    else
+                    {
+                        if(L_DELAY_4 == 0)
+                        {
+                            rc = post_pmu_events(G4, pError);
+                        }
+                    }
+                    break;
+
+                case 5:
+                    if(L_configure)
+                    {
+                        rc = configure_pmu(L_current_state, L_cur_speed, pError);
+                    }
+                    else
+                    {
+                        if(L_DELAY_1 == 0)
+                        {
+                            rc = post_pmu_events(G1B, pError);
+                        }
+                    }
+                    break;
+
+                case 6:
+                    if(L_configure)
+                    {
+                        rc = configure_pmu(L_current_state, L_cur_speed, pError);
+                    }
+                    else
+                    {
+                        if(L_DELAY_2 == 0)
+                        {
+                            rc = post_pmu_events(G2B, pError);
+                        }
+                    }
+                    break;
+
+                case 7:
+                    if(L_configure)
+                    {
+                        rc = configure_pmu(L_current_state, L_cur_speed, pError);
+                    }
+                    else
+                    {
+                        if(L_DELAY_3 == 0)
+                        {
+                            rc = post_pmu_events(G3B, pError);
+                        }
+                    }
+                    break;
+
+                case 8:
+                    if(L_configure)
+                    {
+                        rc = configure_pmu(L_current_state, L_cur_speed, pError);
+                    }
+                    else
+                    {
+                        if(L_DELAY_5 == 0)
+                        {
+                            rc = post_pmu_events(G5, pError);
+                        }
+                    }
+                    break;
+
+                case 9:
+                    if(L_configure)
+                    {
+                        rc = configure_pmu(L_current_state, L_cur_speed, pError);
+                    }
+                    else
+                    {
+                        if(L_DELAY_1 == 0)
+                        {
+                            rc = post_pmu_events(G1A, pError);
+                        }
+                    }
+                    break;
+
+                case 10:
+                    if(L_configure)
+                    {
+                        rc = configure_pmu(L_current_state, L_cur_speed, pError);
+                    }
+                    else
+                    {
+                        if(L_DELAY_2 == 0)
+                        {
+                            rc = post_pmu_events(G2A, pError);
+                        }
+                    }
+                    break;
+
+                case 11:
+                    if(L_configure)
+                    {
+                        rc = configure_pmu(L_current_state, L_cur_speed, pError);
+                    }
+                    else
+                    {
+                        if(L_DELAY_3 == 0)
+                        {
+                            rc = post_pmu_events(G3A, pError);
+                        }
+                    }
+                    break;
+
+                case 12:
+                    if(L_configure)
+                    {
+                        rc = configure_pmu(L_current_state, L_cur_speed, pError);
+                    }
+                    else
+                    {
+                        if(L_DELAY_6 == 0)
+                        {
+                            rc = post_pmu_events(G6, pError);
+                        }
+                    }
+                    break;
+
+                case 13:
+                    if(L_configure)
+                    {
+                        rc = configure_pmu(L_current_state, L_cur_speed, pError);
+                    }
+                    else
+                    {
+                        if(L_DELAY_1 == 0)
+                        {
+                            rc = post_pmu_events(G1B, pError);
+                        }
+                    }
+                    break;
+
+                case 14:
+                    if(L_configure)
+                    {
+                        rc = configure_pmu(L_current_state, L_cur_speed, pError);
+                    }
+                    else
+                    {
+                        if(L_DELAY_2 == 0)
+                        {
+                            rc = post_pmu_events(G2B, pError);
+                        }
+                    }
+                    break;
+
+                case 15:
                     if(L_configure)
                     {
                         rc = configure_pmu(L_current_state, L_cur_speed, pError);
@@ -497,128 +593,17 @@ void gpe_24x7(ipc_msg_t* cmd, void* arg)
                             {
                                 break;
                             }
-                            L_DELAY_3 = L_CUR_DELAY;
-                        }
-                        else
-                            L_DELAY_3--;
 
-                        if(L_DELAY_5 == 0)
-                        {
-                            rc = post_pmu_events(G5, pError);
+                            rc = post_pmu_events(G8, pError);
                             if ( rc )
                             {
                                 break;
                             }
-
-                            //for groups 4,5,6,7 8ms is the fastest possible collection speed.
-                            L_DELAY_5 = L_CUR_DELAY/8;
                         }
-                        else
-                            L_DELAY_5--;
                     }
                     break;
 
-                case 5:
-                    if(L_configure)
-                    {
-                        rc = configure_pmu(L_current_state, L_cur_speed, pError);
-                    }
-                    else
-                    {
-                        if(L_DELAY_1 == 0)
-                        {
-                            rc = post_pmu_events(G1A, pError);
-                            if ( rc )
-                            {
-                                break;
-                            }
-                            L_DELAY_1 = L_CUR_DELAY;
-                        }
-                        else
-                            L_DELAY_1--;
-
-                        if(L_DELAY_2 == 0)
-                        {
-                            rc = post_pmu_events(G2A, pError);
-                            if ( rc )
-                            {
-                                break;
-                            }
-                            L_DELAY_2 = L_CUR_DELAY;
-                        }
-                        else
-                            L_DELAY_2--;
-                    }
-                    break;
-
-                case 6:
-                    if(L_configure)
-                    {
-                        rc = configure_pmu(L_current_state, L_cur_speed, pError);
-                    }
-                    else
-                    {
-                        if(L_DELAY_3 == 0)
-                        {
-                            rc = post_pmu_events(G3A, pError);
-                            if ( rc )
-                            {
-                                break;
-                            }
-                            L_DELAY_3 = L_CUR_DELAY;
-                        }
-                        else
-                            L_DELAY_3--;
-
-                        if(L_DELAY_6 == 0)
-                        {
-                            rc = post_pmu_events(G6, pError);
-                            if ( rc )
-                            {
-                                break;
-                            }
-                            //for groups 4,5,6,7 8ms is the fastest possible collection speed.
-                            L_DELAY_6 = L_CUR_DELAY/8;
-                        }
-                        else
-                            L_DELAY_6--;
-                    }
-                    break;
-
-                case 7:
-                    if(L_configure)
-                    {
-                        rc = configure_pmu(L_current_state, L_cur_speed, pError);
-                    }
-                    else
-                    {
-                        if(L_DELAY_1 == 0)
-                        {
-                            rc = post_pmu_events(G1B, pError);
-                            if ( rc )
-                            {
-                                break;
-                            }
-                            L_DELAY_1 = L_CUR_DELAY;
-                        }
-                        else
-                            L_DELAY_1--;
-
-                        if(L_DELAY_2 == 0)
-                        {
-                            rc = post_pmu_events(G2B, pError);
-                            if ( rc )
-                            {
-                                break;
-                            }
-                            L_DELAY_2 = L_CUR_DELAY;
-                        }
-                        else
-                            L_DELAY_2--;
-                    }
-                    break;
-
-                case 8:
+                case 16:
                     if(L_configure)
                     {
                         rc = configure_pmu(L_current_state, L_cur_speed, pError);
@@ -641,37 +626,10 @@ void gpe_24x7(ipc_msg_t* cmd, void* arg)
                     }
                     else
                     {
-                        if(L_DELAY_3 == 0)
-                        {
-                            rc = post_pmu_events(G3B, pError);
-                            if ( rc )
-                            {
-                                break;
-                            }
-
-                            rc = post_pmu_events(G8, pError);
-                            if ( rc )
-                            {
-                                break;
-                            }
-                            L_DELAY_3 = L_CUR_DELAY;
-                        }
-                        else
-                            L_DELAY_3--;
-
                         if(L_DELAY_7 == 0)
                         {
                             rc = post_pmu_events(G7, pError);
-                            if ( rc )
-                            {
-                                break;
-                            }
-
-                            //for groups 4,5,6,7 8ms is the fastest possible collection speed.
-                            L_DELAY_7 = L_CUR_DELAY/8;
                         }
-                        else
-                            L_DELAY_7--;
                     }
                     break;
 
@@ -714,7 +672,7 @@ uint32_t configure_pmu(uint8_t state, uint64_t speed, GpeErrorStruct* o_err)
     uint32_t rc = 0;
     uint64_t ocmbInstChk, ocmbUAV, val;
     //write the configuration SCOMs for all pmus.
-    int i,j,start = (state - 1) * 17,end = state * 17;
+    int i,j,start = (state - 1) * 9,end = state * 9;
     static volatile uint64_t* L_conf_last = (uint64_t*) (DBG_CONF_OFFSET | PBA_ENABLE);
     static volatile uint64_t* L_DBG_UAV   = (uint64_t*) (DBG_UAV | PBA_ENABLE);
 
@@ -2832,6 +2790,9 @@ uint32_t set_speed (uint64_t* speed, uint8_t* delay, volatile uint64_t* status, 
             gpe_set_ffdc(o_err, 0, GPE_RC_24x7_INVALID_SPEED, *speed);
             break;
     }
+
+    //set default delay to 0 for P10 - 04-Aug-2021
+    *delay = 0;
 
     PK_TRACE ("<< set_speed: delay %d rc %d", *delay, rc);
 
