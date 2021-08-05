@@ -491,7 +491,12 @@ void wof_main( void )
     {
         calculate_ceff_ratio_vdd();
     }
-    if( g_wof->v_ratio_vcs == 0 )
+
+    // Due to an issue with some Vcs VRMs we could get an invalid 0 current reading
+    // resulting in an error trying to calculate ceff.  If vcs dimension is disabled
+    // just skip the calculation since we don't need it anyway
+    if( (g_wof->v_ratio_vcs == 0) ||
+        (g_wof->vcs_override_index != WOF_VRT_IDX_NO_OVERRIDE) )
     {
         g_wof->ceff_ratio_vcs = 0;
     }
@@ -1790,6 +1795,13 @@ void get_poundV_points( uint32_t i_freq_mhz,
            L_trace_max_freq = FALSE;
            INTR_TRAC_ERR("get_poundV_points: Frequency[%d] is higher than max VPD[%d]",
                           i_freq_mhz, G_oppb.operating_points[NUM_PV_POINTS-1].frequency_mhz);
+
+           INTR_TRAC_ERR("get_poundV_points: Pstate 0 frequency is %dkHz", G_oppb.frequency_max_khz);
+
+           pgpe_wof_values_t l_PgpeWofValues;
+           l_PgpeWofValues.dw0.value = in64(g_amec_sys.static_wof_data.pgpe_values_sram_addr);
+           INTR_TRAC_ERR("PGPE dw0[0x%08X%08X]",
+                          l_PgpeWofValues.dw0.words.high_order, l_PgpeWofValues.dw0.words.low_order);
        }
     }
     else

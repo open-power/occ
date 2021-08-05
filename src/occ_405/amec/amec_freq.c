@@ -705,18 +705,6 @@ void amec_slv_proc_voting_box(void)
                    l_log_error = TRUE;
                 }
             }
-            // periodically trace frequency
-            else if( (L_ticks_below_disabled_freq % 250) == 0)
-            {
-                l_sensor = getSensorByGsid(FREQA);
-                TRAC_ERR("Current freq still low after %d ticks from PGPE dw0 %dMHz EMPATH counter FREQA sensor %dMHz",
-                           L_ticks_below_disabled_freq,
-                           g_amec->wof.avg_freq_mhz,
-                           l_sensor->sample);
-                TRAC_ERR("PGPE dw0[0x%08X%08X]",
-                           (uint32_t)(g_amec->wof.pgpe_wof_values_dw0 >>32),
-                           (uint32_t)(g_amec->wof.pgpe_wof_values_dw0) );
-            }
         }
         else
             L_ticks_below_disabled_freq = 0;
@@ -800,16 +788,6 @@ void amec_slv_proc_voting_box(void)
     } // if freq below disabled point and error not logged
     else
     {
-        if( (L_ticks_below_disabled_freq >= NUM_TICKS_LOG_PGPE_PERF_LOSS) &&
-            (g_amec->wof.avg_freq_mhz >= l_temp_freq) )
-        {
-            TRAC_IMP("Current freq %dMHz is now above disabled freq %dMHz!  After %d ticks",
-                      g_amec->wof.avg_freq_mhz,
-                      G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_DISABLED],
-                      L_ticks_below_disabled_freq);
-
-        }
-
         L_ticks_below_disabled_freq = 0;
     }
 
