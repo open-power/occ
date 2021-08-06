@@ -157,9 +157,9 @@ void gpe_24x7(ipc_msg_t* cmd, void* arg)
             //set code version
             ver.val.major      = 0x1;
             ver.val.minor      = 0x0;
-            ver.val.bugfix     = 0x1;
-            ver.val.day        = 0x30;
-            ver.val.month      = 0x06;
+            ver.val.bugfix     = 0x2;
+            ver.val.day        = 0x06;
+            ver.val.month      = 0x08;
             ver.val.year       = 0x2021;
             ver.val.spec_major = 0x1;
             ver.val.spec_minor = 0x1;
@@ -167,7 +167,7 @@ void gpe_24x7(ipc_msg_t* cmd, void* arg)
             *L_version         = ver.value;
 
             // set change-Id
-            com.val.change_id = 0x21fc5d1e;
+            com.val.change_id = 0x0195809b;
             *L_commit         = com.value;
 
             //set status as initializing
@@ -2484,7 +2484,7 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                         break;
                     }
 
-                    post_addr = (uint64_t*) ( (uint32_t)POST_OFFSET_G5_0 | (uint32_t)(0x20 * j) | (uint32_t)PBA_ENABLE );
+                    post_addr = (uint64_t*) ( (uint32_t)(POST_OFFSET_G5_0 | PBA_ENABLE) + (uint32_t)(0x20 * j) );
                     for(i=0; i<4; i++)
                     {
                         *post_addr = (uint64_t)u3.ev.e[i];
@@ -2562,7 +2562,7 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                         break;
                     }
 
-                    post_addr = (uint64_t*) ( (uint32_t)POST_OFFSET_G6_4 | (uint32_t)(0x20 * (j-4)) | (uint32_t)PBA_ENABLE );
+                    post_addr = (uint64_t*) ( (uint32_t)(POST_OFFSET_G6_4 | PBA_ENABLE) + (uint32_t)(0x20 * (j-4)) );
                     for(i=0; i<4; i++)
                     {
                         *post_addr = (uint64_t)u3.ev.e[i];
@@ -2640,7 +2640,7 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                         break;
                     }
 
-                    post_addr = (uint64_t*) ( (uint32_t)POST_OFFSET_G7_8 | (uint32_t)(0x20 * (j-8)) | (uint32_t)PBA_ENABLE );
+                    post_addr = (uint64_t*) ( (uint32_t)(POST_OFFSET_G7_8 | PBA_ENABLE) + (uint32_t)(0x20 * (j-8)) );
                     for(i=0; i<4; i++)
                     {
                         *post_addr = (uint64_t)u3.ev.e[i];
@@ -2718,7 +2718,7 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                         break;
                     }
 
-                    post_addr = (uint64_t*) ( (uint32_t)POST_OFFSET_G8_12 | (uint32_t)(0x20 * (j-12)) | (uint32_t)PBA_ENABLE );
+                    post_addr = (uint64_t*) ( (uint32_t)(POST_OFFSET_G8_12 | PBA_ENABLE) + (uint32_t)(0x20 * (j-12)) );
                     for(i=0; i<4; i++)
                     {
                         *post_addr = (uint64_t)u3.ev.e[i];
