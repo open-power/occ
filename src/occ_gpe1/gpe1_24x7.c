@@ -155,10 +155,10 @@ void gpe_24x7(ipc_msg_t* cmd, void* arg)
             }
 
             //set code version
-            ver.val.major      = 0x1;
+            ver.val.major      = 0x2; // updated as change in freq of PHB event read
             ver.val.minor      = 0x0;
             ver.val.bugfix     = 0x2;
-            ver.val.day        = 0x06;
+            ver.val.day        = 0x11;
             ver.val.month      = 0x08;
             ver.val.year       = 0x2021;
             ver.val.spec_major = 0x1;
@@ -167,7 +167,7 @@ void gpe_24x7(ipc_msg_t* cmd, void* arg)
             *L_version         = ver.value;
 
             // set change-Id
-            com.val.change_id = 0x2b502bcb;
+            com.val.change_id = 0xf381df40;
             *L_commit         = com.value;
 
             //set status as initializing
@@ -490,7 +490,9 @@ void gpe_24x7(ipc_msg_t* cmd, void* arg)
                     {
                         if(L_DELAY_5 == 0)
                         {
-                            rc = post_pmu_events(G5, pError);
+                            // Reading G4: PHB twice in 8 ms.
+                            // G5 read moved to state 12
+                            rc = post_pmu_events(G4, pError);
                         }
                     }
                     break;
@@ -546,6 +548,12 @@ void gpe_24x7(ipc_msg_t* cmd, void* arg)
                     {
                         if(L_DELAY_6 == 0)
                         {
+                            rc = post_pmu_events(G5, pError);
+                            if ( rc )
+                            {
+                                break;
+                            }
+
                             rc = post_pmu_events(G6, pError);
                         }
                     }
