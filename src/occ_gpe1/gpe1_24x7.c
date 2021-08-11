@@ -155,9 +155,9 @@ void gpe_24x7(ipc_msg_t* cmd, void* arg)
             }
 
             //set code version
-            ver.val.major      = 0x2; // updated as change in freq of PHB event read
+            ver.val.major      = 0x0;
             ver.val.minor      = 0x0;
-            ver.val.bugfix     = 0x2;
+            ver.val.bugfix     = 0x3; // updated for OTL fix - FW716360
             ver.val.day        = 0x11;
             ver.val.month      = 0x08;
             ver.val.year       = 0x2021;
@@ -167,7 +167,7 @@ void gpe_24x7(ipc_msg_t* cmd, void* arg)
             *L_version         = ver.value;
 
             // set change-Id
-            com.val.change_id = 0xf381df40;
+            com.val.change_id = 0xef5ed6ee;
             *L_commit         = com.value;
 
             //set status as initializing
@@ -878,6 +878,7 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
     volatile uint64_t* post_addr;
     static volatile uint64_t* L_DBG_GRP = (uint64_t*) (DBG_GRP_OFFSET | PBA_ENABLE);
     static volatile uint64_t* L_DBG_UNIT = (uint64_t*) (DBG_UNIT_OFFSET | PBA_ENABLE);
+    uint64_t temp;
 
     //union to split a pmulet containg 4 counters into its constituents.
     union u1
@@ -1689,7 +1690,7 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
 
                     // Read counter do not reset when read.
                     // Perform read to corresponding config register to reset the read counter.
-                    rc = getScom (G_PMU_CONFIGS_8[82][0], &u3.pmulet, o_err);
+                    rc = getScom (G_PMU_CONFIGS_8[82][0], &temp, o_err);
                     if ( rc )
                     {
                         PK_TRACE("post_pmu_events: 0x%08x getscom failed. rc = 0x%x", G_PMU_CONFIGS_8[82][0], rc);
@@ -1711,7 +1712,7 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
 
                     // Read counter do not reset when read.
                     // Perform read to corresponding config register to reset the read counter.
-                    rc = getScom (G_PMU_CONFIGS_8[85][0], &u3.pmulet, o_err);
+                    rc = getScom (G_PMU_CONFIGS_8[85][0], &temp, o_err);
                     if ( rc )
                     {
                         PK_TRACE("post_pmu_events: 0x%08x getscom failed. rc = 0x%x", G_PMU_CONFIGS_8[85][0], rc);
@@ -1752,7 +1753,7 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
 
                     // Read counter do not reset when read.
                     // Perform read to corresponding config register to reset the read counter.
-                    rc = getScom (G_PMU_CONFIGS_8[88][0], &u3.pmulet, o_err);
+                    rc = getScom (G_PMU_CONFIGS_8[88][0], &temp, o_err);
                     if ( rc )
                     {
                         PK_TRACE("post_pmu_events: 0x%08x getscom failed. rc = 0x%x", G_PMU_CONFIGS_8[88][0], rc);
@@ -1774,7 +1775,7 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
 
                     // Read counter do not reset when read.
                     // Perform read to corresponding config register to reset the read counter.
-                    rc = getScom (G_PMU_CONFIGS_8[91][0], &u3.pmulet, o_err);
+                    rc = getScom (G_PMU_CONFIGS_8[91][0], &temp, o_err);
                     if ( rc )
                     {
                         PK_TRACE("post_pmu_events: 0x%08x getscom failed. rc = 0x%x", G_PMU_CONFIGS_8[91][0], rc);
@@ -1815,7 +1816,7 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
 
                     // Read counter do not reset when read.
                     // Perform read to corresponding config register to reset the read counter.
-                    rc = getScom (G_PMU_CONFIGS_8[94][0], &u3.pmulet, o_err);
+                    rc = getScom (G_PMU_CONFIGS_8[94][0], &temp, o_err);
                     if ( rc )
                     {
                         PK_TRACE("post_pmu_events: 0x%08x getscom failed. rc = 0x%x", G_PMU_CONFIGS_8[94][0], rc);
@@ -1837,7 +1838,7 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
 
                     // Read counter do not reset when read.
                     // Perform read to corresponding config register to reset the read counter.
-                    rc = getScom (G_PMU_CONFIGS_8[97][0], &u3.pmulet, o_err);
+                    rc = getScom (G_PMU_CONFIGS_8[97][0], &temp, o_err);
                     if ( rc )
                     {
                         PK_TRACE("post_pmu_events: 0x%08x getscom failed. rc = 0x%x", G_PMU_CONFIGS_8[97][0], rc);
@@ -1878,7 +1879,7 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
 
                     // Read counter do not reset when read.
                     // Perform read to corresponding config register to reset the read counter.
-                    rc = getScom (G_PMU_CONFIGS_8[100][0], &u3.pmulet, o_err);
+                    rc = getScom (G_PMU_CONFIGS_8[100][0], &temp, o_err);
                     if ( rc )
                     {
                         PK_TRACE("post_pmu_events: 0x%08x getscom failed. rc = 0x%x", G_PMU_CONFIGS_8[100][0], rc);
@@ -1900,7 +1901,7 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
 
                     // Read counter do not reset when read.
                     // Perform read to corresponding config register to reset the read counter.
-                    rc = getScom (G_PMU_CONFIGS_8[103][0], &u3.pmulet, o_err);
+                    rc = getScom (G_PMU_CONFIGS_8[103][0], &temp, o_err);
                     if ( rc )
                     {
                         PK_TRACE("post_pmu_events: 0x%08x getscom failed. rc = 0x%x", G_PMU_CONFIGS_8[103][0], rc);
@@ -1957,7 +1958,7 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
 
                     // Read counter do not reset when read.
                     // Perform read to corresponding config register to reset the read counter.
-                    rc = getScom (G_PMU_CONFIGS_8[106][0], &u3.pmulet, o_err);
+                    rc = getScom (G_PMU_CONFIGS_8[106][0], &temp, o_err);
                     if ( rc )
                     {
                         PK_TRACE("post_pmu_events: 0x%08x getscom failed. rc = 0x%x", G_PMU_CONFIGS_8[106][0], rc);
@@ -1979,7 +1980,7 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
 
                     // Read counter do not reset when read.
                     // Perform read to corresponding config register to reset the read counter.
-                    rc = getScom (G_PMU_CONFIGS_8[109][0], &u3.pmulet, o_err);
+                    rc = getScom (G_PMU_CONFIGS_8[109][0], &temp, o_err);
                     if ( rc )
                     {
                         PK_TRACE("post_pmu_events: 0x%08x getscom failed. rc = 0x%x", G_PMU_CONFIGS_8[109][0], rc);
@@ -2020,7 +2021,7 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
 
                     // Read counter do not reset when read.
                     // Perform read to corresponding config register to reset the read counter.
-                    rc = getScom (G_PMU_CONFIGS_8[112][0], &u3.pmulet, o_err);
+                    rc = getScom (G_PMU_CONFIGS_8[112][0], &temp, o_err);
                     if ( rc )
                     {
                         PK_TRACE("post_pmu_events: 0x%08x getscom failed. rc = 0x%x", G_PMU_CONFIGS_8[112][0], rc);
@@ -2042,7 +2043,7 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
 
                     // Read counter do not reset when read.
                     // Perform read to corresponding config register to reset the read counter.
-                    rc = getScom (G_PMU_CONFIGS_8[115][0], &u3.pmulet, o_err);
+                    rc = getScom (G_PMU_CONFIGS_8[115][0], &temp, o_err);
                     if ( rc )
                     {
                         PK_TRACE("post_pmu_events: 0x%08x getscom failed. rc = 0x%x", G_PMU_CONFIGS_8[115][0], rc);
