@@ -157,7 +157,7 @@ void gpe_24x7(ipc_msg_t* cmd, void* arg)
             //set code version
             ver.val.major      = 0x0;
             ver.val.minor      = 0x0;
-            ver.val.bugfix     = 0x3; // updated for OTL fix - FW716360
+            ver.val.bugfix     = 0x4; // updated for A-link count update - FW716433
             ver.val.day        = 0x11;
             ver.val.month      = 0x08;
             ver.val.year       = 0x2021;
@@ -167,7 +167,7 @@ void gpe_24x7(ipc_msg_t* cmd, void* arg)
             *L_version         = ver.value;
 
             // set change-Id
-            com.val.change_id = 0xef5ed6ee;
+            com.val.change_id = 0x87ff3358;
             *L_commit         = com.value;
 
             //set status as initializing
@@ -1011,17 +1011,6 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
 
             case G2A://XLINKS and ALINKS - [0:3]. Read scoms based on availability.
                 *L_DBG_GRP = G2A;
-                if ( ((G_CUR_UAV & MASK_TLPM0) == MASK_XLINK0) ||
-                     ((G_CUR_UAV & MASK_TLPM1) == MASK_XLINK1) ||
-                     ((G_CUR_UAV & MASK_TLPM2) == MASK_XLINK2) ||
-                     ((G_CUR_UAV & MASK_TLPM3) == MASK_XLINK3) )
-                {
-                    post_addr = (uint64_t*) (POST_OFFSET_G2A_X_H | PBA_ENABLE);
-                }
-                else
-                {
-                    post_addr = (uint64_t*) (POST_OFFSET_G2A_A_H | PBA_ENABLE);
-                }
                 rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_ATOMIC, o_err);
                 if ( rc )
                 {
@@ -1029,8 +1018,23 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                     break;
                 }
 
-                *post_addr = INC_UPD_COUNT;
-                post_addr++;
+                if ( ((G_CUR_UAV & MASK_TLPM0) == MASK_XLINK0) ||
+                     ((G_CUR_UAV & MASK_TLPM1) == MASK_XLINK1) ||
+                     ((G_CUR_UAV & MASK_TLPM2) == MASK_XLINK2) ||
+                     ((G_CUR_UAV & MASK_TLPM3) == MASK_XLINK3) )
+                {
+                    post_addr = (uint64_t*) (POST_OFFSET_G2A_X_H | PBA_ENABLE);
+                    *post_addr = INC_UPD_COUNT;
+                }
+
+                if ( ((G_CUR_UAV & MASK_TLPM0) == MASK_ALINK0) ||
+                     ((G_CUR_UAV & MASK_TLPM1) == MASK_ALINK1) ||
+                     ((G_CUR_UAV & MASK_TLPM2) == MASK_ALINK2) ||
+                     ((G_CUR_UAV & MASK_TLPM3) == MASK_ALINK3) )
+                {
+                    post_addr = (uint64_t*) (POST_OFFSET_G2A_A_H | PBA_ENABLE);
+                    *post_addr = INC_UPD_COUNT;
+                }
 
                 if ( ((G_CUR_UAV & MASK_TLPM0) == MASK_XLINK0) ||
                      ((G_CUR_UAV & MASK_TLPM0) == MASK_ALINK0) )
@@ -1322,27 +1326,21 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                         ((G_CUR_UAV & MASK_TLPM3) == MASK_XLINK3) )
                 {
                     post_addr = (uint64_t*) (POST_OFFSET_G2A_X_T | PBA_ENABLE);
+                    *post_addr = INC_UPD_COUNT;
                 }
-                else
+
+                if ( ((G_CUR_UAV & MASK_TLPM0) == MASK_ALINK0) ||
+                        ((G_CUR_UAV & MASK_TLPM1) == MASK_ALINK1) ||
+                        ((G_CUR_UAV & MASK_TLPM2) == MASK_ALINK2) ||
+                        ((G_CUR_UAV & MASK_TLPM3) == MASK_ALINK3) )
                 {
                     post_addr = (uint64_t*) (POST_OFFSET_G2A_A_T | PBA_ENABLE);
+                    *post_addr = INC_UPD_COUNT;
                 }
-                *post_addr = INC_UPD_COUNT;
                 break;
 
             case G2B://XLINKS and ALINKS - [4:7]. Read scoms based on availability.
                 *L_DBG_GRP = G2B;
-                if ( ((G_CUR_UAV & MASK_TLPM4) == MASK_XLINK4) ||
-                        ((G_CUR_UAV & MASK_TLPM5) == MASK_XLINK5) ||
-                        ((G_CUR_UAV & MASK_TLPM6) == MASK_XLINK6) ||
-                        ((G_CUR_UAV & MASK_TLPM7) == MASK_XLINK7) )
-                {
-                    post_addr = (uint64_t*) (POST_OFFSET_G2B_X_H | PBA_ENABLE);
-                }
-                else
-                {
-                    post_addr = (uint64_t*) (POST_OFFSET_G2B_A_H | PBA_ENABLE);
-                }
                 rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_ATOMIC, o_err);
                 if ( rc )
                 {
@@ -1350,8 +1348,23 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                     break;
                 }
 
-                *post_addr = INC_UPD_COUNT;
-                post_addr++;
+                if ( ((G_CUR_UAV & MASK_TLPM4) == MASK_XLINK4) ||
+                        ((G_CUR_UAV & MASK_TLPM5) == MASK_XLINK5) ||
+                        ((G_CUR_UAV & MASK_TLPM6) == MASK_XLINK6) ||
+                        ((G_CUR_UAV & MASK_TLPM7) == MASK_XLINK7) )
+                {
+                    post_addr = (uint64_t*) (POST_OFFSET_G2B_X_H | PBA_ENABLE);
+                    *post_addr = INC_UPD_COUNT;
+                }
+
+                if ( ((G_CUR_UAV & MASK_TLPM4) == MASK_ALINK4) ||
+                        ((G_CUR_UAV & MASK_TLPM5) == MASK_ALINK5) ||
+                        ((G_CUR_UAV & MASK_TLPM6) == MASK_ALINK6) ||
+                        ((G_CUR_UAV & MASK_TLPM7) == MASK_ALINK7) )
+                {
+                    post_addr = (uint64_t*) (POST_OFFSET_G2B_A_H | PBA_ENABLE);
+                    *post_addr = INC_UPD_COUNT;
+                }
 
                 if ( ((G_CUR_UAV & MASK_TLPM4) == MASK_XLINK4) ||
                         ((G_CUR_UAV & MASK_TLPM4) == MASK_ALINK4) )
@@ -1643,12 +1656,17 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                         ((G_CUR_UAV & MASK_TLPM7) == MASK_XLINK7) )
                 {
                     post_addr = (uint64_t*) (POST_OFFSET_G2B_X_T | PBA_ENABLE);
+                    *post_addr = INC_UPD_COUNT;
                 }
-                else
+
+                if ( ((G_CUR_UAV & MASK_TLPM4) == MASK_ALINK4) ||
+                        ((G_CUR_UAV & MASK_TLPM5) == MASK_ALINK5) ||
+                        ((G_CUR_UAV & MASK_TLPM6) == MASK_ALINK6) ||
+                        ((G_CUR_UAV & MASK_TLPM7) == MASK_ALINK7) )
                 {
                     post_addr = (uint64_t*) (POST_OFFSET_G2B_A_T | PBA_ENABLE);
+                    *post_addr = INC_UPD_COUNT;
                 }
-                *post_addr = INC_UPD_COUNT;
                 break;
 
             case G3A://OCAPI - [0,3,4,5]
