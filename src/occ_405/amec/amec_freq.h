@@ -78,11 +78,13 @@ typedef enum
 
 // these power/thermal reasons should result in a performance loss error
 #define FREQ_REASON_PERF_LOSS_ERROR ( AMEC_VOTING_REASON_PROC_THRM | \
-                                      AMEC_VOTING_REASON_OVER_CURRENT | \
                                       AMEC_VOTING_REASON_PPB_HARD_CAP | \
                                       AMEC_VOTING_REASON_APSS_PMAX | \
                                       AMEC_VOTING_REASON_VDD_THRM \
                                     )
+
+// these power/thermal reasons should result in a performance loss error due to PGPE
+#define FREQ_REASON_PGPE_PERF_LOSS_ERROR ( AMEC_VOTING_REASON_OVER_CURRENT )
 
 extern BOOLEAN G_non_dps_power_limited;
 

@@ -1118,6 +1118,8 @@ bool read_oppb_params()
         // verify pstate_max_throttle is defined and larger than min
         if (G_oppb.pstate_max_throttle >= G_oppb.pstate_min)
         {
+            g_amec->oc_wof_off.pstate_max = G_oppb.pstate_max_throttle;
+
             uint32_t l_steps = 0;
             uint32_t l_max_throt_freq = proc_pstate2freq(G_oppb.pstate_max_throttle, &l_steps);
             MAIN_TRAC_IMP("read_oppb_params:  pstate_max_throttle[0x%02X]/%dkHz(%d steps)  Fmin Pstate[0x%02X]",

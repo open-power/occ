@@ -309,9 +309,11 @@ void amec_slv_proc_voting_box(void)
     bool                            l_log_error = FALSE; // indicates if should log perf loss error
     bool                            l_pgpe_error = FALSE; // indicates error is due to PGPE
     bool                            l_wof_clip_error = FALSE; // indicates error is due to wof
+    bool                            l_ocs_dirty_error = FALSE; // indicates error is due to OCS dirty
     static bool                     L_perf_loss_error_logged = FALSE; // indicates if perf loss error was logged
     static bool                     L_pgpe_perf_loss_error_logged = FALSE; // indicates if perf loss error due to pgpe was logged
     static bool                     L_wof_clip_perf_loss_error_logged = FALSE; // indicates if perf loss error due to WOF was logged
+    static bool                     L_pgpe_ocs_dirty_error_logged = FALSE; // indicates if perf loss error due to dirty was logged
     errlHndl_t                      l_err = NULL;
     static uint16_t                 L_ticks_below_disabled_freq = 0;
     sensor_t                        *l_sensor = NULL;
@@ -605,20 +607,7 @@ void amec_slv_proc_voting_box(void)
 
                 l_log_error = TRUE;
 
-                // additional debug traces
-                if(l_current_reason == AMEC_VOTING_REASON_OVER_CURRENT)
-                {
-                   pgpe_wof_values_t l_PgpeWofValues;
-                   l_PgpeWofValues.dw1.value = in64(g_amec_sys.static_wof_data.pgpe_values_sram_addr + 0x08);
-                   l_PgpeWofValues.dw4.value = in64(g_amec_sys.static_wof_data.pgpe_values_sram_addr + 0x20);
-                   l_PgpeWofValues.dw5.value = in64(g_amec_sys.static_wof_data.pgpe_values_sram_addr + 0x28);
-                   TRAC_ERR("Low frequency due to OCS dirty act rdp_limit_10ma[%d] dirty_current_10ma[%d]",
-                            l_PgpeWofValues.dw1.fields.rdp_limit_10ma,
-                            l_PgpeWofValues.dw4.fields.dirty_current_10ma);
-                   TRAC_ERR("dirty_ttsr[0x%08X%08X] ",
-                            l_PgpeWofValues.dw5.words.high_order, l_PgpeWofValues.dw5.words.low_order);
-                }
-                else if(l_current_reason == AMEC_VOTING_REASON_PROC_THRM)
+                if(l_current_reason == AMEC_VOTING_REASON_PROC_THRM)
                 {
                    l_sensor = getSensorByGsid(TEMPPROCTHRM);
                    TRAC_ERR("Low frequency due to processor OT current temp[%d] max temp[%d]",
@@ -641,8 +630,10 @@ void amec_slv_proc_voting_box(void)
             }  // if OCC reason not power cap or this OCC is master and reason pcap
         }
 
+        // Check if PGPE drove the freq down
         // if OCC is not voting for freq drop (reason 0) then it must be PGPE
-        else if( (L_last_reason == 0) && (l_current_reason == 0) )
+        else if( ( (L_last_reason == 0) && (l_current_reason == 0) ) ||
+                 ( l_current_reason & FREQ_REASON_PGPE_PERF_LOSS_ERROR ) )
         {
             if(L_ticks_below_disabled_freq != 0xFFFF) // avoid wrapping
                 L_ticks_below_disabled_freq++;
@@ -650,8 +641,37 @@ void amec_slv_proc_voting_box(void)
             // only log when below for NUM_TICKS_LOG_PGPE_PERF_LOSS consecutive ticks
             if(L_ticks_below_disabled_freq == NUM_TICKS_LOG_PGPE_PERF_LOSS)
             {
-                // Check if WOF is enabled
-                if(!g_amec->wof.wof_disabled)
+                // Check if low freq is due to dirty indication from PGPE
+                if( (l_current_reason == AMEC_VOTING_REASON_OVER_CURRENT) ||
+                    ( (!g_amec->wof.wof_disabled) && (g_amec->wof.vdd_oc_ceff_add) ) )
+                {
+                   // only log if haven't already logged error due to OCS Dirty
+                   if(!L_pgpe_ocs_dirty_error_logged)
+                   {
+                       l_ocs_dirty_error = TRUE;
+                       l_log_error = TRUE;
+                       TRAC_ERR("Current freq %dMHz is below disabled freq %dMHz due to OCS dirty! System max %dMHz",
+                                 g_amec->wof.avg_freq_mhz,
+                                 G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_DISABLED],
+                                 g_amec->sys.fmax);
+
+                       pgpe_wof_values_t l_PgpeWofValues;
+                       l_PgpeWofValues.dw1.value = in64(g_amec_sys.static_wof_data.pgpe_values_sram_addr + 0x08);
+                       l_PgpeWofValues.dw4.value = in64(g_amec_sys.static_wof_data.pgpe_values_sram_addr + 0x20);
+                       l_PgpeWofValues.dw5.value = in64(g_amec_sys.static_wof_data.pgpe_values_sram_addr + 0x28);
+                       TRAC_ERR("Low frequency due to OCS dirty act rdp_limit_10ma[%d] dirty_current_10ma[%d]",
+                                l_PgpeWofValues.dw1.fields.rdp_limit_10ma,
+                                l_PgpeWofValues.dw4.fields.dirty_current_10ma);
+                       TRAC_ERR("dirty_ttsr[0x%08X%08X] ",
+                                l_PgpeWofValues.dw5.words.high_order, l_PgpeWofValues.dw5.words.low_order);
+                       TRAC_ERR("PGPE dw0[0x%08X%08X]",
+                                (uint32_t)(g_amec->wof.pgpe_wof_values_dw0 >>32),
+                                (uint32_t)(g_amec->wof.pgpe_wof_values_dw0) );
+                   }
+                }
+
+                // Check if due to WOF enabled (but not due to dirty checked above)
+                else if(!g_amec->wof.wof_disabled)
                 {
                    // only log if haven't already logged error due to WOF clipping
                    if(!L_wof_clip_perf_loss_error_logged)
@@ -659,34 +679,17 @@ void amec_slv_proc_voting_box(void)
                        l_wof_clip_error = TRUE;
                        l_log_error = TRUE;
 
-                       TRAC_ERR("Current freq %dMHz is below disabled freq %dMHz due to WOF!  System max %dMHz",
+                       TRAC_ERR("Current freq %dMHz is below disabled freq %dMHz due to WOF! System max %dMHz",
                                  g_amec->wof.avg_freq_mhz,
                                  G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_DISABLED],
                                  g_amec->sys.fmax);
-
-                       TRAC_ERR("IO Index[%d] Ambient Index[%d] VCS Index[%d]",
-                                 g_amec->wof.io_pwr_step_from_start,
-                                 g_amec->wof.ambient_step_from_start,
-                                 g_amec->wof.vcs_step_from_start);
-
-                       l_sensor = getSensorByGsid(CEFFVDDRATIO);
-                       TRAC_ERR("Current raw Ceff[%d] max raw Ceff[%d]",
-                                 l_sensor->sample, l_sensor->sample_max);
-
-                       l_sensor = getSensorByGsid(CEFFVDDRATIOADJ);
-                       TRAC_ERR("Current adjusted Ceff[%d] max Ceff[%d]",
-                                 l_sensor->sample, l_sensor->sample_max);
-
-                       l_sensor = getSensorByGsid(VRATIO_VDD);
-                       TRAC_ERR("Current Vratio[%d] max Vratio[%d]",
-                                 l_sensor->sample, l_sensor->sample_max);
 
                        TRAC_ERR("PGPE dw0[0x%08X%08X]",
                                 (uint32_t)(g_amec->wof.pgpe_wof_values_dw0 >>32),
                                 (uint32_t)(g_amec->wof.pgpe_wof_values_dw0) );
                    }
                 }
-                else if(!L_pgpe_perf_loss_error_logged)
+                else if(!L_pgpe_perf_loss_error_logged) // Hmm freq is low but no WOF clip and no OCC reason
                 {
                    TRAC_ERR("Current freq %dMHz is below disabled freq %dMHz For unknown reason!  System max %dMHz",
                               g_amec->wof.avg_freq_mhz,
@@ -721,8 +724,29 @@ void amec_slv_proc_voting_box(void)
             * @userdata4   OCC_NO_EXTENDED_RC
             * @devdesc     Frequency below nominal due to power or thermal
             */
-            if( (l_pgpe_error) || (l_wof_clip_error) ) // add PGPE trace?
+            if( (l_pgpe_error) || (l_wof_clip_error) || (l_ocs_dirty_error) ) // add PGPE trace?
             {
+               // add WOF traces if WOF is enabled
+               if(!g_amec->wof.wof_disabled)
+               {
+                   TRAC_ERR("IO Index[%d] Ambient Index[%d] VCS Index[%d]",
+                             g_amec->wof.io_pwr_step_from_start,
+                             g_amec->wof.ambient_step_from_start,
+                             g_amec->wof.vcs_step_from_start);
+
+                   l_sensor = getSensorByGsid(CEFFVDDRATIO);
+                   TRAC_ERR("Current raw Ceff[%d] max raw Ceff[%d]",
+                             l_sensor->sample, l_sensor->sample_max);
+
+                   l_sensor = getSensorByGsid(CEFFVDDRATIOADJ);
+                   TRAC_ERR("Current adjusted Ceff[%d] max Ceff[%d]",
+                             l_sensor->sample, l_sensor->sample_max);
+
+                   l_sensor = getSensorByGsid(VRATIO_VDD);
+                   TRAC_ERR("Current Vratio[%d] max Vratio[%d]",
+                             l_sensor->sample, l_sensor->sample_max);
+               }
+
                l_user_data2 = g_amec->proc[0].chip_f_reason_history;
                if(l_pgpe_error)
                {
@@ -730,7 +754,11 @@ void amec_slv_proc_voting_box(void)
                    // set msb to distinguish between WOF clip and other unknown reason
                    l_user_data2 |= 0x80000000;
                }
-               else
+               else if(l_ocs_dirty_error)
+               {
+                   L_pgpe_ocs_dirty_error_logged = TRUE;
+               }
+               else // l_wof_clip_error
                {
                    L_wof_clip_perf_loss_error_logged = TRUE;
                }

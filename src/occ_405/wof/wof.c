@@ -3008,6 +3008,13 @@ void prevent_oc_wof_off( void )
         INCREMENT_ERR_HISTORY( ERRH_CEFF_RATIO_VDD_EXCURSION );
 
         // over current condition detected on previous PGPE tick time
+        // if there was previously no clip, set Pstate to current frequency
+        if(g_amec->oc_wof_off.pstate_request == 0)
+        {
+             pgpe_wof_values_t l_PgpeWofValues;
+             l_PgpeWofValues.dw0.value = in64(g_amec_sys.static_wof_data.pgpe_values_sram_addr);
+             g_amec->oc_wof_off.pstate_request = l_PgpeWofValues.dw0.fields.average_frequency_pstate;
+        }
         // increase Pstate clip (i.e. decrease frequency) stop at max allowed
         l_pstate = g_amec->oc_wof_off.pstate_request + g_amec->oc_wof_off.increase_pstate;
 
