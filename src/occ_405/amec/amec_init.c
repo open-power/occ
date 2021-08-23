@@ -443,14 +443,6 @@ void amec_init_vector_sensors(void)
       TEMPQ0);
 
   //-----------------------------------------------------
-  // FREQA Vector Sensor
-  //-----------------------------------------------------
-  amec_vectorize_core_sensor(AMECSENSOR_PTR(FREQA),
-      &g_amec_sys.proc[0].freqa_vector,
-      VECTOR_OP_AVG,
-      FREQAC0);
-
-  //-----------------------------------------------------
   // IPS Vector Sensor
   //-----------------------------------------------------
   amec_vectorize_core_sensor(AMECSENSOR_PTR(IPS),

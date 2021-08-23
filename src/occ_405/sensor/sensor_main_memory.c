@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2017,2020                        */
+/* Contributors Listed Below - COPYRIGHT 2017,2021                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -203,7 +203,6 @@ main_mem_sensor_t G_main_mem_sensors[] =
 
     // AMEC_SENSOR_TYPE_FREQ:     gsid            smf_mode  master_only
     MAIN_MEM_SENSOR              (FREQA,          true,     false),
-    MAIN_MEM_CORE_SENSORS        (FREQAC,         true,     false),
 
     // AMEC_SENSOR_TYPE_POWER:    gsid            smf_mode  master_only
     MAIN_MEM_SENSOR              (PWRSYS,         true,     true ),

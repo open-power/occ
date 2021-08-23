@@ -83,7 +83,6 @@ void amec_update_proc_core_sensors(uint8_t i_core)
   uint16_t  l_core_util = 0;
   uint16_t  l_core_freq = 0;
   uint16_t  l_time_interval = 0;
-  uint8_t   i = 0;
   uint8_t   l_quad = i_core / 4;     // Quad this core resides in
   // track if previous readings were updated in order to do differentials
   static bool L_prev_updated[MAX_NUM_CORES] = {FALSE};
@@ -208,10 +207,6 @@ void amec_update_proc_core_sensors(uint8_t i_core)
     sensor_update(AMECSENSOR_ARRAY_PTR(NOTBZEC0, i_core), 0);
     sensor_update(AMECSENSOR_ARRAY_PTR(NOTFINC0, i_core), 0);
     sensor_update(AMECSENSOR_ARRAY_PTR(FREQAC0, i_core), 0);
-    for(i=0; i<MAX_THREADS_PER_CORE; i++)
-    {
-      g_amec->proc[0].core[i_core].thread[i].util4ms_thread = 0;
-    }
 
     // Make updates for rolling average
     // Determine the time interval for the rolling average calculation
@@ -584,45 +579,20 @@ void amec_calc_freq_and_util_sensors(CoreData * i_core_data_ptr, uint8_t i_core)
   // ------------------------------------------------------
   // Per Core Frequency
   // ------------------------------------------------------
-  // <amec_formula>
-  // Result: Calculated Core Frequency
   // Sensor: FREQAC0
   // Timescale: CORE_DATA_COLLECTION_US
   // Units: MHz
-  // Min/Max: 0/6000 (UPPER_LIMIT_PROC_FREQ_MHZ=6000)
-  // Formula: cyc_delta(cycles) = (RAW_CYCLES[t=now] - RAW_CYCLES[t=-CORE_DATA_COLLECTION_US])
-  //          time_delta(TOD ticks) = (TOD[t=now] - TOD[t=-CORE_DATA_COLLECTION_US])
-  //          frequency(MHz) = (cyc_delta / time_delta) * (2M TOD ticks / 1 second)
-  //                         = (2 * cyc_delta) / time_delta
-  // NOTE: cyc_delta is the total number of cycles in CORE_DATA_COLLECTION_US time for the core
-  // NOTE: In the HWP where we aquire the TOD count, we shift the counter by 8
-  //       which causes each TOD tick here to equate to 0.5us. This is why we
-  //       are multiplying by 2 in the above equation.
-  // </amec_formula>
 
-  // Compute Delta in PC_RAW_CYCLES
-  temp32  = i_core_data_ptr->empath.raw_cycles;
-  temp32a = g_amec->proc[0].core[i_core].prev_PC_RAW_CYCLES;
-  temp32  = l_cycles4ms = temp32 - temp32a;
-  temp32a = (i_core_data_ptr->tod_2mhz -
-             g_amec->proc[0].core[i_core].prev_tod_2mhz);
-
-  if (0 == temp32a) temp32 = 0;
-  else temp32  = (2 * temp32) / temp32a;
-
-  if(temp32 < UPPER_LIMIT_PROC_FREQ_MHZ)
+  // Update Sensor for this core, if not in sleep copy chip freq to core sensor
+  if(l_core_sleep_winkle)
   {
-      // Update Sensor for this core
-      if(l_core_sleep_winkle)
-      {
-          l_core_freq = 0;
-      }
-      else
-      {
-          l_core_freq = (uint16_t) temp32;
-      }
-      sensor_update( AMECSENSOR_ARRAY_PTR(FREQAC0,i_core), l_core_freq);
+      l_core_freq = 0;
   }
+  else
+  {
+      l_core_freq = G_amec_sensor_list[FREQA]->sample;
+  }
+  sensor_update( AMECSENSOR_ARRAY_PTR(FREQAC0,i_core), l_core_freq);
 
   // ------------------------------------------------------
   // Per Core Utilization
@@ -640,6 +610,11 @@ void amec_calc_freq_and_util_sensors(CoreData * i_core_data_ptr, uint8_t i_core)
   // NOTE: cyc_delta is the total number of cycles in CORE_DATA_COLLECTION_US time for the core
   // NOTE: run_delta is the total number of cycles utilized by a specific core in CORE_DATA_COLLECTION_US
   // </amec_formula>
+
+  // Compute Delta in PC_RAW_CYCLES
+  temp32  = i_core_data_ptr->empath.raw_cycles;
+  temp32a = g_amec->proc[0].core[i_core].prev_PC_RAW_CYCLES;
+  l_cycles4ms = temp32 - temp32a;
 
   // Compute Delta in PC_RUN_CYCLES
   temp32 = i_core_data_ptr->empath.run_cycles;
@@ -859,7 +834,9 @@ void amec_calc_ips_sensors(CoreData * i_core_data_ptr, uint8_t i_core)
       //         = (2* fin2) / ticks_2mhz
       //
       // Note: For best resolution do multiply first and division last.
-      // Note: For an explanation regarding the multiply by 2, see the note under FREQAC0.
+      // NOTE: In the HWP where we aquire the TOD count, we shift the counter by 8
+      //       which causes each TOD tick here to equate to 0.5us. This is why we
+      //       are multiplying by 2 in the above equation.
       // </amec_formula>
 
       ticks_2mhz = i_core_data_ptr->tod_2mhz - g_amec->proc[0].core[i_core].prev_tod_2mhz;

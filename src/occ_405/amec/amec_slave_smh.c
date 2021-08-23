@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2021                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -393,9 +393,14 @@ void amec_slv_common_tasks_pre(void)
     // If sensors were not updated due to EPOW event, skip remaining tasks
     if (amec_update_apss_sensors())
     {
-        // Read the AVS Bus sensors as long as there is at least one core
-        if(G_present_cores)
+        // Read the AVS Bus sensors as long as there is at least one core and
+        // OCC has reached a state of monitoring sensors
+        if( (G_present_cores) &&
+            ( IS_OCC_STATE_ACTIVE() || IS_OCC_STATE_OBSERVATION() ||
+              IS_OCC_STATE_CHARACTERIZATION() ) )
+        {
             amec_update_avsbus_sensors();
+        }
 
         // Over-subscription check
         amec_oversub_check();
@@ -519,7 +524,6 @@ void amec_slv_state_0(void)
   sensor_vector_update(AMECSENSOR_PTR(TEMPPROCTHRM), 1);
   sensor_vector_update(AMECSENSOR_PTR(TEMPRTAVG), 1);
   sensor_vector_update(AMECSENSOR_PTR(TEMPPROCIOTHRM), 1);
-  sensor_vector_update(AMECSENSOR_PTR(FREQA),        1);
   sensor_vector_update(AMECSENSOR_PTR(IPS),     1);
   sensor_vector_update(AMECSENSOR_PTR(UTIL),         1);
 

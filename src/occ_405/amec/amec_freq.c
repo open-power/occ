@@ -701,7 +701,7 @@ void amec_slv_proc_voting_box(void)
                             (uint32_t)(g_amec->wof.pgpe_wof_values_dw0) );
 
                    l_sensor = getSensorByGsid(FREQA);
-                   TRAC_ERR("OCC requested Pstate[0x%02X] EMPATH counter FREQA sensor[%d]",
+                   TRAC_ERR("OCC requested Pstate[0x%02X] FREQA sensor[%d]",
                              G_desired_pstate, l_sensor->sample);
 
                    l_pgpe_error = TRUE;

@@ -146,7 +146,7 @@ enum e_gsid
     CURVDD,
     CURVDN,
     CURVCS,
-    RESERVED,  // Was CURVIO, re-use in future (don't delete so sensor ids after this don't change)
+    PSTATE,         // average pstate (includes throttle space) from PGPE dw0
     TEMPVDD,        // VRM Vdd temperature
 
     // ------------------------------------------------------
@@ -640,7 +640,7 @@ enum e_gsid
     IO_PWR_PROXY,
     UV_AVG,
     OV_AVG,
-
+    FREQ_PSTATE,   // average frequency pstate from PGPE dw0
     // ------------------------------------------------------
     // END of Sensor List (this must be last entry)
     // ------------------------------------------------------

@@ -376,7 +376,7 @@ const sensor_ptr_t G_amec_sensor_list[] =
   SENSOR_PTR( CURVDD,               &g_amec_sys.proc[0].curvdd),
   SENSOR_PTR( CURVDN,               &g_amec_sys.proc[0].curvdn),
   SENSOR_PTR( CURVCS,               &g_amec_sys.proc[0].curvcs),
-  SENSOR_PTR( RESERVED,             &g_amec_sys.proc[0].reserved),
+  SENSOR_PTR( PSTATE,               &g_amec_sys.proc[0].pstate),
   SENSOR_PTR( TEMPVDD,              &g_amec_sys.sys.tempvdd),
 
 
@@ -439,6 +439,7 @@ const sensor_ptr_t G_amec_sensor_list[] =
   SENSOR_PTR( IO_PWR_PROXY,         &g_amec_sys.wof_sensors.io_proxy_sensor),
   SENSOR_PTR( UV_AVG,               &g_amec_sys.wof_sensors.uv_avg_sensor),
   SENSOR_PTR( OV_AVG,               &g_amec_sys.wof_sensors.ov_avg_sensor),
+  SENSOR_PTR( FREQ_PSTATE,          &g_amec_sys.wof_sensors.freq_pstate_sensor),
 };
 STATIC_ASSERT(   (NUMBER_OF_SENSORS_IN_LIST != (sizeof(G_amec_sensor_list)/sizeof(sensor_ptr_t)))   );
 STATIC_ASSERT(   (MAX_AMEC_SENSORS < (sizeof(G_amec_sensor_list)/sizeof(sensor_ptr_t)))   );
@@ -553,7 +554,7 @@ const minisensor_ptr_t G_amec_mini_sensor_list[] INIT_SECTION =
   MINI_SENSOR_PTR( CURVDD,          &G_dcom_slv_outbox_tx.curVdd),
   MINI_SENSOR_PTR( CURVDN,          NULL),
   MINI_SENSOR_PTR( CURVCS,          NULL),
-  MINI_SENSOR_PTR( RESERVED,        NULL),
+  MINI_SENSOR_PTR( PSTATE,          NULL),
   MINI_SENSOR_PTR( TEMPVDD,         &G_dcom_slv_outbox_tx.tempvdd),
 
   // ------------------------------------------------------
@@ -615,6 +616,7 @@ const minisensor_ptr_t G_amec_mini_sensor_list[] INIT_SECTION =
   MINI_SENSOR_PTR( IO_PWR_PROXY,   NULL),
   MINI_SENSOR_PTR( UV_AVG,         &G_dcom_slv_outbox_tx.uvAvg),
   MINI_SENSOR_PTR( OV_AVG,         &G_dcom_slv_outbox_tx.ovAvg),
+  MINI_SENSOR_PTR( FREQ_PSTATE,   NULL),
 };
 STATIC_ASSERT(   (NUMBER_OF_SENSORS_IN_LIST != (sizeof(G_amec_mini_sensor_list)/sizeof(uint16_t *)))   );
 STATIC_ASSERT(   (MAX_AMEC_SENSORS < (sizeof(G_amec_mini_sensor_list)/sizeof(uint16_t *)))   );

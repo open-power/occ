@@ -432,6 +432,7 @@ typedef struct __attribute__ ((packed))
     sensor_t io_proxy_sensor;
     sensor_t uv_avg_sensor;
     sensor_t ov_avg_sensor;
+    sensor_t freq_pstate_sensor;
 } amec_wof_sensors_t;
 
 typedef struct __attribute__ ((packed))

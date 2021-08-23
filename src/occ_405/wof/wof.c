@@ -1072,6 +1072,11 @@ void read_pgpe_produced_wof_values( void )
                       &g_wof->vpd_index1,
                       &g_wof->vpd_index2);
 
+    // save pstates and freq in sensors
+    sensor_update(AMECSENSOR_PTR(FREQ_PSTATE), (uint16_t)l_PgpeWofValues.dw0.fields.average_frequency_pstate);
+    sensor_update(AMECSENSOR_PTR(PSTATE), (uint16_t)l_PgpeWofValues.dw0.fields.average_pstate);
+    sensor_update(AMECSENSOR_PTR(FREQA), (uint16_t)g_wof->avg_freq_mhz);
+
     g_wof->v_ratio_vcs = l_PgpeWofValues.dw3.fields.vratio_vcs_roundup_avg;
 
     g_wof->v_ratio_vdd = l_PgpeWofValues.dw3.fields.vratio_vdd_roundup_avg;

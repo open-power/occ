@@ -200,9 +200,16 @@ Pstate_t proc_freq2pstate(uint32_t i_freq_mhz, uint32_t *o_additional_steps)
         l_freq_khz = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MAX_FREQ] * 1000;
     }
 
+    if(l_freq_khz == G_oppb.frequency_min_khz)
+    {
+        // frequency corresponds to OPPB pstate_min use that else the rounding to nearest in
+        // calculation below may result in being one pstate off putting us in throttle space
+        l_pstate = G_oppb.pstate_min;
+    }
+
     // frequency is above min pstate, calculate Pstate from max
     // G_oppb.frequency_max_khz is the frequency for Pstate 0 (PMAX)
-    if(l_freq_khz < G_oppb.frequency_max_khz)
+    else if(l_freq_khz < G_oppb.frequency_max_khz)
     {
         // First, calculate the delta between passed in freq, and Pmax
         int32_t l_delta_freq_khz = G_oppb.frequency_max_khz - l_freq_khz;

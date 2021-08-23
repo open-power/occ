@@ -198,11 +198,6 @@ typedef struct
   //-----------------------------------
   uint32_t prev_PC_RUN_Th_CYCLES;
 
-  //-----------------------------------
-  // Calculations & Interim Data
-  //-----------------------------------
-  uint16_t util4ms_thread;
-
 } amec_core_thread_t;
 
 typedef struct
@@ -414,7 +409,6 @@ typedef struct
 
   // Processor Sensors
   sensor_t freqa;
-  vectorSensor_t freqa_vector;
   sensor_t ips4ms;
   vectorSensor_t ips4ms_vector;
   sensor_t pwrproc;
@@ -434,7 +428,7 @@ typedef struct
   sensor_t curvdd;
   sensor_t curvdn;
   sensor_t curvcs;
-  sensor_t reserved;
+  sensor_t pstate;
   sensor_t voltvdd;
   sensor_t voltvdn;
   sensor_t voltvcs;

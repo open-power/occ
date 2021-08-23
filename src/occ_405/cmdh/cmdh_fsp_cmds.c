@@ -74,12 +74,12 @@ ERRL_RC cmdh_poll_v20 (cmdh_fsp_rsp_t * i_rsp_ptr);
 
 // list of sensors to include in field debug data not to exceed CMDH_FIELD_MAX_NUM_SENSORS
 const uint16_t G_field_debug_gsids[] =
-{ PWRSYS,         PWRPROC,      VOLTVDD,         CURVDD,         VOLTVCS,
-  CURVCS,         FREQA,        UV_AVG,          OV_AVG,         DDSAVG,
-  DDSMIN,         CEFFVDDRATIO, CEFFVDDRATIOADJ, TEMPAMBIENT,    TEMPPROCTHRM,
-  TEMPRTAVG,      TEMPPROCIO00, TEMPPROCIO01,    TEMPPROCIO10,   TEMPPROCIO11,
-  TEMPNEST0,      TEMPNEST1,    TEMPVDD,         TEMPMEMBUFTHRM, TEMPDIMMTHRM,
-  TEMPMCDIMMTHRM, TEMPPMICTHRM, TEMPMCEXTTHRM, };
+{ PWRSYS,         PWRPROC,        VOLTVDD,      CURVDD,          VOLTVCS,
+  CURVCS,         FREQA,          PSTATE,       UV_AVG,          OV_AVG,
+  DDSAVG,         DDSMIN,         CEFFVDDRATIO, CEFFVDDRATIOADJ, TEMPAMBIENT,
+  TEMPPROCTHRM,   TEMPRTAVG,      TEMPPROCIO00, TEMPPROCIO01,    TEMPPROCIO10,
+  TEMPPROCIO11,   TEMPNEST0,      TEMPNEST1,    TEMPVDD,         TEMPMEMBUFTHRM,
+  TEMPDIMMTHRM,   TEMPMCDIMMTHRM, TEMPPMICTHRM, TEMPMCEXTTHRM,};
 
 #define MAX_CONSECUTIVE_HCODE_ELOGS 2
 
@@ -457,16 +457,10 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
     l_sensorHeader.length = sizeof(cmdh_poll_freq_sensor_t);
     l_sensorHeader.count  = 0;
 
-    cmdh_poll_freq_sensor_t l_freqSensorList[MAX_NUM_CORES];
-    for (k=0; k<MAX_NUM_CORES; k++)
-    {
-        if(CORE_PRESENT(k))
-        {
-            l_freqSensorList[l_sensorHeader.count].id = G_amec_sensor_list[FREQAC0 + k]->ipmi_sid;
-            l_freqSensorList[l_sensorHeader.count].value = G_amec_sensor_list[FREQAC0 + k]->sample;
-            l_sensorHeader.count++;
-        }
-    }
+    cmdh_poll_freq_sensor_t l_freqSensorList[1]; // only return proc level freq
+    l_freqSensorList[l_sensorHeader.count].id = G_sysConfigData.proc_freq_huid;
+    l_freqSensorList[l_sensorHeader.count].value = G_amec_sensor_list[FREQA]->sample;
+    l_sensorHeader.count++;
 
     // Copy header to response buffer.
     memcpy ((void *) &(o_rsp_ptr->data[l_rsp_index]), (void *)&l_sensorHeader, sizeof(l_sensorHeader));
