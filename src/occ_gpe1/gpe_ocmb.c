@@ -54,6 +54,18 @@ const uint32_t MI_MCSYNC[OCCHW_N_MC_PORT] =
     MI_3_MCSYNC
 };
 
+const uint32_t MI_DSTLFIR[OCCHW_N_MC_CHANNEL] =
+{
+    MI_0_DSTLFIR0,
+    MI_0_DSTLFIR1,
+    MI_1_DSTLFIR0,
+    MI_1_DSTLFIR1,
+    MI_2_DSTLFIR0,
+    MI_2_DSTLFIR1,
+    MI_3_DSTLFIR0,
+    MI_3_DSTLFIR1
+};
+
 int inband_scom_setup(MemBufConfiguration_t* i_config,
                             uint32_t i_membuf_instance,
                             uint32_t i_scom_address,
@@ -75,6 +87,7 @@ int membuf_put_scom_all(MemBufConfiguration_t* i_config,
 
 int check_and_reset_mmio_fir(MemBufConfiguration_t * i_config,unsigned int i_membuf);
 
+int check_channel_fail(int i_membuf);
 
 void swap_u32(uint32_t * data32)
 {
@@ -415,6 +428,11 @@ int gpe_ocmb_configuration_create(MemBufConfiguration_t* o_config)
                 continue;  // MEMBUF MMIOBAR not configured, ignore MEMBUFs
             }
 
+            if(check_channel_fail(i*OCCWH_MEMBUF_PER_CHANNEL) != 0)
+            {
+                continue; // Channel is in fail state - ignore
+            }
+
             l_mmio_bar =
                 (uint32_t)(mcfgpr.fields.mmio_group_base_addr) << 1;
             PK_TRACE("Ocmb[%d] MMIO Bar: %08x", i, l_mmio_bar);
@@ -430,11 +448,6 @@ int gpe_ocmb_configuration_create(MemBufConfiguration_t* o_config)
 
             // Add this MC channel to the configuration
             o_config->config |= CHIP_CONFIG_MCS(i);
-        }
-
-        if( rc )
-        {
-            break;
         }
 
         // Find the designated sync.
@@ -757,6 +770,12 @@ int get_ocmb_sensorcache(MemBufConfiguration_t* i_config,
         {
             rc = MEMBUF_GET_MEM_DATA_COLLECT_INVALID;
         }
+        else if(check_channel_fail(i_parms->collect) != 0)
+        {
+            // Remove the membuf from the config
+            i_config->config &= ~(CHIP_CONFIG_MEMBUF(i_parms->collect));
+            rc =  MEMBUF_CHANNEL_CHECKSTOP;
+        }
         else
         {
             uint32_t oci_addr = 0;
@@ -880,5 +899,32 @@ int gpe_ocmb_init(MemBufConfiguration_t * i_config)
 
     // Any errors sould have been traced
     return 0;
+}
+
+int check_channel_fail(int i_membuf)
+{
+    int rc = 0;
+    int i_channel = i_membuf/(OCCHW_N_MEMBUF/OCCHW_N_MC_CHANNEL);
+    dstlfir_t fir;
+
+    rc = getscom_abs(MI_DSTLFIR[i_channel],&fir.value);
+    if ( rc )
+    {
+        PK_TRACE("check_channel_fail: Scom read failed addr[%08x], rc[%d]",
+                 MI_DSTLFIR[i_channel],
+                 rc);
+        // If the scom failed the count it as a channel checkstop though the
+        // entire MI has probably failed or is offline
+        rc = MEMBUF_CHANNEL_CHECKSTOP;
+    }
+    else
+    {
+        if(fir.fields.channel_fail != 0)
+        {
+            rc = MEMBUF_CHANNEL_CHECKSTOP;
+        }
+    }
+
+    return rc;
 }
 

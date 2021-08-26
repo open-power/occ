@@ -110,4 +110,20 @@ typedef union mcchifir
     } fields;
 } mcchifir_t;
 
+
+typedef union dstlfir
+{
+    uint64_t value;
+    struct
+    {
+        uint32_t high_order;
+        uint32_t low_order;
+    } words;
+    struct
+    {
+        uint64_t dontCare0 : 20;
+        uint64_t channel_fail: 2;  // One bit per dimm
+        uint64_t dontCare1 : 42;
+    } fields;
+} dstlfir_t;
 #endif

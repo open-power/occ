@@ -49,6 +49,16 @@
 #define MI_2_MCSYNC     0x0e010c15
 #define MI_3_MCSYNC     0x0f010c15
 
+#define MI_0_DSTLFIR0   0x0c010d00
+#define MI_0_DSTLFIR1   0x0c010d40
+#define MI_1_DSTLFIR0   0x0d010d00
+#define MI_1_DSTLFIR1   0x0d010d40
+#define MI_2_DSTLFIR0   0x0e010d00
+#define MI_2_DSTLFIR1   0x0e010d40
+#define MI_3_DSTLFIR0   0x0f010d00
+#define MI_3_DSTLFIR1   0x0f010d40
+
+
 extern uint32_t g_inband_access_state;
 extern MemBufConfiguration_t * G_membuf_config;
 

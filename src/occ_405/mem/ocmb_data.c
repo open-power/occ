@@ -323,7 +323,7 @@ void ocmb_init(void)
         if( gpe_request_rc )
         {
             TRAC_ERR("ocmb_init: gpe_request_create failed for "
-                     "G_membuf_data_task.gpe_req. rc = 0x%08x", rc);
+                     "G_membuf_data_task.gpe_req. rc = 0x%08x", gpe_request_rc);
             /* @
              * @errortype
              * @moduleid    MEM_MID_OCMB_INIT_MOD
@@ -369,7 +369,7 @@ void ocmb_init(void)
         else if((G_dimm_enabled_sensors.dw[0] != G_dimm_configured_sensors.dw[0]) ||
                 (G_dimm_enabled_sensors.dw[1] != G_dimm_configured_sensors.dw[1]))
         {
-            TRAC_ERR("ocmb_init: There are TMGT configured DIMM sensors that are not configured"
+            TRAC_INFO("ocmb_init: There are TMGT configured DIMM sensors that are not configured"
                      " in hardware. Bitmap of configured dimm dts: 0x%08X%08X %08X%08X",
                      (uint32_t)(G_dimm_configured_sensors.dw[0]>>32),
                      (uint32_t)G_dimm_configured_sensors.dw[0],
@@ -383,6 +383,12 @@ void ocmb_init(void)
 
     if( rc )
     {
+        ERRL_SEVERITY l_severity = ERRL_SEV_INFORMATIONAL;
+        if(l_reset_on_error)
+        {
+            l_severity = ERRL_SEV_PREDICTIVE;
+        }
+
         /* @
          * @errortype
          * @moduleid    MEM_MID_OCMB_INIT_MOD
@@ -396,7 +402,7 @@ void ocmb_init(void)
                        MEM_MID_OCMB_INIT_MOD,             //modId
                        INVALID_CONFIG_DATA,               //reasoncode
                        OCC_NO_EXTENDED_RC,                //Extended reasoncode
-                       ERRL_SEV_PREDICTIVE,               //Severity
+                       l_severity,                        //Severity
                        NULL,                              //Trace Buf
                        DEFAULT_TRACE_SIZE,                //Trace Size
                        rc,                                //userdata1
