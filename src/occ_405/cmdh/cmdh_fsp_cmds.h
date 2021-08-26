@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2021                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -395,7 +395,10 @@ typedef struct __attribute__ ((packed)) cmdh_send_ambient_temp
 // Size of trace data for a trace buffer
 #define CMDH_FIELD_TRACE_DATA_SIZE  1024
 // Max number of sensors for field debug data
-#define CMDH_FIELD_MAX_NUM_SENSORS  50
+#define CMDH_FIELD_MAX_NUM_SENSORS  40
+
+// list of sensors to include in field debug data
+extern const uint16_t G_field_debug_gsids[];
 
 typedef struct cmdh_dbug_sensor_list
 {
@@ -410,14 +413,16 @@ typedef struct cmdh_dbug_sensor_list
 typedef struct __attribute__ ((packed))
 {
     struct                  cmdh_fsp_rsp_header;
-    // OCC node
-    uint8_t                 occ_node;
+    // version for parsing purposes
+    uint8_t                 version;
     // OCC id
     uint8_t                 occ_id;
     // OCC role
     uint8_t                 occ_role;
     // ERR trace
     char                    trace_err[CMDH_FIELD_TRACE_DATA_SIZE];
+    // IMP trace
+    char                    trace_imp[CMDH_FIELD_TRACE_DATA_SIZE];
     // INF trace
     char                    trace_inf[CMDH_FIELD_TRACE_DATA_SIZE];
     // Number of Sensors

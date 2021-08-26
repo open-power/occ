@@ -29,6 +29,7 @@
 #include <trac.h>
 #include <errl.h>
 #include <occ_service_codes.h>
+#include "sensor.h"
 
 uint8_t G_host_notifications_pending = 0;
 extern uint16_t G_allow_trace_flags;
@@ -58,6 +59,7 @@ void task_misc_405_checks(task_t *i_self)
     uint8_t     l_reason_code         = 0;
     bool        l_create_errl         = false;
     static unsigned int L_delay_cstop = TICKS_TO_DELAY_CHECKSTOP_PROCESSING;
+    sensor_t   *l_sensor              = NULL;
 
     do
     {
@@ -130,8 +132,42 @@ void task_misc_405_checks(task_t *i_self)
 
             if (l_oisr1_status.fields.check_stop_ppc405)
             {
-                TRAC_IMP("task_misc_405_checks: System checkstop detected by RTL: OISR1[0x%08x]",
+                TRAC_ERR("task_misc_405_checks: System checkstop detected by RTL: OISR1[0x%08x]",
                          l_oisr1_status.value);
+
+                // requested by char team to add sensors for checkstop analysis
+                l_sensor = getSensorByGsid(UV_AVG);
+                TRAC_IMP("task_misc_405_checks UV_AVG: current[%d] min[%d] max[%d]",
+                          l_sensor->sample, l_sensor->sample_min, l_sensor->sample_max);
+
+                l_sensor = getSensorByGsid(OV_AVG);
+                TRAC_IMP("task_misc_405_checks OV_AVG: current[%d] min[%d] max[%d]",
+                          l_sensor->sample, l_sensor->sample_min, l_sensor->sample_max);
+
+                l_sensor = getSensorByGsid(VOLTVDD);
+                TRAC_IMP("task_misc_405_checks VOLTVDD: current[%d] min[%d] max[%d]",
+                          l_sensor->sample, l_sensor->sample_min, l_sensor->sample_max);
+
+                l_sensor = getSensorByGsid(CURVDD);
+                TRAC_IMP("task_misc_405_checks CURVDD: current[%d] min[%d] max[%d]",
+                          l_sensor->sample, l_sensor->sample_min, l_sensor->sample_max);
+
+                l_sensor = getSensorByGsid(FREQA);
+                TRAC_IMP("task_misc_405_checks FREQA: current[%d] min[%d] max[%d]",
+                          l_sensor->sample, l_sensor->sample_min, l_sensor->sample_max);
+
+                l_sensor = getSensorByGsid(DDSMIN);
+                TRAC_IMP("task_misc_405_checks DDSMIN: current[%d] min[%d] max[%d]",
+                          l_sensor->sample, l_sensor->sample_min, l_sensor->sample_max);
+
+                l_sensor = getSensorByGsid(CEFFVDDRATIOADJ);
+                TRAC_IMP("task_misc_405_checks CEFFVDDRATIOADJ: current[%d] min[%d] max[%d]",
+                          l_sensor->sample, l_sensor->sample_min, l_sensor->sample_max);
+
+                l_sensor = getSensorByGsid(TEMPPROCTHRM);
+                TRAC_IMP("task_misc_405_checks TEMPPROCTHRM: current[%d] min[%d] max[%d]",
+                          l_sensor->sample, l_sensor->sample_min, l_sensor->sample_max);
+
                 /*
                  * @errortype
                  * @moduleid    MAIN_SYSTEM_HALTED_MID

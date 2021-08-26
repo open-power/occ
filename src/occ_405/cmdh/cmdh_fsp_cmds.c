@@ -72,6 +72,15 @@ uint8_t G_apss_ch_to_function[MAX_APSS_ADC_CHANNELS] = {0};
 
 ERRL_RC cmdh_poll_v20 (cmdh_fsp_rsp_t * i_rsp_ptr);
 
+// list of sensors to include in field debug data not to exceed CMDH_FIELD_MAX_NUM_SENSORS
+const uint16_t G_field_debug_gsids[] =
+{ PWRSYS,         PWRPROC,      VOLTVDD,         CURVDD,         VOLTVCS,
+  CURVCS,         FREQA,        UV_AVG,          OV_AVG,         DDSAVG,
+  DDSMIN,         CEFFVDDRATIO, CEFFVDDRATIOADJ, TEMPAMBIENT,    TEMPPROCTHRM,
+  TEMPRTAVG,      TEMPPROCIO00, TEMPPROCIO01,    TEMPPROCIO10,   TEMPPROCIO11,
+  TEMPNEST0,      TEMPNEST1,    TEMPVDD,         TEMPMEMBUFTHRM, TEMPDIMMTHRM,
+  TEMPMCDIMMTHRM, TEMPPMICTHRM, TEMPMCEXTTHRM, };
+
 #define MAX_CONSECUTIVE_HCODE_ELOGS 2
 
 // Function Specification
@@ -1420,8 +1429,7 @@ errlHndl_t cmdh_tmgt_get_field_debug_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
     uint16_t                          i                 = 0;
     UINT                              l_rtLen           = 0;
     uint16_t                          l_num_of_sensors  = CMDH_FIELD_MAX_NUM_SENSORS;
-    sensorQueryList_t                 l_sensor_list[CMDH_FIELD_MAX_NUM_SENSORS];
-    sensor_t                          *l_sensor_ptr     = NULL;
+    uint16_t                          l_sensor_gsid     = 0;
     cmdh_get_field_debug_data_resp_t  *l_resp_ptr       = (cmdh_get_field_debug_data_resp_t*) o_rsp_ptr;
     uint16_t                          l_rsp_data_length = 0;
     ERRL_RC                           l_rc              = ERRL_RC_SUCCESS;
@@ -1435,10 +1443,10 @@ errlHndl_t cmdh_tmgt_get_field_debug_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
             break;
         }
 
-        // Add occ infomation so that we know where the debug data from
-        l_resp_ptr->occ_node     = G_pbax_id.node_id;
+        // Add occ infomation
+        l_resp_ptr->version      = 0x10;
 
-        l_resp_ptr->occ_id       =  G_pbax_id.chip_id;
+        l_resp_ptr->occ_id       = G_pbax_id.chip_id;
         l_resp_ptr->occ_role     = G_occ_role;
 
         // copy trace data
@@ -1446,57 +1454,24 @@ errlHndl_t cmdh_tmgt_get_field_debug_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
         TRAC_get_buffer_partial(TRAC_get_td("ERR"), l_resp_ptr->trace_err, &l_rtLen);
 
         l_rtLen = CMDH_FIELD_TRACE_DATA_SIZE;
+        TRAC_get_buffer_partial(TRAC_get_td("IMP"), l_resp_ptr->trace_imp, &l_rtLen);
+
+        l_rtLen = CMDH_FIELD_TRACE_DATA_SIZE;
         TRAC_get_buffer_partial(TRAC_get_td("INF"), l_resp_ptr->trace_inf, &l_rtLen);
 
-        querySensorListArg_t l_qsl_arg = {
-            0,                         // i_startGsid - start with sensor 0x0000
-            0,                         // i_present
-            (AMEC_SENSOR_TYPE_POWER|   // i_type
-             AMEC_SENSOR_TYPE_TEMP),
-            AMEC_SENSOR_LOC_ALL,       // i_loc
-            &l_num_of_sensors,         // io_numOfSensors
-            l_sensor_list,             // o_sensors
-            NULL                       // o_sensorInfoPtr
-        };
-
-        // Get sensor list
-        l_err = querySensorList(&l_qsl_arg);
-
-        if (NULL != l_err)
+        // Populate the sensors in the response data packet
+        l_num_of_sensors = sizeof(G_field_debug_gsids)/sizeof(uint16_t);
+        l_resp_ptr->num_sensors = l_num_of_sensors;
+        for (i=0; i<l_num_of_sensors; i++)
         {
-            // Query failure, this should not happen
-            TRAC_ERR("get_field_debug_data: Failed to get sensor list. Error status is: 0x%x",
-                     l_err->iv_reasonCode);
-
-            // Commit error log
-            commitErrl(&l_err);
-            l_rc = ERRL_RC_INTERNAL_FAIL;
-            break;
+            l_sensor_gsid = G_field_debug_gsids[i];
+            strncpy(l_resp_ptr->sensor[i].name, G_sensor_info[l_sensor_gsid].name, MAX_SENSOR_NAME_SZ);
+            l_resp_ptr->sensor[i].gsid = l_sensor_gsid;
+            l_resp_ptr->sensor[i].sample = G_amec_sensor_list[l_sensor_gsid]->sample;
+            l_resp_ptr->sensor[i].sample_min = G_amec_sensor_list[l_sensor_gsid]->sample_min;
+            l_resp_ptr->sensor[i].sample_max = G_amec_sensor_list[l_sensor_gsid]->sample_max;
         }
-        else
-        {
-            // Populate the response data packet
-            l_resp_ptr->num_sensors = l_num_of_sensors;
-            for (i=0; i<l_num_of_sensors; i++)
-            {
-                l_resp_ptr->sensor[i].gsid = l_sensor_list[i].gsid;
-                l_resp_ptr->sensor[i].sample = l_sensor_list[i].sample;
-                strncpy(l_resp_ptr->sensor[i].name, l_sensor_list[i].name, MAX_SENSOR_NAME_SZ);
 
-                // Capture the min and max value for this sensor
-                l_sensor_ptr = getSensorByGsid(l_sensor_list[i].gsid);
-                if (l_sensor_ptr == NULL)
-                {
-                    TRAC_INFO("get_field_debug_data: Unable to find sensor with gsid[0x%.4X]. Values won't be accurate.",
-                              l_sensor_list[i].gsid);
-
-                    // Didn't find this sensor, just continue
-                    continue;
-                }
-                l_resp_ptr->sensor[i].sample_min = l_sensor_ptr->sample_min;
-                l_resp_ptr->sensor[i].sample_max = l_sensor_ptr->sample_max;
-            }
-        }
         // -------------------------------------------------
         // Build Response Packet
         // -------------------------------------------------
@@ -1504,9 +1479,10 @@ errlHndl_t cmdh_tmgt_get_field_debug_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
         l_rsp_data_length = (sizeof(cmdh_get_field_debug_data_resp_t) - CMDH_DBUG_FSP_RESP_LEN);
         l_resp_ptr->data_length[0] = ((uint8_t *)&l_rsp_data_length)[0];
         l_resp_ptr->data_length[1] = ((uint8_t *)&l_rsp_data_length)[1];
-        G_rsp_status = l_rc;
 
     } while(0);
+
+    G_rsp_status = l_rc;
 
     if (l_rc)
     {
