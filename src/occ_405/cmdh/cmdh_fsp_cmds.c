@@ -1847,6 +1847,88 @@ uint8_t cmdh_select_sensor_groups(const uint16_t  i_cmd_data_length,
 
 // Function Specification
 //
+// Name:  cmdh_inband_wof_control
+//
+// Description: Implements the Inband WOF Control command
+//
+// End Function Specification
+uint8_t cmdh_inband_wof_control(const uint16_t  i_cmd_data_length,
+                       const uint8_t*  i_cmd_data_ptr,
+                       const uint16_t  i_max_rsp_data_length,
+                             uint16_t* o_rsp_data_length,
+                             uint8_t*  o_rsp_data_ptr)
+{
+    errlHndl_t  l_err = NULL;
+    uint8_t  l_rc = ERRL_RC_SUCCESS;
+    cmdh_inband_wof_control_cmd_data_t *l_cmd_ptr = (cmdh_inband_wof_control_cmd_data_t *) i_cmd_data_ptr;
+    cmdh_inband_wof_control_rsp_data_t *l_rsp_ptr = (cmdh_inband_wof_control_rsp_data_t*) o_rsp_data_ptr;
+    *o_rsp_data_length = 0;
+
+    do
+    {
+        // Command Length Check
+        if( i_cmd_data_length != sizeof(cmdh_inband_wof_control_cmd_data_t) )
+        {
+            TRAC_ERR("cmdh_inband_wof_control: Invalid command length %u, expected %u ",
+                     i_cmd_data_length, sizeof(cmdh_inband_wof_control_cmd_data_t));
+            l_rc = ERRL_RC_INVALID_CMD_LEN;
+            break;
+        }
+        // Make sure there is enough room in response buffer
+        if( sizeof(cmdh_inband_wof_control_rsp_data_t) > i_max_rsp_data_length )
+        {
+            TRAC_ERR("cmdh_inband_wof_control: Response size %u is larger than buffer size %u ",
+                     sizeof(cmdh_inband_wof_control_rsp_data_t), i_max_rsp_data_length);
+            l_rc = ERRL_RC_INTERNAL_FAIL;
+            break;
+        }
+        // Check if WOF Control parameter is valid
+        if( (l_cmd_ptr->wof_control == INBAND_WOF_CONTROL_DISABLE) ||
+            (l_cmd_ptr->wof_control == INBAND_WOF_CONTROL_ENABLE) ||
+            (l_cmd_ptr->wof_control == INBAND_WOF_CONTROL_FMAX) )
+        {
+            TRAC_INFO("cmdh_inband_wof_control: WOF Control changed from %u to %u",
+                       G_sysConfigData.inband_wof_control, l_cmd_ptr->wof_control);
+            G_sysConfigData.inband_wof_control = l_cmd_ptr->wof_control;
+
+            if(l_cmd_ptr->wof_control == INBAND_WOF_CONTROL_ENABLE)
+            {
+               // WOF is enabled, clear the mode bit
+               set_clear_wof_disabled( CLEAR,
+                                       WOF_RC_MODE_NO_SUPPORT_MASK,
+                                       ERC_WOF_MODE_NO_SUPPORT_MASK );
+            }
+            else // WOF should be disabled, set the mode bit
+            {
+               set_clear_wof_disabled( SET,
+                                       WOF_RC_MODE_NO_SUPPORT_MASK,
+                                       ERC_WOF_MODE_NO_SUPPORT_MASK );
+            }
+
+            l_err = amec_set_freq_range(OCC_MODE_NOCHANGE);
+            if(l_err)
+            {
+               // Commit log
+             commitErrl(&l_err);
+            }
+
+            // copy the WOF Control option to the response buffer and set the rsp length
+            l_rsp_ptr->wof_control = l_cmd_ptr->wof_control;
+            *o_rsp_data_length = (uint16_t) sizeof(cmdh_inband_wof_control_rsp_data_t);
+        }
+        else
+        {
+            TRAC_ERR("cmdh_inband_wof_control: Invalid WOF Control parameter %u",
+                      l_cmd_ptr->wof_control);
+            l_rc = ERRL_RC_INVALID_DATA;
+        }
+    } while (0);
+
+    return l_rc;
+}
+
+// Function Specification
+//
 // Name:  cmdh_send_ambient_temp
 //
 // Description: Command to receive the ambient temperature of the system

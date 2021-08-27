@@ -49,7 +49,6 @@ extern bool G_mem_monitoring_allowed;
 extern task_t G_task_table[TASK_END];  // Global task table
 extern bool G_simics_environment;
 extern volatile pstateStatus G_proc_pstate_status;
-extern uint16_t G_proc_fmax_mhz;
 extern GpeRequest G_clip_update_req;
 extern GPE_BUFFER(ipcmsg_clip_update_t*  G_clip_update_parms_ptr);
 extern volatile int G_ss_pgpe_rc;

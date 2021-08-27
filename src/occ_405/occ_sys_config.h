@@ -374,8 +374,8 @@ typedef struct
   // ------------------------------------
   freqConfig_t sys_mode_freq;
 
-  // indicates if Fmax mode has been enabled (0x01) or not (0x00)
-  uint8_t fmax_mode_enable;
+  // indicates status of WOF and Fmax mode set inband (OPAL)
+  uint8_t inband_wof_control;
 
   // ------------------------------------
   // APSS Configuration Data

@@ -452,6 +452,14 @@ void inband_command_handler(void)
                                                            l_rsp_data_ptr);
                  break;
 
+              case CMDH_INBAND_WOF_CONTROL:
+                 l_reason_code = cmdh_inband_wof_control(l_cmd_data_len,
+                                                         l_cmd_data_ptr,
+                                                         INBAND_MAX_DATA_LENGTH,
+                                                         &l_rsp_data_length,
+                                                         l_rsp_data_ptr);
+                 break;
+
               default:
                    l_reason_code = ERRL_RC_INVALID_CMD;
                    break;

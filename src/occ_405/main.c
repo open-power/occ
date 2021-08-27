@@ -92,7 +92,6 @@ IMAGE_HEADER (G_mainAppImageHdr,__ssx_boot,MAIN_APP_ID,ID_NUM_INVALID);
 ppmr_header_t G_ppmr_header;       // PPMR Header layout format
 pgpe_header_data_t G_pgpe_header;  // PGPE Header layout format
 OCCPstateParmBlock_t G_oppb;       // OCC Pstate Parameters Block Structure
-extern uint16_t G_proc_fmax_mhz;
 extern volatile int G_ss_pgpe_rc;
 
 // Buffer to hold the wof header
@@ -378,10 +377,6 @@ void populate_sys_mode_freq_table(void)
                        G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MAX_FREQ]);
         G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_VPD_UT] = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MAX_FREQ];
     }
-    // Copy over UT frequency into G_proc_fmax_mhz
-    // can only go higher than UT if Fmax mode is enabled
-    G_proc_fmax_mhz = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_VPD_UT];
-
     MAIN_TRAC_IMP("populate_sys_mode_freq_table: freq points min[%dMHz], WOF Base[%dMHz], UT[%dMHz], max[%dMHz]",
                    G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MIN_FREQ],
                    G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_WOF_BASE],
@@ -402,6 +397,9 @@ void populate_sys_mode_freq_table(void)
 
     // set freq for bottom throttle point to 1Mhz this will translate into pstate for the most throttled settin
     G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_BOTTOM_THROTTLE] = 1;
+
+    // default WOF enabled for OPAL (Fmax mode off)
+    G_sysConfigData.inband_wof_control = INBAND_WOF_CONTROL_ENABLE;
 
     // Set the frequency range for amec, at this point there is no mode set
     l_err = amec_set_freq_range(OCC_MODE_NOCHANGE);
@@ -1792,9 +1790,6 @@ void Main_thread_routine(void *private)
             G_oppb.frequency_step_khz = 16667;
             G_oppb.pstate_min         = PMAX +
                 ((G_oppb.frequency_max_khz - G_oppb.frequency_min_khz)/G_oppb.frequency_step_khz);
-
-            G_proc_fmax_mhz   = G_oppb.frequency_max_khz / 1000;
-
 
             // Set globals used by amec for pcap calculation
             // could have used G_oppb.frequency_step_khz in PCAP calculations

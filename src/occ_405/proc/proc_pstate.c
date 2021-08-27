@@ -62,9 +62,6 @@ extern uint8_t G_occ_interrupt_type;
 
 extern bool G_reset_prep;
 
-//Holds Fmax for ease of proc_freq2pstate calculation = max(fturbo,futurbo)
-uint16_t G_proc_fmax_mhz;
-
 uint8_t         G_desired_pstate;
 
 // A global variable indicating whether the pstates have been enabled.
@@ -363,6 +360,17 @@ void populate_opal_dynamic_data()
     else
     {
         G_opal_dynamic_table.dynamic.proc_throt_status = G_amec_opal_proc_throt_reason;
+    }
+
+    if( (G_sysConfigData.inband_wof_control == INBAND_WOF_CONTROL_ENABLE) &&
+        (g_amec->wof.wof_disabled) )
+    {
+        // Inband wants WOF enabled but OCC can't enable
+        G_opal_dynamic_table.dynamic.wof_state = INBAND_WOF_CONTROL_OCC_DISABLE;
+    }
+    else
+    {
+        G_opal_dynamic_table.dynamic.wof_state = G_sysConfigData.inband_wof_control;
     }
 
     G_opal_dynamic_table.dynamic.mem_throt_status     = G_amec_opal_mem_throt_reason;
@@ -799,6 +807,25 @@ void check_for_opal_updates(void)
             else
                 TRAC_INFO("check_for_opal_updates: Reset prep OCC state change 0x%02X->0x%02X",
                            G_opal_dynamic_table.dynamic.occ_state, OCC_STATE_SAFE);
+        }
+
+        // check for WOF state change
+        if( (G_sysConfigData.inband_wof_control == INBAND_WOF_CONTROL_ENABLE) &&
+            (g_amec->wof.wof_disabled) )
+        {
+            // Inband wants WOF enabled but OCC has a reason that WOF can't be enabled
+            if(G_opal_dynamic_table.dynamic.wof_state != INBAND_WOF_CONTROL_OCC_DISABLE)
+            {
+                dynamic_data_change = true;
+                TRAC_INFO("check_for_opal_updates: Unable to enable WOF due to WOF disable[0x%08X]",
+                           g_amec->wof.wof_disabled);
+            }
+        }
+        else if(G_opal_dynamic_table.dynamic.wof_state != G_sysConfigData.inband_wof_control)
+        {
+            dynamic_data_change = true;
+            TRAC_INFO("check_for_opal_updates: WOF state change 0x%02X->0x%02X",
+                       G_opal_dynamic_table.dynamic.wof_state, G_sysConfigData.inband_wof_control);
         }
 
         if(G_occ_role == OCC_MASTER)

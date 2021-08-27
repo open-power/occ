@@ -57,6 +57,7 @@ typedef enum
     CMDH_SET_PCAP_INBAND        = 0xD1,
     CMDH_WRITE_PSR              = 0xD2,
     CMDH_SELECT_SENSOR_GROUPS   = 0xD3,
+    CMDH_INBAND_WOF_CONTROL     = 0xD4,
 } eCmdhCommands;
 
 #define SENSOR_TEMP "TEMP"
@@ -501,6 +502,29 @@ typedef struct __attribute__ ((packed))
     uint8_t                sensor_groups[2];
 }cmdh_select_sensor_groups_rsp_data_t;
 
+//---------------------------------------------------------
+// Inband WOF Control Command
+//---------------------------------------------------------
+// Reason
+typedef enum
+{
+    INBAND_WOF_CONTROL_DISABLE     = 0x00,
+    INBAND_WOF_CONTROL_ENABLE      = 0x01,
+    // Fmax mode, by definition WOF is off in this mode
+    INBAND_WOF_CONTROL_FMAX        = 0x02,
+    // User wants WOF enabled but OCC can't enable
+    INBAND_WOF_CONTROL_OCC_DISABLE = 0xE0,
+} eInbandWofControl;
+
+typedef struct __attribute__ ((packed))
+{
+    uint8_t                 wof_control;
+}cmdh_inband_wof_control_cmd_data_t;
+
+typedef struct __attribute__ ((packed))
+{
+    uint8_t                 wof_control;
+}cmdh_inband_wof_control_rsp_data_t;
 
 errlHndl_t cmdh_tmgt_setmodestate(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                         cmdh_fsp_rsp_t * i_rsp_ptr);
@@ -531,7 +555,7 @@ errlHndl_t cmdh_send_ambient_temp(const cmdh_fsp_cmd_t * i_cmd_ptr,
 //------------------------------------------------------------------------------------
 // Commands supported via in-band interface must have additional inputs/output/return
 // Any out of band commands that are to be supported in-band should change to this
-// common format to allow calling by either i.e. AMESTER pass thru is supported on both
+// common format to allow calling by either
 //------------------------------------------------------------------------------------
 uint8_t cmdh_clear_sensor_data(const uint16_t  i_cmd_data_length,
                                     const uint8_t*  i_cmd_data_ptr,
@@ -557,5 +581,10 @@ uint8_t cmdh_select_sensor_groups(const uint16_t  i_cmd_data_length,
                                              uint16_t* o_rsp_data_length,
                                              uint8_t*  o_rsp_data_ptr);
 
+uint8_t cmdh_inband_wof_control(const uint16_t  i_cmd_data_length,
+                                const uint8_t*  i_cmd_data_ptr,
+                                const uint16_t  i_max_rsp_data_length,
+                                      uint16_t* o_rsp_data_length,
+                                      uint8_t*  o_rsp_data_ptr);
 #endif
 

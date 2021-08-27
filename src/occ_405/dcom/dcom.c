@@ -43,7 +43,6 @@
 #include <common.h>
 
 extern uint8_t G_occ_interrupt_type;
-extern uint16_t G_proc_fmax_mhz;   // max(turbo,uturbo) frequencies
 extern data_cnfg_t * G_data_cnfg;
 extern uint16_t G_allow_trace_flags;
 

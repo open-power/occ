@@ -131,7 +131,7 @@ typedef struct __attribute__ ((packed))
     uint8_t              dynamic_major_version;
     uint8_t              dynamic_minor_version;
     uint8_t              gpus_present;
-    uint8_t              reserved[1];
+    uint8_t              wof_state;
     uint8_t              proc_throt_status;
     uint8_t              mem_throt_status;
     uint8_t              quick_power_drop;

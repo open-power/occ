@@ -68,7 +68,6 @@
 
 extern uint8_t G_occ_interrupt_type;
 
-extern uint16_t G_proc_fmax_mhz;      // Maximum frequency (uturbo if WOF enabled, otherwise turbo)
 extern OCCPstateParmBlock_t G_oppb;   // OCC Pstate Parameters Block Structure
 extern uint32_t G_first_proc_gpu_config;
 extern uint32_t G_first_num_gpus_sys;

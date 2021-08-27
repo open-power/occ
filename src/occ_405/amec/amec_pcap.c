@@ -68,7 +68,6 @@ extern uint16_t G_allow_trace_flags;
 //Frequency_step_khz (from global pstate table)/1000
 uint32_t    G_mhz_per_pstate=0;
 
-extern uint16_t G_proc_fmax_mhz;   // max(turbo,uturbo) frequencies
 extern uint32_t G_first_proc_gpu_config;
 extern uint32_t G_first_num_gpus_sys;
 
@@ -409,9 +408,10 @@ void amec_ppb_fmax_calc(void)
             G_sysConfigData.master_ppb_fmax += G_mhz_per_pstate;
         }
 
-        if(G_sysConfigData.master_ppb_fmax > G_proc_fmax_mhz)
+        // bounds checking
+        if(G_sysConfigData.master_ppb_fmax > G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MAX_FREQ])
         {
-            G_sysConfigData.master_ppb_fmax = G_proc_fmax_mhz;
+            G_sysConfigData.master_ppb_fmax = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MAX_FREQ];
         }
 
         if(G_sysConfigData.master_ppb_fmax < G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MIN_FREQ])
@@ -465,7 +465,7 @@ void amec_power_control(void)
     else
     {
         // No system power reading for power capping set pcap frequency votes to max
-        g_amec->proc[0].pwr_votes.ppb_fmax = G_proc_fmax_mhz;
+        g_amec->proc[0].pwr_votes.ppb_fmax = 0xFFFF;
     }
 }
 

@@ -67,7 +67,6 @@
 //*************************************************************************/
 extern dcom_slv_inbox_t G_dcom_slv_inbox_rx;
 extern opal_proc_voting_reason_t G_amec_opal_proc_throt_reason;
-extern uint16_t G_proc_fmax_mhz;
 extern GpeRequest G_wof_vrt_req;
 extern uint32_t G_present_cores;
 
@@ -310,7 +309,7 @@ void amec_slv_check_apss_fail(void)
             if (L_raise_pmax_rail == FALSE)
             {
                 // Raise the Pmax rail back
-                l_pmax_rail_freq = G_proc_fmax_mhz;
+                l_pmax_rail_freq = 0xFFFF;
 
                 // Let the slave voting box handle the clip
                 // to take in account all reasons for clip changes

@@ -58,8 +58,6 @@
 extern uint8_t G_membuf_temp_expired_bitmap;
 extern dimm_sensor_flags_t G_dimm_temp_expired_bitmap;
 
-extern uint16_t G_proc_fmax_mhz;
-
 extern uint16_t G_allow_trace_flags;
 extern bool G_allowPstates;
 extern OCCPstateParmBlock_t G_oppb;
@@ -142,15 +140,20 @@ errlHndl_t amec_set_freq_range(const OCC_MODE i_mode)
     // if no mode set yet or running with OPAL set to the full range
     if( (i_mode == OCC_MODE_NOCHANGE) || (G_sysConfigData.system_type.kvm) )
     {
-        // Set Max frequency to WOF base if wof and Fmax is off, otherwise max possible
-        if( (g_amec->wof.wof_disabled || (g_amec->wof.wof_init_state != WOF_ENABLED)) &&
-            (!G_sysConfigData.fmax_mode_enable) )
+        // Set Max frequency to Fmax if Fmax is enabled, Fmax enabled by definition means wof is off
+        if(G_sysConfigData.inband_wof_control == INBAND_WOF_CONTROL_FMAX)
         {
+            l_freq_max = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MAX_FREQ];
+        }
+        // Fmax mode not enabled, set max freq based on if WOF is enabled
+        else if(g_amec->wof.wof_disabled || (g_amec->wof.wof_init_state != WOF_ENABLED))
+        {
+            // WOF and Fmax is off, set Max frequency to WOF base
             l_freq_max = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_WOF_BASE];
         }
-        else
+        else // WOF is enabled
         {
-            l_freq_max = G_proc_fmax_mhz;
+            l_freq_max = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_VPD_UT];
         }
     }
     else  // Set max based on specific mode
@@ -248,18 +251,6 @@ errlHndl_t amec_set_freq_range(const OCC_MODE i_mode)
 
         g_amec->sys.fmin_max_throttled = l_freq_min_at_max_throttle;
         g_amec->sys.fmax = l_freq_max;
-
-        // if frequency is above UT we are in a fmax mode. Need to raise G_proc_fmax_mhz
-        // to fmax to prevent power capping control loop clipping to UT
-        if(g_amec->sys.fmax > G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_VPD_UT])
-        {
-            G_proc_fmax_mhz = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MAX_FREQ];
-        }
-        else
-        {
-            G_proc_fmax_mhz = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_VPD_UT];
-        }
-
 
         TRAC_INFO("amec_set_freq_range: Mode[0x%02x] Fmin[%u/0x%02X] Fmax[%u/0x%02X]",
                   i_mode,

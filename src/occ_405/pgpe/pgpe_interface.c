@@ -50,7 +50,6 @@ extern volatile pstateStatus G_proc_pstate_status;
 extern volatile PMCR_OWNER G_proc_pmcr_owner;
 extern volatile bool G_set_pStates;
 
-extern uint16_t G_proc_fmax_mhz;
 extern uint32_t G_present_cores;
 extern OCCPstateParmBlock_t G_oppb;
 
