@@ -153,8 +153,7 @@ occSysConfigData_t G_sysConfigData =
         .gpu[1][0]           = SYSCFG_INVALID_ADC_CHAN,
         .gpu[1][1]           = SYSCFG_INVALID_ADC_CHAN,
         .gpu[1][2]           = SYSCFG_INVALID_ADC_CHAN,
-        .sense_volt2         = SYSCFG_INVALID_ADC_CHAN,
-        .total_current_volt2 = SYSCFG_INVALID_ADC_CHAN,
+        .pcie                = SYSCFG_INVALID_ADC_CHAN,
     },
 
     .apssGpioPortsMode =   {0, 0},

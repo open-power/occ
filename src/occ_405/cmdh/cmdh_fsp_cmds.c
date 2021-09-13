@@ -497,27 +497,26 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
             const uint8_t function_id = G_apss_ch_to_function[k];
             if ((function_id != ADC_12V_SENSE) &&
                 (function_id != ADC_GND_REMOTE_SENSE) &&
-                (function_id != ADC_12V_STANDBY_CURRENT) &&
-                (function_id != ADC_VOLT_SENSE_2))
+                (function_id != ADC_12V_STANDBY_CURRENT))
             {
                 // only return channel power for GPU if the GPU is present
                 bool include = FALSE;
                 if  ( (function_id == ADC_GPU_0_0) ||
-                      ((function_id >= ADC_GPU_0_1) && (function_id <= ADC_GPU_VOLT2_1_1)) )
+                      ((function_id >= ADC_GPU_0_1) && (function_id <= ADC_GPU_1_2)) )
                 {
                     // GPU channel: include if has a non-zero reading or if GPU is present
                     if ( ( G_amec_sensor_list[PWRAPSSCH00 + k]->sample > 0) ||
-                         ( ((ADC_GPU_0_0 == function_id) || (ADC_GPU_VOLT2_0_0 == function_id)) &&
+                         ( (ADC_GPU_0_0 == function_id) &&
                            (G_first_sys_gpu_config & 0x01) ) ||
-                         ( ((ADC_GPU_0_1 == function_id) || (ADC_GPU_VOLT2_0_1 == function_id)) &&
+                         ( (ADC_GPU_0_1 == function_id) &&
                            (G_first_sys_gpu_config & 0x02) ) ||
-                         ( ( ADC_GPU_0_2 == function_id) &&
+                         ( (ADC_GPU_0_2 == function_id) &&
                            (G_first_sys_gpu_config & 0x04) ) ||
-                         ( ((ADC_GPU_1_0 == function_id) || (ADC_GPU_VOLT2_1_0 == function_id)) &&
+                         ( (ADC_GPU_1_0 == function_id) &&
                            (G_first_sys_gpu_config & 0x08) ) ||
-                         ( ((ADC_GPU_1_1 == function_id) || (ADC_GPU_VOLT2_1_1 == function_id)) &&
+                         ( (ADC_GPU_1_1 == function_id) &&
                            (G_first_sys_gpu_config & 0x10) ) ||
-                         ( ( ADC_GPU_1_2 == function_id) &&
+                         ( (ADC_GPU_1_2 == function_id) &&
                            (G_first_sys_gpu_config & 0x20) ) )
                     {
                         // GPU is present

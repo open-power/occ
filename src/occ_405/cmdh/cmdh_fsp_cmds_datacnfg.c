@@ -108,10 +108,6 @@ bool G_mem_monitoring_allowed = FALSE;
 uint8_t G_read_ocmb_num_8ms_ticks = 1;
 uint32_t G_num_ocmb_reads_per_1000s = 3906;  // default assuming 200us update time (256ms reads)
 
-// Save which voltage the GPU is using (1 = default (12V), 2 = 2nd voltage (54V))
-uint8_t G_gpu_volt_type[MAX_GPU_DOMAINS][MAX_NUM_GPU_PER_DOMAIN] = {{0}};
-bool    G_found_volt2 = FALSE;
-
 // Will get set when receiving APSS config data
 PWR_READING_TYPE G_pwr_reading_type = PWR_READING_TYPE_NONE;
 
@@ -250,7 +246,6 @@ uint8_t DATA_request_cnfgdata ()
 errlHndl_t apss_store_adc_channel(const eApssAdcChannelAssignments i_func_id, const uint8_t i_channel_num )
 {
     errlHndl_t l_err = NULL;
-    bool l_gpu_volt_conflict = FALSE;
 
     // Check function ID and channel number
     if ( (i_func_id >= NUM_ADC_ASSIGNMENT_TYPES) ||
@@ -341,20 +336,12 @@ errlHndl_t apss_store_adc_channel(const eApssAdcChannelAssignments i_func_id, co
                 l_adc_function = &G_sysConfigData.apss_adc_map.sense_12v;
                 break;
 
-            case ADC_VOLT_SENSE_2:
-                l_adc_function = &G_sysConfigData.apss_adc_map.sense_volt2;
-                break;
-
             case ADC_GND_REMOTE_SENSE:
                 l_adc_function = &G_sysConfigData.apss_adc_map.remote_gnd;
                 break;
 
             case ADC_TOTAL_SYS_CURRENT:
                 l_adc_function = &G_sysConfigData.apss_adc_map.total_current_12v;
-                break;
-
-            case ADC_TOTAL_SYS_CURRENT_2:
-                l_adc_function = &G_sysConfigData.apss_adc_map.total_current_volt2;
                 break;
 
             case ADC_MEM_CACHE:
@@ -366,27 +353,11 @@ errlHndl_t apss_store_adc_channel(const eApssAdcChannelAssignments i_func_id, co
                 break;
 
             case ADC_GPU_0_0:
-                if (G_gpu_volt_type[0][0] != 2)
-                {
-                    G_gpu_volt_type[0][0] = 1;
-                    l_adc_function = &G_sysConfigData.apss_adc_map.gpu[0][0];
-                }
-                else
-                {
-                    l_gpu_volt_conflict = TRUE;
-                }
+                l_adc_function = &G_sysConfigData.apss_adc_map.gpu[0][0];
                 break;
 
             case ADC_GPU_0_1:
-                if (G_gpu_volt_type[0][1] != 2)
-                {
-                    G_gpu_volt_type[0][1] = 1;
-                    l_adc_function = &G_sysConfigData.apss_adc_map.gpu[0][1];
-                }
-                else
-                {
-                    l_gpu_volt_conflict = TRUE;
-                }
+                l_adc_function = &G_sysConfigData.apss_adc_map.gpu[0][1];
                 break;
 
             case ADC_GPU_0_2:
@@ -394,83 +365,19 @@ errlHndl_t apss_store_adc_channel(const eApssAdcChannelAssignments i_func_id, co
                 break;
 
             case ADC_GPU_1_0:
-                if (G_gpu_volt_type[1][0] != 2)
-                {
-                    G_gpu_volt_type[1][0] = 1;
-                    l_adc_function = &G_sysConfigData.apss_adc_map.gpu[1][0];
-                }
-                else
-                {
-                    l_gpu_volt_conflict = TRUE;
-                }
+                l_adc_function = &G_sysConfigData.apss_adc_map.gpu[1][0];
                 break;
 
             case ADC_GPU_1_1:
-                if (G_gpu_volt_type[1][1] != 2)
-                {
-                    G_gpu_volt_type[1][1] = 1;
-                    l_adc_function = &G_sysConfigData.apss_adc_map.gpu[1][1];
-                }
-                else
-                {
-                    l_gpu_volt_conflict = TRUE;
-                }
+                l_adc_function = &G_sysConfigData.apss_adc_map.gpu[1][1];
                 break;
 
             case ADC_GPU_1_2:
                 l_adc_function = &G_sysConfigData.apss_adc_map.gpu[1][2];
                 break;
 
-            case ADC_GPU_VOLT2_0_0:
-                if (G_gpu_volt_type[0][0] != 1)
-                {
-                    G_found_volt2 = TRUE;
-                    G_gpu_volt_type[0][0] = 2;
-                    l_adc_function = &G_sysConfigData.apss_adc_map.gpu[0][0];
-                }
-                else
-                {
-                    l_gpu_volt_conflict = TRUE;
-                }
-                break;
-
-            case ADC_GPU_VOLT2_0_1:
-                if (G_gpu_volt_type[0][1] != 1)
-                {
-                    G_found_volt2 = TRUE;
-                    G_gpu_volt_type[0][1] = 2;
-                    l_adc_function = &G_sysConfigData.apss_adc_map.gpu[0][1];
-                }
-                else
-                {
-                    l_gpu_volt_conflict = TRUE;
-                }
-                break;
-
-            case ADC_GPU_VOLT2_1_0:
-                if (G_gpu_volt_type[1][0] != 1)
-                {
-                    G_found_volt2 = TRUE;
-                    G_gpu_volt_type[1][0] = 2;
-                    l_adc_function = &G_sysConfigData.apss_adc_map.gpu[1][0];
-                }
-                else
-                {
-                    l_gpu_volt_conflict = TRUE;
-                }
-                break;
-
-            case ADC_GPU_VOLT2_1_1:
-                if (G_gpu_volt_type[1][1] != 1)
-                {
-                    G_found_volt2 = TRUE;
-                    G_gpu_volt_type[1][1] = 2;
-                    l_adc_function = &G_sysConfigData.apss_adc_map.gpu[1][1];
-                }
-                else
-                {
-                    l_gpu_volt_conflict = TRUE;
-                }
+            case ADC_PCIe_CURRENT:
+                l_adc_function = &G_sysConfigData.apss_adc_map.pcie;
                 break;
 
             default:
@@ -518,33 +425,6 @@ errlHndl_t apss_store_adc_channel(const eApssAdcChannelAssignments i_func_id, co
                                  ERRL_CALLOUT_PRIORITY_HIGH);
             }
         }
-        else if (l_gpu_volt_conflict)
-        {
-            CMDH_TRAC_ERR("apss_store_adc_channel: GPU has conflicting voltage function ids (0x%02X)", i_func_id);
-            /* @
-             * @errortype
-             * @moduleid    DATA_STORE_APSS_DATA
-             * @reasoncode  INVALID_INPUT_DATA
-             * @userdata1   function ID
-             * @userdata2   channel number
-             * @userdata4   ERC_APSS_GPU_VOLTAGE_CONFLICT
-             * @devdesc     Function ID conflict for GPU voltage
-             */
-            l_err = createErrl(DATA_STORE_APSS_DATA,
-                               INVALID_INPUT_DATA,
-                               ERC_APSS_GPU_VOLTAGE_CONFLICT,
-                               ERRL_SEV_UNRECOVERABLE,
-                               NULL,
-                               DEFAULT_TRACE_SIZE,
-                               (uint32_t)i_func_id,
-                               (uint32_t)i_channel_num);
-
-            // Callout firmware
-            addCalloutToErrl(l_err,
-                             ERRL_CALLOUT_TYPE_COMPONENT_ID,
-                             ERRL_COMPONENT_ID_FIRMWARE,
-                             ERRL_CALLOUT_PRIORITY_HIGH);
-        }
     }
 
     return l_err;
@@ -586,23 +466,10 @@ void apss_store_ipmi_sensor_id(const uint16_t i_channel, const apss_cfg_adc_v20_
         case ADC_STORAGE_A:
         case ADC_STORAGE_B:
         case ADC_12V_SENSE:
-        case ADC_VOLT_SENSE_2:
-            //None
-            break;
-
+        case ADC_PCIe_CURRENT:
         case ADC_GND_REMOTE_SENSE:
-            //None
-            break;
-
         case ADC_TOTAL_SYS_CURRENT:
-        case ADC_TOTAL_SYS_CURRENT_2:
-            //None
-            break;
-
         case ADC_MEM_CACHE:
-            //None
-            break;
-
         case ADC_12V_STANDBY_CURRENT:
             //None
             break;
@@ -610,8 +477,6 @@ void apss_store_ipmi_sensor_id(const uint16_t i_channel, const apss_cfg_adc_v20_
         case ADC_GPU_0_0:
         case ADC_GPU_0_1:
         case ADC_GPU_0_2:
-        case ADC_GPU_VOLT2_0_0:
-        case ADC_GPU_VOLT2_0_1:
             if((i_adc->ipmisensorId != 0) && (l_proc == 0))
             {
                 AMECSENSOR_PTR(PWRGPU)->ipmi_sid = i_adc->ipmisensorId;
@@ -621,8 +486,6 @@ void apss_store_ipmi_sensor_id(const uint16_t i_channel, const apss_cfg_adc_v20_
         case ADC_GPU_1_0:
         case ADC_GPU_1_1:
         case ADC_GPU_1_2:
-        case ADC_GPU_VOLT2_1_0:
-        case ADC_GPU_VOLT2_1_1:
             if((i_adc->ipmisensorId != 0) && (l_proc == 1))
             {
                 AMECSENSOR_PTR(PWRGPU)->ipmi_sid = i_adc->ipmisensorId;
@@ -648,8 +511,7 @@ void apss_store_ipmi_sensor_id(const uint16_t i_channel, const apss_cfg_adc_v20_
         //Only store sensor ids for power sensors.  voltage and gnd remote sensors do not report power used.
         if ((i_adc->assignment != ADC_12V_SENSE) &&
             (i_adc->assignment != ADC_GND_REMOTE_SENSE) &&
-            (i_adc->assignment != ADC_12V_STANDBY_CURRENT) &&
-            (i_adc->assignment != ADC_VOLT_SENSE_2))
+            (i_adc->assignment != ADC_12V_STANDBY_CURRENT))
         {
             AMECSENSOR_PTR(PWRAPSSCH00 + i_channel)->ipmi_sid = i_adc->ipmisensorId;
             CNFG_DBG("apss_store_ipmi_sensor_id: SID[0x%08X] stored as 0x%08X for channel %d",
@@ -841,7 +703,6 @@ errlHndl_t data_store_apss_config_v20(const cmdh_apss_config_v20_t * i_cmd_ptr,
        G_pwr_reading_type = PWR_READING_TYPE_NONE;
     }
 
-    bool l_found_volt2_sense = FALSE;
     for(l_channel=0;(l_channel < l_num_channels) && (NULL == l_err);l_channel++)
     {
         G_sysConfigData.apss_cal[l_channel].gnd_select = i_cmd_ptr->adc[l_channel].gnd_select;
@@ -852,11 +713,6 @@ errlHndl_t data_store_apss_config_v20(const cmdh_apss_config_v20_t * i_cmd_ptr,
         l_err = apss_store_adc_channel(i_cmd_ptr->adc[l_channel].assignment, l_channel);
         if (l_err == NULL)
         {
-            if (i_cmd_ptr->adc[l_channel].assignment == ADC_VOLT_SENSE_2)
-            {
-                l_found_volt2_sense = TRUE;
-            }
-
             //Write sensor IDs to the appropriate powr sensors.
             apss_store_ipmi_sensor_id(l_channel, &(i_cmd_ptr->adc[l_channel]));
 
@@ -872,31 +728,6 @@ errlHndl_t data_store_apss_config_v20(const cmdh_apss_config_v20_t * i_cmd_ptr,
         CNFG_DBG("data_store_apss_config_v20: Channel %d: GND[0x%02X] Gain[0x%08X] Offst[0x%08X]",
                  l_channel, G_sysConfigData.apss_cal[l_channel].gnd_select, G_sysConfigData.apss_cal[l_channel].gain,
                  G_sysConfigData.apss_cal[l_channel].offset);
-    }
-
-    if ((NULL == l_err) && G_found_volt2 && (!l_found_volt2_sense))
-    {
-        CMDH_TRAC_ERR("data_store_apss_config_v20: Found GPU using 2nd voltage but no ADC_VOLT_SENSE_2 supplied");
-        /* @
-         * @errortype
-         * @moduleid    DATA_STORE_APSS_DATA
-         * @reasoncode  INVALID_INPUT_DATA
-         * @userdata4   ERC_APSS_MISSING_ADC_VOLT_SENSE_2
-         * @devdesc     ADC_VOLT_SENSE_2 was not provided
-         */
-        l_err = createErrl(DATA_STORE_APSS_DATA,
-                           INVALID_INPUT_DATA,
-                           ERC_APSS_MISSING_ADC_VOLT_SENSE_2,
-                           ERRL_SEV_UNRECOVERABLE,
-                           NULL,
-                           DEFAULT_TRACE_SIZE,
-                           0,
-                           0);
-        // Callout firmware
-        addCalloutToErrl(l_err,
-                         ERRL_CALLOUT_TYPE_COMPONENT_ID,
-                         ERRL_COMPONENT_ID_FIRMWARE,
-                         ERRL_CALLOUT_PRIORITY_HIGH);
     }
 
     if( (NULL == l_err) && (G_pwr_reading_type == PWR_READING_TYPE_APSS) ) // only APSS has GPIO config
@@ -942,8 +773,6 @@ errlHndl_t data_store_apss_config(const cmdh_fsp_cmd_t * i_cmd_ptr,
     // Set to default values
     memset(&G_sysConfigData.apss_adc_map, SYSCFG_INVALID_ADC_CHAN, sizeof(G_sysConfigData.apss_adc_map));
     memset(&G_sysConfigData.apss_gpio_map, SYSCFG_INVALID_PIN, sizeof(G_sysConfigData.apss_gpio_map));
-    memset(G_gpu_volt_type, 0, sizeof(G_gpu_volt_type));
-    G_found_volt2 = FALSE;
 
     // only version 0x20 supported and data length must be at least 4
     if( (l_cmd_ptr->version != DATA_APSS_VERSION20) || (l_data_length < 4))

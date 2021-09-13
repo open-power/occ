@@ -138,12 +138,7 @@ typedef enum
     ADC_GPU_1_0                 = 0x1F,
     ADC_GPU_1_1                 = 0x20,
     ADC_GPU_1_2                 = 0x21,
-    ADC_GPU_VOLT2_0_0           = 0x22,
-    ADC_GPU_VOLT2_0_1           = 0x23,
-    ADC_GPU_VOLT2_1_0           = 0x24,
-    ADC_GPU_VOLT2_1_1           = 0x25,
-    ADC_VOLT_SENSE_2            = 0x26,
-    ADC_TOTAL_SYS_CURRENT_2     = 0x27,
+    ADC_PCIe_CURRENT            = 0x22,
     NUM_ADC_ASSIGNMENT_TYPES    // This should always be the last member
 } eApssAdcChannelAssignments;
 
@@ -221,8 +216,7 @@ typedef struct
   uint8_t mem_cache;
   uint8_t current_12v_stby;
   uint8_t gpu[MAX_GPU_DOMAINS][MAX_NUM_GPU_PER_DOMAIN];
-  uint8_t sense_volt2;
-  uint8_t total_current_volt2;
+  uint8_t pcie;
 } apssAdcChannelData_t;
 
 typedef struct

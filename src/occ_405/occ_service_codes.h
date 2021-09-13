@@ -188,9 +188,6 @@ enum occExtReasonCode
     ERC_AMEC_GPE1_TIMEOUT                       = 0x0033,
     ERC_AMEC_PROC_IO_TEMP_TIMEOUT               = 0x0034,
 
-    ERC_APSS_MISSING_ADC_VOLT_SENSE_2           = 0x0038,
-    ERC_APSS_GPU_VOLTAGE_CONFLICT               = 0x0039,
-
     ERC_CMDH_INTERNAL_FAILURE                   = 0x0041,
     ERC_CMDH_THRM_DATA_MISSING                  = 0x0042,
     ERC_CMDH_IPS_DATA_MISSING                   = 0x0043,

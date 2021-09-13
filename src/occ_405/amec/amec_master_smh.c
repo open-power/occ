@@ -322,8 +322,7 @@ void amec_mst_check_under_pcap(void)
                     if((l_apss_func_id != ADC_RESERVED) &&
                        (l_apss_func_id != ADC_12V_SENSE) &&
                        (l_apss_func_id != ADC_GND_REMOTE_SENSE) &&
-                       (l_apss_func_id != ADC_12V_STANDBY_CURRENT) &&
-                       (l_apss_func_id != ADC_VOLT_SENSE_2))
+                       (l_apss_func_id != ADC_12V_STANDBY_CURRENT))
                     {
                         l_trace[l_trace_idx] = (i << 24) | (l_apss_func_id << 16) | (AMECSENSOR_PTR(PWRAPSSCH00 + i)->sample);
                         l_trace_idx++;
