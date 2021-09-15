@@ -31,14 +31,14 @@
 #include <apss.h>
 
 #define  CHOM_GEN_LOG_PERIODIC_TIME     86400 // seconds in a day
-#define  CHOM_VERSION                   0x03
+#define  CHOM_VERSION                   0x10
 // Max size of chom data this should be less than MAX_ERRL_CALL_HOME_SZ
 // to account for error log header/possible other data in the call home log
 #define  CHOM_LOG_DATA_MAX              (MAX_ERRL_CALL_HOME_SZ - 256)
-// Max number of memory bandwidth CHOM sensors
-#define  MAX_NUM_MEMORY_SENSORS         64
 // Max number of procs Call Home will get data for
-#define CHOM_MAX_OCCS                   4
+#define CHOM_MAX_OCCS                   8
+// Max number of memory bandwidth CHOM sensors
+#define  MAX_NUM_MEMORY_SENSORS         (CHOM_MAX_OCCS * 16)
 // Max number of error history entries to add to call home log
 #define CHOM_MAX_ERRH_ENTRIES           4
 // List of call home sensors
@@ -68,51 +68,91 @@ enum
     CHOMFREQP1,
     CHOMFREQP2,
     CHOMFREQP3,
+    CHOMFREQP4,
+    CHOMFREQP5,
+    CHOMFREQP6,
+    CHOMFREQP7,
     // Processor utilization sensor
     CHOMUTILP0,
     CHOMUTILP1,
     CHOMUTILP2,
     CHOMUTILP3,
+    CHOMUTILP4,
+    CHOMUTILP5,
+    CHOMUTILP6,
+    CHOMUTILP7,
     // Proc temperatures across all nodes
     CHOMTEMPPROC0,
     CHOMTEMPPROC1,
     CHOMTEMPPROC2,
     CHOMTEMPPROC3,
+    CHOMTEMPPROC4,
+    CHOMTEMPPROC5,
+    CHOMTEMPPROC6,
+    CHOMTEMPPROC7,
     // Proc io temperature accross all nodes
     CHOMTEMPIOP0,
     CHOMTEMPIOP1,
     CHOMTEMPIOP2,
     CHOMTEMPIOP3,
+    CHOMTEMPIOP4,
+    CHOMTEMPIOP5,
+    CHOMTEMPIOP6,
+    CHOMTEMPIOP7,
     // Membuf temperature for all membufs in the node
     CHOMTEMPMEMBUFP0,
     CHOMTEMPMEMBUFP1,
     CHOMTEMPMEMBUFP2,
     CHOMTEMPMEMBUFP3,
+    CHOMTEMPMEMBUFP4,
+    CHOMTEMPMEMBUFP5,
+    CHOMTEMPMEMBUFP6,
+    CHOMTEMPMEMBUFP7,
     // Dimm temperature for all Dimms in the node
     CHOMTEMPDIMMP0,
     CHOMTEMPDIMMP1,
     CHOMTEMPDIMMP2,
     CHOMTEMPDIMMP3,
+    CHOMTEMPDIMMP4,
+    CHOMTEMPDIMMP5,
+    CHOMTEMPDIMMP6,
+    CHOMTEMPDIMMP7,
     // temperature covering mem controller and DRAM for all Dimms in the node
     CHOMTEMPMCDIMMP0,
     CHOMTEMPMCDIMMP1,
     CHOMTEMPMCDIMMP2,
     CHOMTEMPMCDIMMP3,
+    CHOMTEMPMCDIMMP4,
+    CHOMTEMPMCDIMMP5,
+    CHOMTEMPMCDIMMP6,
+    CHOMTEMPMCDIMMP7,
     // PMIC temperature read from OCMB cache line for all Dimms in the node
     CHOMTEMPPMICP0,
     CHOMTEMPPMICP1,
     CHOMTEMPPMICP2,
     CHOMTEMPPMICP3,
+    CHOMTEMPPMICP4,
+    CHOMTEMPPMICP5,
+    CHOMTEMPPMICP6,
+    CHOMTEMPPMICP7,
     // External memory buffer temperature for all memory controllers in the node
     CHOMTEMPMCEXTP0,
     CHOMTEMPMCEXTP1,
     CHOMTEMPMCEXTP2,
     CHOMTEMPMCEXTP3,
+    CHOMTEMPMCEXTP4,
+    CHOMTEMPMCEXTP5,
+    CHOMTEMPMCEXTP6,
+    CHOMTEMPMCEXTP7,
     // VRM VDD temperature per proc
     CHOMTEMPVDDP0,
     CHOMTEMPVDDP1,
     CHOMTEMPVDDP2,
     CHOMTEMPVDDP3,
+    CHOMTEMPVDDP4,
+    CHOMTEMPVDDP5,
+    CHOMTEMPVDDP6,
+    CHOMTEMPVDDP7,
     // Instructions per second sensor
     CHOMIPS,
     // Memory bandwidth for process memory controller
@@ -180,30 +220,118 @@ enum
     CHOMBWP3M13,
     CHOMBWP3M14,
     CHOMBWP3M15,
+    CHOMBWP4M0,
+    CHOMBWP4M1,
+    CHOMBWP4M2,
+    CHOMBWP4M3,
+    CHOMBWP4M4,
+    CHOMBWP4M5,
+    CHOMBWP4M6,
+    CHOMBWP4M7,
+    CHOMBWP4M8,
+    CHOMBWP4M9,
+    CHOMBWP4M10,
+    CHOMBWP4M11,
+    CHOMBWP4M12,
+    CHOMBWP4M13,
+    CHOMBWP4M14,
+    CHOMBWP4M15,
+    CHOMBWP5M0,
+    CHOMBWP5M1,
+    CHOMBWP5M2,
+    CHOMBWP5M3,
+    CHOMBWP5M4,
+    CHOMBWP5M5,
+    CHOMBWP5M6,
+    CHOMBWP5M7,
+    CHOMBWP5M8,
+    CHOMBWP5M9,
+    CHOMBWP5M10,
+    CHOMBWP5M11,
+    CHOMBWP5M12,
+    CHOMBWP5M13,
+    CHOMBWP5M14,
+    CHOMBWP5M15,
+    CHOMBWP6M0,
+    CHOMBWP6M1,
+    CHOMBWP6M2,
+    CHOMBWP6M3,
+    CHOMBWP6M4,
+    CHOMBWP6M5,
+    CHOMBWP6M6,
+    CHOMBWP6M7,
+    CHOMBWP6M8,
+    CHOMBWP6M9,
+    CHOMBWP6M10,
+    CHOMBWP6M11,
+    CHOMBWP6M12,
+    CHOMBWP6M13,
+    CHOMBWP6M14,
+    CHOMBWP6M15,
+    CHOMBWP7M0,
+    CHOMBWP7M1,
+    CHOMBWP7M2,
+    CHOMBWP7M3,
+    CHOMBWP7M4,
+    CHOMBWP7M5,
+    CHOMBWP7M6,
+    CHOMBWP7M7,
+    CHOMBWP7M8,
+    CHOMBWP7M9,
+    CHOMBWP7M10,
+    CHOMBWP7M11,
+    CHOMBWP7M12,
+    CHOMBWP7M13,
+    CHOMBWP7M14,
+    CHOMBWP7M15,
     CHOMDDSAVGP0,
     CHOMDDSAVGP1,
     CHOMDDSAVGP2,
     CHOMDDSAVGP3,
+    CHOMDDSAVGP4,
+    CHOMDDSAVGP5,
+    CHOMDDSAVGP6,
+    CHOMDDSAVGP7,
     CHOMDDSMINP0,
     CHOMDDSMINP1,
     CHOMDDSMINP2,
     CHOMDDSMINP3,
+    CHOMDDSMINP4,
+    CHOMDDSMINP5,
+    CHOMDDSMINP6,
+    CHOMDDSMINP7,
     CHOMCURVDDP0,
     CHOMCURVDDP1,
     CHOMCURVDDP2,
     CHOMCURVDDP3,
+    CHOMCURVDDP4,
+    CHOMCURVDDP5,
+    CHOMCURVDDP6,
+    CHOMCURVDDP7,
     CHOMCEFFRATIOVDDP0,
     CHOMCEFFRATIOVDDP1,
     CHOMCEFFRATIOVDDP2,
     CHOMCEFFRATIOVDDP3,
+    CHOMCEFFRATIOVDDP4,
+    CHOMCEFFRATIOVDDP5,
+    CHOMCEFFRATIOVDDP6,
+    CHOMCEFFRATIOVDDP7,
     CHOMUVAVGP0,
     CHOMUVAVGP1,
     CHOMUVAVGP2,
     CHOMUVAVGP3,
+    CHOMUVAVGP4,
+    CHOMUVAVGP5,
+    CHOMUVAVGP6,
+    CHOMUVAVGP7,
     CHOMOVAVGP0,
     CHOMOVAVGP1,
     CHOMOVAVGP2,
     CHOMOVAVGP3,
+    CHOMOVAVGP4,
+    CHOMOVAVGP5,
+    CHOMOVAVGP6,
+    CHOMOVAVGP7,
     // The number of chom sensors reported
     CHOM_NUM_OF_SENSORS
 };
@@ -252,10 +380,12 @@ struct ChomNodeData
     uint8_t        modeInLog;                     // the number of different power mode in the polling period
     uint8_t        channelFuncIds[MAX_APSS_ADC_CHANNELS];
     uint16_t       numSensors;                    // the number of sensors for which call home data was collected
-    // error history counts. Only collect on up to 3 slaves, excluding master
+    // error history counts and freq clip history for all slaves, skip master already in error log
     error_history_count_t errhCounts[CHOM_MAX_OCCS-1][CHOM_MAX_ERRH_ENTRIES];
     uint32_t       fClipHist[CHOM_MAX_OCCS-1];
-    uint8_t        ddsMinCore[CHOM_MAX_OCCS];     // core number that had the minimum for DDS min sensor
+    uint8_t        ddsMinCore[CHOM_MAX_OCCS];       // core number that had the minimum for DDS min sensor
+    uint32_t       ocsDirtyTypeAct[CHOM_MAX_OCCS];  // count of OCS dirty with type 1 (act) was set
+    uint32_t       ocsDirtyTypeHold[CHOM_MAX_OCCS]; // count of OCS dirty with type 0 (hold) was set
 } __attribute__ ((__packed__));
 
 typedef struct ChomNodeData ChomNodeData_t;

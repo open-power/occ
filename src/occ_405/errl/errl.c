@@ -478,9 +478,7 @@ errlHndl_t createPgpeErrl(const uint16_t i_modId,
         addErrHistory( l_err );
 
         // if this is a WOF error add WOF parameters to error log
-        // only add for FSP systems where there is support for larger error logs
-        if( (i_reasonCode == WOF_DISABLED_RC) &&
-            (G_occ_interrupt_type == FSP_SUPPORTED_OCC) )
+        if(i_reasonCode == WOF_DISABLED_RC)
         {
            addUsrDtlsToErrl( l_err,
                              (uint8_t*)&(g_amec_sys.wof),

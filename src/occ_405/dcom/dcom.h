@@ -100,7 +100,7 @@
 #define TOD_SIZE                 6
 #define NUM_TOD_SENSORS          3
 #define SLV_INBOX_RSV_SIZE       170
-#define SLV_OUTBOX_RSV_SIZE      453
+#define SLV_OUTBOX_RSV_SIZE      445
 #define DOORBELL_RSV_SIZE        1
 #define DCOM_MAX_ERRH_ENTRIES    8
 
@@ -237,10 +237,14 @@ typedef struct __attribute__ ((packed))
     // core number corresponding to DDS min sensor
     uint8_t ddsMinCore;                                          // [538]
 
+    // OCS Dirty counters
+    uint32_t ocs_dirty_type0_count;                              // [539] - 4 bytes
+    uint32_t ocs_dirty_type1_count;                              // [543] - 4 bytes
+
     // Reserved Bytes
     union
     {
-        uint8_t  reserved2[SLV_OUTBOX_RSV_SIZE];                 // [539] - 453 bytes
+        uint8_t  reserved2[SLV_OUTBOX_RSV_SIZE];                 // [547] - 445 bytes
         struct __attribute__ ((packed))
         {
             uint8_t _reserved2_1;

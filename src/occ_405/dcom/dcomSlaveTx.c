@@ -36,6 +36,7 @@
 #include <proc_pstate.h>
 #include <amec_sys.h>
 #include <common.h>
+#include <wof.h>
 
 // SSX Block Copy Request for the Slave Outbox Transmit Queue
 BceRequest G_slv_outbox_tx_pba_request;
@@ -118,6 +119,10 @@ uint32_t dcom_build_slv_outbox(void)
 
     // add the core number corresponding to DDS min sensor
     G_dcom_slv_outbox_tx.ddsMinCore = (uint8_t)AMECSENSOR_PTR(DDSMIN)->status.sample_info;
+
+    // add OCS dirty counters
+    G_dcom_slv_outbox_tx.ocs_dirty_type0_count = g_amec->wof.ocs_dirty_type0_count;
+    G_dcom_slv_outbox_tx.ocs_dirty_type1_count = g_amec->wof.ocs_dirty_type1_count;
 
     return l_addr_of_slv_outbox_in_main_mem;
 }

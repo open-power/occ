@@ -75,51 +75,91 @@ const uint16_t * g_chom_sensor_table[CHOM_NUM_OF_SENSORS] =
     &G_dcom_slv_outbox_rx[1].freqa,
     &G_dcom_slv_outbox_rx[2].freqa,
     &G_dcom_slv_outbox_rx[3].freqa,
+    &G_dcom_slv_outbox_rx[4].freqa,
+    &G_dcom_slv_outbox_rx[5].freqa,
+    &G_dcom_slv_outbox_rx[6].freqa,
+    &G_dcom_slv_outbox_rx[7].freqa,
     // Processor utilization sensor
     &G_dcom_slv_outbox_rx[0].util,
     &G_dcom_slv_outbox_rx[1].util,
     &G_dcom_slv_outbox_rx[2].util,
     &G_dcom_slv_outbox_rx[3].util,
+    &G_dcom_slv_outbox_rx[4].util,
+    &G_dcom_slv_outbox_rx[5].util,
+    &G_dcom_slv_outbox_rx[6].util,
+    &G_dcom_slv_outbox_rx[7].util,
     // Processor temperature sensors
     &G_dcom_slv_outbox_rx[0].tempprocthermal,
     &G_dcom_slv_outbox_rx[1].tempprocthermal,
     &G_dcom_slv_outbox_rx[2].tempprocthermal,
     &G_dcom_slv_outbox_rx[3].tempprocthermal,
+    &G_dcom_slv_outbox_rx[4].tempprocthermal,
+    &G_dcom_slv_outbox_rx[5].tempprocthermal,
+    &G_dcom_slv_outbox_rx[6].tempprocthermal,
+    &G_dcom_slv_outbox_rx[7].tempprocthermal,
     // Processor IO temperature sensors
     &G_dcom_slv_outbox_rx[0].tempprociothermal,
     &G_dcom_slv_outbox_rx[1].tempprociothermal,
     &G_dcom_slv_outbox_rx[2].tempprociothermal,
     &G_dcom_slv_outbox_rx[3].tempprociothermal,
+    &G_dcom_slv_outbox_rx[4].tempprociothermal,
+    &G_dcom_slv_outbox_rx[5].tempprociothermal,
+    &G_dcom_slv_outbox_rx[6].tempprociothermal,
+    &G_dcom_slv_outbox_rx[7].tempprociothermal,
     // Membuf temperature sensors
     &G_dcom_slv_outbox_rx[0].tempmembufthrm,
     &G_dcom_slv_outbox_rx[1].tempmembufthrm,
     &G_dcom_slv_outbox_rx[2].tempmembufthrm,
     &G_dcom_slv_outbox_rx[3].tempmembufthrm,
+    &G_dcom_slv_outbox_rx[4].tempmembufthrm,
+    &G_dcom_slv_outbox_rx[5].tempmembufthrm,
+    &G_dcom_slv_outbox_rx[6].tempmembufthrm,
+    &G_dcom_slv_outbox_rx[7].tempmembufthrm,
     // DIMM temperature sensors
     &G_dcom_slv_outbox_rx[0].tempdimmthrm,
     &G_dcom_slv_outbox_rx[1].tempdimmthrm,
     &G_dcom_slv_outbox_rx[2].tempdimmthrm,
     &G_dcom_slv_outbox_rx[3].tempdimmthrm,
+    &G_dcom_slv_outbox_rx[4].tempdimmthrm,
+    &G_dcom_slv_outbox_rx[5].tempdimmthrm,
+    &G_dcom_slv_outbox_rx[6].tempdimmthrm,
+    &G_dcom_slv_outbox_rx[7].tempdimmthrm,
     // temperature sensors for mem controller + DRAM
     &G_dcom_slv_outbox_rx[0].tempmcdimmthrm,
     &G_dcom_slv_outbox_rx[1].tempmcdimmthrm,
     &G_dcom_slv_outbox_rx[2].tempmcdimmthrm,
     &G_dcom_slv_outbox_rx[3].tempmcdimmthrm,
+    &G_dcom_slv_outbox_rx[4].tempmcdimmthrm,
+    &G_dcom_slv_outbox_rx[5].tempmcdimmthrm,
+    &G_dcom_slv_outbox_rx[6].tempmcdimmthrm,
+    &G_dcom_slv_outbox_rx[7].tempmcdimmthrm,
     // temperature sensors for PMIC
     &G_dcom_slv_outbox_rx[0].temppmicthrm,
     &G_dcom_slv_outbox_rx[1].temppmicthrm,
     &G_dcom_slv_outbox_rx[2].temppmicthrm,
     &G_dcom_slv_outbox_rx[3].temppmicthrm,
+    &G_dcom_slv_outbox_rx[4].temppmicthrm,
+    &G_dcom_slv_outbox_rx[5].temppmicthrm,
+    &G_dcom_slv_outbox_rx[6].temppmicthrm,
+    &G_dcom_slv_outbox_rx[7].temppmicthrm,
     // temperature sensors for external mem controller sensor
     &G_dcom_slv_outbox_rx[0].tempmcextthrm,
     &G_dcom_slv_outbox_rx[1].tempmcextthrm,
     &G_dcom_slv_outbox_rx[2].tempmcextthrm,
     &G_dcom_slv_outbox_rx[3].tempmcextthrm,
+    &G_dcom_slv_outbox_rx[4].tempmcextthrm,
+    &G_dcom_slv_outbox_rx[5].tempmcextthrm,
+    &G_dcom_slv_outbox_rx[6].tempmcextthrm,
+    &G_dcom_slv_outbox_rx[7].tempmcextthrm,
     // VRM VDD temperatures
     &G_dcom_slv_outbox_rx[0].tempvdd,
     &G_dcom_slv_outbox_rx[1].tempvdd,
     &G_dcom_slv_outbox_rx[2].tempvdd,
     &G_dcom_slv_outbox_rx[3].tempvdd,
+    &G_dcom_slv_outbox_rx[4].tempvdd,
+    &G_dcom_slv_outbox_rx[5].tempvdd,
+    &G_dcom_slv_outbox_rx[6].tempvdd,
+    &G_dcom_slv_outbox_rx[7].tempvdd,
     // Instructions per second sensor
     NULL,
     // Memory bandwidth for process memory controller
@@ -131,31 +171,63 @@ const uint16_t * g_chom_sensor_table[CHOM_NUM_OF_SENSORS] =
     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
     // P3M0 ~ P3M15
     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+    // P4M0 ~ P4M15
+    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+    // P5M0 ~ P5M15
+    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+    // P6M0 ~ P6M15
+    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+    // P7M0 ~ P7M15
+    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
     // WOF related data
     &G_dcom_slv_outbox_rx[0].ddsAvg,
     &G_dcom_slv_outbox_rx[1].ddsAvg,
     &G_dcom_slv_outbox_rx[2].ddsAvg,
     &G_dcom_slv_outbox_rx[3].ddsAvg,
+    &G_dcom_slv_outbox_rx[4].ddsAvg,
+    &G_dcom_slv_outbox_rx[5].ddsAvg,
+    &G_dcom_slv_outbox_rx[6].ddsAvg,
+    &G_dcom_slv_outbox_rx[7].ddsAvg,
     &G_dcom_slv_outbox_rx[0].ddsMin,
     &G_dcom_slv_outbox_rx[1].ddsMin,
     &G_dcom_slv_outbox_rx[2].ddsMin,
     &G_dcom_slv_outbox_rx[3].ddsMin,
+    &G_dcom_slv_outbox_rx[4].ddsMin,
+    &G_dcom_slv_outbox_rx[5].ddsMin,
+    &G_dcom_slv_outbox_rx[6].ddsMin,
+    &G_dcom_slv_outbox_rx[7].ddsMin,
     &G_dcom_slv_outbox_rx[0].curVdd,
     &G_dcom_slv_outbox_rx[1].curVdd,
     &G_dcom_slv_outbox_rx[2].curVdd,
     &G_dcom_slv_outbox_rx[3].curVdd,
+    &G_dcom_slv_outbox_rx[4].curVdd,
+    &G_dcom_slv_outbox_rx[5].curVdd,
+    &G_dcom_slv_outbox_rx[6].curVdd,
+    &G_dcom_slv_outbox_rx[7].curVdd,
     &G_dcom_slv_outbox_rx[0].ceffRatioVdd,
     &G_dcom_slv_outbox_rx[1].ceffRatioVdd,
     &G_dcom_slv_outbox_rx[2].ceffRatioVdd,
     &G_dcom_slv_outbox_rx[3].ceffRatioVdd,
+    &G_dcom_slv_outbox_rx[4].ceffRatioVdd,
+    &G_dcom_slv_outbox_rx[5].ceffRatioVdd,
+    &G_dcom_slv_outbox_rx[6].ceffRatioVdd,
+    &G_dcom_slv_outbox_rx[7].ceffRatioVdd,
     &G_dcom_slv_outbox_rx[0].uvAvg,
     &G_dcom_slv_outbox_rx[1].uvAvg,
     &G_dcom_slv_outbox_rx[2].uvAvg,
     &G_dcom_slv_outbox_rx[3].uvAvg,
+    &G_dcom_slv_outbox_rx[4].uvAvg,
+    &G_dcom_slv_outbox_rx[5].uvAvg,
+    &G_dcom_slv_outbox_rx[6].uvAvg,
+    &G_dcom_slv_outbox_rx[7].uvAvg,
     &G_dcom_slv_outbox_rx[0].ovAvg,
     &G_dcom_slv_outbox_rx[1].ovAvg,
     &G_dcom_slv_outbox_rx[2].ovAvg,
     &G_dcom_slv_outbox_rx[3].ovAvg,
+    &G_dcom_slv_outbox_rx[4].ovAvg,
+    &G_dcom_slv_outbox_rx[5].ovAvg,
+    &G_dcom_slv_outbox_rx[6].ovAvg,
+    &G_dcom_slv_outbox_rx[7].ovAvg,
 };
 
 
@@ -213,6 +285,10 @@ void chom_update_sensors()
     uint32_t l_mips = 0;
     uint16_t l_mem_rw = 0;
     uint16_t l_sample = 0;
+    uint32_t l_dirty_accum = 0;
+
+    static uint32_t L_prev_ocsDirtyType0[CHOM_MAX_OCCS] = {0};
+    static uint32_t L_prev_ocsDirtyType1[CHOM_MAX_OCCS] = {0};
 
     static uint32_t L_memBWNumSamples[NUM_CHOM_MODES][MAX_NUM_MEM_CONTROLLERS] = {{0}};
 
@@ -406,6 +482,33 @@ void chom_update_sensors()
     for( proc_idx = 0; proc_idx < CHOM_MAX_OCCS; proc_idx++ )
     {
         g_chom->nodeData.ddsMinCore[proc_idx] = G_dcom_slv_outbox_rx[proc_idx].ddsMinCore;
+
+        // add overcurrent dirty counters for both type hold and act
+        // add type1 (act) check for rollover
+        if(G_dcom_slv_outbox_rx[proc_idx].ocs_dirty_type1_count < L_prev_ocsDirtyType1[proc_idx])
+        {
+            l_dirty_accum = 0xFFFFFFFF - L_prev_ocsDirtyType1[proc_idx] + 1;
+            l_dirty_accum += G_dcom_slv_outbox_rx[proc_idx].ocs_dirty_type1_count;
+        }
+        else
+        {
+            l_dirty_accum = G_dcom_slv_outbox_rx[proc_idx].ocs_dirty_type1_count - L_prev_ocsDirtyType1[proc_idx];
+        }
+        g_chom->nodeData.ocsDirtyTypeAct[proc_idx] += l_dirty_accum;
+        L_prev_ocsDirtyType1[proc_idx] = G_dcom_slv_outbox_rx[proc_idx].ocs_dirty_type1_count;
+
+        // add type0 (hold) check for rollover
+        if(G_dcom_slv_outbox_rx[proc_idx].ocs_dirty_type0_count < L_prev_ocsDirtyType0[proc_idx])
+        {
+            l_dirty_accum = 0xFFFFFFFF - L_prev_ocsDirtyType0[proc_idx] + 1;
+            l_dirty_accum += G_dcom_slv_outbox_rx[proc_idx].ocs_dirty_type0_count;
+        }
+        else
+        {
+            l_dirty_accum = G_dcom_slv_outbox_rx[proc_idx].ocs_dirty_type0_count - L_prev_ocsDirtyType0[proc_idx];
+        }
+        g_chom->nodeData.ocsDirtyTypeHold[proc_idx] += l_dirty_accum;
+        L_prev_ocsDirtyType0[proc_idx] = G_dcom_slv_outbox_rx[proc_idx].ocs_dirty_type0_count;
 
         // If we are on the master proc, skip ERRH and Fclip since it is already
         // present in the call home log
