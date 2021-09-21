@@ -312,17 +312,6 @@ typedef struct __attribute__ ((packed))
 }cmdh_thrm_thresholds_v30_t;
 
 // Header data for mem cfg packet
-// TODO RTC: 258705 Delete version 0x21
-typedef struct __attribute__ ((packed))
-{
-    struct cmdh_fsp_cmd_header;
-    uint8_t                 format;
-    uint8_t                 version;
-    uint8_t                 default_mem_pwr_ctl;  // default memory power control
-    uint8_t                 ips_mem_pwr_ctl;      // Idle Power Save memory power control
-    uint8_t                 num_data_sets;
-}cmdh_mem_cfg_header_v21_t;
-
 typedef struct __attribute__ ((packed))
 {
     struct cmdh_fsp_cmd_header;
@@ -347,13 +336,6 @@ typedef struct __attribute__ ((packed))
     uint8_t                    dimm_info3;  // Reserved
 }cmdh_mem_cfg_data_set_t;
 
-// TODO RTC: 258705 Delete version 0x21
-typedef struct __attribute__ ((packed))
-{
-    cmdh_mem_cfg_header_v21_t   header;
-    cmdh_mem_cfg_data_set_t data_set[1];
-}cmdh_mem_cfg_v21_t;
-
 typedef struct __attribute__ ((packed))
 {
     cmdh_mem_cfg_header_v30_t   header;
@@ -376,30 +358,6 @@ typedef struct __attribute__ ((packed))
     uint8_t   membuf_num;            // Physical memory buffer#
     uint8_t   _reserved;
 } cmdh_mem_throt_info_t;
-
-typedef struct __attribute__ ((packed))
-{
-    cmdh_mem_throt_info_t mem_throt_info;        // membuf information header
-
-    uint16_t              min_n_per_mba;         // Lowest per MBA allowed numerator
-    uint16_t              min_mem_power;         // Max mem Power @min (x0.01W)
-
-    uint16_t              wof_n_per_mba;         // Static per MBA numerator when WOF is enabled
-    uint16_t              wof_n_per_chip;        // Static per chip numerator when WOF is enabled
-    uint16_t              wof_mem_power;         // Max memory power when WOF is enabled (x0.01W)
-
-    uint16_t              pcap_n_per_mba;        // Static per MBA numerator @PCAP
-    uint16_t              pcap_n_per_chip;       // Static per chip numerator @PCAP
-    uint16_t              pcap_mem_power;        // Max memory power @PCAP (x0.01W)
-
-    uint16_t              fmax_n_per_mba;         // Static per MBA N at fmax
-    uint16_t              fmax_n_per_chip;        // Static per chip N at fmax
-    uint16_t              fmax_mem_power;         // Max memory power at fmax (x0.01W)
-
-    uint16_t              reserved1;             // reserved
-    uint16_t              reserved2;             // reserved
-    uint16_t              reserved3;             // reserved
-} cmdh_mem_throt_data_set_v30_t;
 
 typedef struct __attribute__ ((packed))
 {
