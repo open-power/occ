@@ -254,7 +254,9 @@ void cmdh_dbug_get_ame_sensor (const cmdh_fsp_cmd_t * i_cmd_ptr,
 
                 if(l_clear)
                 {
-                    sensor_reset(l_sensor_ptr);
+                    // Only clear the sample min/max fields in sensor
+                    sensor_clear_minmax(l_sensor_ptr,
+                                        AMEC_SENSOR_CLEAR_SAMPLE_MINMAX);
                 }
             }
         }
