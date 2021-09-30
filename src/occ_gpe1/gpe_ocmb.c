@@ -919,9 +919,20 @@ int check_channel_fail(int i_membuf)
     }
     else
     {
-        if(fir.fields.channel_fail != 0)
+        // Each membuf on the channel is connected to it's own sub-channel
+        if((i_membuf & 0x1) == 0)// even
         {
-            rc = MEMBUF_CHANNEL_CHECKSTOP;
+            if(fir.fields.sub_channel_a_fail != 0)
+            {
+                rc = MEMBUF_CHANNEL_CHECKSTOP;
+            }
+        }
+        else // odd
+        {
+            if(fir.fields.sub_channel_b_fail != 0)
+            {
+                rc = MEMBUF_CHANNEL_CHECKSTOP;
+            }
         }
     }
 

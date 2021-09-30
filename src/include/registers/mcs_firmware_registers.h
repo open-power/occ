@@ -122,7 +122,8 @@ typedef union dstlfir
     struct
     {
         uint64_t dontCare0 : 20;
-        uint64_t channel_fail: 2;  // One bit per dimm
+        uint64_t sub_channel_a_fail: 1;  // One bit per dimm
+        uint64_t sub_channel_b_fail: 1;
         uint64_t dontCare1 : 42;
     } fields;
 } dstlfir_t;
