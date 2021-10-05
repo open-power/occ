@@ -862,11 +862,15 @@ errlHndl_t cmdh_reset_prep (const cmdh_fsp_cmd_t * i_cmd_ptr,
         {
             case CMDH_PREP_NONFAILURE:
                 // No FFDC Error Log Needed
+                // stop watchdog so frequency will drop to safe
+                rtl_stop_task(TASK_ID_POKE_WDT);
                 l_rc = ERRL_RC_SUCCESS;
                 break;
 
             case CMDH_PREP_FAILON_THISOCC:
                 l_ffdc = TRUE;
+                // stop watchdog so frequency will drop to safe
+                rtl_stop_task(TASK_ID_POKE_WDT);
                 l_rc = ERRL_RC_SUCCESS;
                 break;
 
@@ -876,11 +880,15 @@ errlHndl_t cmdh_reset_prep (const cmdh_fsp_cmd_t * i_cmd_ptr,
                 {
                     l_ffdc = TRUE;
                 }
+                // stop watchdog so frequency will drop to safe
+                rtl_stop_task(TASK_ID_POKE_WDT);
                 l_rc = ERRL_RC_SUCCESS;
                 break;
 
             case CMDH_PREP_FAILON_OTHERNODE:
                 // No FFDC Error Log Needed
+                // stop watchdog so frequency will drop to safe
+                rtl_stop_task(TASK_ID_POKE_WDT);
                 l_rc = ERRL_RC_SUCCESS;
                 break;
 
