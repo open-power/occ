@@ -1120,8 +1120,8 @@ void read_xgpe_values( void )
     // Read and process XGPE Produced WOF values
     l_XgpeWofValues.value = in64(g_amec_sys.static_wof_data.xgpe_values_sram_addr);
 
-    // update IO Power Proxy sensor
-    sensor_update(AMECSENSOR_PTR(IO_PWR_PROXY), (uint16_t)l_XgpeWofValues.fields.io_power_proxy_0p01w);
+    // update IO Power Proxy sensor with last computed power
+    sensor_update(AMECSENSOR_PTR(IO_PWR_PROXY), (uint16_t)l_XgpeWofValues.fields.compute_pwr_10mw);
 
     // Set IO Power index bits 1:3 of io_index
     g_wof->io_pwr_step_from_start = (uint16_t)((l_XgpeWofValues.fields.io_index & 0x70) >> 4);

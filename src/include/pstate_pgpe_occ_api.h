@@ -287,10 +287,11 @@ typedef union
     } words;
     struct
     {
-        uint64_t io_power_proxy_0p01w           : 16;
+        uint64_t io_power_proxy_w               : 16;
         uint64_t reserved0                      : 8;
         uint64_t io_index                       : 8;
-        uint64_t reserved1                      : 32;
+        uint64_t compute_pwr_10mw               : 16;
+        uint64_t reserved1                      : 16;
     } fields;
 } xgpe_wof_values_t;
 
