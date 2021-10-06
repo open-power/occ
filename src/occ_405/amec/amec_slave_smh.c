@@ -1215,6 +1215,9 @@ void amec_slv_substate_5_2(void)
     // Update Proc Core sensors (for this substate)
     //-------------------------------------------------------
     amec_update_proc_core_group(2);
+
+    // Call processor-based thermal controller
+    amec_controller_proc_thermal();
 }
 
 void amec_slv_substate_5_3(void)
@@ -1259,6 +1262,9 @@ void amec_slv_substate_5_4(void)
     // Update Proc Core sensors (for this substate)
     //-------------------------------------------------------
     amec_update_proc_core_group(2);
+
+    // Call processor-based thermal controller
+    amec_controller_proc_thermal();
 }
 
 void amec_slv_substate_5_5(void)
@@ -1302,6 +1308,9 @@ void amec_slv_substate_5_6(void)
     // Update Proc Core sensors (for this substate)
     //-------------------------------------------------------
     amec_update_proc_core_group(2);
+
+    // Call processor-based thermal controller
+    amec_controller_proc_thermal();
 }
 
 void amec_slv_substate_5_7(void)

@@ -1006,13 +1006,14 @@ void amec_health_check_proc_temp()
     #define NUM_PROC_SENSOR_TYPES 2
 
     // number of additional pieces of info for each OT history
-    #define NUM_HISTORY_FIELDS    4
+    #define NUM_HISTORY_FIELDS    5
 
     // these are used for both L_error_count and L_temp_history, types (core, IO) must be first
     #define CORE_DTS_INDEX        0  // core temperature
     #define IO_DTS_INDEX          1  // IO temperature
     #define CORE_NUM_INDEX        2  // core number corresponding to core temp
     #define FREQ_INDEX            3  // current processor frequency
+    #define DESIRED_FREQ_INDEX    4  // OCC desired processor frequency
 
     /*------------------------------------------------------------------------*/
     /*  Local Variables                                                       */
@@ -1025,6 +1026,7 @@ void amec_health_check_proc_temp()
     uint8_t                     l_quad;
     uint16_t                    l_idx = 0;
     uint16_t                    l_freq = 0;
+    uint16_t                    l_desired_freq = 0;
     static uint32_t             L_error_count[NUM_PROC_SENSOR_TYPES] = {0};
     // history of core and IO temperatures for tracing when logging OT error
     static uint16_t             L_temp_history[TEMP_HISTORY_SIZE][NUM_HISTORY_FIELDS] = {{0}};
@@ -1049,6 +1051,7 @@ void amec_health_check_proc_temp()
         l_core_num = l_sensor->vector->max_pos;
         l_ot_error = g_amec->thermalproc.ot_error;
         l_freq = (uint16_t)g_amec->wof.avg_freq_mhz;
+        l_desired_freq = g_amec->thermalproc.freq_request;
 
         // Get TEMPPROCIOTHRM sensor, which is hottest IO temperature
         // in OCC processor
@@ -1090,6 +1093,7 @@ void amec_health_check_proc_temp()
                   L_temp_history[l_idx][CORE_NUM_INDEX] = l_core_num;
                   L_temp_history[l_idx][CORE_DTS_INDEX] = l_cur_temp;
                   L_temp_history[l_idx][FREQ_INDEX] = l_freq;
+                  L_temp_history[l_idx][DESIRED_FREQ_INDEX] = l_desired_freq;
                }
             }
             // Increment the error counter for this FRU
@@ -1188,6 +1192,9 @@ void amec_health_check_proc_temp()
                 TRAC_ERR("amec_health_check_error_temp: frequency history current[%u] [%u] [%u] [%u] [%u]",
                          L_temp_history[4][FREQ_INDEX], L_temp_history[3][FREQ_INDEX], L_temp_history[2][FREQ_INDEX],
                          L_temp_history[1][FREQ_INDEX], L_temp_history[0][FREQ_INDEX]);
+                TRAC_ERR("amec_health_check_error_temp: desired frequency history current[%u] [%u] [%u] [%u] [%u]",
+                         L_temp_history[4][DESIRED_FREQ_INDEX], L_temp_history[3][DESIRED_FREQ_INDEX], L_temp_history[2][DESIRED_FREQ_INDEX],
+                         L_temp_history[1][DESIRED_FREQ_INDEX], L_temp_history[0][DESIRED_FREQ_INDEX]);
 
                 // trace the individual temps used to calculate the current hottest core temp
                 // non-weighted avg of 2 core DTS and 1 L3 DTS
