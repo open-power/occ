@@ -378,6 +378,24 @@ errlHndl_t apss_store_adc_channel(const eApssAdcChannelAssignments i_func_id, co
                 l_adc_function = &G_sysConfigData.apss_adc_map.pcie;
                 break;
 
+            case ADC_VPCIE_CURRENT_DCM0:
+            case ADC_VPCIE_CURRENT_DCM1:
+            case ADC_VPCIE_CURRENT_DCM2:
+            case ADC_VPCIE_CURRENT_DCM3:
+                l_adc_function = &G_sysConfigData.apss_adc_map.dcm_vpcie[i_func_id-ADC_VPCIE_CURRENT_DCM0];
+                break;
+
+            case ADC_VIO_CURRENT_DCM0:
+            case ADC_VIO_CURRENT_DCM1:
+            case ADC_VIO_CURRENT_DCM2:
+            case ADC_VIO_CURRENT_DCM3:
+                l_adc_function = &G_sysConfigData.apss_adc_map.dcm_vio[i_func_id-ADC_VIO_CURRENT_DCM0];
+                break;
+
+            case ADC_AVDD_CURRENT_TOTAL:
+                l_adc_function = &G_sysConfigData.apss_adc_map.avdd_total;
+                break;
+
             default:
                 // It should never happen
                 CMDH_TRAC_ERR("apss_store_adc_channel: Invalid function ID: 0x%x", i_func_id);
@@ -443,9 +461,6 @@ void apss_store_ipmi_sensor_id(const uint16_t i_channel, const apss_cfg_adc_v20_
 
     switch (i_adc->assignment)
     {
-        case ADC_RESERVED:
-            // Do nothing; given channel is not utilized.
-            break;
         case ADC_MEMORY_PROC_0:
         case ADC_MEMORY_PROC_1:
         case ADC_MEMORY_PROC_2:
@@ -454,22 +469,6 @@ void apss_store_ipmi_sensor_id(const uint16_t i_channel, const apss_cfg_adc_v20_
             {
                 AMECSENSOR_PTR(PWRMEM)->ipmi_sid = i_adc->ipmisensorId;
             }
-            break;
-
-        case ADC_IO_A:
-        case ADC_IO_B:
-        case ADC_IO_C:
-        case ADC_FANS_A:
-        case ADC_FANS_B:
-        case ADC_STORAGE_A:
-        case ADC_STORAGE_B:
-        case ADC_12V_SENSE:
-        case ADC_PCIe_CURRENT:
-        case ADC_GND_REMOTE_SENSE:
-        case ADC_TOTAL_SYS_CURRENT:
-        case ADC_MEM_CACHE:
-        case ADC_12V_STANDBY_CURRENT:
-            //None
             break;
 
         case ADC_GPU_0_0:
@@ -491,6 +490,7 @@ void apss_store_ipmi_sensor_id(const uint16_t i_channel, const apss_cfg_adc_v20_
             break;
 
         default:
+            // None
             break;
     }
 

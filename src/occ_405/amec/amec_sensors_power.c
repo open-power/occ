@@ -208,6 +208,7 @@ bool amec_update_apss_sensors(void)
 {
     static bool L_trace_time = TRUE;
     bool l_sensors_updated = TRUE;
+    static bool L_trace_everest_workaround = TRUE;
     do
     {
         // Need to check to make sure APSS data has been received
@@ -238,6 +239,21 @@ bool amec_update_apss_sensors(void)
             // does not get truncated (before dividing by ADCMULT_TO_UNITS)
             uint64_t l_bulk_voltage = ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.sense_12v);
 
+            // TODO RTC: 293586 Remove Everest workaround
+            // Everest workaround for not having 12v sense
+            // Everest 12v sense is on channel 3 and no other P10 system is on channel 3
+            // checking for channel 3 verifies this will only run on Everest
+            if( (G_sysConfigData.apss_adc_map.sense_12v == 3) &&
+                ((l_bulk_voltage < 9000) || (l_bulk_voltage > 15000)) )
+            {
+                if(L_trace_everest_workaround)
+                {
+                    TRAC_IMP("Everest workaround using 12000 for 12V sense not reading %d", l_bulk_voltage);
+                    L_trace_everest_workaround = FALSE;
+                }
+                l_bulk_voltage = 12000;
+            }
+
             if (OCC_MASTER == G_occ_role)
             {
                 // Update channel sensors for all channels (except voltage sense and gnd)
@@ -252,8 +268,7 @@ bool amec_update_apss_sensors(void)
                     else if((l_idx != G_sysConfigData.apss_adc_map.sense_12v) &&
                             (l_idx != G_sysConfigData.apss_adc_map.remote_gnd))
                     {
-                        uint64_t l_bulk_v = l_bulk_voltage;
-                        temp32 = ROUND_POWER(ADC_CONVERTED_VALUE(l_idx) * l_bulk_v);
+                        temp32 = ROUND_POWER(ADC_CONVERTED_VALUE(l_idx) * l_bulk_voltage);
                         sensor_update(AMECSENSOR_PTR(PWRAPSSCH00 + l_idx), (uint16_t) temp32);
                     }
                 }

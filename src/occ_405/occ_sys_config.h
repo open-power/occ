@@ -138,7 +138,16 @@ typedef enum
     ADC_GPU_1_0                 = 0x1F,
     ADC_GPU_1_1                 = 0x20,
     ADC_GPU_1_2                 = 0x21,
-    ADC_PCIe_CURRENT            = 0x22,
+    ADC_PCIe_CURRENT            = 0x22,  // total for all PCIe slots
+    ADC_VPCIE_CURRENT_DCM0      = 0x23,
+    ADC_VPCIE_CURRENT_DCM1      = 0x24,
+    ADC_VPCIE_CURRENT_DCM2      = 0x25,
+    ADC_VPCIE_CURRENT_DCM3      = 0x26,
+    ADC_VIO_CURRENT_DCM0        = 0x27,
+    ADC_VIO_CURRENT_DCM1        = 0x28,
+    ADC_VIO_CURRENT_DCM2        = 0x29,
+    ADC_VIO_CURRENT_DCM3        = 0x2A,
+    ADC_AVDD_CURRENT_TOTAL      = 0x2B,  // analog shared between 2 DCMs
     NUM_ADC_ASSIGNMENT_TYPES    // This should always be the last member
 } eApssAdcChannelAssignments;
 
@@ -217,6 +226,9 @@ typedef struct
   uint8_t current_12v_stby;
   uint8_t gpu[MAX_GPU_DOMAINS][MAX_NUM_GPU_PER_DOMAIN];
   uint8_t pcie;
+  uint8_t dcm_vpcie[MAX_NUM_CHIP_MODULES];
+  uint8_t dcm_vio[MAX_NUM_CHIP_MODULES];
+  uint8_t avdd_total;
 } apssAdcChannelData_t;
 
 typedef struct
