@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/tools/cft/occutil.C $                                     */
+/* $Source: src/tools/occutil/occutil.C $                                 */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2020                             */
+/* Contributors Listed Below - COPYRIGHT 2020,2021                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -71,13 +71,14 @@ void usage()
         printf("    Options:\n");
         printf("        -o #           Target specified OCC instance\n");
         printf("        -D XX...       Data for other commands (XX is a hex string)\n");
-        printf("        -v | -v2       Verbose (-v2 includes ECMD packets)\n");
-        printf("\n    last update: 18-Nov-2020\n");
+        printf("        -v|-v2|-v3     Verbose (-v2 includes ECMD packets)\n");
+        printf("\n    last update: 13-Oct-2021\n");
 }
 
 
 enum operation_e
 {
+    OP_UNDEFINED,
     OP_HELP,
     OP_OCC_POLL,
     OP_TMGT_INFO,
@@ -100,284 +101,297 @@ enum operation_e
 int main (int argc, char *argv[])
 {
     uint32_t rc = CMT_SUCCESS;
-    operation_e op = OP_HELP;
+    operation_e op = OP_UNDEFINED;
     unsigned int l_occ = 0;
 
-    // Load and initialize the eCMD Dll
-    // Which DLL to load is determined by the ECMD_DLL_FILE environment variable
-    rc = ecmdLoadDll("");
-    if (rc)
+    if (argc == 1)
     {
-        cmtOutputError("**** ERROR : Problems loading eCMD Dll!\n");
-        return rc;
+        op = OP_HELP;
     }
 
-    if (argc > 1)
+    unsigned int l_occ_cmd = 0xFF;
+    uint8_t l_data[1024] = {0};
+    unsigned int l_dataLen = 0;
+    uint8_t l_state = 0;
+    uint16_t l_mode = 0;
+    uint16_t l_freq = 0;
+
+    // Parse the parameters
+    for (int ii = 1; ii < argc; ii++)
     {
-        unsigned int l_occ_cmd = 0xFF;
-        uint8_t l_data[1024] = {0};
-        unsigned int l_dataLen = 0;
-        uint8_t l_state = 0;
-        uint16_t l_mode = 0;
-        uint16_t l_freq = 0;
-
-        for (int ii = 1; ii < argc; ii++)
+        //printf("arg[%d]: %s\n", ii, argv[ii]);
+        if (argv[ii][0] == '-')
         {
-            //printf("arg[%d]: %s\n", ii, argv[ii]);
-            if (argv[ii][0] == '-')
+            // OPTIONS:
+
+            if ((strcmp(argv[ii], "-h") == 0) || (strcmp(argv[ii], "--help") == 0))
             {
-                // OPTIONS:
-
-                if ((strcmp(argv[ii], "-h") == 0) || (strcmp(argv[ii], "--help") == 0))
+                op = OP_HELP;
+            }
+            else if ((strcmp(argv[ii], "-D") == 0) || (strcmp(argv[ii], "--data") == 0))
+            {
+                if ((ii+1 < argc) && (argv[ii+1][0] != '-'))
                 {
-                    op = OP_HELP;
-                }
-                else if ((strcmp(argv[ii], "-D") == 0) || (strcmp(argv[ii], "--data") == 0))
-                {
-                    if ((ii+1 < argc) && (argv[ii+1][0] != '-'))
+                    ++ii;
+                    if (strlen(argv[ii]) % 2 == 0)
                     {
-                        ++ii;
-                        if (strlen(argv[ii]) % 2 == 0)
+                        unsigned int data_offset = 0;
+                        if (argv[ii][1] == 'x') data_offset = 2;
+                        char *ptr = &argv[ii][data_offset];
+                        //printf("data\"%s\" is %lu characters long\n", argv[ii], strlen(argv[ii]));
+                        while (ptr[0] != '\0')
                         {
-                            unsigned int data_offset = 0;
-                            if (argv[ii][1] == 'x') data_offset = 2;
-                            char *ptr = &argv[ii][data_offset];
-                            //printf("data\"%s\" is %lu characters long\n", argv[ii], strlen(argv[ii]));
-                            while (ptr[0] != '\0')
+                            if (sscanf(ptr, "%2hhX", &l_data[l_dataLen]) == 1)
                             {
-                                if (sscanf(ptr, "%2hhX", &l_data[l_dataLen]) == 1)
-                                {
-                                    //printf("--[%.3d]-->%02X\n", l_dataLen, l_data[l_dataLen]);
-                                    l_dataLen += 1;
-                                }
-                                else
-                                {
-                                    cmtOutputError("ERROR: Unexpected hex data: \"%s\" (byte %d)\n", ptr, l_dataLen);
-                                    break;
-                                }
-                                ptr += 2;
+                                //printf("--[%.3d]-->%02X\n", l_dataLen, l_data[l_dataLen]);
+                                l_dataLen += 1;
                             }
-                        }
-                        else
-                        {
-                            cmtOutputError("ERROR: DATA (-D option) requires hex string \"%s\" (even number of digits)\n", argv[ii]);
-                            op = OP_HELP;
-                        }
-                    }
-                    else
-                    {
-                        cmtOutputError("ERROR: DATA (-D option) requires hex string \"%s\"\n", argv[ii+1]);
-                        op = OP_HELP;
-                    }
-                }
-                else if (strcmp(argv[ii], "-f") == 0)
-                {
-                    if ((ii+1 < argc) && (argv[ii+1][0] != '-'))
-                    {
-                        ++ii;
-                        if (argv[ii][1] == 'x')
-                            sscanf(&argv[ii][2], "%hX", &l_freq);
-                        else
-                            sscanf(argv[ii], "%hd", &l_freq);
-                    }
-                    else
-                    {
-                        cmtOutputError("ERROR: Frequency point (-f option) requires number\n");
-                        op = OP_HELP;
-                    }
-                }
-                else if (strcmp(argv[ii], "-o") == 0)
-                {
-                    if ((ii+1 < argc) && (argv[ii+1][0] != '-'))
-                    {
-                        sscanf(argv[++ii], "%d", &l_occ);
-                    }
-                    else
-                    {
-                        cmtOutputError("ERROR: OCC (-o option) requires number\n");
-                        op = OP_HELP;
-                    }
-                }
-                else if (strcmp(argv[ii], "-s") == 0)
-                {
-                    if ((ii+1 < argc) && (argv[ii+1][0] != '-'))
-                    {
-                        ++ii;
-                        struct stat buffer;
-                        if (stat(argv[ii], &buffer) == 0)
-                        {
-                            strcpy(G_occ_string_file, argv[ii]);
-                        }
-                        else
-                        {
-                            cmtOutputError("ERROR: OCC string file not found: %s\n", argv[ii]);
-                            op = OP_HELP;
+                            else
+                            {
+                                cmtOutputError("ERROR: Unexpected hex data: \"%s\" (byte %d)\n", ptr, l_dataLen);
+                                break;
+                            }
+                            ptr += 2;
                         }
                     }
                     else
                     {
-                        cmtOutputError("ERROR: -s requires OCC string filename\n");
-                        op = OP_HELP;
-                    }
-                }
-                else if (strcmp(argv[ii], "-v") == 0)
-                {
-                    G_verbose = 1;
-                }
-                else if (strcmp(argv[ii], "-v2") == 0)
-                {
-                    G_verbose = 2;
-                }
-
-                // COMMANDS:
-
-                else if (strcmp(argv[ii], "-p") == 0) { op = OP_OCC_POLL; }
-                else if (strcmp(argv[ii], "--IF") == 0)
-                {
-                    op = OP_INTERNAL_FLAGS;
-                }
-                else if (strcmp(argv[ii], "--mode") == 0)
-                {
-                    op = OP_SET_MODE;
-                    if ((ii+1 < argc) && (argv[ii+1][0] != '-'))
-                    {
-                        ++ii;
-                        if (argv[ii][1] == 'x')
-                            sscanf(&argv[ii][2], "%hX", &l_mode);
-                        else
-                            sscanf(argv[ii], "%hu", &l_mode);
-
-                        if (!IS_VALID_MODE(l_mode))
-                        {
-                            cmtOutputError("ERROR: --mode command requires valid mode parameter\n");
-                            op = OP_HELP;
-                        }
-                    }
-                    else
-                    {
-                        cmtOutputError("ERROR: --mode command requires valid mode parameter\n");
-                        op = OP_HELP;
-                    }
-                }
-                else if (strcmp(argv[ii], "--state") == 0)
-                {
-                    op = OP_SET_STATE;
-                    if ((ii+1 < argc) && (argv[ii+1][0] != '-'))
-                    {
-                        sscanf(argv[++ii], "%hhu", &l_state);
-                    }
-                    if (!IS_VALID_STATE(l_state))
-                    {
-                        cmtOutputError("ERROR: --state requires valid state parameter\n");
-                        op = OP_HELP;
-                    }
-                }
-                else if (strcmp(argv[ii], "--system") == 0)
-                {
-                    op = OP_SYSTEM_STATE;
-                }
-                else if (strcmp(argv[ii], "--driver") == 0)
-                {
-                    op = OP_DRIVER;
-                }
-                else if (strcmp(argv[ii], "--trace") == 0)
-                {
-                    op = OP_OCC_TRACE;
-                }
-                else if (strcmp(argv[ii], "--query") == 0)
-                {
-                    op = OP_QUERY_MODE_FUNCTION;
-                }
-                else if (strcmp(argv[ii], "--reset") == 0)
-                {
-                    op = OP_PMCOMPLEX_RESET;
-                }
-                else if (strcmp(argv[ii], "--reset_clear") == 0)
-                {
-                    op = OP_PMCOMPLEX_RESET_CLEAR;
-                }
-                else if (strcmp(argv[ii], "--active_wait") == 0)
-                {
-                    op = OP_ACTIVE_WAIT;
-                }
-                else if (strcmp(argv[ii], "-H") == 0)
-                {
-                    op = OP_HTMGT_CMD;
-                    if ((ii+1 < argc) && (argv[ii+1][0] != '-'))
-                    {
-                        ++ii;
-                        if (argv[ii][1] == 'x')
-                            sscanf(&argv[ii][2], "%X", &l_occ_cmd);
-                        else
-                            sscanf(argv[ii], "%d", &l_occ_cmd);
-                    }
-                    else
-                    {
-                        cmtOutputError("ERROR: HTMGT command (-H option) requires number\n");
-                        op = OP_HELP;
-                    }
-                }
-                else if (strcmp(argv[ii], "-I") == 0) { op = OP_TMGT_INFO; }
-                else if (strcmp(argv[ii], "-S") == 0)
-                {
-                    op = OP_OCC_SENSORS;
-                    if ((ii+1 < argc) && (argv[ii+1][0] != '-'))
-                    {
-                        ++ii;
-                        char *c = strstr(argv[ii], "loc=");
-                        if (c)
-                        {
-                            if (c[5] == 'x') sscanf(c+6, "%hx", &G_sensor_loc);
-                            else sscanf(c+4, "%hu", &G_sensor_loc);
-                            printf("Sensor Loc:  0x%04X\n", G_sensor_loc);
-                        }
-                        c = strstr(argv[ii], "type=");
-                        if (c)
-                        {
-                            if (c[6] == 'x') sscanf(c+7, "%hx", &G_sensor_type);
-                            else sscanf(c+5, "%hu", &G_sensor_type);
-                            printf("Sensor Type: 0x%04X\n", G_sensor_type);
-                        }
-                        c = strstr(argv[ii], "guid=");
-                        if (c)
-                        {
-                            if (c[6] == 'x') sscanf(c+7, "%hx", &G_sensor_guid);
-                            else sscanf(c+5, "%hu", &G_sensor_guid);
-                            printf("Sensor GUID: 0x%04X\n", G_sensor_guid);
-                        }
-                    }
-                    else
-                    {
-                        G_sensor_type = 0xFFFF;
-                        G_sensor_loc  = 0xFFFF;
-                    }
-                }
-                else if (strcmp(argv[ii], "-X") == 0)
-                {
-                    op = OP_SEND_OCC_CMD;
-                    if ((ii+1 < argc) && (argv[ii+1][0] != '-'))
-                    {
-                        ++ii;
-                        if (argv[ii][1] == 'x')
-                            sscanf(&argv[ii][2], "%X", &l_occ_cmd);
-                        else
-                            sscanf(argv[ii], "%d", &l_occ_cmd);
-                    }
-                    else
-                    {
-                        cmtOutputError("ERROR: OCC command (-X option) requires number\n");
-                        op = OP_HELP;
+                        cmtOutputError("ERROR: DATA (-D option) requires hex string \"%s\" (even number of digits)\n", argv[ii]);
+                        rc = CMT_INVALID_PARAMETER;
                     }
                 }
                 else
                 {
-                    printf("WARNING: Ignoring unknown option: %s\n", argv[ii]);
+                    cmtOutputError("ERROR: DATA (-D option) requires hex string \"%s\"\n", argv[ii+1]);
+                    rc = CMT_INVALID_PARAMETER;
+                }
+            }
+            else if (strcmp(argv[ii], "-f") == 0)
+            {
+                if ((ii+1 < argc) && (argv[ii+1][0] != '-'))
+                {
+                    ++ii;
+                    if (argv[ii][1] == 'x')
+                        sscanf(&argv[ii][2], "%hX", &l_freq);
+                    else
+                        sscanf(argv[ii], "%hd", &l_freq);
+                }
+                else
+                {
+                    cmtOutputError("ERROR: Frequency point (-f option) requires number\n");
+                    rc = CMT_INVALID_PARAMETER;
+                }
+            }
+            else if ((strcmp(argv[ii], "-o") == 0) || (strcmp(argv[ii], "-O") == 0))
+            {
+                if ((ii+1 < argc) && (argv[ii+1][0] != '-'))
+                {
+                    sscanf(argv[++ii], "%d", &l_occ);
+                }
+                else
+                {
+                    cmtOutputError("ERROR: OCC (-o option) requires number\n");
+                    rc = CMT_INVALID_PARAMETER;
+                }
+            }
+            else if (strcmp(argv[ii], "-s") == 0)
+            {
+                if ((ii+1 < argc) && (argv[ii+1][0] != '-'))
+                {
+                    ++ii;
+                    struct stat buffer;
+                    if (stat(argv[ii], &buffer) == 0)
+                    {
+                        strcpy(G_occ_string_file, argv[ii]);
+                    }
+                    else
+                    {
+                        cmtOutputError("ERROR: OCC string file not found: %s\n", argv[ii]);
+                        rc = CMT_INVALID_PARAMETER;
+                    }
+                }
+                else
+                {
+                    cmtOutputError("ERROR: -s requires OCC string filename\n");
+                    rc = CMT_INVALID_PARAMETER;
+                }
+            }
+            else if (strcmp(argv[ii], "-v") == 0)
+            {
+                G_verbose = 1;
+            }
+            else if (strcmp(argv[ii], "-v2") == 0)
+            {
+                G_verbose = 2;
+            }
+            else if (strcmp(argv[ii], "-v3") == 0)
+            {
+                G_verbose = 3;
+            }
+
+            // COMMANDS:
+
+            else if (strcmp(argv[ii], "-p") == 0) { op = OP_OCC_POLL; }
+            else if (strcmp(argv[ii], "--IF") == 0)
+            {
+                op = OP_INTERNAL_FLAGS;
+            }
+            else if (strcmp(argv[ii], "--mode") == 0)
+            {
+                op = OP_SET_MODE;
+                if ((ii+1 < argc) && (argv[ii+1][0] != '-'))
+                {
+                    ++ii;
+                    if (argv[ii][1] == 'x')
+                        sscanf(&argv[ii][2], "%hX", &l_mode);
+                    else
+                        sscanf(argv[ii], "%hu", &l_mode);
+
+                    if (!IS_VALID_MODE(l_mode))
+                    {
+                        cmtOutputError("ERROR: --mode command requires valid mode parameter\n");
+                        rc = CMT_INVALID_PARAMETER;
+                    }
+                }
+                else
+                {
+                    cmtOutputError("ERROR: --mode command requires valid mode parameter\n");
+                    rc = CMT_INVALID_PARAMETER;
+                }
+            }
+            else if (strcmp(argv[ii], "--state") == 0)
+            {
+                op = OP_SET_STATE;
+                if ((ii+1 < argc) && (argv[ii+1][0] != '-'))
+                {
+                    sscanf(argv[++ii], "%hhu", &l_state);
+                }
+                if (!IS_VALID_STATE(l_state))
+                {
+                    cmtOutputError("ERROR: --state requires valid state parameter\n");
+                    rc = CMT_INVALID_PARAMETER;
+                }
+            }
+            else if (strcmp(argv[ii], "--system") == 0)
+            {
+                op = OP_SYSTEM_STATE;
+            }
+            else if (strcmp(argv[ii], "--driver") == 0)
+            {
+                op = OP_DRIVER;
+            }
+            else if (strcmp(argv[ii], "--trace") == 0)
+            {
+                op = OP_OCC_TRACE;
+            }
+            else if (strcmp(argv[ii], "--query") == 0)
+            {
+                op = OP_QUERY_MODE_FUNCTION;
+            }
+            else if (strcmp(argv[ii], "--reset") == 0)
+            {
+                op = OP_PMCOMPLEX_RESET;
+            }
+            else if (strcmp(argv[ii], "--reset_clear") == 0)
+            {
+                op = OP_PMCOMPLEX_RESET_CLEAR;
+            }
+            else if (strcmp(argv[ii], "--active_wait") == 0)
+            {
+                op = OP_ACTIVE_WAIT;
+            }
+            else if (strcmp(argv[ii], "-H") == 0)
+            {
+                op = OP_HTMGT_CMD;
+                if ((ii+1 < argc) && (argv[ii+1][0] != '-'))
+                {
+                    ++ii;
+                    if (argv[ii][1] == 'x')
+                        sscanf(&argv[ii][2], "%X", &l_occ_cmd);
+                    else
+                        sscanf(argv[ii], "%d", &l_occ_cmd);
+                }
+                else
+                {
+                    cmtOutputError("ERROR: HTMGT command (-H option) requires number\n");
+                    rc = CMT_INVALID_PARAMETER;
+                }
+            }
+            else if (strcmp(argv[ii], "-I") == 0) { op = OP_TMGT_INFO; }
+            else if (strcmp(argv[ii], "-S") == 0)
+            {
+                op = OP_OCC_SENSORS;
+                if ((ii+1 < argc) && (argv[ii+1][0] != '-'))
+                {
+                    ++ii;
+                    char *c = strstr(argv[ii], "loc=");
+                    if (c)
+                    {
+                        if (c[5] == 'x') sscanf(c+6, "%hx", &G_sensor_loc);
+                        else sscanf(c+4, "%hu", &G_sensor_loc);
+                        printf("Sensor Loc:  0x%04X\n", G_sensor_loc);
+                    }
+                    c = strstr(argv[ii], "type=");
+                    if (c)
+                    {
+                        if (c[6] == 'x') sscanf(c+7, "%hx", &G_sensor_type);
+                        else sscanf(c+5, "%hu", &G_sensor_type);
+                        printf("Sensor Type: 0x%04X\n", G_sensor_type);
+                    }
+                    c = strstr(argv[ii], "guid=");
+                    if (c)
+                    {
+                        if (c[6] == 'x') sscanf(c+7, "%hx", &G_sensor_guid);
+                        else sscanf(c+5, "%hu", &G_sensor_guid);
+                        printf("Sensor GUID: 0x%04X\n", G_sensor_guid);
+                    }
+                }
+                else
+                {
+                    G_sensor_type = 0xFFFF;
+                    G_sensor_loc  = 0xFFFF;
+                }
+            }
+            else if (strcmp(argv[ii], "-X") == 0)
+            {
+                op = OP_SEND_OCC_CMD;
+                if ((ii+1 < argc) && (argv[ii+1][0] != '-'))
+                {
+                    ++ii;
+                    if (argv[ii][1] == 'x')
+                        sscanf(&argv[ii][2], "%X", &l_occ_cmd);
+                    else
+                        sscanf(argv[ii], "%d", &l_occ_cmd);
+                }
+                else
+                {
+                    cmtOutputError("ERROR: OCC command (-X option) requires number\n");
+                    rc = CMT_INVALID_PARAMETER;
                 }
             }
             else
             {
-                printf("WARNING: Ignoring unknown parameter: %s\n", argv[ii]);
+                cmtOutputError("ERROR: Unknown command: %s\n", argv[ii]);
+                rc = CMT_INVALID_PARAMETER;
             }
+        }
+        else
+        {
+            cmtOutputError("ERROR: Unexpected parameter: %s\n", argv[ii]);
+            rc = CMT_INVALID_PARAMETER;
+        }
+    }
+
+    // Execute the operation
+    if (rc == CMT_SUCCESS)
+    {
+        // Load and initialize the eCMD Dll
+        // Which DLL to load is determined by the ECMD_DLL_FILE environment variable
+        rc = ecmdLoadDll("");
+        if (rc)
+        {
+            cmtOutputError("**** ERROR : Problems loading eCMD Dll!\n");
+            return rc;
         }
 
         switch (op)
@@ -504,21 +518,25 @@ int main (int argc, char *argv[])
                 break;
 
             case OP_HELP:
-            default:
                 usage();
+                break;
+
+            default:
+                cmtOutputError("ERROR: Unrecognized command: %d\n", op);
+                rc = CMT_INVALID_PARAMETER;
+                break;
         }
-    }
-    else
-    {
-        usage();
+
+        // Unload the eCMD Dll, this should always be the last thing you do
+        ecmdUnloadDll();
     }
 
-    // Unload the eCMD Dll, this should always be the last thing you do
-    ecmdUnloadDll();
 
     if (rc)
     {
-        cmtOutputError("ERROR: Command (%d) failed with rc=0x%08X\n", op, rc);
+        if (op != OP_HELP)
+            cmtOutputError("ERROR: Command (%d) failed with %s (rc=%d)\n",
+                           op, getRcString(rc), rc);
     }
 
     exit(rc);

@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/tools/occutil.C $                                         */
+/* $Source: src/tools/occutil/cft_utils.C $                               */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2020                             */
+/* Contributors Listed Below - COPYRIGHT 2020,2021                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -30,9 +30,11 @@
 
 #include <unistd.h> // sleep
 #include "cft_utils.H"
+#include <cmtReturnCodes.H>
 
 
 unsigned int G_verbose = 0;
+static uint32_t G_sequence = 0;
 
 const uint32_t  SBE_HEADER_VERSION      = 0x00010000;
 const uint32_t  COMMAND_HEADER_VERSION  = 0x00010000;
@@ -72,40 +74,77 @@ const uint32_t CMT_HBRT_CMD_IN_PROGRESS_BIT             = 0x1;
 const uint32_t DATA_128_BYTE_ALLIGN    = 128;
 
 
+const char *getRcString(uint32_t rc)
+{
+    switch(rc)
+    {
+        case CMT_SUCCESS:
+            return "SUCCESS";
+            break;
+        case CMT_INIT_FAILURE:
+            return "FAILURE";
+            break;
+        case CMT_INVALID_TARGET:
+            return "INVALID_TARGET";
+            break;
+        case CMT_SEND_RECEIVE_FAILURE:
+            return "SEND_RECEIVE_FAILURE";
+            break;
+        case CMT_INVALID_DATA:
+            return "INVALID_DATA";
+            break;
+        case CMT_NOT_SUPPORTED:
+            return "NOT_SUPPORTED";
+            break;
+        case CMT_TIMEOUT:
+            return "TIMEOUT";
+            break;
+        case CMT_INVALID_PARAMETER:
+            return "INVALID_PARAMETER";
+            break;
+        default:
+            return "";
+    }
+}
+
 void dumpHex(const uint8_t *data, const unsigned int i_len)
 {
-    unsigned int i, j;
-    char text[17];
-
-    text[16] = '\0';
-
-    unsigned int len = i_len;
-    if (len > 0x1000)
-        len = 0x1000;
-    for(i = 0; i < len; i++)
+    if ((i_len > 0) && (data != NULL))
     {
-        if (i % 16 == 0)
+        unsigned int i, j;
+        char text[17];
+
+        text[16] = '\0';
+
+        unsigned int len = i_len;
+        if (len > 0x1000)
+            len = 0x1000;
+        for(i = 0; i < len; i++)
         {
-            if (i > 0) printf("   \"%s\"\n", text);
-            printf("   %04X:",i);
-        }
-        if (i % 4 == 0) printf(" ");
+            if (i % 16 == 0)
+            {
+                if (i > 0) printf("   \"%s\"\n", text);
+                printf("   %04X:",i);
+            }
+            if (i % 4 == 0) printf(" ");
 
-        printf("%02X",(int)data[i]);
-        if (isprint(data[i])) text[i%16] = data[i];
-        else text[i%16] = '.';
-    }
-    if ((i%16) != 0) {
-        text[i%16] = '\0';
-        for(j = (i % 16); j < 16; ++j) {
-            printf("  ");
-            if (j % 4 == 0) printf(" ");
+            printf("%02X",(int)data[i]);
+            if (isprint(data[i])) text[i%16] = data[i];
+            else text[i%16] = '.';
         }
-    }
-    printf("   \"%s\"\n", text);
-    if (len < i_len)
-    {
-        printf("WARNING: data was truncated from %d to %d\n", i_len, len);
+        if ((i%16) != 0)
+        {
+            text[i%16] = '\0';
+            for(j = (i % 16); j < 16; ++j) {
+                printf("  ");
+                if (j % 4 == 0) printf(" ");
+            }
+        }
+        printf("   \"%s\"\n", text);
+        if (len < i_len)
+        {
+            printf("WARNING: data was truncated from %d to %d\n", i_len, len);
+        }
     }
     return;
 }
@@ -119,9 +158,12 @@ void dumpHex(ecmdDataBuffer &i_data, const unsigned int i_length=0)
         length = i_length;
     }
 
-    uint8_t l_buffer[length];
-    i_data.memCopyOut(l_buffer, length);
-    dumpHex(l_buffer, length);
+    if (length > 0)
+    {
+        uint8_t l_buffer[length];
+        i_data.memCopyOut(l_buffer, length);
+        dumpHex(l_buffer, length);
+    }
 
     return;
 }
@@ -131,7 +173,15 @@ void initHeader(cmtHeader & i_header, uint32_t i_lengthOfMsg)
 {
     i_header.sbeHeaderVersion   = htonl(SBE_HEADER_VERSION);
     i_header.lengthOfMsg        = htonl(i_lengthOfMsg);
-    i_header.sequenceId         = 0x0;
+    if (G_sequence == 0)
+    {
+        // Start with random number from 1 to RAND_MAX
+        srand(time(0));
+        G_sequence = rand() + 1;
+    }
+    if (G_verbose)
+        printf("initHeader: Building SBE command with sequence id 0x%08X\n", G_sequence);
+    i_header.sequenceId         = htonl(G_sequence++);
     i_header.cmdHeaderVersion   = htonl(COMMAND_HEADER_VERSION);
     i_header.status             = 0x0;
     i_header.dataOffset         = htonl(sizeof(cmtHeader) - offsetof(cmtHeader,cmdHeaderVersion));
@@ -230,6 +280,34 @@ uint32_t cmtOCCSendReceive(ecmdChipTarget &i_target,
     {
         uint32_t l_bytes = i_data.getByteLength();
 
+        // Clear complete bit in CFAM reg (if it was set)
+        ecmdDataBuffer l_regData;
+        if (G_verbose >= 2)
+            printf("cmtOCCSendReceive: Checking CFAM reg for complete bit - getCfamRegister(0x%04X)\n",
+                   CFAM_REGISTER_ADDRESS);
+        l_rc = getCfamRegister(i_target,CFAM_REGISTER_ADDRESS,l_regData);
+        if(l_rc)
+        {
+            cmtOutputError("ERROR: cmtOCCSendReceive: getCfamRegister() failed. RC=0x%08X\n", l_rc);
+            break;
+        }
+        if (l_regData.isBitSet(CMT_HBRT_CMD_COMPLETE_BIT))
+        {
+            l_rc = l_regData.clearBit(CMT_HBRT_CMD_COMPLETE_BIT);
+            if (l_rc)
+                printf("ERROR: cmtOCCSendReceive: clearing bit %d in ecmdDataBuffer failed with rc=0x%08X\n",
+                       CMT_HBRT_CMD_COMPLETE_BIT, l_rc);
+
+            if (G_verbose >= 2)
+                printf("cmtOCCSendReceive: Clearing complete bit in CFAM reg (putCfamRegister)\n");
+            l_rc = putCfamRegister(i_target, CFAM_REGISTER_ADDRESS, l_regData);
+            if (l_rc)
+            {
+                printf("ERROR: cmtOCCSendReceive: putCfamRegister failed to clear complete bit rc=0x%08X\n", l_rc);
+                break;
+            }
+        }
+
         if (G_verbose >= 2)
         {
             printf("cmtOCCSendReceive: calling putMemPba(0x%08X)\n", (unsigned int)HOST_PASS_THROUGH_MEM_ADDRESS);
@@ -255,17 +333,14 @@ uint32_t cmtOCCSendReceive(ecmdChipTarget &i_target,
             l_polling_interval = i_timeout;
         }
         uint32_t l_attempt = 0;
-        ecmdDataBuffer l_regData;
         if (G_verbose)
-            printf("cmtOCCSendReceive: Waiting for response (timeout=%d sec, %d sec between polls)\n",
+            printf("cmtOCCSendReceive: Waiting for command complete (timeout=%d sec, %d sec between CFAM queries)\n",
                    l_timeout, l_polling_interval);
         do {
-            //if (G_verbose)
-            //    printf("cmtOCCSendReceive: sleeping %d sec (%d attempts remaining)\n",
-            //           l_polling_interval, l_timeout-l_attempt);
             sleep(l_polling_interval);
-            //if (G_verbose)
-            //    printf("cmtOCCSendReceive: calling getCfamRegister(0x%04X)\n", CFAM_REGISTER_ADDRESS);
+            if (G_verbose >= 3)
+                printf("cmtOCCSendReceive: calling getCfamRegister(0x%04X) (%d attempts remaining)\n",
+                       CFAM_REGISTER_ADDRESS, l_timeout-l_attempt);
             l_rc = getCfamRegister(i_target,CFAM_REGISTER_ADDRESS,l_regData);
             if(l_rc) {
                 cmtOutputError("%s : getCfamRegister() failed. RC=0x%08X\n", __FUNCTION__, l_rc);
@@ -281,10 +356,10 @@ uint32_t cmtOCCSendReceive(ecmdChipTarget &i_target,
 
         if ( (l_attempt == l_timeout) && (!l_regData.isBitSet(CMT_HBRT_CMD_COMPLETE_BIT)) ) {
             cmtOutputError("Host pass through commmand has timed out! (%d sec)\n", i_timeout);
-            l_rc = 0x55; //CMT_HOST_PASSTHROUGH_TIMEOUT;
+            l_rc = CMT_HOST_PASSTHROUGH_TIMEOUT;
             break;
         }
-        else if (G_verbose >= 2)
+        else if ((G_verbose >= 2) || (l_attempt*l_polling_interval > 10))
         {
             printf("cmtOCCSendReceive: request completed in %d sec\n",
                    l_attempt * l_polling_interval);
@@ -293,11 +368,11 @@ uint32_t cmtOCCSendReceive(ecmdChipTarget &i_target,
         ecmdDataBuffer l_header;
         //Reading 128 bytes to get data size from HBRT header
         if (G_verbose >= 2)
-            printf("cmtOCCSendReceive: calling getMemPbaHidden(0x%08X, %d)\n",
+            printf("cmtOCCSendReceive: calling getMemPba(0x%08X, %d)\n",
                    (unsigned int)HOST_PASS_THROUGH_MEM_ADDRESS, DATA_128_BYTE_ALLIGN);
-        l_rc = getMemPbaHidden(i_target, HOST_PASS_THROUGH_MEM_ADDRESS, DATA_128_BYTE_ALLIGN, l_header,(PBA_MODE_LCO|PBA_OPTION_PASSTHROUGH));
+        l_rc = getMemPba(i_target, HOST_PASS_THROUGH_MEM_ADDRESS, DATA_128_BYTE_ALLIGN, l_header,(PBA_MODE_LCO|PBA_OPTION_PASSTHROUGH));
         if(l_rc) {
-            cmtOutputError("%s : getMemPbaHidden() failed. RC=0x%08X\n", __FUNCTION__, l_rc);
+            cmtOutputError("%s : getMemPba() failed. RC=0x%08X\n", __FUNCTION__, l_rc);
             break;
         }
         else if (G_verbose >= 2)
@@ -328,11 +403,11 @@ uint32_t cmtOCCSendReceive(ecmdChipTarget &i_target,
             uint32_t l_remainingRespSize = l_responseSize - DATA_128_BYTE_ALLIGN;
             l_bytes = ((l_remainingRespSize)%DATA_128_BYTE_ALLIGN)? (l_remainingRespSize-(l_remainingRespSize%DATA_128_BYTE_ALLIGN)+DATA_128_BYTE_ALLIGN) : l_remainingRespSize;
             if (G_verbose >= 2)
-                printf("cmtOCCSendReceive: calling getMemPbaHidden(0x%08X, %d bytes)\n",
+                printf("cmtOCCSendReceive: calling getMemPba(0x%08X, %d bytes)\n",
                        (unsigned int)HOST_PASS_THROUGH_MEM_ADDRESS_128, l_bytes);
-            l_rc = getMemPbaHidden(i_target, HOST_PASS_THROUGH_MEM_ADDRESS_128, l_bytes, l_tempData,(PBA_MODE_LCO|PBA_OPTION_PASSTHROUGH));
+            l_rc = getMemPba(i_target, HOST_PASS_THROUGH_MEM_ADDRESS_128, l_bytes, l_tempData,(PBA_MODE_LCO|PBA_OPTION_PASSTHROUGH));
             if(l_rc) {
-                cmtOutputError("%s : getMemPbaHidden() failed. RC=0x%08X\n", __FUNCTION__, l_rc);
+                cmtOutputError("%s : getMemPba() failed. RC=0x%08X\n", __FUNCTION__, l_rc);
                 break;
             }
             l_data.concat(l_header,l_tempData);

@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/tools/cft/cftocctool.C $                                  */
+/* $Source: src/tools/occutil/cft_utils.H $                               */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2020                             */
+/* Contributors Listed Below - COPYRIGHT 2020,2021                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -56,7 +56,9 @@ enum cmt_status_e
     CMT_SEND_RECEIVE_FAILURE,
     CMT_INVALID_DATA,
     CMT_NOT_SUPPORTED,
-    CMT_TIMEOUT
+    CMT_TIMEOUT,
+    CMT_INVALID_PARAMETER,
+    CMT_DATA_TRUNCATED
 };
 
 struct cmtHeader
@@ -73,6 +75,7 @@ struct cmtHeader
 } __attribute__((packed));
 
 
+const char *getRcString(uint32_t rc);
 void dumpHex(const uint8_t *data, const unsigned int i_len);
 
 void initHeader(cmtHeader & i_header, uint32_t i_lengthOfMsg);

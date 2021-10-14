@@ -201,6 +201,7 @@ const char * getPollStatus(const uint8_t i_flags)
 {
     // from src/occ_405/cmdh/cmdh_fsp_cmds.h
     static char string[256] = "";
+    string[0] = '\0';
     if (i_flags & 0x80) strcat(string, "Master ");
     if (i_flags & 0x10) strcat(string, "OCCPmcrOwner ");
     if (i_flags & 0x08) strcat(string, "SIMICS ");
@@ -217,6 +218,7 @@ const char * getPollExtStatus(const uint8_t i_flags)
 {
     // from src/occ_405/cmdh/cmdh_fsp_cmds.h
     static char string[256] = "";
+    string[0] = '\0';
     if (i_flags & 0x80) strcat(string, "Throttle-ProcOverTemp ");
     if (i_flags & 0x40) strcat(string, "Throttle-Power ");
     if (i_flags & 0x20) strcat(string, "MemThrot-OverTemp ");
@@ -434,15 +436,20 @@ int parse_occ_poll(const uint8_t *i_rsp_data, const uint16_t i_rsp_len)
     int rc = 0;
     occ_poll_rsp_t *data = (occ_poll_rsp_t*)i_rsp_data;
 
+    if (i_rsp_len < 40)
+    {
+        printf("ERROR: OCC Response too short! (%d bytes, expected at least 40)\n", i_rsp_len);
+        return CMT_DATA_TRUNCATED;
+    }
     printf("    Status: 0x%02X  %s\n", data->status.word, getPollStatus(data->status.word));
     printf("Ext Status: 0x%02X  %s\n", data->ext_status.word, getPollExtStatus(data->ext_status.word));
     printf("OCCs Prsnt: 0x%02X\n", data->occ_pres_mask);
     printf("Confg Reqd: 0x%02X\n", data->config_data);
     printf("     State: 0x%02X  %s\n", data->state, getStateString(data->state));
     printf("      Mode: 0x%02X  %s\n", data->mode, getModeString(data->mode));
-    printf("IPS Status: 0x%02X  %s  %s\n", data->ips_status.word,
-           (data->ips_status.ips_enabled) ? "Enabled" : "Disabled",
-           (data->ips_status.ips_active) ? "Active" : "");
+    printf("IPS Status: 0x%02X  %s %s\n", data->ips_status.word,
+           (data->ips_status.word & 0x01) ? "ENABLED" : "DISABLED",
+           (data->ips_status.word & 0x02) ? "and ACTIVE" : "");
     printf("   Elog ID: 0x%02X  %s\n", data->errl_id, data->errl_id ? "" : "(no error)");
     printf(" Elog Addr: 0x%08X\n", htonl(data->errl_address));
     printf("  Elog Len: 0x%04X\n", htonl(data->errl_length));
@@ -455,7 +462,7 @@ int parse_occ_poll(const uint8_t *i_rsp_data, const uint16_t i_rsp_len)
     printf(" Sens Vers: 0x%02X\n", data->sensor_dblock_version);
     uint8_t *dblock = (uint8_t*)&data->sensor_dblock;
     unsigned int index=0;
-    while (num_blocks > 0)
+    while ((num_blocks > 0) && (40+index+8 < i_rsp_len))
     {
         uint8_t sensorLen = dblock[index+6];
         uint8_t numSensors = dblock[index+7];
@@ -465,7 +472,7 @@ int parse_occ_poll(const uint8_t *i_rsp_data, const uint16_t i_rsp_len)
         if (strncmp((char *)&dblock[index], "TEMP", 4) == 0)
         {
             printf("                   SSSSSSSS FF TT LL -- (SSSS = Sensor ID, FF is FRU type, TT is temp in C, LL is throttle temp)\n");
-            while (numSensors > 0)
+            while ((numSensors > 0) && (40+sindex+sensorLen < i_rsp_len))
             {
                 if (dblock[sindex+4] != 0xFF) // Valid FRU
                     if (dblock[sindex+5] != 0xFF) // Valid temperature
@@ -566,7 +573,7 @@ int parse_occ_poll(const uint8_t *i_rsp_data, const uint16_t i_rsp_len)
                 {
                     if ((name == ntohl(0x464D494E)) || (name == ntohl(0x46444953)) || // FMIN/FDIS
                         (name == ntohl(0x46424153)) || // FBAS
-                        (name == ntohl(0x46555400)) || (name == ntohl(0x46555400))) // FUT/FMAX
+                        (name == ntohl(0x46555400)) || (name == ntohl(0x464D4158))) // FUT/FMAX
                     {
                         printf("\"%-4.4s\" %02X %02X %08X%04X    pState: %3d / %d MHz", (char*)&name, flags, dblock[sindex+5],
                                           htonl(*(uint32_t*)&dblock[sindex+6]), htons(*(uint16_t*)&dblock[sindex+10]),
@@ -619,6 +626,11 @@ int parse_occ_poll(const uint8_t *i_rsp_data, const uint16_t i_rsp_len)
         }
         index = sindex;
         --num_blocks;
+    }
+    if ((rc == 0) && (index > i_rsp_len))
+    {
+        printf("ERROR: OCC Response too short! Data was truncated (received %d bytes)\n", i_rsp_len);
+        return CMT_DATA_TRUNCATED;
     }
 
     return rc;

@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/tools/cft/cftocctool.C $                                  */
+/* $Source: src/tools/occutil/cft_tmgt.C $                                */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2020                             */
+/* Contributors Listed Below - COPYRIGHT 2020,2021                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -39,6 +39,7 @@ const uint16_t  HTMGT_CMD_CODE    = 0x0001;
 //const uint16_t  HBRT_CMD_CLASS    = 0x00E1;
 //const uint16_t  HBRT_CMD_CODE     = 0x0002;
 
+const unsigned int HBRT_CMD_TIMEOUT = 30; // seconds
 
 struct cmtHtmgtCmd
 {
@@ -115,13 +116,13 @@ struct htmgt_query_mode_function_t
 uint32_t send_hbrt_command(const htmgt_command i_cmd,
                            const uint8_t* i_cmd_data,
                            const uint16_t i_len,
-                           const uint32_t i_timeout = 60 /*seconds*/);
+                           const uint32_t i_timeout = HBRT_CMD_TIMEOUT /*seconds*/);
 uint32_t send_hbrt_command(const htmgt_command i_cmd,
                            const uint8_t* i_cmd_data,
                            const uint16_t i_len,
                            uint8_t * & i_rsp_data,
                            uint32_t & i_rsp_len,
-                           const uint32_t i_timeout = 60 /*seconds*/);
+                           const uint32_t i_timeout = HBRT_CMD_TIMEOUT /*seconds*/);
 
 void parse_htmgt_response(const uint8_t i_cmd,
                           const uint8_t *i_rsp_data,
@@ -161,21 +162,22 @@ uint32_t occ_cmd_via_htmgt(const uint8_t i_occNum,
         l_packet.htmgtCmd    = HTMGT_SEND_OCC_CMD;
         l_packet.occNumber   = i_occNum;
         l_packet.commandType = i_cmd;
-        l_data.setByteLength(l_packet_length);
         if ((i_cmd_data != 0) && (i_len > 0))
         {
             memcpy(l_packet.data, i_cmd_data, i_len);
         }
-        if (G_verbose >= 2)
-            dumpHex((uint8_t*)&l_packet, l_packet_length);
-        else if (G_verbose)
+        if (G_verbose)
         {
+            if (G_verbose >= 2)
+                dumpHex((uint8_t*)&l_packet, l_packet_length);
+
             printf("occ_cmd_via_htmgt: Sending %s (0x%02X) command to OCC%d (%d bytes of data)\n",
                    getCmdString(i_cmd), i_cmd, i_occNum, i_len);
-            if (i_len)
+            if ((i_cmd_data != 0) && (i_len > 0))
                 dumpHex(i_cmd_data, i_len);
         }
         uint8_t *pData = reinterpret_cast<uint8_t *>(&l_packet);
+        l_data.setByteLength(l_packet_length);
         l_data.memCopyIn(pData, l_packet_length);
 
         ecmdChipTarget l_target;
@@ -201,7 +203,7 @@ uint32_t occ_cmd_via_htmgt(const uint8_t i_occNum,
             printf("occ_cmd_via_htmgt: calling ecmdConfigLooperNext()\n");
         l_rc = ecmdConfigLooperNext(l_target, looper);
         if (!l_rc) {
-            cmtOutputError("ecmdConfigLooperNext has not returned a valid target\n");
+            cmtOutputError("ecmdConfigLooperNext has not returned a valid target. RC=0x%08X\n", l_rc);
             l_rc = CMT_INVALID_TARGET;
             break;
         }
@@ -227,6 +229,7 @@ uint32_t occ_cmd_via_htmgt(const uint8_t i_occNum,
 
     if (G_verbose)
         printf("occ_cmd_via_htmgt: returning %d\n", l_rc);
+
     return l_rc;
 
 } // end occ_cmd_via_htmgt()
@@ -314,7 +317,8 @@ uint32_t send_htmgt_command(const uint8_t i_cmd,
 
     if (G_verbose)
     {
-        printf("send_htmgt_command(command=0x%02X, FSP=%c)\n", i_cmd, isFsp()?'y':'n');
+        printf("send_htmgt_command(command=0x%02X, FSP=%c, len=%d)\n",
+               i_cmd, isFsp()?'y':'n', i_len);
         dumpHex(i_cmd_data, i_len);
     }
 
@@ -377,21 +381,28 @@ uint32_t send_hbrt_command(const htmgt_command i_cmd,
         {
             l_packet_length += i_len;
         }
+        if (G_verbose >= 2)
+            printf("send_hbrt_command: calling initHeader()\n");
         initHeader(l_packet.header, l_packet_length);
         l_packet.header.cmdClass    = htons(HTMGT_CMD_CLASS);
         l_packet.header.cmdCode     = htons(HTMGT_CMD_CODE);
         l_packet.htmgtCmd    = i_cmd;
-        if (G_verbose)
-            printf("HTMGT command 0x%02X w/%d bytes of data\n", i_cmd, i_len);
-        // command data
-        l_data.setByteLength(l_packet_length);
         if ((i_len > 0) && (i_cmd_data != 0))
         {
-            if (G_verbose)
-                dumpHex(i_cmd_data, i_len);
             memcpy(l_packet.data, i_cmd_data, i_len);
         }
+
+        if (G_verbose)
+        {
+            if (G_verbose >= 2)
+                dumpHex((uint8_t*)&l_packet, l_packet_length);
+
+            printf("HTMGT command 0x%02X w/%d bytes of data\n", i_cmd, i_len);
+            if ((i_len > 0) && (i_cmd_data != 0))
+                dumpHex(i_cmd_data, i_len);
+        }
         uint8_t *pData = reinterpret_cast<uint8_t *>(&l_packet);
+        l_data.setByteLength(l_packet_length);
         l_data.memCopyIn(pData, l_packet_length);
 
         ecmdChipTarget l_target;
@@ -401,23 +412,32 @@ uint32_t send_hbrt_command(const htmgt_command i_cmd,
         l_target.posState = ECMD_TARGET_FIELD_VALID;
         l_target.pos      = 0; // i_occNum;
 
+        if (G_verbose >= 2)
+            printf("send_hbrt_command: calling ecmdConfigLooperInit()\n");
         l_rc = ecmdConfigLooperInit(l_target, ECMD_SELECTED_TARGETS_LOOP_DEFALL, looper);
         if (l_rc)
         {
             cmtOutputError("%s : ecmdConfigLooperInit failed. RC=0x%08X\n", __FUNCTION__, l_rc);
+            l_rc = CMT_INIT_FAILURE;
             break;
         }
 
+        if (G_verbose >= 2)
+            printf("send_hbrt_command: calling ecmdConfigLooperNext()\n");
         l_rc = ecmdConfigLooperNext(l_target, looper);
         if (!l_rc) {
-            cmtOutputError("ecmdConfigLooperNext has not returned a valid target\n");
+            cmtOutputError("ecmdConfigLooperNext has not returned a valid target. RC=0x%08X\n", l_rc);
+            l_rc = CMT_INVALID_TARGET;
             break;
         }
 
+        if (G_verbose)
+            printf("send_hbrt_command: calling cmtOCCSendReceive()\n");
         l_rc = cmtOCCSendReceive(l_target, l_data, i_rsp_data, i_rsp_len, i_timeout);
         if (l_rc)
         {
             cmtOutputError("%s : cmtOCCSendReceive() failed. RC=0x%08X\n", __FUNCTION__, l_rc);
+            l_rc = CMT_SEND_RECEIVE_FAILURE;
             break;
         }
         if (G_verbose)
@@ -580,27 +600,29 @@ uint32_t send_tmgt_pmcomplex_reset(const bool i_clear_reset_count)
     {
         if (i_clear_reset_count)
         {
-            uint32_t l_clear_rc;
-            l_clear_rc = send_hbrt_command(HTMGT_CLEAR_RESET_COUNTS, NULL, 0);
+            if (G_verbose >= 2)
+                printf("send_tmgt_pmcomplex_reset: Requesting clear of reset counts\n");
+            const uint32_t l_clear_rc = send_hbrt_command(HTMGT_CLEAR_RESET_COUNTS, NULL, 0);
             if (l_clear_rc)
             {
                 printf("send_tmgt_pmcomplex_reset: Clear of reset counts failed! (before reset) RC=0x%04X\n",
                        l_clear_rc);
             }
+        }
 
-            printf("Waiting up to 5 minutes for reset to complete...\n");
-            l_rc = send_hbrt_command(HTMGT_RESET_PM_COMPLEX, NULL, 0, 300);
+        printf("Waiting up to 5 minutes for reset to complete...\n");
+        l_rc = send_hbrt_command(HTMGT_RESET_PM_COMPLEX, NULL, 0, 300);
 
-            l_clear_rc = send_hbrt_command(HTMGT_CLEAR_RESET_COUNTS, NULL, 0);
+        if (i_clear_reset_count)
+        {
+            if (G_verbose >= 2)
+                printf("send_tmgt_pmcomplex_reset: Requesting 2nd clear of reset counts\n");
+            const uint32_t l_clear_rc = send_hbrt_command(HTMGT_CLEAR_RESET_COUNTS, NULL, 0);
             if (l_clear_rc)
             {
                 printf("send_tmgt_pmcomplex_reset: Clear of reset counts failed! RC=0x%04X\n",
                        l_clear_rc);
             }
-        }
-        else
-        {
-            l_rc = send_hbrt_command(HTMGT_RESET_PM_COMPLEX, NULL, 0, 300);
         }
     }
 
@@ -715,7 +737,6 @@ uint32_t tmgt_waitforstate(const uint8_t i_state)
     {
         bool done = false;
         static uint8_t  L_state = 0xFF;
-        static uint32_t L_rc = CMT_SUCCESS;
 
         printf("Waiting for the OCCs to reach %s state (%d) - %s\n",
                getStateString(i_state), i_state, get_timestamp());
@@ -755,14 +776,6 @@ uint32_t tmgt_waitforstate(const uint8_t i_state)
                 free(rsp_ptr);
                 rsp_ptr = NULL;
                 rsp_len = 0;
-            }
-            else
-            {
-                if (L_rc != l_rc)
-                {
-                    printf("RC: %d - %s\n", l_rc, get_timestamp());
-                    L_rc = l_rc;
-                }
             }
             sleep(5);
         }
