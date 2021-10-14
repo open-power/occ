@@ -32,7 +32,6 @@ import random
 import time
 import sys
 import os
-from curses.ascii import isprint
 
 
 script_directory = os.path.dirname(os.path.realpath(__file__))
@@ -192,7 +191,7 @@ def hexDumpByteString(stringArray):
 #   ...
 def hexDumpSingleString(stringArray):
     offset=0
-    for index in xrange(0, len(stringArray)/2):
+    for index in range(0, len(stringArray)/2):
         if ((offset % 16) == 0):
             print("{0:#0{1}x}".format(offset,6)+":  ", end="")
         if ((offset % 4) == 0):
@@ -243,7 +242,7 @@ def hexDumpPanic(stringArray):
 def hexDumpInt(intArray):
     # Display data buffer in hex dump
     asciiData=""
-    for i in xrange(0, len(intArray)):
+    for i in range(0, len(intArray)):
         if (i % 16 == 0):
             if (i > 0):
                 print("  \""+asciiData+"\"")
@@ -253,8 +252,8 @@ def hexDumpInt(intArray):
             print(" ", end="")
         print('%02X' % intArray[i], end="")
         asciiChar=chr(intArray[i])
-        if (isprint(asciiChar)):
-            asciiData+=str(chr(intArray[i]))
+        if (asciiChar.isprintable()):
+            asciiData+=asciiChar
         else:
             asciiData+="."
     print("")
@@ -403,7 +402,7 @@ def ReadSRAM(command, FLG_VRB):
     hex_digits = set(string.hexdigits)
     ReturnList = []
     N = 0
-    for N in xrange(0, len(tmplist)):
+    for N in range(0, len(tmplist)):
         if(len(tmplist[N]) == 4) and ( all(c in hex_digits for c in tmplist[N]) == True ):
             ReturnList.append( tmplist[N] )
         elif(len(tmplist[N]) == 2) and ( all(c in hex_digits for c in tmplist[N]) == True ):
@@ -534,20 +533,20 @@ def ReadPrint_OCCsensor(FLG_VRB, SeqNum):
         if(DataLength != 0):
             LoopCount = 5
             # convert data to int array and continue checksum calculation
-            for i in xrange(LoopCount, DataLength+LoopCount):
+            for i in range(LoopCount, DataLength+LoopCount):
                 LoopCount = i
                 if(i%2==0):
-                    DataList.append( int(mylist[ i/2 ][:2], 16 ))
-                    CheckSum += int( mylist[ i/2 ][:2], 16 )
+                    DataList.append( int(mylist[ int(i/2) ][:2], 16 ))
+                    CheckSum += int( mylist[ int(i/2) ][:2], 16 )
                 else:
-                    DataList.append( int(mylist[ i/2 ][-2:], 16 ))
-                    CheckSum += int( mylist[ i/2 ][-2:], 16 )
+                    DataList.append( int(mylist[ int(i/2) ][-2:], 16 ))
+                    CheckSum += int( mylist[ int(i/2) ][-2:], 16 )
 
             LoopCount += 1
             if( (LoopCount)%2==0):
-                ReturnCheckSum = mylist[LoopCount/2][:2] + mylist[LoopCount/2][-2:]
+                ReturnCheckSum = mylist[int(LoopCount/2)][:2] + mylist[int(LoopCount/2)][-2:]
             else:
-                ReturnCheckSum = mylist[LoopCount/2][-2:] + mylist[(LoopCount/2)+1][:2]
+                ReturnCheckSum = mylist[int(LoopCount/2)][-2:] + mylist[(int(LoopCount/2))+1][:2]
         else:
             ReturnCheckSum = mylist[2][-2:] + mylist[3][:2]
         # Truncate checksum to 2 bytes
@@ -600,11 +599,11 @@ def parseSensorList(DataList, DataLength, flg_verbose):
     print("\tNum Sensors        : " + str(num_sensors))
     sensor_length=20
     print("\t\tGUID    Name              Sample")
-    for i in xrange(0, num_sensors):
+    for i in range(0, num_sensors):
         offset = i * sensor_length
         last_sensor = (DataList[2+offset] << 8) + DataList[3+offset]
         print("\t\t0x" + '{:04X}'.format(last_sensor) + "  ", end='')
-        for j in xrange(0, 16):
+        for j in range(0, 16):
             if chr(DataList[4+offset+j]).isalnum():
                 print(chr(DataList[4+offset+j]), end='')
             else:
@@ -629,7 +628,7 @@ def parseSensorList(DataList, DataLength, flg_verbose):
 
 
 
-def ReadPrint_AMEsensor(FLG_VRB, SeqNum):
+def ReadPrint_debugPassthru(FLG_VRB, SeqNum):
     RC = 0
     CheckSum = 0
     Successful = 0
@@ -655,20 +654,20 @@ def ReadPrint_AMEsensor(FLG_VRB, SeqNum):
         if(DataLength != 0):
             LoopCount = 5
             # convert data to int array and continue checksum calculation
-            for i in xrange(LoopCount, DataLength+LoopCount):
+            for i in range(LoopCount, DataLength+LoopCount):
                 LoopCount = i
                 if(i%2==0):
-                    DataList.append( int(mylist[ i/2 ][:2], 16 ))
-                    CheckSum += int( mylist[ i/2 ][:2], 16 )
+                    DataList.append( int(mylist[ int(i/2) ][:2], 16 ))
+                    CheckSum += int( mylist[ int(i/2) ][:2], 16 )
                 else:
-                    DataList.append( int(mylist[ i/2 ][-2:], 16 ))
-                    CheckSum += int( mylist[ i/2 ][-2:], 16 )
+                    DataList.append( int(mylist[ int(i/2) ][-2:], 16 ))
+                    CheckSum += int( mylist[ int(i/2) ][-2:], 16 )
 
             LoopCount += 1
             if( (LoopCount)%2==0):
-                ReturnCheckSum = mylist[LoopCount/2][:2] + mylist[LoopCount/2][-2:]
+                ReturnCheckSum = mylist[int(LoopCount/2)][:2] + mylist[int(LoopCount/2)][-2:]
             else:
-                ReturnCheckSum = mylist[LoopCount/2][-2:] + mylist[(LoopCount/2)+1][:2]
+                ReturnCheckSum = mylist[int(LoopCount/2)][-2:] + mylist[(int(LoopCount/2))+1][:2]
         else:
             ReturnCheckSum = mylist[2][-2:] + mylist[3][:2]
         # Truncate checksum to 2 bytes
@@ -695,7 +694,7 @@ def ReadPrint_AMEsensor(FLG_VRB, SeqNum):
 
         if( sramRC == None) and ( CheckSum == int(ReturnCheckSum, 16) ):
             # Response for: OCCw -C 0x53 -D "05000000000002ffff" (0002 is the location (proc), ffff is the type)
-            parseAmeSensors(DataList, DataLength, FLG_VRB)
+            parseSensors(DataList, DataLength, FLG_VRB)
 
             print("\tChecksum               : 0x" + ReturnCheckSum)
 
@@ -711,7 +710,7 @@ def ReadPrint_AMEsensor(FLG_VRB, SeqNum):
 
 
 
-def parseAmeSensors(DataList, DataLength, flg_verbose):
+def parseSensors(DataList, DataLength, flg_verbose):
     last_sensor = 0
 
     # Response for: OCCw -C 0x40 -D "080002ffff" (0002 is the location (proc), ffff is the type)
@@ -719,10 +718,10 @@ def parseAmeSensors(DataList, DataLength, flg_verbose):
     print("\tNum Sensors        : " + str(num_sensors))
     sensor_length=24
     print("\t\tName               GUID     Sample      Min       Max")
-    for i in xrange(0, num_sensors):
+    for i in range(0, num_sensors):
         print("\t\t", end='')
         offset = i * sensor_length
-        for j in xrange(0, 16):
+        for j in range(0, 16):
             if chr(DataList[2+offset+j]).isalnum():
                 print(chr(DataList[2+offset+j]), end='')
             else:
@@ -830,25 +829,25 @@ def ValidateCmd(FLG_VRB, SeqNumExpected, FLG_LAST, flg_quiet):
         DataList=[]
         if(DataLength != 0):
             LoopCount = 5
-            for i in xrange(LoopCount, DataLength+LoopCount):
+            for i in range(LoopCount, DataLength+LoopCount):
                 LoopCount = i
                 #print("THis is the counter loop : " + str(LoopCount))
                 if(i%2==0):
-                    #print("even number ->" + str( i ) + " / " + str( i/2 ) + " -2: " + mylist[ i/2 ][:2] )
-                        DataList.append( int(mylist[ i/2 ][:2], 16 ))
-                        CheckSum += int( mylist[ i/2 ][:2], 16 )
+                    #print("even number ->" + str( i ) + " / " + str( int(i/2) ) + " -2: " + mylist[ int(i/2) ][:2] )
+                        DataList.append( int(mylist[ int(i/2) ][:2], 16 ))
+                        CheckSum += int( mylist[ int(i/2) ][:2], 16 )
                 else:
-                    #print("odd number ->" + str(i) + " / " + str( i/2 ) + " :2 " + mylist[ i/2 ][-2:] )
-                        DataList.append( int(mylist[ i/2 ][-2:], 16 ))
-                        CheckSum += int( mylist[ i/2 ][-2:], 16 )
+                    #print("odd number ->" + str(i) + " / " + str( int(i/2) ) + " :2 " + mylist[ int(i/2) ][-2:] )
+                        DataList.append( int(mylist[ int(i/2) ][-2:], 16 ))
+                        CheckSum += int( mylist[ int(i/2) ][-2:], 16 )
 
             LoopCount += 1                      #srb01a
             if( (LoopCount)%2==0):              #srb01r LoopCount+1
-                #print("even number ->" + str( LoopCount ) + " / " + str( LoopCount/2 ) + " :2 " + mylist[ LoopCount/2 ][:2] )
-                ReturnCheckSum = mylist[LoopCount/2][:2] + mylist[LoopCount/2][-2:]
+                #print("even number ->" + str( LoopCount ) + " / " + str( int(LoopCount/2) ) + " :2 " + mylist[ int(LoopCount/2) ][:2] )
+                ReturnCheckSum = mylist[int(LoopCount/2)][:2] + mylist[int(LoopCount/2)][-2:]
             else:
-                #print("odd number ->" + str( LoopCount ) + " / " + str( LoopCount/2 ) + " -2: " + mylist[ LoopCount/2 ][-2:] )
-                ReturnCheckSum = mylist[LoopCount/2][-2:] + mylist[(LoopCount/2)+1][:2]
+                #print("odd number ->" + str( LoopCount ) + " / " + str( int(LoopCount/2) ) + " -2: " + mylist[ int(LoopCount/2) ][-2:] )
+                ReturnCheckSum = mylist[int(LoopCount/2)][-2:] + mylist[(int(LoopCount/2))+1][:2]
         else:
             ReturnCheckSum = mylist[2][-2:] + mylist[3][:2]
         # Truncate checksum to 2 bytes
@@ -1029,11 +1028,11 @@ def parse_response_POLL(DataList, FLG_VRB):
     #######################################################################################################
     print("\t##############################################################")
     hexstring = ''
-    for i in xrange(16,32):
+    for i in range(16,32):
         hexstring += str(format(DataList[i],'02X'))
     print("\tOCC Code Level(17-32)  : " + bytearray.fromhex(hexstring).decode() )
     hexstring = ''
-    for i in xrange(32,38):
+    for i in range(32,38):
         hexstring += str(format(DataList[i],'02X'))
     print("\tSENSOR (33-38)         : " + bytearray.fromhex(hexstring).decode() )
     print("\t##############################################################")
@@ -1041,9 +1040,9 @@ def parse_response_POLL(DataList, FLG_VRB):
     print("\tSensor Version (40)    : 0x" + str(format(DataList[39],'02X')) )
     print("\t##############################################################")
     indexdata = 40
-    for j in xrange(0,DataList[38] ):   # Loop through all the Sensor Data Blocks.
+    for j in range(0,DataList[38] ):   # Loop through all the Sensor Data Blocks.
         hexstring = ''
-        for i in xrange(0,4):   # 4 bytes Eye Catcher
+        for i in range(0,4):   # 4 bytes Eye Catcher
             hexstring += str(format(DataList[indexdata],'02X'))
             indexdata += 1
         eyecatcher = bytearray.fromhex(hexstring).decode()
@@ -1060,7 +1059,7 @@ def parse_response_POLL(DataList, FLG_VRB):
         print("\tNumber Sensors (7)     : 0x" + str(format(numbersensors,'02X')) )   # 1 byte Number Sensors
         if eyecatcher == "CAPS":
             print("\t\tSensorData     :  " ,end="")
-            for k in xrange(0, sensorlength):   # loop through data in Sensor
+            for k in range(0, sensorlength):   # loop through data in Sensor
                 if ((k > 0) and ((k % 24) == 0)): # split hex data on lines of 24 bytes
                     print("\n\t\t               :  " ,end="")
                 print(str(format(DataList[indexdata+k],'02X'))+" ",end="")
@@ -1089,11 +1088,11 @@ def parse_response_POLL(DataList, FLG_VRB):
             print("\t\tUser Power Limit Source: " + str(DataList[indexdata]) + "  (1=TMGT/BMC, 2=OPAL)")
             indexdata += 1
         elif eyecatcher == "EXTN":
-            for i in xrange(0, numbersensors):   # loop through the number of Sensors
+            for i in range(0, numbersensors):   # loop through the number of Sensors
                 sensorstart=indexdata
                 # Dump raw sensor data first
                 print("\t\tSensorData     :  " ,end="")
-                for k in xrange(0, sensorlength):   # loop through data in Sensor
+                for k in range(0, sensorlength):   # loop through data in Sensor
                     if ((k > 0) and ((k % 24) == 0)): # split hex data on lines of 24 bytes
                         print("\n\t\t               :  " ,end="")
                     print(str(format(DataList[indexdata],'02X'))+" ",end="")
@@ -1101,7 +1100,7 @@ def parse_response_POLL(DataList, FLG_VRB):
                 name=""
                 tempindex = indexdata - sensorlength
                 # Parse specific fields
-                for k in xrange(0, 4):
+                for k in range(0, 4):
                     if DataList[tempindex] != 0x00:
                         name=name+chr(DataList[tempindex])
                     else:
@@ -1132,13 +1131,13 @@ def parse_response_POLL(DataList, FLG_VRB):
                             print("0x"+str(format(DataList[tempindex],'02X')),end="")
                             print(":%-3d  "%DataList[tempindex+1],end="")
                         tempindex += 2
-                #for k in xrange(tempindex, sensorstart+sensorlength):
+                #for k in range(tempindex, sensorstart+sensorlength):
                 #    print("  0x"+str(format(DataList[k],'02X')),end="")
                 print("")
         else:
-            for i in xrange(0, numbersensors):   # loop through the number of Sensors
+            for i in range(0, numbersensors):   # loop through the number of Sensors
                 print("\t\tSensorData     :  " ,end="")
-                for k in xrange(0, sensorlength):   # loop through data in Sensor
+                for k in range(0, sensorlength):   # loop through data in Sensor
                     if ((k > 0) and ((k % 24) == 0)): # split hex data on lines of 24 bytes
                         print("\n\t\t               :  " ,end="")
                     print(str(format(DataList[indexdata],'02X'))+" ",end="")
@@ -1278,7 +1277,7 @@ def write_cmd_func2(flg_Cmd, Cmd_arg, flg_Data, Data_arg, flg_verbose ):
             if CmdLength < 8 :
 #                print(str(indexNow) + " : APPEND ")
                 CmdBuffer += str( '{0:02X}'.format( int(ByteList[indexNow], 16)) )
-                checksum2 += long(ByteList[indexNow], 16)
+                checksum2 += int(ByteList[indexNow],16)
                 CmdLength += 1
 
         if CmdLength < 7 :
@@ -1448,25 +1447,25 @@ def read_cmd_func(flg_Cmd, Cmd_arg, flg_verbose ):
     DataList=[]
     if(DataLength != 0):
         LoopCount = 5
-        for i in xrange(LoopCount, DataLength+LoopCount):
+        for i in range(LoopCount, DataLength+LoopCount):
             LoopCount = i
             #print("THis is the counter loop : " + str(LoopCount))
             if(i%2==0):
-                #print("even number ->" + str( i ) + " / " + str( i/2 ) + " -2: " + mylist[ i/2 ][:2] )
-                    DataList.append( int(mylist[ i/2 ][:2], 16 ))
-                    CheckSum += int( mylist[ i/2 ][:2], 16 )
+                #print("even number ->" + str( i ) + " / " + str( int(i/2) ) + " -2: " + mylist[ int(i/2) ][:2] )
+                    DataList.append( int(mylist[ int(i/2) ][:2], 16 ))
+                    CheckSum += int( mylist[ int(i/2) ][:2], 16 )
             else:
-                #print("odd number ->" + str(i) + " / " + str( i/2 ) + " :2 " + mylist[ i/2 ][-2:] )
-                    DataList.append( int(mylist[ i/2 ][-2:], 16 ))
-                    CheckSum += int( mylist[ i/2 ][-2:], 16 )
+                #print("odd number ->" + str(i) + " / " + str( int(i/2) ) + " :2 " + mylist[ int(i/2) ][-2:] )
+                    DataList.append( int(mylist[ int(i/2) ][-2:], 16 ))
+                    CheckSum += int( mylist[ int(int(i/2)) ][-2:], 16 )
 
         LoopCount += 1                      #srb01a
         if( (LoopCount)%2==0):              #srb01r LoopCount+1
-            #print("even number ->" + str( LoopCount ) + " / " + str( LoopCount/2 ) + " :2 " + mylist[ LoopCount/2 ][:2] )
-            ReturnCheckSum = mylist[LoopCount/2][:2] + mylist[LoopCount/2][-2:]
+            #print("even number ->" + str( LoopCount ) + " / " + str( int(LoopCount/2) ) + " :2 " + mylist[ int(LoopCount/2) ][:2] )
+            ReturnCheckSum = mylist[int(LoopCount/2)][:2] + mylist[int(LoopCount/2)][-2:]
         else:
-            #print("odd number ->" + str( LoopCount ) + " / " + str( LoopCount/2 ) + " -2: " + mylist[ LoopCount/2 ][-2:] )
-            ReturnCheckSum = mylist[LoopCount/2][-2:] + mylist[(LoopCount/2)+1][:2]
+            #print("odd number ->" + str( LoopCount ) + " / " + str( int(LoopCount/2) ) + " -2: " + mylist[ int(LoopCount/2) ][-2:] )
+            ReturnCheckSum = mylist[int(LoopCount/2)][-2:] + mylist[(int(LoopCount/2))+1][:2]
     else:
         ReturnCheckSum = mylist[2][-2:] + mylist[3][:2]
     # Truncate checksum to 2 bytes
@@ -1503,7 +1502,7 @@ def read_cmd_func(flg_Cmd, Cmd_arg, flg_verbose ):
                     RC = parse_response_POLL(DataList, flg_verbose)
                     parsed = 1
                 elif Cmd_arg == 0x40:
-                    ReadPrint_AMEsensor(flg_verbose, '00')
+                    ReadPrint_debugPassthru(flg_verbose, '00')
                     parsed = 1
                 elif Cmd_arg == 0x53:
                     ReadPrint_OCCsensor(flg_verbose, '00')
@@ -1603,7 +1602,7 @@ def print_elog(err_id, err_addr, err_len, flg_verbose):
             print(indent+"      Length: 0x"+str('{0:04X}'.format(length)))
             index=index+1
             hexDumpStringTrunc(mylist[offset+2:], length)
-            offset = offset + ((4+length)/2) # half words
+            offset = offset + int((4+length)/2) # half words
 
     else:
         print("ERROR: Invalid elog data (id=0x"+str('{0:02X}'.format(err_id))+", 0x"+
@@ -2444,14 +2443,14 @@ def occ_init(code_dir, flg_nopgpe, flg_verbose):
         L_pgpe_enabled = 0
 
     # Disable Mambo thread(s) - required for p10_standalone
-    command = "foreach $proc in (get-object-list -all type = ppc_power10_mambo_core) {$proc.disable; continue-loop}"
+    command = "foreach $proc in (list-objects -all type = ppc_power10_mambo_core) {$proc.disable; continue-loop}"
     print("==> " + command);
     cli.run_command(command)
 
     # Hide error message: [backplane0.dcm0.chip0.pib_cmp.tod_scom error] Mambo cpu system_cmp0.cpu0_0_00_0 is disabled - Failed reading chip TOD value
-    command = bp+"."+proc+".pib_cmp.tod_scom.log-type -disable log-type = error"
-    print("==> " + command);
-    cli.run_command(command)
+    #command = bp+"."+proc+".pib_cmp.tod_scom.log-type -disable log-type = error"
+    #print("==> " + command);
+    #cli.run_command(command)
 
     command = bp+"->system_info = \"OCC Complex Model\""
     print("==> " + command)
@@ -2471,42 +2470,42 @@ def occ_init(code_dir, flg_nopgpe, flg_verbose):
     command = bp+"."+proc+".occ_cmp.oci_space.load-binary -v "+occ_405_binary_to_load
     print("==> " + command)
     cli.run_command(command)
-    command = "new-symtable -n sym_tbl_405 file="+occ_405_binary_to_load
-    print("==> " + command)
-    cli.run_command(command)
-    command = "new-context ctx_405"
-    print("==> " + command)
-    cli.run_command(command)
-    command = bp+"."+proc+".occ_cmp.proc_405.set-context context = ctx_405"
-    print("==> " + command)
-    cli.run_command(command)
-    command = "ctx_405->symtable = sym_tbl_405"
-    print("==> " + command)
-    cli.run_command(command)
+    #command = "new-symtable -n sym_tbl_405 file="+occ_405_binary_to_load
+    #print("==> " + command)
+    #cli.run_command(command)
+    #command = "new-context ctx_405"
+    #print("==> " + command)
+    #cli.run_command(command)
+    #command = bp+"."+proc+".occ_cmp.proc_405.set-context context = ctx_405"
+    #print("==> " + command)
+    #cli.run_command(command)
+    #command = "ctx_405->symtable = sym_tbl_405"
+    #print("==> " + command)
+    #cli.run_command(command)
 
     print("\n==> Loading GPE0 binary: " + occ_gpe0_binary_to_load)
     cli.run_command("!ls -l "+occ_gpe0_binary_to_load)
     command = bp+"."+proc+".occ_cmp.oci_space.load-binary -v "+occ_gpe0_binary_to_load
     print("==> " + command)
     cli.run_command(command)
-    command = "new-symtable -n sym_tbl_gpe0 file="+occ_gpe0_binary_to_load
-    print("==> " + command)
-    cli.run_command(command)
-    command = bp+"."+proc+".occ_cmp.gpe_ctx0.symtable sym_tbl_gpe0"
-    print("==> " + command)
-    cli.run_command(command)
+    #command = "new-symtable -n sym_tbl_gpe0 file="+occ_gpe0_binary_to_load
+    #print("==> " + command)
+    #cli.run_command(command)
+    #command = bp+"."+proc+".occ_cmp.gpe_ctx0.symtable sym_tbl_gpe0"
+    #print("==> " + command)
+    #cli.run_command(command)
 
     print("\n==> Loading GPE1 binary: " + occ_gpe1_binary_to_load)
     cli.run_command("!ls -l "+occ_gpe1_binary_to_load)
     command = bp+"."+proc+".occ_cmp.oci_space.load-binary -v "+occ_gpe1_binary_to_load
     print("==> " + command)
     cli.run_command(command)
-    command = "new-symtable -n sym_tbl_gpe1 file="+occ_gpe1_binary_to_load
-    print("==> " + command)
-    cli.run_command(command)
-    command = bp+"."+proc+".occ_cmp.gpe_ctx1.symtable sym_tbl_gpe1"
-    print("==> " + command)
-    cli.run_command(command)
+    #command = "new-symtable -n sym_tbl_gpe1 file="+occ_gpe1_binary_to_load
+    #print("==> " + command)
+    #cli.run_command(command)
+    #command = bp+"."+proc+".occ_cmp.gpe_ctx1.symtable sym_tbl_gpe1"
+    #print("==> " + command)
+    #cli.run_command(command)
 
     if L_pgpe_enabled:
         print("\n==> Loading GPE2 (PGPE) binary: " + occ_gpe2_binary_to_load)
@@ -2514,16 +2513,16 @@ def occ_init(code_dir, flg_nopgpe, flg_verbose):
         command = bp+"."+proc+".occ_cmp.oci_space.load-binary -v "+occ_gpe2_binary_to_load
         print("==> " + command)
         cli.run_command(command)
-        command = "new-symtable -n sym_tbl_gpe2 file="+occ_gpe2_binary_to_load
-        print("==> " + command)
-        cli.run_command(command)
-        command = bp+"."+proc+".occ_cmp.gpe_ctx2.symtable sym_tbl_gpe2"
-        print("==> " + command)
-        cli.run_command(command)
-
-        #command = bp+"."+proc+".occ_cmp.oci_space.write 0xfff201a0 0x10300000 -b" # Enable PGPE immediate return
-        #print("\n==> " + command + " (enable PGPE immediate return)")
+        #command = "new-symtable -n sym_tbl_gpe2 file="+occ_gpe2_binary_to_load
+        #print("==> " + command)
         #cli.run_command(command)
+        #command = bp+"."+proc+".occ_cmp.gpe_ctx2.symtable sym_tbl_gpe2"
+        #print("==> " + command)
+        #cli.run_command(command)
+
+    #command = bp+"."+proc+".occ_cmp.oci_space.write 0xfff201a0 0x10300000 -b" # Enable PGPE immediate return
+    #print("\n==> " + command + " (enable PGPE immediate return)")
+    #cli.run_command(command)
 
     G_symbols_loaded = 1
 
@@ -2657,7 +2656,7 @@ def occ_init(code_dir, flg_nopgpe, flg_verbose):
     cli.run_command(bp+"."+proc+".bridge_cmp.pba->pba_barmsk0=0x0000000007f00000")
 
     print("==> INIT APSS CHANNEL VALUES")
-    value,junk = cli.quiet_run_command("get-object-list -all type = apss_device");
+    value,junk = cli.quiet_run_command("list-objects -all type = apss_device");
     apssdev = str(value[0])
     print("APSS DEVICE: "+apssdev)
     command = bp+".apss->adc_channel_val = [0x0293, 0x9287, 0x2887, 0x3877, 0x4326, 0x52F2, 0x6214, 0x7006, 0x8003, 0x9EB7, 0xA01B, 0xB013, 0xC123, 0xD0FC, 0xE0F2, 0xF008]"
