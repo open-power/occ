@@ -294,12 +294,16 @@ const char * getApssFuncName(uint8_t i_funcId)
         case 0x1F: return("Proc 1 GPU 0"); break;
         case 0x20: return("Proc 1 GPU 1"); break;
         case 0x21: return("Proc 1 GPU 2"); break;
-        case 0x22: return("Proc 0 GPU Volt 2-0"); break;
-        case 0x23: return("Proc 0 GPU Volt 2-12"); break;
-        case 0x24: return("Proc 1 GPU Volt 2-0"); break;
-        case 0x25: return("Proc 1 GPU Volt 2-1"); break;
-        case 0x26: return("(voltage sense 2)"); break;
-        case 0x27: return("Total System Power 2"); break;
+        case 0x22: return("PCIe Total"); break;
+        case 0x23: return("PCIe DCM0"); break;
+        case 0x24: return("PCIe DCM1"); break;
+        case 0x25: return("PCIe DCM2"); break;
+        case 0x26: return("PCIe DCM3"); break;
+        case 0x27: return("IO DCM0"); break;
+        case 0x28: return("IO DCM1"); break;
+        case 0x29: return("IO DCM2"); break;
+        case 0x2A: return("IO DCM3"); break;
+        case 0x2B: return("AVdd Total"); break;
         default: return(""); break;
     }
 }
@@ -349,19 +353,23 @@ const char * getHistoryName(uint8_t id)
 uint32_t send_occ_command(const uint8_t i_occ,
                           const uint8_t i_cmd,
                           const uint8_t* i_cmd_data,
-                          const uint16_t i_len)
+                          const uint16_t i_len,
+                          const uint8_t i_node)
 {
     uint32_t rc = CMT_SUCCESS;
-    printf("Sending %s (0x%02X) command to OCC%d\n", getCmdString(i_cmd), i_cmd, i_occ);
 
     uint8_t *rsp_ptr = NULL;
     uint32_t rsp_length = 0;
     if (isFsp())
     {
-        rc = occ_cmd_via_tmgt(i_occ, i_cmd, i_cmd_data, i_len, rsp_ptr, rsp_length);
+        printf("Sending %s (0x%02X) command to OCC%d in node %d\n",
+               getCmdString(i_cmd), i_cmd, i_occ, i_node);
+        rc = occ_cmd_via_tmgt(i_occ, i_cmd, i_cmd_data, i_len, rsp_ptr, rsp_length, i_node);
     }
     else
     {
+        printf("Sending %s (0x%02X) command to OCC%d\n",
+               getCmdString(i_cmd), i_cmd, i_occ);
         rc = occ_cmd_via_htmgt(i_occ, i_cmd, i_cmd_data, i_len, rsp_ptr, rsp_length);
     }
 
@@ -773,19 +781,20 @@ int parse_occ_mfg_test(const uint8_t *i_cmd_data,
 } // end parse_occ_mfg_test()
 
 
-uint32_t get_occ_trace(const uint8_t i_occ)
+uint32_t get_occ_trace(const uint8_t i_occ, const uint8_t i_node)
 {
     uint32_t rc = CMT_SUCCESS;
-    printf("Collecting OCC%d trace\n", i_occ);
 
     if (isFsp())
     {
+        printf("Collecting OCC%d trace on node %d\n", i_occ, i_node);
         char command[128];
-        sprintf(command, "tmgt trace occsram %d", i_occ);
+        sprintf(command, "tmgt trace occsram %d %d", i_occ, i_node);
         rc = send_fsp_command(command);
     }
     else
     {
+        printf("Collecting OCC%d trace\n", i_occ);
         char command[1024];
         sprintf(command, "/afs/rch/usr2/cjcain/bin/occtoolp10 -trace -s %s -o %d",
                 G_occ_string_file, i_occ);
@@ -813,20 +822,21 @@ uint32_t get_occ_trace(const uint8_t i_occ)
 
 
 
-int get_occ_sensors(const uint8_t i_occ)
+int get_occ_sensors(const uint8_t i_occ,
+                    const uint8_t i_node)
 {
     int rc = 0;
 
     if (G_sensor_guid != 0)
     {
         uint8_t cmd_data[] = { 0x06, 0x00, uint8_t(G_sensor_guid >> 8), uint8_t(G_sensor_guid & 0xFF) };
-        send_occ_command(i_occ, 0x53, cmd_data, sizeof(cmd_data));
+        send_occ_command(i_occ, 0x53, cmd_data, sizeof(cmd_data), i_node);
     }
     else
     {
         uint8_t cmd_data[] = { 0x07, uint8_t(G_sensor_type >> 8), uint8_t(G_sensor_type & 0xFF),
             uint8_t(G_sensor_loc >> 8), uint8_t(G_sensor_loc & 0xFF) };
-        send_occ_command(i_occ, 0x40, cmd_data, sizeof(cmd_data));
+        send_occ_command(i_occ, 0x40, cmd_data, sizeof(cmd_data), i_node);
     }
 
     return rc;

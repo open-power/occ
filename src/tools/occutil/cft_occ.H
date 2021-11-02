@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/tools/cft/cftocctool.C $                                  */
+/* $Source: src/tools/occutil/cft_occ.H $                                 */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2020                             */
+/* Contributors Listed Below - COPYRIGHT 2020,2021                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -80,10 +80,13 @@ const char * getHistoryName(uint8_t id);
 uint32_t send_occ_command(const uint8_t i_occ,
                           const uint8_t i_cmd,
                           const uint8_t* i_cmd_data,
-                          const uint16_t i_len);
+                          const uint16_t i_len,
+                          const uint8_t i_node = 0);
 
-uint32_t get_occ_trace(const uint8_t i_occ = 0);
+uint32_t get_occ_trace(const uint8_t i_occ = 0,
+                       const uint8_t i_node = 0);
 
-int get_occ_sensors(const uint8_t i_occ = 0);
+int get_occ_sensors(const uint8_t i_occ = 0,
+                    const uint8_t i_node = 0);
 
 #endif

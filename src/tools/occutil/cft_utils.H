@@ -39,6 +39,7 @@
 
 
 extern unsigned int G_verbose;
+extern unsigned int G_sbe_timeout;
 
 #define UINT16_GET(__uint8_ptr)   ((uint16_t)((*((const uint8_t *)(__uint8_ptr)) << 8) | *((const uint8_t *)(__uint8_ptr) + 1)))
 #define UINT32_GET(__uint8_ptr)   ((uint32_t)((uint32_t)(UINT16_GET(__uint8_ptr) << 16) | UINT16_GET((((const uint8_t *)(__uint8_ptr)) + 2))))
@@ -85,7 +86,7 @@ uint32_t cmtOCCSendReceive(ecmdChipTarget &i_target,
                            ecmdDataBuffer &i_data,
                            uint8_t       *&o_responseData,
                            uint32_t       &o_responseSize,
-                           const uint32_t  i_timeout = 60 /*seconds*/);
+                           const uint32_t  i_timeout = G_sbe_timeout);
 
 bool isFsp();
 

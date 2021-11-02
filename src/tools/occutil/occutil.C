@@ -70,9 +70,11 @@ void usage()
         printf("        -X XX          Send OCC command XX (use -D to specify data)\n");
         printf("    Options:\n");
         printf("        -o #           Target specified OCC instance\n");
+        printf("        -n #           Target specified node (FSP only)\n");
         printf("        -D XX...       Data for other commands (XX is a hex string)\n");
         printf("        -v|-v2|-v3     Verbose (-v2 includes ECMD packets)\n");
-        printf("\n    last update: 13-Oct-2021\n");
+        printf("        --STO #        Use SBE timeout to # seconds (default: %d)\n", G_sbe_timeout);
+        printf("\n    last update: 11-Nov-2021 - debug\n");
 }
 
 
@@ -103,6 +105,7 @@ int main (int argc, char *argv[])
     uint32_t rc = CMT_SUCCESS;
     operation_e op = OP_UNDEFINED;
     unsigned int l_occ = 0;
+    unsigned int l_fsp_node = 0;
 
     if (argc == 1)
     {
@@ -182,7 +185,19 @@ int main (int argc, char *argv[])
                     rc = CMT_INVALID_PARAMETER;
                 }
             }
-            else if ((strcmp(argv[ii], "-o") == 0) || (strcmp(argv[ii], "-O") == 0))
+            else if ((strcmp(argv[ii], "-n") == 0) || (strcmp(argv[ii], "-N") == 0)) // FSP Node
+            {
+                if ((ii+1 < argc) && (argv[ii+1][0] != '-'))
+                {
+                    sscanf(argv[++ii], "%d", &l_fsp_node);
+                }
+                else
+                {
+                    cmtOutputError("ERROR: OCC (-n option) requires number\n");
+                    rc = CMT_INVALID_PARAMETER;
+                }
+            }
+            else if ((strcmp(argv[ii], "-o") == 0) || (strcmp(argv[ii], "-O") == 0)) // OCC Instance
             {
                 if ((ii+1 < argc) && (argv[ii+1][0] != '-'))
                 {
@@ -194,7 +209,7 @@ int main (int argc, char *argv[])
                     rc = CMT_INVALID_PARAMETER;
                 }
             }
-            else if (strcmp(argv[ii], "-s") == 0)
+            else if (strcmp(argv[ii], "-s") == 0) // OCC String File
             {
                 if ((ii+1 < argc) && (argv[ii+1][0] != '-'))
                 {
@@ -369,6 +384,28 @@ int main (int argc, char *argv[])
                     rc = CMT_INVALID_PARAMETER;
                 }
             }
+            else if (strcmp(argv[ii], "--STO") == 0) // SBE Timeout
+            {
+                if ((ii+1 < argc) && (argv[ii+1][0] != '-'))
+                {
+                    int newTimeout = 0;
+                    sscanf(argv[++ii], "%d", &newTimeout);
+                    if (newTimeout > 0)
+                    {
+                        G_sbe_timeout = newTimeout;
+                    }
+                    else
+                    {
+                        cmtOutputError("ERROR: SBE Timeout (--STO option) requires valid time in seconds\n");
+                        rc = CMT_INVALID_PARAMETER;
+                    }
+                }
+                else
+                {
+                    cmtOutputError("ERROR: SBE Timeout (--STO option) requires time in seconds\n");
+                    rc = CMT_INVALID_PARAMETER;
+                }
+            }
             else
             {
                 cmtOutputError("ERROR: Unknown command: %s\n", argv[ii]);
@@ -399,7 +436,7 @@ int main (int argc, char *argv[])
             case OP_OCC_POLL:
                 {
                     uint8_t cmd_data[] = { 0x20 };
-                    rc = send_occ_command(l_occ, 0x00, cmd_data, sizeof(cmd_data));
+                    rc = send_occ_command(l_occ, 0x00, cmd_data, sizeof(cmd_data), l_fsp_node);
                 }
                 break;
 
@@ -483,7 +520,7 @@ int main (int argc, char *argv[])
 
             case OP_OCC_TRACE:
                 {
-                    rc = get_occ_trace(l_occ);
+                    rc = get_occ_trace(l_occ, l_fsp_node);
                 }
                 break;
 
@@ -507,13 +544,13 @@ int main (int argc, char *argv[])
 
             case OP_SEND_OCC_CMD:
                 {
-                    rc = send_occ_command(l_occ, l_occ_cmd, l_data, l_dataLen);
+                    rc = send_occ_command(l_occ, l_occ_cmd, l_data, l_dataLen, l_fsp_node);
                 }
                 break;
 
             case OP_OCC_SENSORS:
                 {
-                    rc = get_occ_sensors(l_occ);
+                    rc = get_occ_sensors(l_occ, l_fsp_node);
                 }
                 break;
 

@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/tools/cft/cftocctool.C $                                  */
+/* $Source: src/tools/occutil/cft_tmgt.H $                                */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2020                             */
+/* Contributors Listed Below - COPYRIGHT 2020,2021                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -58,7 +58,8 @@ uint32_t occ_cmd_via_tmgt(const uint8_t i_occNum,
                           const uint8_t* i_cmd_data,
                           const uint16_t i_len,
                           uint8_t *& o_responseData,
-                          uint32_t & o_responseSize);
+                          uint32_t & o_responseSize,
+                          const uint8_t i_node = 0);
 
 uint32_t send_htmgt_command(const uint8_t i_cmd,
                            const uint8_t* i_cmd_data,

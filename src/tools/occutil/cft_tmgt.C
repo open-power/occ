@@ -39,8 +39,6 @@ const uint16_t  HTMGT_CMD_CODE    = 0x0001;
 //const uint16_t  HBRT_CMD_CLASS    = 0x00E1;
 //const uint16_t  HBRT_CMD_CODE     = 0x0002;
 
-const unsigned int HBRT_CMD_TIMEOUT = 30; // seconds
-
 struct cmtHtmgtCmd
 {
     cmtHeader   header;
@@ -116,13 +114,13 @@ struct htmgt_query_mode_function_t
 uint32_t send_hbrt_command(const htmgt_command i_cmd,
                            const uint8_t* i_cmd_data,
                            const uint16_t i_len,
-                           const uint32_t i_timeout = HBRT_CMD_TIMEOUT /*seconds*/);
+                           const uint32_t i_timeout = G_sbe_timeout);
 uint32_t send_hbrt_command(const htmgt_command i_cmd,
                            const uint8_t* i_cmd_data,
                            const uint16_t i_len,
                            uint8_t * & i_rsp_data,
                            uint32_t & i_rsp_len,
-                           const uint32_t i_timeout = HBRT_CMD_TIMEOUT /*seconds*/);
+                           const uint32_t i_timeout = G_sbe_timeout);
 
 void parse_htmgt_response(const uint8_t i_cmd,
                           const uint8_t *i_rsp_data,
@@ -240,7 +238,8 @@ uint32_t occ_cmd_via_tmgt(const uint8_t i_occNum,
                            const uint8_t* i_cmd_data,
                            const uint16_t i_len,
                            uint8_t *& o_responseData,
-                           uint32_t & o_responseSize)
+                           uint32_t & o_responseSize,
+                           const uint8_t i_node)
 {
     uint32_t    l_rc = CMT_SUCCESS;
     char command[1024] = "";
@@ -258,7 +257,7 @@ uint32_t occ_cmd_via_tmgt(const uint8_t i_occNum,
             cmd_index += 2;
         }
     }
-    sprintf(&command[cmd_index], " -O %d", i_occNum);
+    sprintf(&command[cmd_index], " -O %d -N %d", i_occNum, i_node);
 
     l_rc = send_fsp_command_rspdata(command, o_responseData, o_responseSize);
 
@@ -585,10 +584,12 @@ uint32_t send_tmgt_pmcomplex_reset(const bool i_clear_reset_count)
     {
         if (i_clear_reset_count)
         {
+            printf("Requesting clear of reset counts\n");
             l_rc = send_fsp_command("tmgtclient --reset_occ_clear 0");
         }
         else
         {
+            printf("Requesting PM Complex Reset\n");
             l_rc = send_fsp_command("tmgtclient --reset_occ 0");
         }
         if (l_rc == CMT_SUCCESS)
@@ -600,8 +601,7 @@ uint32_t send_tmgt_pmcomplex_reset(const bool i_clear_reset_count)
     {
         if (i_clear_reset_count)
         {
-            if (G_verbose >= 2)
-                printf("send_tmgt_pmcomplex_reset: Requesting clear of reset counts\n");
+            printf("Requesting clear of reset counts\n");
             const uint32_t l_clear_rc = send_hbrt_command(HTMGT_CLEAR_RESET_COUNTS, NULL, 0);
             if (l_clear_rc)
             {
@@ -612,11 +612,14 @@ uint32_t send_tmgt_pmcomplex_reset(const bool i_clear_reset_count)
 
         printf("Waiting up to 5 minutes for reset to complete...\n");
         l_rc = send_hbrt_command(HTMGT_RESET_PM_COMPLEX, NULL, 0, 300);
+        if (l_rc == CMT_SUCCESS)
+        {
+            l_rc = tmgt_waitforstate(0x03);
+        }
 
         if (i_clear_reset_count)
         {
-            if (G_verbose >= 2)
-                printf("send_tmgt_pmcomplex_reset: Requesting 2nd clear of reset counts\n");
+            printf("Requesting 2nd clear of reset counts\n");
             const uint32_t l_clear_rc = send_hbrt_command(HTMGT_CLEAR_RESET_COUNTS, NULL, 0);
             if (l_clear_rc)
             {

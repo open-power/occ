@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2016,2020                        */
+/* Contributors Listed Below - COPYRIGHT 2016,2021                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -116,25 +116,69 @@ void print_thread_data(thread_dump_t * i_thrd, char* i_name)
     parse_stack("\t\t", i_thrd->stack_trace, 8);
 }
 
+int dirExists(const char *name)
+{
+  struct stat file_stats;
+  int rc = 0;
+
+  if ((name == NULL) || (name[0] == '\0')) return(0);
+
+  if (stat(name, &file_stats) == 0)
+  {
+    if (file_stats.st_mode & S_IFDIR) // is it a directory?
+      {
+        rc = 1;
+      }
+  }
+  return(rc);
+}
+
+int fileExists(const char *name)
+{
+    FILE *theFile;
+
+    if ((name == NULL) || (name[0] == '\0')) return(0);
+
+    if ((theFile = fopen(name,"r")) == NULL) {
+        return(0);
+    }
+    else {
+        fclose(theFile);
+        return(1);
+    }
+}
+
 void dump_ffdc(ffdc_t * data)
 {
     uint32_t i = 0;
 
     printf("Exception Code: 0x%02X\n", data->excp);
-    printf("Checkpoint: 0x%04X\n", data->ckpt);
-    printf("SSX Panic Code: 0x%08X\n", data->ssx_panic);
+    printf("Checkpoint:     0x%04X\n", data->ckpt);
+    printf("SSX Panic Code: 0x%08X", data->ssx_panic);
     if ((data->ssx_panic != 0) && (repo_directory[0] != '\0'))
     {
+        fflush(stdout);
         char command[511] = "";
-        sprintf(command, "grep 0x%08X %s/occ/src/ssx/ssx/ssx_api.h", data->ssx_panic, repo_directory);
-        int rc = system(command);
+        char ssxDir[511] = "";
+        sprintf(ssxDir, "%s/occ/src/ssx/ssx", repo_directory);
+        if (dirExists(ssxDir))
+        {
+            sprintf(command, "grep 0x%08X %s/ssx_api.h | awk '{print \": \"$2}'", data->ssx_panic, ssxDir);
+            //printf("==> %s\n", command);
+            int rc = system(command);
+            //printf("--> rc=%d", rc);
+        }
+        else printf("\n");
     }
-    printf("Panic Address: 0x%08X\n", data->panic_addr);
-    printf("LR: ");
+    else printf("\n");
+    printf("Panic Address:  ");
+    lookup_address(data->panic_addr);
+    printf("LR:    ");
     lookup_address(data->lr);
-    printf("MSR: 0x%08X\n", data->msr);
-    printf("CR: 0x%08X\n", data->cr);
-    printf("CTR: 0x%08X\n", data->ctr);
+    printf("MSR:   0x%08X\n", data->msr);
+    printf("CR:    0x%08X\n", data->cr);
+    printf("CTR:   ");
+    lookup_address(data->ctr);
     for(i = 0; i < 32; i++)
         printf("GPR%02d: 0x%08X\n", i, data->gpr[i]);
     printf("EVPR: 0x%08X\n", data->evpr);
@@ -208,12 +252,30 @@ int main(int argc, char** argv)
         //printf("arg[%d]: %s\n", i, argv[i]);
         if (argv[i][0] == '-')
         {
+            if (strcmp(argv[i], "-h") == 0) // HELP
+            {
+                printf("Usage: ffdcparser <panic.bin> <options>\n");
+                printf("     -g <OCC REPO> - specify OCC source code location\n");
+                printf("         OCC REPO would be directory containing occ/ subdirectory\n");
+                printf("         or you can from the the occ/src/ directory of OCC repo\n");
+                printf("    To create <panic.bin> copy hex data from panic into file and run:\n");
+                printf("      /gsa/rchgsa/projects/p/power_thermal/bin/asm2bin panic.txt\n");
+                exit(0);
+            }
             if (strcmp(argv[i], "-g") == 0) // OCC Git Repo
             {
                 if (i+1 < argc)
                 {
                     i += 1;
-                    strcpy(repo_directory, argv[i]);
+                    if (dirExists(argv[i]))
+                    {
+                        strcpy(repo_directory, argv[i]);
+                    }
+                    else
+                    {
+                        printf("ERROR: OCC REPO %s does not exist\n", argv[i]);
+                        return -2;
+                    }
                 }
                 else
                 {
@@ -246,6 +308,32 @@ int main(int argc, char** argv)
         {
             strcpy(repo_directory, occ_repo);
         }
+        else if (dirExists("occ_405"))
+        {
+            strcpy(repo_directory, getenv("PWD"));
+            strcat(repo_directory, "/../..");
+        }
+        else if (dirExists("src/occ_405"))
+        {
+            strcpy(repo_directory, getenv("PWD"));
+            strcat(repo_directory, "/..");
+        }
+    }
+    else
+    {
+        setenv("OCCREPO", repo_directory, 1);
+        char *occ_repo = getenv("OCCREPO");
+    }
+    if (repo_directory[0] != '\0')
+    {
+        printf("Using OCC Repo: %s\n", repo_directory);
+        char disName[511] = "";
+        sprintf(disName, "%s/occ/obj/occ_405/occ_405.dis", repo_directory);
+        if (fileExists(disName))
+        {
+            printf("Using Dissassembly: %s\n", disName);
+        }
+        printf("\n");
     }
 
     if (bin_filename[0] == '\0')

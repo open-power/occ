@@ -34,6 +34,8 @@
 
 
 unsigned int G_verbose = 0;
+unsigned int G_sbe_timeout = 30; // seconds
+
 static uint32_t G_sequence = 0;
 
 const uint32_t  SBE_HEADER_VERSION      = 0x00010000;
@@ -179,7 +181,7 @@ void initHeader(cmtHeader & i_header, uint32_t i_lengthOfMsg)
         srand(time(0));
         G_sequence = rand() + 1;
     }
-    if (G_verbose)
+    if (G_verbose || (G_sbe_timeout != DEFAULT_SBE_TIMEOUT))
         printf("initHeader: Building SBE command with sequence id 0x%08X\n", G_sequence);
     i_header.sequenceId         = htonl(G_sequence++);
     i_header.cmdHeaderVersion   = htonl(COMMAND_HEADER_VERSION);
@@ -333,7 +335,7 @@ uint32_t cmtOCCSendReceive(ecmdChipTarget &i_target,
             l_polling_interval = i_timeout;
         }
         uint32_t l_attempt = 0;
-        if (G_verbose)
+        if (G_verbose || (G_sbe_timeout != DEFAULT_SBE_TIMEOUT))
             printf("cmtOCCSendReceive: Waiting for command complete (timeout=%d sec, %d sec between CFAM queries)\n",
                    l_timeout, l_polling_interval);
         do {
