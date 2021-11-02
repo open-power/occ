@@ -544,8 +544,8 @@ void amec_init_gamec_struct(void)
   g_amec->thermalmcext.speed_request = AMEC_MEMORY_MAX_STEP;
 
   // Initialize OC controller when WOF is off
-  // number of pstates to decrease (increase freq) when no OC detected 
-  g_amec->oc_wof_off.decrease_pstate = 1;
+  // number of pstates to decrease (increase freq) when no OC detected
+  g_amec->oc_wof_off.decrease_pstate = 2;
   // number of pstates to increase (decrease freq) when OC type act detected
   g_amec->oc_wof_off.increase_pstate = 2;
   g_amec->oc_wof_off.pstate_max = 0xFF;
