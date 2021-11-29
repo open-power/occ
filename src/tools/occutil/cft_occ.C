@@ -47,6 +47,7 @@ struct occ_poll_rsp_t
     {
         struct
         {
+#ifdef _BIG_ENDIAN
             uint8_t master_occ     : 1;   // 1 => master, 0 => slave
             uint8_t _reserved_6    : 1;
             uint8_t _reserved_5    : 1;
@@ -55,6 +56,16 @@ struct occ_poll_rsp_t
             uint8_t _reserved_2    : 1;
             uint8_t obs_ready      : 1;   // 1 => OCC received all data to support obs state.
             uint8_t active_ready   : 1;   // 1 => OCC received all data to support active state.
+#else
+            uint8_t active_ready   : 1;   // 1 => OCC received all data to support active state.
+            uint8_t obs_ready      : 1;   // 1 => OCC received all data to support obs state.
+            uint8_t _reserved_2    : 1;
+            uint8_t simics         : 1;   // 1 => running in SIMICS environment
+            uint8_t pmcr_owner     : 1;   // 1 => Indicates OCC sets the PMCR / Pstates
+            uint8_t _reserved_5    : 1;
+            uint8_t _reserved_6    : 1;
+            uint8_t master_occ     : 1;   // 1 => master, 0 => slave
+#endif
         };
         uint8_t word;
     } status;
@@ -63,12 +74,21 @@ struct occ_poll_rsp_t
     {
         struct
         {
+#ifdef _BIG_ENDIAN
             uint8_t dvfs_due_to_ot     : 1;   // 1 => OCC clipped max Pstate due to a processor over temp.
             uint8_t dvfs_due_to_pwr    : 1;   // 1 => OCC clipped max Psate due to reaching pcap limit.
             uint8_t mthrot_due_to_ot   : 1;   // 1 => OCC throttled memory due to an over temp.
             uint8_t n_power            : 1;   // 1 => Server running without redundant power.
             uint8_t dvfs_due_to_vdd_ot : 1;   // 1 => OCC clipped max Pstate due to VRM Vdd over temp.
             uint8_t gpu_throttle       : 3;   // 1 => Bitmask of GPUs being throttled. LSB = GPU0. MSB = GPU2.
+#else
+            uint8_t gpu_throttle       : 3;   // 1 => Bitmask of GPUs being throttled. LSB = GPU0. MSB = GPU2.
+            uint8_t dvfs_due_to_vdd_ot : 1;   // 1 => OCC clipped max Pstate due to VRM Vdd over temp.
+            uint8_t n_power            : 1;   // 1 => Server running without redundant power.
+            uint8_t mthrot_due_to_ot   : 1;   // 1 => OCC throttled memory due to an over temp.
+            uint8_t dvfs_due_to_pwr    : 1;   // 1 => OCC clipped max Psate due to reaching pcap limit.
+            uint8_t dvfs_due_to_ot     : 1;   // 1 => OCC clipped max Pstate due to a processor over temp.
+#endif
         };
         uint8_t word;
     } ext_status;
@@ -85,6 +105,7 @@ struct occ_poll_rsp_t
     {
         struct
         {
+#ifdef _BIG_ENDIAN
             uint8_t _reserved_7     : 1;
             uint8_t _reserved_6     : 1;
             uint8_t _reserved_5     : 1;
@@ -93,6 +114,16 @@ struct occ_poll_rsp_t
             uint8_t _reserved_2     : 1;
             uint8_t ips_active      : 1;
             uint8_t ips_enabled     : 1;
+#else
+            uint8_t ips_enabled     : 1;
+            uint8_t ips_active      : 1;
+            uint8_t _reserved_2     : 1;
+            uint8_t _reserved_3     : 1;
+            uint8_t _reserved_4     : 1;
+            uint8_t _reserved_5     : 1;
+            uint8_t _reserved_6     : 1;
+            uint8_t _reserved_7     : 1;
+#endif
         };
         uint8_t word;
     } ips_status;
@@ -184,7 +215,7 @@ const char * getModeString(const uint8_t i_mode)
     const char *string = "UNKNOWN";
     switch(i_mode)
     {
-        case 0x01: string = "DISABLED"; break;
+        case 0x01: string = "STATIC"; break;
         case 0x03: string = "STATIC FREQ POINT"; break;
         case 0x04: string = "SAFE"; break;
         case 0x05: string = "STATIC POWER SAVE"; break;
@@ -456,8 +487,8 @@ int parse_occ_poll(const uint8_t *i_rsp_data, const uint16_t i_rsp_len)
     printf("     State: 0x%02X  %s\n", data->state, getStateString(data->state));
     printf("      Mode: 0x%02X  %s\n", data->mode, getModeString(data->mode));
     printf("IPS Status: 0x%02X  %s %s\n", data->ips_status.word,
-           (data->ips_status.word & 0x01) ? "ENABLED" : "DISABLED",
-           (data->ips_status.word & 0x02) ? "and ACTIVE" : "");
+           (data->ips_status.ips_enabled) ? "ENABLED" : "DISABLED",
+           (data->ips_status.ips_active) ? "and ACTIVE" : "");
     printf("   Elog ID: 0x%02X  %s\n", data->errl_id, data->errl_id ? "" : "(no error)");
     printf(" Elog Addr: 0x%08X\n", htonl(data->errl_address));
     printf("  Elog Len: 0x%04X\n", htonl(data->errl_length));

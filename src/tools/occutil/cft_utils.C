@@ -32,9 +32,10 @@
 #include "cft_utils.H"
 #include <cmtReturnCodes.H>
 
+#define DEFAULT_SBE_TIMEOUT 30 // seconds
 
 unsigned int G_verbose = 0;
-unsigned int G_sbe_timeout = 30; // seconds
+unsigned int G_sbe_timeout = DEFAULT_SBE_TIMEOUT;
 
 static uint32_t G_sequence = 0;
 

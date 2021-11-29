@@ -51,7 +51,7 @@ enum occStateId
 
 enum powerMode
 {
-    POWERMODE_DISABLE           = 0x01, // Disabled Mode
+    POWERMODE_STATIC            = 0x01, // Static Mode
     POWERMODE_SFP               = 0x03, // Static Frequency Point
     POWERMODE_SAFE              = 0x04, // -- not settable mode --
     POWERMODE_POWER_SAVE        = 0x05, // Static Power Save
@@ -61,7 +61,7 @@ enum powerMode
     POWERMODE_MAX_PERF          = 0x0C, // Maximum Performance
 };
 
-#define IS_VALID_MODE(mode) ((mode == POWERMODE_DISABLE) || \
+#define IS_VALID_MODE(mode) ((mode == POWERMODE_STATIC) || \
                              (mode == POWERMODE_SFP) || \
                              (mode == POWERMODE_POWER_SAVE) || \
                              (mode == POWERMODE_FMAX) || \

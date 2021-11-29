@@ -67,8 +67,13 @@ struct occ_info_t
     uint8_t failed;
     uint8_t needs_reset;
     uint8_t reset_reason;
+#ifdef _BIG_ENDIAN
     uint8_t wof_reset_count:4;
     uint8_t reset_count:4;
+#else
+    uint8_t reset_count:4;
+    uint8_t wof_reset_count:4;
+#endif
     uint8_t last_poll[4];
 };
 
@@ -131,6 +136,14 @@ int parse_tmgt_info(const uint8_t *i_rsp_data,
 
 int parse_query_mode_func(const uint8_t *i_rsp_data,
                           const uint16_t i_rsp_len);
+
+void parseTmgtError(const uint32_t rc)
+{
+    if (rc == 0x2616)
+    {
+        cmtOutputError("**** System is in SAFE mode ****\n");
+    }
+}
 
 uint32_t occ_cmd_via_htmgt(const uint8_t i_occNum,
                            const uint8_t i_cmd,
@@ -212,6 +225,7 @@ uint32_t occ_cmd_via_htmgt(const uint8_t i_occNum,
         if (l_rc)
         {
             cmtOutputError("%s : cmtOCCSendReceive() failed. RC=0x%08X\n", __FUNCTION__, l_rc);
+            parseTmgtError(l_rc);
             l_rc = CMT_SEND_RECEIVE_FAILURE;
             break;
         }
@@ -436,6 +450,7 @@ uint32_t send_hbrt_command(const htmgt_command i_cmd,
         if (l_rc)
         {
             cmtOutputError("%s : cmtOCCSendReceive() failed. RC=0x%08X\n", __FUNCTION__, l_rc);
+            parseTmgtError(l_rc);
             l_rc = CMT_SEND_RECEIVE_FAILURE;
             break;
         }

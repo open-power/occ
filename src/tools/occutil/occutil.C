@@ -54,12 +54,12 @@ void usage()
         printf("                  0x10=VRM, 0x20=OCC, 0x40=Core, 0x80=GPU, 0x100=Quad\n");
         printf("    Commands:\n");
         printf("        --mode #       Set the Power Mode for the system\n");
-        printf("                Modes: 1=DISABLED, 3=STATIC FREQ POINT*, 5=STATIC POWER SAVE,\n"
+        printf("                Modes: 1=STATIC, 3=STATIC FREQ POINT*, 5=STATIC POWER SAVE,\n"
                "                       9=MAX FREQ, 10=DYNAMIC PERF, 11=FIXED FREQ*, 12=MAX PERF\n");
         printf("           -f XXXX     Frequency point (required for * modes)\n");
         printf("                SFP points: 0x1000-0x1007=VPD Curve Fit Points, 0x2000=Static Power Save,\n"
                "                       0x2001=WOF Base, 0x2002=Ultra Turbo, 0x2003=Maximum Frequency,\n"
-               "                       0x2004=Disabled, 0x4000=Bottom Throttle Space (most throttled),\n"
+               "                       0x2004=Static, 0x4000=Bottom Throttle Space (most throttled),\n"
                "                       0xFFpp=Specific pstate: pp\n");
         printf("        --state #      Set the OCC state\n");
         printf("                States: 2=OBSERVATION, 3=ACTIVE, 5=CHARACTERIZATION\n");
@@ -74,7 +74,7 @@ void usage()
         printf("        -D XX...       Data for other commands (XX is a hex string)\n");
         printf("        -v|-v2|-v3     Verbose (-v2 includes ECMD packets)\n");
         printf("        --STO #        Use SBE timeout to # seconds (default: %d)\n", G_sbe_timeout);
-        printf("\n    last update: 11-Nov-2021 - debug\n");
+        printf("\n    last update: 24-Nov-2021 - debug\n");
 }
 
 
@@ -193,7 +193,7 @@ int main (int argc, char *argv[])
                 }
                 else
                 {
-                    cmtOutputError("ERROR: OCC (-n option) requires number\n");
+                    cmtOutputError("ERROR: node (-n option) requires number\n");
                     rc = CMT_INVALID_PARAMETER;
                 }
             }
