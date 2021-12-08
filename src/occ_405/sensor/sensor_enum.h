@@ -114,7 +114,7 @@ enum e_gsid
     VOLTVDDSENSE,   // chip voltage (remote sense adjusted for loadline)
     VOLTVDNSENSE,   // chip voltage (remote sense adjusted for loadline)
     VOLTVCSSENSE,   // chip voltage (remote sense adjusted for loadline)
-    VOLTVIOSENSE,   // chip voltage (remote sense adjusted for loadline)
+    VOLTVIOSENSE,   // not used
     PWRVDD,         // calculated from AVSBUS data
     PWRVDN,         // calculated from AVSBUS data
     PWRVCS,         // calculated from AVSBUS data
@@ -142,7 +142,7 @@ enum e_gsid
     VOLTVDD,
     VOLTVDN,
     VOLTVCS,
-    VOLTVIO,
+    VOLTVIO,        // not used
     CURVDD,
     CURVDN,
     CURVCS,

@@ -998,15 +998,6 @@ void read_pgpe_produced_wof_values( void )
         sensor_update(AMECSENSOR_PTR(VOLTVCS), l_voltage);
     }
 
-    // save Vio voltage to sensor
-    l_voltage = (uint16_t)l_PgpeWofValues.dw2.fields.vio_avg_mv;
-    if (l_voltage != 0)
-    {
-        // Voltage value stored in the sensor should be in 100uV (mV scale -1)
-        l_voltage *= 10;
-        sensor_update(AMECSENSOR_PTR(VOLTVIO), l_voltage);
-    }
-
     // Save Vdd current to sensor
     l_current = (uint16_t)l_PgpeWofValues.dw1.fields.idd_avg_10ma;
     if (l_current != 0)
@@ -2979,10 +2970,12 @@ uint32_t prevent_over_current( uint32_t i_ceff_ratio )
 void prevent_oc_wof_off( void )
 {
     static uint8_t  L_ocs_dirty_prev = 0;
+    static uint8_t  L_trace_first_dirty = 5; // number of times to trace a transition to dirty act
            uint16_t l_pstate = 0;
            uint32_t l_steps = 0;
            uint32_t l_steps_in_kHz = 0;
            uint32_t l_freq_kHz = 0;
+           bool     l_trace_final_vote = FALSE;
 
     // check if OC protection when WOF is off was disabled
     if(G_internal_flags & INT_FLAG_DISABLE_OC_WOF_OFF)
@@ -3004,7 +2997,7 @@ void prevent_oc_wof_off( void )
         if( (L_ocs_dirty_prev != g_wof->ocs_dirty) &&
             (G_allow_trace_flags & ALLOW_WOF_OCS_TRACE) )
         {
-           INTR_TRAC_IMP("OCS NOW CLEAN: Pstate Request[%d]",
+           INTR_TRAC_IMP("OCS NOW CLEAN: Pstate Request[0x%02X]",
                           g_amec->oc_wof_off.pstate_request);
         }
     }
@@ -3013,12 +3006,23 @@ void prevent_oc_wof_off( void )
         INCREMENT_ERR_HISTORY( ERRH_CEFF_RATIO_VDD_EXCURSION );
 
         // over current condition detected on previous PGPE tick time
-        // if there was previously no clip, set Pstate to current frequency
+        // if there was previously no clip, set Pstate to frequency when dirty occurred
         if(g_amec->oc_wof_off.pstate_request == 0)
         {
              pgpe_wof_values_t l_PgpeWofValues;
              l_PgpeWofValues.dw0.value = in64(g_amec_sys.static_wof_data.pgpe_values_sram_addr);
-             g_amec->oc_wof_off.pstate_request = l_PgpeWofValues.dw0.fields.average_frequency_pstate;
+             l_PgpeWofValues.dw2.value = in64(g_amec_sys.static_wof_data.pgpe_values_sram_addr + 0x10);
+
+             g_amec->oc_wof_off.pstate_request = l_PgpeWofValues.dw2.fields.dirty_pstate_inst;
+
+             if( (L_trace_first_dirty) || (G_allow_trace_flags & ALLOW_WOF_OCS_TRACE) )
+             {
+                L_trace_first_dirty--;
+                INTR_TRAC_IMP("OCS DIRTY ACT DETECTED: Dirty Pstate Inst[0x%02X] Avg Pstate[0x%02X]",
+                               l_PgpeWofValues.dw2.fields.dirty_pstate_inst,
+                               l_PgpeWofValues.dw0.fields.average_frequency_pstate);
+		l_trace_final_vote = TRUE;
+             }
         }
         // increase Pstate clip (i.e. decrease frequency) stop at max allowed
         l_pstate = g_amec->oc_wof_off.pstate_request + g_amec->oc_wof_off.increase_pstate;
@@ -3032,10 +3036,11 @@ void prevent_oc_wof_off( void )
             g_amec->oc_wof_off.pstate_request = (Pstate_t)l_pstate;
         }
 
-        if( (L_ocs_dirty_prev != g_wof->ocs_dirty) &&
-            (G_allow_trace_flags & ALLOW_WOF_OCS_TRACE) )
+        if( (l_trace_final_vote) ||
+            ( (L_ocs_dirty_prev != g_wof->ocs_dirty) &&
+              (G_allow_trace_flags & ALLOW_WOF_OCS_TRACE) ) )
         {
-           INTR_TRAC_IMP("OCS DIRTY ACT TYPE: Pstate vote[%d]",
+           INTR_TRAC_IMP("OCS DIRTY ACT TYPE: Pstate vote[0x%02X]",
                           g_amec->oc_wof_off.pstate_request);
         }
 
@@ -3049,7 +3054,7 @@ void prevent_oc_wof_off( void )
         if( (L_ocs_dirty_prev != g_wof->ocs_dirty) &&
             (G_allow_trace_flags & ALLOW_WOF_OCS_TRACE) )
         {
-           INTR_TRAC_IMP("OCS DIRTY HOLD TYPE: Pstate vote[%d]",
+           INTR_TRAC_IMP("OCS DIRTY HOLD TYPE: Pstate vote[0x%02X]",
                           g_amec->oc_wof_off.pstate_request);
         }
     }
