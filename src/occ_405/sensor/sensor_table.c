@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2021                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2022                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -346,11 +346,11 @@ const sensor_ptr_t G_amec_sensor_list[] =
   SENSOR_PTR( VOLTVDDSENSE,         &g_amec_sys.fw.voltvddsense),
   SENSOR_PTR( VOLTVDNSENSE,         &g_amec_sys.fw.voltvdnsense),
   SENSOR_PTR( VOLTVCSSENSE,         &g_amec_sys.fw.voltvcssense),
-  SENSOR_PTR( VOLTVIOSENSE,         &g_amec_sys.fw.voltviosense),
+  SENSOR_PTR( VSENSERESERVE,        &g_amec_sys.fw.vsensereserve),
   SENSOR_PTR( PWRVDD,               &g_amec_sys.proc[0].pwrvdd),
   SENSOR_PTR( PWRVDN,               &g_amec_sys.proc[0].pwrvdn),
   SENSOR_PTR( PWRVCS,               &g_amec_sys.proc[0].pwrvcs),
-  SENSOR_PTR( PWRVIO,               &g_amec_sys.proc[0].pwrvio),
+  SENSOR_PTR( RESERVE,              &g_amec_sys.proc[0].reserve),
   SENSOR_PTR( PROCPWRTHROT,         &g_amec_sys.proc[0].procpwrthrot),
   SENSOR_PTR( PROCOTTHROT,          &g_amec_sys.proc[0].procotthrot),
   SENSOR_PTR( DDSAVG,               &g_amec_sys.proc[0].ddsavg),
@@ -372,7 +372,7 @@ const sensor_ptr_t G_amec_sensor_list[] =
   SENSOR_PTR( VOLTVDD,              &g_amec_sys.proc[0].voltvdd),
   SENSOR_PTR( VOLTVDN,              &g_amec_sys.proc[0].voltvdn),
   SENSOR_PTR( VOLTVCS,              &g_amec_sys.proc[0].voltvcs),
-  SENSOR_PTR( VOLTVIO,              &g_amec_sys.proc[0].voltvio),
+  SENSOR_PTR( VOLTRESERVE,          &g_amec_sys.proc[0].voltreserve),
   SENSOR_PTR( CURVDD,               &g_amec_sys.proc[0].curvdd),
   SENSOR_PTR( CURVDN,               &g_amec_sys.proc[0].curvdn),
   SENSOR_PTR( CURVCS,               &g_amec_sys.proc[0].curvcs),
@@ -524,11 +524,11 @@ const minisensor_ptr_t G_amec_mini_sensor_list[] INIT_SECTION =
   MINI_SENSOR_PTR(   VOLTVDDSENSE,  NULL),
   MINI_SENSOR_PTR(   VOLTVDNSENSE,  NULL),
   MINI_SENSOR_PTR(   VOLTVCSSENSE,  NULL),
-  MINI_SENSOR_PTR(   VOLTVIOSENSE,  NULL),
-  MINI_SENSOR_PTR(         PWRVDD,  NULL),
+  MINI_SENSOR_PTR(  VSENSERESERVE,  NULL),
+  MINI_SENSOR_PTR(         PWRVDD,  &G_dcom_slv_outbox_tx.pwrvdd),
   MINI_SENSOR_PTR(         PWRVDN,  NULL),
-  MINI_SENSOR_PTR(         PWRVCS,  NULL),
-  MINI_SENSOR_PTR(         PWRVIO,  NULL),
+  MINI_SENSOR_PTR(         PWRVCS,  &G_dcom_slv_outbox_tx.pwrvcs),
+  MINI_SENSOR_PTR(        RESERVE,  NULL),
   MINI_SENSOR_PTR(   PROCPWRTHROT,  NULL),
   MINI_SENSOR_PTR(    PROCOTTHROT,  NULL),
   MINI_SENSOR_PTR(         DDSAVG,  &G_dcom_slv_outbox_tx.ddsAvg),
@@ -550,7 +550,7 @@ const minisensor_ptr_t G_amec_mini_sensor_list[] INIT_SECTION =
   MINI_SENSOR_PTR( VOLTVDD,         NULL),
   MINI_SENSOR_PTR( VOLTVDN,         NULL),
   MINI_SENSOR_PTR( VOLTVCS,         NULL),
-  MINI_SENSOR_PTR( VOLTVIO,         NULL),
+  MINI_SENSOR_PTR( VOLTRESERVE,     NULL),
   MINI_SENSOR_PTR( CURVDD,          &G_dcom_slv_outbox_tx.curVdd),
   MINI_SENSOR_PTR( CURVDN,          NULL),
   MINI_SENSOR_PTR( CURVCS,          NULL),

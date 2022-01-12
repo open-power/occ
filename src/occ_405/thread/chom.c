@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2021                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2022                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -228,6 +228,24 @@ const uint16_t * g_chom_sensor_table[CHOM_NUM_OF_SENSORS] =
     &G_dcom_slv_outbox_rx[5].ovAvg,
     &G_dcom_slv_outbox_rx[6].ovAvg,
     &G_dcom_slv_outbox_rx[7].ovAvg,
+    // Processor Vdd power
+    &G_dcom_slv_outbox_rx[0].pwrvdd,
+    &G_dcom_slv_outbox_rx[1].pwrvdd,
+    &G_dcom_slv_outbox_rx[2].pwrvdd,
+    &G_dcom_slv_outbox_rx[3].pwrvdd,
+    &G_dcom_slv_outbox_rx[4].pwrvdd,
+    &G_dcom_slv_outbox_rx[5].pwrvdd,
+    &G_dcom_slv_outbox_rx[6].pwrvdd,
+    &G_dcom_slv_outbox_rx[7].pwrvdd,
+    // Processor Vcs power
+    &G_dcom_slv_outbox_rx[0].pwrvcs,
+    &G_dcom_slv_outbox_rx[1].pwrvcs,
+    &G_dcom_slv_outbox_rx[2].pwrvcs,
+    &G_dcom_slv_outbox_rx[3].pwrvcs,
+    &G_dcom_slv_outbox_rx[4].pwrvcs,
+    &G_dcom_slv_outbox_rx[5].pwrvcs,
+    &G_dcom_slv_outbox_rx[6].pwrvcs,
+    &G_dcom_slv_outbox_rx[7].pwrvcs,
 };
 
 

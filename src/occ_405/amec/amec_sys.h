@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2021                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2022                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -84,7 +84,7 @@ typedef struct
   sensor_t voltvddsense;
   sensor_t voltvdnsense;
   sensor_t voltvcssense;
-  sensor_t voltviosense;
+  sensor_t vsensereserve;
 
   // DPS update flag
   // 8 bit flag: =1, no updating allowed; =0, updating is allowed
@@ -432,11 +432,11 @@ typedef struct
   sensor_t voltvdd;
   sensor_t voltvdn;
   sensor_t voltvcs;
-  sensor_t voltvio;
+  sensor_t voltreserve;
   sensor_t pwrvdd;
   sensor_t pwrvdn;
   sensor_t pwrvcs;
-  sensor_t pwrvio;
+  sensor_t reserve;
   sensor_t procpwrthrot;
   sensor_t procotthrot;
   sensor_t ddsavg;

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2021                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2022                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -332,6 +332,22 @@ enum
     CHOMOVAVGP5,
     CHOMOVAVGP6,
     CHOMOVAVGP7,
+    CHOMPWRVDDP0,
+    CHOMPWRVDDP1,
+    CHOMPWRVDDP2,
+    CHOMPWRVDDP3,
+    CHOMPWRVDDP4,
+    CHOMPWRVDDP5,
+    CHOMPWRVDDP6,
+    CHOMPWRVDDP7,
+    CHOMPWRVCSP0,
+    CHOMPWRVCSP1,
+    CHOMPWRVCSP2,
+    CHOMPWRVCSP3,
+    CHOMPWRVCSP4,
+    CHOMPWRVCSP5,
+    CHOMPWRVCSP6,
+    CHOMPWRVCSP7,
     // The number of chom sensors reported
     CHOM_NUM_OF_SENSORS
 };

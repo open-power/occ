@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2021                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2022                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -114,11 +114,11 @@ enum e_gsid
     VOLTVDDSENSE,   // chip voltage (remote sense adjusted for loadline)
     VOLTVDNSENSE,   // chip voltage (remote sense adjusted for loadline)
     VOLTVCSSENSE,   // chip voltage (remote sense adjusted for loadline)
-    VOLTVIOSENSE,   // not used
+    VSENSERESERVE,  // reserve was VIO sense re-use for new sensor
     PWRVDD,         // calculated from AVSBUS data
     PWRVDN,         // calculated from AVSBUS data
     PWRVCS,         // calculated from AVSBUS data
-    PWRVIO,         // calculated from AVSBUS data
+    RESERVE,        // reserve was VIO re-use for new sensor
     PROCPWRTHROT,
     PROCOTTHROT,
     DDSAVG,         // Average DDS_DATA field in SDSR across all good cores
@@ -142,7 +142,7 @@ enum e_gsid
     VOLTVDD,
     VOLTVDN,
     VOLTVCS,
-    VOLTVIO,        // not used
+    VOLTRESERVE,  // reserve was VIO re-use for new sensor
     CURVDD,
     CURVDN,
     CURVCS,

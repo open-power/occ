@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2021                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2022                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -214,7 +214,9 @@ typedef struct __attribute__ ((packed))
     uint16_t ceffRatioVdd;                                       // [380]
     uint16_t uvAvg;                                              // [382]
     uint16_t ovAvg;                                              // [384]
-    uint16_t reserved[25];                                       // [386]
+    uint16_t pwrvdd;                                             // [386]
+    uint16_t pwrvcs;                                             // [388]
+    uint16_t reserved[23];                                       // [390]
     uint16_t todclock[NUM_TOD_SENSORS];                          // [436]
     uint16_t tempmembufthrm;                                     // [442]
     uint16_t tempdimmthrm;                                       // [444]
