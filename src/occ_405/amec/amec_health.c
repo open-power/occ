@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2021                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2022                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -1027,6 +1027,7 @@ void amec_health_check_proc_temp()
     uint16_t                    l_idx = 0;
     uint16_t                    l_freq = 0;
     uint16_t                    l_desired_freq = 0;
+    uint16_t                    l_temp16 = 0;
     static uint32_t             L_error_count[NUM_PROC_SENSOR_TYPES] = {0};
     // history of core and IO temperatures for tracing when logging OT error
     static uint16_t             L_temp_history[TEMP_HISTORY_SIZE][NUM_HISTORY_FIELDS] = {{0}};
@@ -1110,10 +1111,26 @@ void amec_health_check_proc_temp()
                          l_freq);
             }
         }
-        else
+        else // core not OT
         {
-            // Reset the error counter for this FRU
-            L_error_count[CORE_DTS_INDEX] = 0;
+            if(L_error_count[CORE_DTS_INDEX] != 0)
+            {
+               // update sensor with time OT, we will clear it on next check if still not OT
+               l_temp16 = 32 * L_error_count[CORE_DTS_INDEX];
+               sensor_update(AMECSENSOR_PTR(PROCOTTIME), l_temp16);
+               // Reset the error counter for this FRU
+               L_error_count[CORE_DTS_INDEX] = 0;
+            }
+            else
+            {
+               // clear OT time sensor if needed
+               l_temp_sensor = getSensorByGsid((uint16_t)PROCOTTIME);
+               if(l_temp_sensor->sample)
+               {
+                  // clear OT time sensor
+                  sensor_update(AMECSENSOR_PTR(PROCOTTIME), 0);
+               }
+            }
         }
 
         // Check to see if we exceeded our error temperature for IO
@@ -1179,6 +1196,13 @@ void amec_health_check_proc_temp()
 
             if(L_error_count[CORE_DTS_INDEX] == AMEC_HEALTH_PROC_ERROR_TIMER)
             {
+                // update proc OT time to the max since we will no longer be checking
+                l_temp_sensor = getSensorByGsid((uint16_t)PROCOTTIME);
+                TRAC_ERR("amec_health_check_error_temp: Proc OT being logged previous max time OT[%ums]",
+                         l_temp_sensor->sample_max);
+                l_temp16 = 32 * AMEC_HEALTH_PROC_ERROR_TIMER;
+                sensor_update(AMECSENSOR_PTR(PROCOTTIME), l_temp16);
+
                 TRAC_ERR("amec_health_check_error_temp: processor has exceeded OT error! core[%u] is hottest current temp[%u] ot_error[%u]",
                          l_core_num,
                          l_cur_temp,

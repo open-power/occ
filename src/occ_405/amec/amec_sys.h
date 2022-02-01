@@ -436,7 +436,7 @@ typedef struct
   sensor_t pwrvdd;
   sensor_t pwrvdn;
   sensor_t pwrvcs;
-  sensor_t reserve;
+  sensor_t procottime;
   sensor_t procpwrthrot;
   sensor_t procotthrot;
   sensor_t ddsavg;

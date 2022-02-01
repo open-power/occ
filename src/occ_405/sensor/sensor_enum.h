@@ -118,7 +118,7 @@ enum e_gsid
     PWRVDD,         // calculated from AVSBUS data
     PWRVDN,         // calculated from AVSBUS data
     PWRVCS,         // calculated from AVSBUS data
-    RESERVE,        // reserve was VIO re-use for new sensor
+    PROCOTTIME,     // consecutive time (ms) processor above ERROR temperature
     PROCPWRTHROT,
     PROCOTTHROT,
     DDSAVG,         // Average DDS_DATA field in SDSR across all good cores
