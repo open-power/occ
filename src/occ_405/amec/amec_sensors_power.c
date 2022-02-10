@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2021                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2022                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -219,6 +219,7 @@ bool amec_update_apss_sensors(void)
         {
             uint8_t l_proc   = G_pbax_id.chip_id;
             uint32_t temp32  = 0;
+            uint64_t temp64  = 0;
             uint8_t  l_idx   = 0;
 
             // ----------------------------------------------------
@@ -248,7 +249,7 @@ bool amec_update_apss_sensors(void)
             {
                 if(L_trace_everest_workaround)
                 {
-                    TRAC_IMP("Everest workaround using 12000 for 12V sense not reading %d", l_bulk_voltage);
+                    TRAC_IMP("Everest workaround using 12000 for 12V sense not reading %d", (uint16_t)l_bulk_voltage);
                     L_trace_everest_workaround = FALSE;
                 }
                 l_bulk_voltage = 12000;
@@ -346,15 +347,15 @@ bool amec_update_apss_sensors(void)
             if (l_proc < MAX_GPU_DOMAINS)
             {
                 // GPU0
-                temp32 = l_bulk_voltage * ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.gpu[l_proc][0]);
+                temp64 = l_bulk_voltage * ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.gpu[l_proc][0]);
 
                 // GPU1
-                temp32 += l_bulk_voltage * ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.gpu[l_proc][1]);
+                temp64 += l_bulk_voltage * ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.gpu[l_proc][1]);
 
                 // GPU2
-                temp32 += l_bulk_voltage * ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.gpu[l_proc][2]);
+                temp64 += l_bulk_voltage * ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.gpu[l_proc][2]);
 
-                temp32 = ROUND_POWER(temp32);
+                temp32 = ROUND_POWER(temp64);
                 sensor_update( AMECSENSOR_PTR(PWRGPU), (uint16_t)temp32);
             }
 
@@ -362,16 +363,16 @@ bool amec_update_apss_sensors(void)
             // Convert Raw Bulk Power from APSS into sensors
             // ----------------------------------------------------
             // Not all systems provide a total system current/power, in which case it must be calculated.
-            temp32 = 0;
-            const uint32_t syspwr_volt1 = l_bulk_voltage   * ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.total_current_12v);
-            if(0 != syspwr_volt1)
+            if(G_sysConfigData.apss_adc_map.total_current_12v != SYSCFG_INVALID_ADC_CHAN)
             {
-                // Total System Power (voltage 1 (12V)) was provided, use directly
-                temp32 = syspwr_volt1;
+                // Total System Power was provided, use directly
+                temp32 = ROUND_POWER(ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.total_current_12v) * l_bulk_voltage);
+                sensor_update(AMECSENSOR_PTR(PWRSYS), (uint16_t)temp32);
             }
             else
             {
-                // No Total System Power (voltage 1 (12V)) - Add powers for channels using voltage 1
+                // No Total System Power - Add powers for channels
+                temp64 = 0;
                 for (l_idx = 0; l_idx < MAX_APSS_ADC_CHANNELS; l_idx++)
                 {
                     if ((l_idx != G_sysConfigData.apss_adc_map.sense_12v) &&
@@ -379,12 +380,12 @@ bool amec_update_apss_sensors(void)
                         (l_idx != G_sysConfigData.apss_adc_map.current_12v_stby))
                     {
                         // Add power for this channel
-                        temp32 += l_bulk_voltage * G_lastValidAdcValue[l_idx];
+                        temp64 += l_bulk_voltage * G_lastValidAdcValue[l_idx];
                     }
                 }
+                temp32 = ROUND_POWER(temp64);
+                sensor_update(AMECSENSOR_PTR(PWRSYS), (uint16_t)temp32);
             }
-            temp32 = ROUND_POWER(temp32);
-            sensor_update(AMECSENSOR_PTR(PWRSYS), (uint16_t)temp32);
 
             // Check if in oversubscription and trace time it took to get under cap
             if( L_trace_time && (AMEC_INTF_GET_OVERSUBSCRIPTION()) &&
