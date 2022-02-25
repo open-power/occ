@@ -1187,10 +1187,21 @@ void calculate_core_leakage( void )
     uint64_t  l_t_p001_scale_nc = 0; // unit 0.001
     uint16_t  l_temperature = 0;
     uint64_t  l_temp64 = 0;
+    uint32_t  l_eco_cores = 0;
+    uint32_t  l_core_eco_bit_mask = 0;
     uint32_t  l_temp32 = 0;
     int l_oct_idx = 0;  // octant index
     int l_core_idx = 0; // core index
     bool l_non_core_scaling_line = FALSE;  // default to core scaling line
+    static bool L_trace_eco = TRUE;
+
+    // read in ECO cores
+    l_eco_cores = in32(OCB_OCCFLG6);
+    if(L_trace_eco)
+    {
+        TRAC_IMP("calculate_core_leakage: ECO cores[0x%08X]", l_eco_cores);
+        L_trace_eco = FALSE;  // only trace once
+    }
 
     // Start leakage summation loop for each octant (EQ01, EQ23, EQ45, EQ67)
     for (l_oct_idx=0; l_oct_idx<MAXIMUM_EQ_SETS; l_oct_idx++)
@@ -1348,14 +1359,24 @@ void calculate_core_leakage( void )
                                 g_wof->p1pct_off[l_core_idx] *
                                 l_t_p001_scale_nc;
 
-            // each cache adds leakage of being ON, and/or OFF
-            l_iddq_p000001ua += g_wof->single_cache_on_vdd_chip_ua_nc *
-                               (g_wof->p1pct_on[l_core_idx] + g_wof->p1pct_vmin[l_core_idx]) *
-                                l_t_p001_scale_nc;
+            // each cache adds leakage of being ON, and/or OFF -- including ECO cores that are always ON
+            l_core_eco_bit_mask = (0x80000000 >> l_core_idx);
 
-            l_iddq_p000001ua += g_wof->single_cache_off_vdd_chip_ua_nc *
-                                g_wof->p1pct_off[l_core_idx] *
-                                l_t_p001_scale_nc;
+            if((l_eco_cores & l_core_eco_bit_mask) == 0)
+            {
+               l_iddq_p000001ua += g_wof->single_cache_on_vdd_chip_ua_nc *
+                                  (g_wof->p1pct_on[l_core_idx] + g_wof->p1pct_vmin[l_core_idx]) *
+                                   l_t_p001_scale_nc;
+
+               l_iddq_p000001ua += g_wof->single_cache_off_vdd_chip_ua_nc *
+                                   g_wof->p1pct_off[l_core_idx] *
+                                   l_t_p001_scale_nc;
+            }
+            else // Core is in ECO mode
+            {
+               // add in the ECO contributor (always on)
+               l_iddq_p000001ua += (g_wof->single_cache_on_vdd_chip_ua_nc * 1000 * l_t_p001_scale_nc);
+            }
 
             l_icsq_p000001ua += g_wof->single_cache_on_vcs_chip_ua_nc *
                                (g_wof->p1pct_on[l_core_idx] + g_wof->p1pct_vmin[l_core_idx]) *
