@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2022                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -399,7 +399,7 @@ void amec_ppb_fmax_calc(void)
             }
             else
             {
-                G_sysConfigData.master_ppb_fmax = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MIN_FREQ];
+                G_sysConfigData.master_ppb_fmax = g_amec->sys.fmin_max_throttled;
             }
         }
         else if(l_power_avail > PDROP_THRESH)
@@ -414,9 +414,9 @@ void amec_ppb_fmax_calc(void)
             G_sysConfigData.master_ppb_fmax = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MAX_FREQ];
         }
 
-        if(G_sysConfigData.master_ppb_fmax < G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MIN_FREQ])
+        if(G_sysConfigData.master_ppb_fmax < g_amec->sys.fmin_max_throttled)
         {
-            G_sysConfigData.master_ppb_fmax = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MIN_FREQ];
+            G_sysConfigData.master_ppb_fmax = g_amec->sys.fmin_max_throttled;
         }
         if(G_allow_trace_flags & ALLOW_PCAP_TRACE)
         {

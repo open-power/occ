@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2021                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2022                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -132,9 +132,9 @@ errlHndl_t amec_set_freq_range(const OCC_MODE i_mode)
     {
         // adjust min frequency by convert l_steps into frequency in kHz
         l_freq_min_at_max_throttle -= l_steps * G_oppb.frequency_step_khz;
-        // convert to Mhz
-        l_freq_min_at_max_throttle /= 1000;
     }
+    // proc_pstate2freq() returns kHz convert to mHz
+    l_freq_min_at_max_throttle /= 1000;
 
     // Determine Max Freq for this mode
     // if no mode set yet or running with OPAL set to the full range
