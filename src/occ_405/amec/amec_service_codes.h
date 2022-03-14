@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2021                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2022                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -70,6 +70,7 @@ enum occAmecModuleId
     AMEC_CALC_DTS_SENSORS             =    AMEC_COMP_ID | 0x1D,
     AMEC_SLV_PROC_VOTING_BOX          =    AMEC_COMP_ID | 0x1E,
     AMEC_VECTORIZE_MEMBUF_SENSORS     =    AMEC_COMP_ID | 0x1F,
+    AMEC_UPDATE_APSS_SENSORS          =    AMEC_COMP_ID | 0x20,
 };
 
 /*----------------------------------------------------------------------------*/

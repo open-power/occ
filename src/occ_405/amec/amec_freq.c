@@ -70,6 +70,9 @@ extern uint32_t G_present_cores;
 // give time for frequency to come up after boot/throttle event
 #define NUM_TICKS_LOG_PGPE_PERF_LOSS 16  // 8ms
 
+// Power cap alg does not run every tick. Make this a multiple of how often power cap alg
+// runs to give time for new power capping votes
+#define NUM_TICKS_LOG_HARD_PCAP_PERF_LOSS (NUM_TICKS_RUN_PCAP * 4)
 //*************************************************************************
 // Structures
 //*************************************************************************
@@ -307,6 +310,7 @@ void amec_slv_proc_voting_box(void)
     static bool                     L_pgpe_ocs_dirty_error_logged = FALSE; // indicates if perf loss error due to dirty was logged
     errlHndl_t                      l_err = NULL;
     static uint16_t                 L_ticks_below_disabled_freq = 0;
+    static uint16_t                 L_ticks_hard_pcap_reason = 0;
     sensor_t                        *l_sensor = NULL;
 
     // frequency threshold for reporting throttling
@@ -562,6 +566,17 @@ void amec_slv_proc_voting_box(void)
          sensor_update(AMECSENSOR_PTR(PROCPWRTHROT), 0);
     }
 
+    // keep track of number of ticks hard power capping is driving the frequency down
+    if(l_current_reason == AMEC_VOTING_REASON_PPB_HARD_CAP)
+    {
+        if(L_ticks_hard_pcap_reason != 0xFFFF) // avoid wrapping
+            L_ticks_hard_pcap_reason++;
+    }
+    else
+    {
+        L_ticks_hard_pcap_reason = 0;
+    }
+
     // check if need to log performance loss error when running PowerVM (not OPAL)
     // this is logged if frequency drops below the modes disabled freq point due to power or thermal
     // when in a mode that has a max freq of disabled or higher, determined by g_amec->sys.fmax.
@@ -588,8 +603,7 @@ void amec_slv_proc_voting_box(void)
         {
             // only log power cap error on master OCC since it is the one that determined the lower freq
             // and sent to all other OCCs
-            if( (l_current_reason != AMEC_VOTING_REASON_PPB_HARD_CAP) ||
-                (OCC_MASTER == G_occ_role) )
+            if(l_current_reason != AMEC_VOTING_REASON_PPB_HARD_CAP)
             {
                 TRAC_ERR("Current freq %dMHz is below disabled freq %dMHz due to OCC Reason 0x%08X",
                            g_amec->wof.avg_freq_mhz,
@@ -610,15 +624,26 @@ void amec_slv_proc_voting_box(void)
                    TRAC_ERR("Low frequency due to Vdd VRM OT current temp[%d] max temp[%d]",
                              l_sensor->sample, l_sensor->sample_max);
                 }
-                else if(l_current_reason == AMEC_VOTING_REASON_PPB_HARD_CAP)
-                {
-                   l_sensor = getSensorByGsid(PWRSYS);
-                   TRAC_ERR("Low frequency due to power capping current node power[%d] max node power[%d]",
-                             l_sensor->sample, l_sensor->sample_max);
-                   TRAC_ERR("Current power cap[%d] hard pcap min[%d]",
-                             g_amec->pcap.active_node_pcap, G_sysConfigData.pcap.hard_min_pcap);
-                }
-            }  // if OCC reason not power cap or this OCC is master and reason pcap
+            }  // if OCC reason not power cap
+
+            // power capping alg does not run every tick, allow extra time for pcap alg
+            // to run and raise freq after a power excursion
+            else if( (OCC_MASTER == G_occ_role) &&
+                     (l_current_reason == AMEC_VOTING_REASON_PPB_HARD_CAP) &&
+                     (L_ticks_hard_pcap_reason == NUM_TICKS_LOG_HARD_PCAP_PERF_LOSS) )
+            {
+                TRAC_ERR("Current freq %dMHz is below disabled freq %dMHz due to OCC Reason 0x%08X",
+                           g_amec->wof.avg_freq_mhz,
+                           G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_DISABLED],
+                           l_current_reason);
+
+                l_log_error = TRUE;
+                l_sensor = getSensorByGsid(PWRSYS);
+                TRAC_ERR("Low frequency due to power capping current node power[%d] max node power[%d]",
+                         l_sensor->sample, l_sensor->sample_max);
+                TRAC_ERR("Current power cap[%d] hard pcap min[%d]",
+                         g_amec->pcap.active_node_pcap, G_sysConfigData.pcap.hard_min_pcap);
+            }  // else if OCC is master and reason pcap
         }
 
         // Check if PGPE drove the freq down

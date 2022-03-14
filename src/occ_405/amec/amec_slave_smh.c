@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2021                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2022                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -77,10 +77,6 @@ extern uint32_t G_present_cores;
 //*************************************************************************/
 // Defines/Enums
 //*************************************************************************/
-// number of 500us ticks power cap alg will run in order to give previous
-// power cap Pstate changes time to be reflected in APSS power readings
-#define NUM_TICKS_RUN_PCAP 10  // 5ms
-
 smh_state_t G_amec_slv_state = {AMEC_INITIAL_STATE,
                                 AMEC_INITIAL_STATE,
                                 AMEC_INITIAL_STATE};

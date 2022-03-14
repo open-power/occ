@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2016                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2022                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -68,6 +68,11 @@
 #define AMEC_SMH_PERIODS_IN_1SEC (1000000 / AMEC_US_PER_SMH_PERIOD)
 // Number of times core data is processed. The AMEC SMH goes around twice per tick cycle.
 #define AMEC_CORE_COLLECTION_1SEC (AMEC_SMH_PERIODS_IN_1SEC / 2)
+
+// number of 500us ticks power cap alg will run in order to give previous
+// power cap Pstate changes time to be reflected in APSS power readings
+#define NUM_TICKS_RUN_PCAP 10  // 5ms
+
 //*************************************************************************
 // Structures
 //*************************************************************************

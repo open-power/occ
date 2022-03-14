@@ -47,6 +47,7 @@
 #include "avsbus.h"
 #include <pstates_occ.H>
 #include <wof.h>
+#include <cmdh_fsp_cmds.h>      // For G_apss_ch_to_function
 /******************************************************************************/
 /* Globals                                                                    */
 /******************************************************************************/
@@ -193,6 +194,8 @@ uint32_t amec_value_from_apss_adc(uint8_t i_chan)
 #define ADCMULT_TO_UNITS 1000000
 #define ADCMULT_ROUND ADCMULT_TO_UNITS/2
 #define ROUND_POWER(value) ((((uint64_t)value) + ADCMULT_ROUND) / ADCMULT_TO_UNITS)
+#define NUM_DEBUG_TRACE 4
+#define DEBUG_HIGH_READ 900
 // Function Specification
 //
 // Name: amec_update_apss_sensors
@@ -206,6 +209,9 @@ uint32_t amec_value_from_apss_adc(uint8_t i_chan)
 // End Function Specification
 bool amec_update_apss_sensors(void)
 {
+    uint16_t l_raw = 0;
+    uint32_t l_trace32 = 0;
+    static uint8_t L_trace_high_channel_reading[MAX_APSS_ADC_CHANNELS] = {0};  // used to threshold trace per channel
     static bool L_trace_time = TRUE;
     bool l_sensors_updated = TRUE;
     static bool L_trace_everest_workaround = TRUE;
@@ -240,7 +246,6 @@ bool amec_update_apss_sensors(void)
             // does not get truncated (before dividing by ADCMULT_TO_UNITS)
             uint64_t l_bulk_voltage = ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.sense_12v);
 
-            // TODO RTC: 293586 Remove Everest workaround
             // Everest workaround for not having 12v sense
             // Everest 12v sense is on channel 3 and no other P10 system is on channel 3
             // checking for channel 3 verifies this will only run on Everest
@@ -251,6 +256,29 @@ bool amec_update_apss_sensors(void)
                 {
                     TRAC_IMP("Everest workaround using 12000 for 12V sense not reading %d", (uint16_t)l_bulk_voltage);
                     L_trace_everest_workaround = FALSE;
+
+                    // only need one error log, log on master only
+                    if (OCC_MASTER == G_occ_role)
+                    {
+                        /*
+                         * @errortype
+                         * @moduleid    AMEC_UPDATE_APSS_SENSORS
+                         * @reasoncode  APSS_12V_SENSE_HW_WORKAROUND
+                         * @userdata1   0
+                         * @userdata2   0
+                         * @userdata4   OCC_NO_EXTENDED_RC
+                         * @devdesc     Everest APSS 12V sense HW workaround detected
+                         */
+                        errlHndl_t l_err = createErrl(AMEC_UPDATE_APSS_SENSORS,
+                                                      APSS_12V_SENSE_HW_WORKAROUND,
+                                                      OCC_NO_EXTENDED_RC,
+                                                      ERRL_SEV_INFORMATIONAL,
+                                                      NULL,
+                                                      DEFAULT_TRACE_SIZE,
+                                                      0,
+                                                      0);
+                        commitErrl(&l_err);
+                    }
                 }
                 l_bulk_voltage = 12000;
             }
@@ -271,6 +299,20 @@ bool amec_update_apss_sensors(void)
                     {
                         temp32 = ROUND_POWER(ADC_CONVERTED_VALUE(l_idx) * l_bulk_voltage);
                         sensor_update(AMECSENSOR_PTR(PWRAPSSCH00 + l_idx), (uint16_t) temp32);
+                        // extra debug traces if the value seems too high
+                        if( (l_idx != G_sysConfigData.apss_adc_map.total_current_12v) &&
+                            (temp32 >= DEBUG_HIGH_READ) && (L_trace_high_channel_reading[l_idx] < NUM_DEBUG_TRACE) )
+                        {
+                            L_trace_high_channel_reading[l_idx]++;
+                            // Read Raw Value in mA (divide masked channel data by 2)
+                            l_trace32 = ((l_idx << 24) | (G_apss_ch_to_function[l_idx] << 16) | (temp32 & 0xFFFF));
+                            l_raw = (G_dcom_slv_inbox_rx.adc[l_idx] & APSS_12BIT_ADC_MASK)/2;
+                            TRAC_IMP("APSS channel/FuncID/Power[%08X] high??? raw/2=0x%04X, offset=0x%08X, gain=0x%08X",
+                                     l_trace32, l_raw, G_sysConfigData.apss_cal[l_idx].offset,
+                                     G_sysConfigData.apss_cal[l_idx].gain);
+                            TRAC_IMP("ADC converted value[%d mA] 12V bulk voltage[%d mV]",
+                                     (uint32_t)G_lastValidAdcValue[l_idx], (uint16_t)l_bulk_voltage);
+                        }
                     }
                 }
 

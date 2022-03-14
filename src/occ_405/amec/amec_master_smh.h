@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2022                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -82,7 +82,7 @@ typedef struct
 }slave_pcap_info_t;
 
 extern slave_pcap_info_t G_slave_active_pcaps[MAX_OCCS];
-extern uint8_t G_over_cap_count;
+extern uint16_t G_over_cap_count;
 
 //*************************************************************************
 // Function Prototypes

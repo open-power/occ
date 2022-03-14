@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2021                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2022                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -110,6 +110,8 @@ enum occReasonCode
     APSS_SLV_LONG_TIMEOUT           = 0xC4,
     /// APSS failed to return data or returned bad data over a long time interval
     APSS_HARD_FAILURE               = 0xC5,
+    /// APSS 12V sense HW workaround detected
+    APSS_12V_SENSE_HW_WORKAROUND    = 0xC6,
     ///  Request to read redundant APSS data failed
     REDUNDANT_APSS_GPE_FAILURE      = 0xCB,
 

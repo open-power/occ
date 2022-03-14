@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2022                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -54,8 +54,9 @@
 // Defines/Enums
 //*************************************************************************/
 
-//Power cap failure threshold with no GPUs set to 32 ticks
-#define PCAP_FAILURE_THRESHOLD 32
+//Power cap failure threshold with no GPUs must be a multiple of how often power
+// cap alg runs to allow new power capping votes
+#define PCAP_FAILURE_THRESHOLD (NUM_TICKS_RUN_PCAP * 5)
 
 //Power cap failure threshold with GPUs set to number of ticks for 2s
 #define PCAP_GPU_FAILURE_THRESHOLD (2000000 / MICS_PER_TICK)
@@ -75,7 +76,7 @@ smh_state_t G_amec_mst_state = {AMEC_INITIAL_STATE,
 slave_pcap_info_t G_slave_active_pcaps[MAX_OCCS] = {{0}};
 
 //OCC over power cap count
-uint8_t G_over_cap_count = 0;
+uint16_t G_over_cap_count = 0;
 
 //Array that stores the exit counts for the IPS algorithm
 uint32_t G_ips_exit_count[MAX_OCCS][MAX_CORES] = {{0}};
@@ -277,7 +278,7 @@ void amec_mst_check_under_pcap(void)
     uint8_t l_apss_func_id = 0;
     uint32_t l_trace[MAX_APSS_ADC_CHANNELS] = {0};  // used to trace per channel data
     uint8_t l_trace_idx = 0;
-
+    sensor_t *l_sensor = NULL;
 
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
@@ -312,6 +313,11 @@ void amec_mst_check_under_pcap(void)
                 TRAC_ERR("Failure to maintain power cap: Power Cap = %d ,"
                          "PWRSYS = %d",g_amec->pcap.active_node_pcap,
                          AMECSENSOR_PTR(PWRSYS)->sample);
+
+                // trace what PGPE has for actual Pstate to verify frequency was actually dropped
+                // we want to trace PSTATE sensor since that includes throttle space pstates
+                l_sensor = getSensorByGsid(PSTATE);
+                TRAC_ERR("Over cap for %d ticks. PGPE avg Pstate[0x%02X]", G_over_cap_count, (uint8_t)l_sensor->sample);
 
                 // Trace power per APSS channel to have the best breakdown for debug
                 // compress traces to 4 max to save space on OP systems
