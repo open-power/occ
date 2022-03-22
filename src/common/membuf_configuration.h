@@ -152,6 +152,7 @@ enum
     MEMBUF_GET_MEM_DATA_DIED = 202,
     MEMBUF_CHANNEL_CHECKSTOP = 203,
     MEMBUF_SCACHE_ERROR = 204,
+    MEMBUF_PBA_BUSY = 205,
 };
 
 // Inband Scom Operations
@@ -216,6 +217,7 @@ typedef enum
 //  - @see POWER Energy Management Hcode/HWP spec
 #define PBA_BAR_MEMBUF  1
 #define PBA_SLAVE_MEMBUF 1
+#define PBA_WRB_EMPTY 1
 
 // These are used to setup MemBufConfiguration.config field
 #define CHIP_CONFIG_MCS_BASE 0
