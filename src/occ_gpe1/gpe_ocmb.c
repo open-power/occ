@@ -750,14 +750,12 @@ int get_ocmb_sensorcache(MemBufConfiguration_t* i_config,
                              MemBufGetMemDataParms_t* i_parms)
 {
     int rc = 0;
+    uint64_t pba_slvctln_save;
 
     i_parms->error.rc = MEMBUF_GET_MEM_DATA_DIED;
 
-    rc = pba_check_busy();
-    if (rc)
-        return rc;
-
     pbaslvctl_reset(&(i_config->dataParms));
+    pba_slvctln_save = pbaslvctl_setup(&(i_config->dataParms));
 
     // Clear SIB error accumulator bits & mask SIB errors from
     // generating machine checks
@@ -844,6 +842,8 @@ int get_ocmb_sensorcache(MemBufConfiguration_t* i_config,
             }
         }
     }
+    pbaslvctl_reset(&(i_config->dataParms));
+    PPE_STVD((i_config->dataParms).slvctl_address, pba_slvctln_save);
 
     if(i_parms->touch != 0)
     {
@@ -861,9 +861,6 @@ int gpe_ocmb_init(MemBufConfiguration_t * i_config)
 {
     uint64_t data64 = 0;
     int instance = 0;
-    int rc = 0;
-    int retry = 0;
-
     // Issue occ touch sync (resets deadman timer count)
     // Any errors will already be traced
     PK_TRACE("gpe_ocmb_init: Issue OCCO_TOUCH");
@@ -887,15 +884,7 @@ int gpe_ocmb_init(MemBufConfiguration_t * i_config)
             {
                 PK_TRACE("gpe_ocmb_init: Retry clear emergency throttle");
                 data64 = 0;
-                // Since this is INIT phase, this is not time sensitive.
-                for(retry=0; retry < 10; ++retry)
-                {
-                    rc = membuf_put_scom(i_config, instance, OCMB_MBA_FARB7Q, data64);
-                    if(rc != MEMBUF_PBA_BUSY)
-                    {
-                        break;
-                    }
-                }
+                membuf_put_scom(i_config, instance, OCMB_MBA_FARB7Q, data64);
             }
 
             membuf_get_scom(i_config, instance, OCMB_MBA_FARB8Q, &data64);
@@ -903,14 +892,7 @@ int gpe_ocmb_init(MemBufConfiguration_t * i_config)
             {
                 PK_TRACE("gpe_ocmb_init: Retry clear safe refresh");
                 data64 = 0;
-                for(retry=0; retry < 10; ++retry)
-                {
-                    rc = membuf_put_scom(i_config, instance, OCMB_MBA_FARB8Q, data64);
-                    if(rc != MEMBUF_PBA_BUSY)
-                    {
-                        break;
-                    }
-                }
+                membuf_put_scom(i_config, instance, OCMB_MBA_FARB8Q, data64);
             }
         }
     }

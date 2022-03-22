@@ -106,33 +106,6 @@ int inband_access(MemBufConfiguration_t* i_config,
     return rc;
 }
 
-int pba_check_busy()
-{
-    int rc = 0;
-    int n = 0;
-    for(;n < 2; ++n)
-    {
-        pba_wbufvaln_t wbufval;
-        rc = getscom_abs(PBA_WBUFVALN(n), &(wbufval.value));
-        if(rc)
-        {
-            PK_TRACE("inband_scom_set_setup. getscom failed on PBA_WBUFVAL(%d)."
-                     " rc = %d",n,rc);
-            break;
-        }
-        if(wbufval.fields.wr_slvnum == PBA_SLAVE_MEMBUF)
-        {
-            if(wbufval.fields.wr_buffer_status != PBA_WRB_EMPTY)
-            {
-                rc = MEMBUF_PBA_BUSY;
-                break;
-            }
-        }
-    }
-    return rc;
-}
-
-
 /**
  * Setup the PBASLVCTLN extended address and calculate the OCI scom address
  * @param[in] PBA base address
@@ -235,12 +208,10 @@ int membuf_get_scom_vector(MemBufConfiguration_t* i_config,
     int access_rc = 0;
     int pba_rc = 0;
     int instance = 0;
-
-    rc = pba_check_busy();
-    if (rc)
-        return rc;
+    uint64_t pba_slvctln_save;
 
     pbaslvctl_reset(&(i_config->scomParms));
+    pba_slvctln_save = pbaslvctl_setup(&(i_config->scomParms));
 
     // clear SIB errors in MSR
     mtmsr((mfmsr() & ~(MSR_SIBRC | MSR_SIBRCA)));
@@ -288,6 +259,10 @@ int membuf_get_scom_vector(MemBufConfiguration_t* i_config,
         ++o_data;
     }
 
+    // gpe_pba_cntl function?
+    pbaslvctl_reset(&(i_config->scomParms));
+    PPE_STVD((i_config->scomParms).slvctl_address, pba_slvctln_save);
+
     return rc;
 }
 
@@ -298,12 +273,10 @@ int membuf_get_scom(MemBufConfiguration_t* i_config,
 {
     int rc = 0;
     uint32_t oci_addr;
-
-    rc = pba_check_busy();
-    if (rc)
-        return rc;
+    uint64_t pba_slvctln_save;
 
     pbaslvctl_reset(&(i_config->scomParms));
+    pba_slvctln_save = pbaslvctl_setup(&(i_config->scomParms));
 
     rc = inband_scom_setup(i_config,
                             i_membuf_instance,
@@ -324,6 +297,10 @@ int membuf_get_scom(MemBufConfiguration_t* i_config,
         *o_data = 0;
     }
 
+    // gpe_pba_cntl function?
+    pbaslvctl_reset(&(i_config->scomParms));
+    PPE_STVD((i_config->scomParms).slvctl_address, pba_slvctln_save);
+
     return rc;
 }
 
@@ -337,24 +314,15 @@ int membuf_put_scom_all(MemBufConfiguration_t* i_config,
     int pba_rc = 0;
     int access_rc = 0;
     int instance = 0;
+    uint64_t pba_slvctln_save;
+
+    pbaslvctl_reset(&(i_config->scomParms));
+    pba_slvctln_save = pbaslvctl_setup(&(i_config->scomParms));
 
     for(instance = 0; instance < OCCHW_N_MEMBUF; ++instance)
     {
         if( CHIP_CONFIG_MEMBUF(instance) & (i_config->config))
         {
-            // SW545021 -- This seems to be where the PBA is busy check twice
-            rc = pba_check_busy();
-            if(rc)
-            {
-                rc = pba_check_busy();
-                if (rc)
-                {
-                    break;
-                }
-            }
-
-            pbaslvctl_reset(&(i_config->scomParms));
-
             uint32_t oci_addr;
             pba_rc = inband_scom_setup(i_config,
                                     instance,
@@ -386,6 +354,10 @@ int membuf_put_scom_all(MemBufConfiguration_t* i_config,
         }
     }
 
+    // reset pba slave
+    pbaslvctl_reset(&(i_config->scomParms));
+    PPE_STVD((i_config->scomParms).slvctl_address, pba_slvctln_save);
+
     return rc;
 }
 
@@ -396,12 +368,10 @@ int membuf_put_scom(MemBufConfiguration_t* i_config,
 {
     int rc = 0;
     uint32_t oci_addr;
-
-    rc = pba_check_busy();
-    if (rc)
-        return rc;
+    uint64_t pba_slvctln_save;
 
     pbaslvctl_reset(&(i_config->scomParms));
+    pba_slvctln_save = pbaslvctl_setup(&(i_config->scomParms));
 
     rc = inband_scom_setup(i_config,
                             i_membuf_instance,
@@ -421,6 +391,10 @@ int membuf_put_scom(MemBufConfiguration_t* i_config,
         }
     }
 
+    // reset pba slave
+    pbaslvctl_reset(&(i_config->scomParms));
+    PPE_STVD((i_config->scomParms).slvctl_address, pba_slvctln_save);
+
     return rc;
 }
 
@@ -433,13 +407,11 @@ int membuf_scom_rmw(MemBufConfiguration_t* i_config,
 {
     int rc = 0;
     uint32_t oci_addr;
+    uint64_t pba_slvctln_save;
     uint64_t data64;
 
-    rc = pba_check_busy();
-    if (rc)
-        return rc;
-
     pbaslvctl_reset(&(i_config->scomParms));
+    pba_slvctln_save = pbaslvctl_setup(&(i_config->scomParms));
 
     rc = inband_scom_setup(i_config,
                             i_membuf_instance,
@@ -467,6 +439,10 @@ int membuf_scom_rmw(MemBufConfiguration_t* i_config,
         }
     }
 
+
+    pbaslvctl_reset(&(i_config->scomParms));
+    PPE_STVD((i_config->scomParms).slvctl_address, pba_slvctln_save);
+
     return rc;
 }
 
@@ -480,12 +456,10 @@ int membuf_scom_rmw_all(MemBufConfiguration_t* i_config,
     int pba_rc = 0;
     int access_rc = 0;
     int instance = 0;
-
-    rc = pba_check_busy();
-    if (rc)
-        return rc;
+    uint64_t pba_slvctln_save;
 
     pbaslvctl_reset(&(i_config->scomParms));
+    pba_slvctln_save = pbaslvctl_setup(&(i_config->scomParms));
 
     for(instance = 0; (instance < OCCHW_N_MEMBUF); ++instance)
     {
@@ -529,14 +503,11 @@ int membuf_scom_rmw_all(MemBufConfiguration_t* i_config,
                 rc = access_rc;
             }
 
-            rc = pba_check_busy();
-            if (rc)
-            {
-                break;
-            }
             pbaslvctl_reset(&(i_config->scomParms));
         }
     }
+
+    PPE_STVD((i_config->scomParms).slvctl_address, pba_slvctln_save);
 
     return rc;
 }
