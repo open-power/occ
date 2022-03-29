@@ -82,12 +82,6 @@ uint64_t pbaslvctl_setup(GpePbaParms* i_pba_parms);
 
 
 /**
- * Check to see if pba buffers are clear
- * @returns SUCCESS if not busy else  MEMBUF_PBA_BUSY | scom fail
- */
-int pba_check_busy(void);
-
-/**
  * Access the MEMBUF mmio over the PBA slave.
  * @param[in] Memory buffer configuration
  * @param[in] The membuf ordinal number
