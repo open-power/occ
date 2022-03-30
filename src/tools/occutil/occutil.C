@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2020,2021                        */
+/* Contributors Listed Below - COPYRIGHT 2020,2022                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -55,7 +55,7 @@ void usage()
         printf("    Commands:\n");
         printf("        --mode #       Set the Power Mode for the system\n");
         printf("                Modes: 1=STATIC, 3=STATIC FREQ POINT*, 5=STATIC POWER SAVE,\n"
-               "                       9=MAX FREQ, 10=DYNAMIC PERF, 11=FIXED FREQ*, 12=MAX PERF\n");
+               "                       9=MAX FREQ, 11=FIXED FREQ*, 12=MAX PERF\n");
         printf("           -f XXXX     Frequency point (required for * modes)\n");
         printf("                SFP points: 0x1000-0x1007=VPD Curve Fit Points, 0x2000=Static Power Save,\n"
                "                       0x2001=WOF Base, 0x2002=Ultra Turbo, 0x2003=Maximum Frequency,\n"
@@ -63,7 +63,7 @@ void usage()
                "                       0xFFpp=Specific pstate: pp\n");
         printf("        --state #      Set the OCC state\n");
         printf("                States: 2=OBSERVATION, 3=ACTIVE, 5=CHARACTERIZATION\n");
-        printf("        --reset        Reset the PM Complex (waits or OCC to go active)\n");
+        printf("        --reset        Reset the PM Complex (waits for OCC to go active)\n");
         printf("        --reset_clear  Reset the PM Complex (and clear reset counts)\n");
         printf("        -H XX          Send HTMGT cmd (use -D to specify data)\n");
         printf("        --IF           Query/set TMGT/HTMGT internal flags (use -D for set)\n");
@@ -74,7 +74,7 @@ void usage()
         printf("        -D XX...       Data for other commands (XX is a hex string)\n");
         printf("        -v|-v2|-v3     Verbose (-v2 includes ECMD packets)\n");
         printf("        --STO #        Use SBE timeout to # seconds (default: %d)\n", G_sbe_timeout);
-        printf("\n    last update: 24-Nov-2021 - debug\n");
+        printf("\n    last update:  30-Mar 2022\n");
 }
 
 
@@ -481,7 +481,7 @@ int main (int argc, char *argv[])
                         printf("BMC Release:\n");
                         rc = send_bmc_command("strings /etc/os-release");
                         printf("PNOR Driver:\n");
-                        rc |= send_bmc_command("strings /var/lib/phosphor-software-manager/pnor/ro/VERSION | grep -A99 VERSION");
+                        rc |= send_bmc_command("strings /var/lib/phosphor-software-manager/pnor/ro/VERSION | grep -A99 IBM-");
                     }
                 }
                 break;

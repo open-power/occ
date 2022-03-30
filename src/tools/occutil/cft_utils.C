@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2020,2021                        */
+/* Contributors Listed Below - COPYRIGHT 2020,2022                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -104,6 +104,12 @@ const char *getRcString(uint32_t rc)
             break;
         case CMT_INVALID_PARAMETER:
             return "INVALID_PARAMETER";
+            break;
+        case CMT_DATA_TRUNCATED:
+            return "DATA_TRUNCATED";
+            break;
+        case CMT_REQUEST_FAILED:
+            return "REQUEST_FAILED";
             break;
         default:
             return "";
@@ -622,12 +628,25 @@ uint32_t send_fsp_command_rspdata(const char * i_cmd,
 
 uint32_t send_bmc_command(const char *i_cmd)
 {
+    std::string results;
+    uint32_t l_rc = send_bmc_command(i_cmd, results);
+    printf("%s\n", results.c_str());
+    return l_rc;
+}
+
+uint32_t send_bmc_command(const char *i_cmd, std::string& o_results)
+{
     uint32_t l_rc = CMT_SUCCESS;
 
     if ((i_cmd != NULL) && (i_cmd[0] != '\0'))
     {
         if (!isFsp())
         {
+            if (G_verbose)
+            {
+                printf("send_bmc_command(%s)\n", i_cmd);
+            }
+
             ecmdChipTarget  l_target;
             std::string     l_output;
             l_rc = makeSPSystemCall(l_target, i_cmd, l_output);
@@ -638,9 +657,12 @@ uint32_t send_bmc_command(const char *i_cmd)
             }
             else
             {
-                printf("-BMC-> %s\n", i_cmd);
-                printf("%s\n", l_output.c_str());
+                if (G_verbose)
+                {
+                    printf("send_bmc_command response: %s\n", l_output.c_str());
                 fflush(stdout);
+                }
+                o_results = l_output;
             }
         }
         else

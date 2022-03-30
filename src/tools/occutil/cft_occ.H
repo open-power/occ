@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2020,2021                        */
+/* Contributors Listed Below - COPYRIGHT 2020,2022                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -68,6 +68,14 @@ enum powerMode
                              (mode == POWERMODE_DYNAMIC_PERF) || \
                              (mode == POWERMODE_FFO) || \
                              (mode == POWERMODE_MAX_PERF))
+
+#define IS_VALID_CUSTOMER_MODE(mode) ((mode == POWERMODE_STATIC) || \
+                                      (mode == POWERMODE_POWER_SAVE) || \
+                                      (mode == POWERMODE_MAX_PERF))
+
+#define IS_VALID_OEM_MODE(mode) ((mode == POWERMODE_SFP) || \
+                                 (mode == POWERMODE_FMAX) || \
+                                 (mode == POWERMODE_FFO))
 
 const char * getCmdString(const uint8_t i_cmd);
 const char * getStateString(const uint8_t i_state);

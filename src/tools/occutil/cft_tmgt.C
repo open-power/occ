@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2020,2021                        */
+/* Contributors Listed Below - COPYRIGHT 2020,2022                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -501,9 +501,20 @@ int parse_tmgt_info(const uint8_t *i_rsp_data, const uint16_t i_rsp_len)
     htmgt_info_t *data = (htmgt_info_t*)i_rsp_data;
     if (i_rsp_len >= 16)
     {
-        printf("HTMGT State: %s (0x%02X), Mode: %s (0x%02X), %d OCC (master:OCC%d), resetCount:%d,",
+        uint8_t currentMode = data->mode;
+        if ((data->num_occs > 0) && (data->occ[0].mode != 0) && (data->mode != data->occ[0].mode))
+        {
+            currentMode = data->occ[0].mode;
+            printf("HTMGT State: %s (0x%02X), OCC Mode: %s (0x%02X), %d OCC (master:OCC%d), resetCount:%d,",
+                   getStateString(data->state), data->state, getModeString(currentMode), currentMode,
+                   data->num_occs, data->master, data->system_reset_count);
+        }
+        else
+        {
+            printf("HTMGT State: %s (0x%02X), HTMGT Mode: %s (0x%02X), %d OCC (master:OCC%d), resetCount:%d,",
                getStateString(data->state), data->state, getModeString(data->mode), data->mode,
                data->num_occs, data->master, data->system_reset_count);
+        }
         if (data->safe_mode)
         {
             printf(",  (SAFE MODE: rc=0x%04X/OCC%d)", htonl(data->safe_rc), htonl(data->safe_occ));
@@ -522,11 +533,16 @@ int parse_tmgt_info(const uint8_t *i_rsp_data, const uint16_t i_rsp_len)
             if (i_rsp_len >= (16 + (sizeof(occ_info_t)*(occ+1))))
             {
                 occ_info_t * occd = &data->occ[occ];
-                printf("OCC%d: %s %s (0x%02X) resetCount:%d wofResets:%d flags pollRsp:0x%02X%02X%02X%02X... %s\n",
+                printf("OCC%d: %s %s (0x%02X) Mode: 0x%02X, resetCount:%d wofResets:%d flags pollRsp:0x%02X%02X%02X%02X... %s\n",
                        occd->instance, (occd->instance == data->master)?"Master":"Slave ",
-                       getStateString(occd->state), occd->state,
+                       getStateString(occd->state), occd->state, occd->mode,
                        occd->reset_count, occd->wof_reset_count, occd->last_poll[0], occd->last_poll[1], occd->last_poll[2], occd->last_poll[3],
                        getPollExtStatus(occd->last_poll[1]));
+                if (currentMode != occd->mode)
+                {
+                    printf("      ERROR: OCC%d mode 0x%02X does not match expected mode: 0x%02X\n",
+                           occd->instance, occd->mode, currentMode);
+                }
             }
             else
             {
@@ -845,49 +861,84 @@ uint32_t tmgt_set_mode(const uint8_t  i_mode,
 
     if (IS_VALID_MODE(i_mode))
     {
-
         if ((i_mode == POWERMODE_SFP) ||
             (i_mode == POWERMODE_FFO))
-        {
+        { // OEM Mode
             if (i_freq == 0)
             {
-                cmtOutputError("tmgt_set_mode: Mode %d requires a non zero frequency point (-f option)!\n",
+                cmtOutputError("tmgt_set_mode: Mode %d requires a non-zero frequency point (-f option)!\n",
                                i_mode);
                 l_rc = CMT_INVALID_DATA;
             }
             else
             {
+                char command[255];
                 if (isFsp())
                 {
-                    char command[128];
                     sprintf(command, "tmgtclient --set_cust_requested_mode 0x%02X -f %d",
                             i_mode, i_freq);
                     l_rc = send_fsp_command(command);
                 }
                 else
                 {
-                    const uint8_t l_data[3] = { i_mode, uint8_t(i_freq>>8), uint8_t(i_freq & 0xFF) };
-                    l_rc = send_hbrt_command(HTMGT_SET_OCC_MODE, l_data, sizeof(l_data));
+                    printf("Requesting OEM mode change via BMC PassThrough\n");
+                    sprintf(command, "busctl call org.open_power.OCC.Control /org/open_power/control/occ0"
+                            " org.open_power.OCC.PassThrough SetMode yq %d %d",
+                            i_mode, i_freq);
+                    std::string results;
+                    l_rc = send_bmc_command(command, results);
+                    if ((l_rc == CMT_SUCCESS) && (results.compare(0, 6, "b true") != 0))
+                    {
+                        cmtOutputError("tmgt_set_mode: BMC request failed: %s\n", results.c_str());
+                        l_rc = CMT_REQUEST_FAILED;
+                    }
                 }
             }
         }
         else
-        {
+        { // Customer Mode
+            char command[255];
             if (isFsp())
             {
-                char command[128];
                 sprintf(command, "tmgtclient --set_cust_requested_mode 0x%02X", i_mode);
                 l_rc = send_fsp_command(command);
             }
             else
             {
-                l_rc = send_hbrt_command(HTMGT_SET_OCC_MODE, (uint8_t*)&i_mode, sizeof(i_mode));
+                printf("Requesting mode change via BMC PassThrough\n");
+                sprintf(command, "busctl call org.open_power.OCC.Control /org/open_power/control/occ0"
+                        " org.open_power.OCC.PassThrough SetMode yq %d 0",
+                        i_mode);
+                std::string results;
+                l_rc = send_bmc_command(command, results);
+                if ((l_rc == CMT_SUCCESS) && (results.compare(0, 6, "b true") != 0))
+                {
+                    cmtOutputError("tmgt_set_mode: BMC request failed: %s\n", results.c_str());
+                    l_rc = CMT_REQUEST_FAILED;
+                }
             }
         }
+
         if (l_rc == CMT_SUCCESS)
         {
             // Display the resulting state/mode
+            printf("Mode change completed\n");
             (void)send_tmgt_command(HTMGT_QUERY_STATE, NULL, 0);
+
+            if (!isFsp())
+            {
+                std::string results;
+                l_rc = send_bmc_command("busctl get-property org.open_power.OCC.Control /xyz/openbmc_project/control/host0/power_mode xyz.openbmc_project.Control.Power.Mode PowerMode",
+                                        results);
+                printf("\nBMC Power Mode:\n%s", results.c_str());
+                if (results.find(".OEM") != std::string::npos)
+                {
+                    l_rc = send_bmc_command("grep 'value[12]' /var/lib/openpower-occ-control/powerModeData", results);
+                    printf("BMC OEM Data:\n%s\n", results.c_str());
+                }
+                // The set was successful
+                l_rc = CMT_SUCCESS;
+            }
         }
     }
     else

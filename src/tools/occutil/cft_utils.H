@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2020,2021                        */
+/* Contributors Listed Below - COPYRIGHT 2020,2022                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -59,7 +59,8 @@ enum cmt_status_e
     CMT_NOT_SUPPORTED,
     CMT_TIMEOUT,
     CMT_INVALID_PARAMETER,
-    CMT_DATA_TRUNCATED
+    CMT_DATA_TRUNCATED,
+    CMT_REQUEST_FAILED
 };
 
 struct cmtHeader
@@ -97,5 +98,6 @@ uint32_t send_fsp_command_rspdata(const char * i_cmd,
                                   uint32_t   & o_rsplen);
 
 uint32_t send_bmc_command(const char *i_cmd);
+uint32_t send_bmc_command(const char *i_cmd, std::string& o_results);
 
 #endif
