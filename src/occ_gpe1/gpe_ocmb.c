@@ -409,6 +409,8 @@ int gpe_ocmb_configuration_create(MemBufConfiguration_t* o_config)
             break;
         }
 
+        pbaslvctl_reset(&(o_config->scomParms));
+        pbaslvctl_setup(&(o_config->scomParms));
         // Find all configured MEMBUFs
         for (i = 0; i < OCCHW_N_MC_CHANNEL; ++i)
         {

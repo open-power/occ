@@ -106,6 +106,32 @@ int inband_access(MemBufConfiguration_t* i_config,
     return rc;
 }
 
+int pba_check_busy()
+{
+    int rc = 0;
+    int n = 0;
+    for(;n < 2; ++n)
+    {
+        pba_wbufvaln_t wbufval;
+        rc = getscom_abs(PBA_WBUFVALN(n), &(wbufval.value));
+        if(rc)
+        {
+            PK_TRACE("inband_scom_set_setup. getscom failed on PBA_WBUFVAL(%d)."
+                     " rc = %d",n,rc);
+            break;
+        }
+        if(wbufval.fields.wr_slvnum == PBA_SLAVE_MEMBUF)
+        {
+            if(wbufval.fields.wr_buffer_status != PBA_WRB_EMPTY)
+            {
+                rc = MEMBUF_PBA_BUSY;
+                break;
+            }
+        }
+    }
+    return rc;
+}
+
 /**
  * Setup the PBASLVCTLN extended address and calculate the OCI scom address
  * @param[in] PBA base address
@@ -168,6 +194,7 @@ int inband_scom_setup(MemBufConfiguration_t* i_config,
 
 void pbaslvctl_reset(GpePbaParms* i_pba_parms)
 {
+    while( pba_check_busy() == MEMBUF_PBA_BUSY);
     uint64_t val = 0;
 
     do
@@ -324,6 +351,9 @@ int membuf_put_scom_all(MemBufConfiguration_t* i_config,
         if( CHIP_CONFIG_MEMBUF(instance) & (i_config->config))
         {
             uint32_t oci_addr;
+
+            while( pba_check_busy() == MEMBUF_PBA_BUSY);
+            
             pba_rc = inband_scom_setup(i_config,
                                     instance,
                                     i_scom_address,
@@ -467,6 +497,9 @@ int membuf_scom_rmw_all(MemBufConfiguration_t* i_config,
         {
             uint64_t data64;
             uint32_t oci_addr;
+
+            while( pba_check_busy() == MEMBUF_PBA_BUSY);
+            
             pba_rc = inband_scom_setup(i_config,
                                         instance,
                                         i_scom_address,
