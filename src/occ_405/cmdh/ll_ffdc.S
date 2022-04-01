@@ -1,3 +1,27 @@
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occ_405/cmdh/ll_ffdc.S $                                  */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2022                        */
+/* [+] International Business Machines Corp.                              */
+/*                                                                        */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
 # IBM_PROLOG_BEGIN_TAG
 # This is an automatically generated prolog.
 #
@@ -40,13 +64,13 @@
 # | Command
 # | |  Exception code
 # | | | Length of data
-# | | | |    unused
+# | | | |    version
 # | | | |    | Panic Checkpoint: Two possible sets, 0xF00 (ABOUT_TO_HALT), a 405
 # | | | |    | |                 trap event, and everything else. Other values
 # | | | |    | |                 occur at init events, see checkpoints in occ_common.h
 # | | | |    | |     Begin data buffer
 # | | | |    | |     |
-# SSCCRRLL/LLxxKKKK  D...
+# SSCCRRLL/LLvvKKKK  D...
 #                 |
 #                 Header End
 # Return status is always 'E*'h
@@ -66,7 +90,7 @@
 # 2   (x02)         1       Exception code (Always 0xE* for OCC FFDC)
 # 3   (x03)         1       Length Hi byte
 # 4   (x04)         1       Length Lo byte
-# 5   (x05)         1       Unused (0x00 for FFDC)
+# 5   (x05)         1       Version (0x00 FFDC, 0x01 FFDC with BCE registers)
 # 6   (x06)         2       Checkpoint (Typically 0x0F00)
 # 8   (x08)         4       SSX Panic Code
 # 12  (x0c)         4       Panic Address (inside function that called panic)
@@ -153,35 +177,47 @@
 # 320 (x140)        4       OCB_OCISR1
 # 324 (x144)        4       OCB_OCCFLG0
 # 328 (x148)        4       OCB_OCCHBR
-# 332 (x14c)        4       SSX timebase
-# 336 (x150)        16      Build name
-# 352 (x160)        8       OCCLFIR
-# 360 (x168)        8       PBAFIR
-# 368 (x170)        4       CORES_DECON
+# 332 (x14c)        4       PBA_BASE
+# 336 (x150)        4       PBA_MODE
+# 340 (x154)        4       PBA_SLVCTL0
+# 344 (x158)        4       PBA_SLVCTL1
+# 348 (x15c)        4       PBA_SLVCTL2
+# 352 (x160)        4       PBA_SLVCTL3
+# 356 (x164)        4       PBA_BCDE_CTL
+# 360 (x168)        4       PBA_BCDE_SET
+# 364 (x16c)        4       PBA_BCDE_STAT
+# 368 (x170)        4       PBA_BCDE_DR
+# 372 (x174)        4       PBA_BCDE_OCIBAR
+# 376 (x178)        4       PBA_BCUE_CTL
+# 380 (x17c)        4       PBA_BCUE_SET
+# 384 (x180)        4       PBA_BCUE_STAT
+# 388 (x184)        4       PBA_BCUE_DR
+# 392 (x188)        4       PBA_BCUE_OCIBAR
+# 396 (x18c)        4       SSX timebase
+# 400 (x190)        16      Build name
+# 416 (x1a0)        8       OCCLFIR
+# 424 (x1a8)        8       PBAFIR
+# 432 (x1b0)        4       CORES_DECON
 #                   (64)    Main thread dump
-# 372 (x174)        1        Length of thread dump (64)
-# 373 (x175)        1        Priority
-# 374 (x176)        1        State
-# 375 (x177)        1        Flags
-# 376 (x178)        4        Timer
-# 380 (x17c)        4        Semaphore
-# 384 (x180)        4        SRR0
-# 388 (x184)        4        SRR1
-# 392 (x188)        4        SRR2
-# 396 (x18c)        4        SRR3
-# 400 (x190)        4        Link register
-# 404 (x194)        32       Thread stack trace
+# 436 (x1b4)        1        Length of thread dump (64)
+# 437 (x1b5)        1        Priority
+# 438 (x1b6)        1        State
+# 439 (x1b7)        1        Flags
+# 440 (x1b8)        4        Timer
+# 444 (x1bc)        4        Semaphore
+# 448 (x1c0)        4        SRR0
+# 452 (x1c4)        4        SRR1
+# 456 (x1c8)        4        SRR2
+# 460 (x1cc)        4        SRR3
+# 464 (x1d0)        4        Link register
+# 468 (x1d4)        32       Thread stack trace
 #
-# 436 (x1b4)        64      Command thread dump
-# 500 (x1f4)        64      DCOM thread dump
-# 564 (x234)        32      Stack trace
-# 596 (x254)        4       xffdcffdc End of buffer marker
+# 500 (x1f4)        64      Command thread dump
+# 564 (x234)        64      DCOM thread dump
+# 628 (x274)        32      Stack trace
+# 660 (x294)        4       xffdcffdc End of buffer marker
 # -----------------------------------------------------------------------------
-# Total size:       664 - 8 + 3 = 659
 #
-// Lots of updates including a new struct for the FFDC buffer, diff to
-// previous version to see all changes, individual line change tags left out to
-// reduce clutter.
 
 # --------------
 # FFDC Constants
@@ -209,8 +245,8 @@ LENGTH_HI:                  .byte
     .struct LENGTH_HI + 1
 LENGTH_LO:                  .byte
     .struct LENGTH_LO + 1
-UNUSED:                     .byte
-    .struct UNUSED + 1
+VERSION:                    .byte
+    .struct VERSION + 1
 CHECKPOINT:                 .short
     .struct CHECKPOINT + 2
 PANIC_CODE:                 .int
@@ -375,6 +411,38 @@ OCCFLG0:                    .int
     .struct OCCFLG0 + 4
 OCCHBR:                     .int
     .struct OCCHBR + 4
+PBABASE:                     .int
+    .struct PBABASE + 4
+PBAMODE:                     .int
+    .struct PBAMODE + 4
+PBASLVCTL0:                     .int
+    .struct PBASLVCTL0 + 4
+PBASLVCTL1:                     .int
+    .struct PBASLVCTL1 + 4
+PBASLVCTL2:                     .int
+    .struct PBASLVCTL2 + 4
+PBASLVCTL3:                     .int
+    .struct PBASLVCTL3 + 4
+BCDE_CTL:                     .int
+    .struct BCDE_CTL + 4
+BCDE_SET:                     .int
+    .struct BCDE_SET + 4
+BCDE_STAT:                     .int
+    .struct BCDE_STAT + 4
+BCDE_DR:                     .int
+    .struct BCDE_DR + 4
+BCDE_OCIBAR:                     .int
+    .struct BCDE_OCIBAR + 4
+BCUE_CTL:                     .int
+    .struct BCUE_CTL + 4
+BCUE_SET:                     .int
+    .struct BCUE_SET + 4
+BCUE_STAT:                     .int
+    .struct BCUE_STAT + 4
+BCUE_DR:                     .int
+    .struct BCUE_DR + 4
+BCUE_OCIBAR:                     .int
+    .struct BCUE_OCIBAR + 4
 FFDC_TIMEBASE:              .int
     .struct FFDC_TIMEBASE + 4
 OCC_BUILD_NAME:             .byte
@@ -397,9 +465,9 @@ FFDC_END:                   .int
     .struct FFDC_END + 4
 END_OF_BUFFER:  .byte
 
-# The FFDC buffer length is the byte count starting at the unused byte after
+# The FFDC buffer length is the byte count starting at the version byte after
 # the data length and counting to the end of the FFDC buffer.
-    .set        FFDC_BUFFER_LENGTH, (END_OF_BUFFER-UNUSED)
+    .set        FFDC_BUFFER_LENGTH, (END_OF_BUFFER-VERSION)
     .set        FFDC_BUFFER_LENGTH_HI, ((FFDC_BUFFER_LENGTH >> 8) & 0x00FF)
     .set        FFDC_BUFFER_LENGTH_LO, (FFDC_BUFFER_LENGTH & 0x00FF)
 
@@ -673,10 +741,10 @@ __panic_checkpoint:
     # | Command
     # | |  Exception code
     # | | | Length of data
-    # | | | |    unused
+    # | | | |    version
     # | | | |    | Panic Checkpoint
     # | | | |    | |
-    # SSCCRRLL/LLxxKKKK
+    # SSCCRRLL/LLvvKKKK
     #                 |
     #                 Header End
     #
@@ -692,14 +760,18 @@ __panic_checkpoint:
 
     # r3 contains the exception code and r4 and r5 are available for use
     li      %r4, 0x00
-    # Sequence, command, length, unused are all set to 0
+    # Sequence, command, length are all set to 0
     # Exception was passed in r3
     _stbi   %r4, %r5, SEQUENCE
     _stbi   %r4, %r5, COMMAND
     _stbi   %r3, %r5, EXCEPTION
     _stbi   %r4, %r5, LENGTH_HI
     _stbi   %r4, %r5, LENGTH_LO
-    _stbi   %r4, %r5, UNUSED
+
+    # Set version to 1
+    li      %r4, 0x01
+    _stbi   %r4, %r5, VERSION
+
     # Use the predefined OCC panic checkpoint
     li      %r4, FFDC_OCC_CHECKPOINT
     _sthi   %r4, %r5, CHECKPOINT
@@ -908,7 +980,54 @@ __save_ffdc_regs:
     # Save OCCHBR
     _lwzi       %r5, %r5, OCB_OCCHBR
     _stwi       %r5, %r3, OCCHBR
-
+    # Save PBABASE
+    _lwzi       %r5, %r5, PBA_OCI_BASE
+    _stwi       %r5, %r3, PBABASE
+    # Save PBAMODE
+    _lwzi       %r5, %r5, PBA_MODE
+    _stwi       %r5, %r3, PBAMODE
+    # Save PBASLVCTL0
+    _lwzi       %r5, %r5, PBA_SLVCTL0
+    _stwi       %r5, %r3, PBASLVCTL0
+    # Save PBASLVCTL1
+    _lwzi       %r5, %r5, PBA_SLVCTL1
+    _stwi       %r5, %r3, PBASLVCTL1
+    # Save PBASLVCTL2
+    _lwzi       %r5, %r5, PBA_SLVCTL2
+    _stwi       %r5, %r3, PBASLVCTL2
+    # Save PBASLVCTL3
+    _lwzi       %r5, %r5, PBA_SLVCTL3
+    _stwi       %r5, %r3, PBASLVCTL3
+    # Save BCDE_CTL
+    _lwzi       %r5, %r5, PBA_BCDE_CTL
+    _stwi       %r5, %r3, BCDE_CTL
+    # Save BCDE_SET
+    _lwzi       %r5, %r5, PBA_BCDE_SET
+    _stwi       %r5, %r3, BCDE_SET
+    # Save BCDE_STAT
+    _lwzi       %r5, %r5, PBA_BCDE_STAT
+    _stwi       %r5, %r3, BCDE_STAT
+    # Save BCDE_DR
+    _lwzi       %r5, %r5, PBA_BCDE_DR
+    _stwi       %r5, %r3, BCDE_DR
+    # Save BCDE_OCIBAR
+    _lwzi       %r5, %r5, PBA_BCDE_OCIBAR
+    _stwi       %r5, %r3, BCDE_OCIBAR
+    # Save BCUE_CTL
+    _lwzi       %r5, %r5, PBA_BCUE_CTL
+    _stwi       %r5, %r3, BCUE_CTL
+    # Save BCUE_SET
+    _lwzi       %r5, %r5, PBA_BCUE_SET
+    _stwi       %r5, %r3, BCUE_SET
+    # Save BCUE_STAT
+    _lwzi       %r5, %r5, PBA_BCUE_STAT
+    _stwi       %r5, %r3, BCUE_STAT
+    # Save BCUE_DR
+    _lwzi       %r5, %r5, PBA_BCUE_DR
+    _stwi       %r5, %r3, BCUE_DR
+    # Save BCUE_OCIBAR
+    _lwzi       %r5, %r5, PBA_BCUE_OCIBAR
+    _stwi       %r5, %r3, BCUE_OCIBAR
     # Save ssx timebase
     _lwzsd      %r5, __ssx_timebase_frequency_mhz
     _stwi       %r5, %r3, FFDC_TIMEBASE

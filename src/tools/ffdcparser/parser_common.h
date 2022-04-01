@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2018,2020                        */
+/* Contributors Listed Below - COPYRIGHT 2018,2022                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -52,7 +52,7 @@ typedef struct __attribute__((packed,aligned(4))) ffdc
     uint8_t     cmd;        // Command (0x00 for FFDC)
     uint8_t     excp;       // Exception Code
     uint16_t    len;        // FFDC data length
-    uint8_t     reserved;   // (0x00 for FFDC)
+    uint8_t     version;    // (0x00 for FFDC, 0x01 FFDC + BCE registers)
     uint16_t    ckpt;       // Checkpoint (usually 0x0F00 for FFDC)
     uint32_t    ssx_panic;  // SSX Panic Code
     uint32_t    panic_addr; // Address of panic instruction
@@ -97,6 +97,22 @@ typedef struct __attribute__((packed,aligned(4))) ffdc
     uint32_t    ocb_ocisr1;
     uint32_t    ocb_occflg;
     uint32_t    ocb_occhbr;
+    uint32_t    pba_base;
+    uint32_t    pba_mode;
+    uint32_t    pba_slvctl0;
+    uint32_t    pba_slvctl1;
+    uint32_t    pba_slvctl2;
+    uint32_t    pba_slvctl3;
+    uint32_t    pba_bcde_ctl;
+    uint32_t    pba_bcde_set;
+    uint32_t    pba_bcde_stat;
+    uint32_t    pba_bcde_dr;
+    uint32_t    pba_bcde_ocibar;
+    uint32_t    pba_bcue_ctl;
+    uint32_t    pba_bcue_set;
+    uint32_t    pba_bcue_stat;
+    uint32_t    pba_bcue_dr;
+    uint32_t    pba_bcue_ocibar;
     uint32_t    ssx_timebase;
     char        buildname[16];
     uint64_t    occlfir;

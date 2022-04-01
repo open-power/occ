@@ -218,6 +218,27 @@ void dump_ffdc(ffdc_t * data)
     printf("OCB_OCISR1: 0x%08X\n", data->ocb_ocisr1);
     printf("OCB_OCCFLG: 0x%08X\n", data->ocb_occflg);
     printf("OCB_OCCHBR: 0x%08X\n", data->ocb_occhbr);
+
+    if(data->version >= 0x01)
+    {
+        printf("PBA_BASE: 0x%08X\n", data->pba_base);
+        printf("PBA_MODE: 0x%08X\n", data->pba_mode);
+        printf("PBA_SLVCTL0: 0x%08X\n", data->pba_slvctl0);
+        printf("PBA_SLVCTL1: 0x%08X\n", data->pba_slvctl1);
+        printf("PBA_SLVCTL2: 0x%08X\n", data->pba_slvctl2);
+        printf("PBA_SLVCTL3: 0x%08X\n", data->pba_slvctl3);
+        printf("PBA_BCDE_CTL: 0x%08X\n", data->pba_bcde_ctl);
+        printf("PBA_BCDE_SET: 0x%08X\n", data->pba_bcde_set);
+        printf("PBA_BCDE_STAT: 0x%08X\n", data->pba_bcde_stat);
+        printf("PBA_BCDE_DR: 0x%08X\n", data->pba_bcde_dr);
+        printf("PBA_BCDE_OCIBAR: 0x%08X\n", data->pba_bcde_ocibar);
+        printf("PBA_BCUE_CTL: 0x%08X\n", data->pba_bcue_ctl);
+        printf("PBA_BCUE_SET: 0x%08X\n", data->pba_bcue_set);
+        printf("PBA_BCUE_STAT: 0x%08X\n", data->pba_bcue_stat);
+        printf("PBA_BCUE_DR: 0x%08X\n", data->pba_bcue_dr);
+        printf("PBA_BCUE_OCIBAR: 0x%08X\n", data->pba_bcue_ocibar);
+    }
+
     printf("SSX Timebase: 0x%08X\n", data->ssx_timebase);
     printf("OCC Buildname: %s\n", data->buildname);
     printf("OCC LFIR: 0x%016lX\n", data->occlfir);
@@ -373,7 +394,7 @@ int main(int argc, char** argv)
         return -1;
     }
 
-    data.reserved = fgetc(ffdc_file);
+    data.version = fgetc(ffdc_file);
     data.ckpt = get_uint16(ffdc_file);
     data.ssx_panic = get_uint32(ffdc_file);
     data.panic_addr = get_uint32(ffdc_file);
@@ -420,6 +441,27 @@ int main(int argc, char** argv)
     data.ocb_ocisr1 = get_uint32(ffdc_file);
     data.ocb_occflg = get_uint32(ffdc_file);
     data.ocb_occhbr = get_uint32(ffdc_file);
+
+    if(data.version >= 0x01)
+    {
+        data.pba_base = get_uint32(ffdc_file);
+        data.pba_mode = get_uint32(ffdc_file);
+        data.pba_slvctl0 = get_uint32(ffdc_file);
+        data.pba_slvctl1 = get_uint32(ffdc_file);
+        data.pba_slvctl2 = get_uint32(ffdc_file);
+        data.pba_slvctl3 = get_uint32(ffdc_file);
+        data.pba_bcde_ctl = get_uint32(ffdc_file);
+        data.pba_bcde_set = get_uint32(ffdc_file);
+        data.pba_bcde_stat = get_uint32(ffdc_file);
+        data.pba_bcde_dr = get_uint32(ffdc_file);
+        data.pba_bcde_ocibar = get_uint32(ffdc_file);
+        data.pba_bcue_ctl = get_uint32(ffdc_file);
+        data.pba_bcue_set = get_uint32(ffdc_file);
+        data.pba_bcue_stat = get_uint32(ffdc_file);
+        data.pba_bcue_dr = get_uint32(ffdc_file);
+        data.pba_bcue_ocibar = get_uint32(ffdc_file);
+    }
+
     data.ssx_timebase = get_uint32(ffdc_file);
     fgets(data.buildname, 16, ffdc_file);
     fgetc(ffdc_file);
