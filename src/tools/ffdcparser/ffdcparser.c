@@ -221,7 +221,7 @@ void dump_ffdc(ffdc_t * data)
 
     if(data->version >= 0x01)
     {
-        printf("PBA_BASE: 0x%08X\n", data->pba_base);
+        printf("PBA_OCI_BASE: 0x%08X\n", data->pba_base);
         printf("PBA_MODE: 0x%08X\n", data->pba_mode);
         printf("PBA_SLVCTL0: 0x%08X\n", data->pba_slvctl0);
         printf("PBA_SLVCTL1: 0x%08X\n", data->pba_slvctl1);
@@ -237,6 +237,7 @@ void dump_ffdc(ffdc_t * data)
         printf("PBA_BCUE_STAT: 0x%08X\n", data->pba_bcue_stat);
         printf("PBA_BCUE_DR: 0x%08X\n", data->pba_bcue_dr);
         printf("PBA_BCUE_OCIBAR: 0x%08X\n", data->pba_bcue_ocibar);
+        printf("PBA_OCC_ACTION: 0x%08X\n", data->pba_occ_action);
     }
 
     printf("SSX Timebase: 0x%08X\n", data->ssx_timebase);
@@ -460,6 +461,7 @@ int main(int argc, char** argv)
         data.pba_bcue_stat = get_uint32(ffdc_file);
         data.pba_bcue_dr = get_uint32(ffdc_file);
         data.pba_bcue_ocibar = get_uint32(ffdc_file);
+        data.pba_occ_action = get_uint32(ffdc_file);
     }
 
     data.ssx_timebase = get_uint32(ffdc_file);

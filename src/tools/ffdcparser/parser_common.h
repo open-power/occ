@@ -113,6 +113,7 @@ typedef struct __attribute__((packed,aligned(4))) ffdc
     uint32_t    pba_bcue_stat;
     uint32_t    pba_bcue_dr;
     uint32_t    pba_bcue_ocibar;
+    uint32_t    pba_occ_action;
     uint32_t    ssx_timebase;
     char        buildname[16];
     uint64_t    occlfir;

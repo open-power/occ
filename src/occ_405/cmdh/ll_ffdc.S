@@ -193,29 +193,30 @@
 # 384 (x180)        4       PBA_BCUE_STAT
 # 388 (x184)        4       PBA_BCUE_DR
 # 392 (x188)        4       PBA_BCUE_OCIBAR
-# 396 (x18c)        4       SSX timebase
-# 400 (x190)        16      Build name
-# 416 (x1a0)        8       OCCLFIR
-# 424 (x1a8)        8       PBAFIR
-# 432 (x1b0)        4       CORES_DECON
+# 396 (x18c)        4       PBA_OCCACT
+# 400 (x190)        4       SSX timebase
+# 404 (x194)        16      Build name
+# 420 (x1a4)        8       OCCLFIR
+# 428 (x1ac)        8       PBAFIR
+# 436 (x1b4)        4       CORES_DECON
 #                   (64)    Main thread dump
-# 436 (x1b4)        1        Length of thread dump (64)
-# 437 (x1b5)        1        Priority
-# 438 (x1b6)        1        State
-# 439 (x1b7)        1        Flags
-# 440 (x1b8)        4        Timer
-# 444 (x1bc)        4        Semaphore
-# 448 (x1c0)        4        SRR0
-# 452 (x1c4)        4        SRR1
-# 456 (x1c8)        4        SRR2
-# 460 (x1cc)        4        SRR3
-# 464 (x1d0)        4        Link register
-# 468 (x1d4)        32       Thread stack trace
+# 440 (x1b8)        1        Length of thread dump (64)
+# 441 (x1b9)        1        Priority
+# 442 (x1ba)        1        State
+# 443 (x1bb)        1        Flags
+# 444 (x1bc)        4        Timer
+# 448 (x1c0)        4        Semaphore
+# 452 (x1c4)        4        SRR0
+# 456 (x1c8)        4        SRR1
+# 460 (x1cc)        4        SRR2
+# 464 (x1d0)        4        SRR3
+# 468 (x1d4)        4        Link register
+# 472 (x1d8)        32       Thread stack trace
 #
-# 500 (x1f4)        64      Command thread dump
-# 564 (x234)        64      DCOM thread dump
-# 628 (x274)        32      Stack trace
-# 660 (x294)        4       xffdcffdc End of buffer marker
+# 504 (x1f8)        64      Command thread dump
+# 568 (x238)        64      DCOM thread dump
+# 632 (x278)        32      Stack trace
+# 664 (x298)        4       xffdcffdc End of buffer marker
 # -----------------------------------------------------------------------------
 #
 
@@ -443,6 +444,8 @@ BCUE_DR:                     .int
     .struct BCUE_DR + 4
 BCUE_OCIBAR:                     .int
     .struct BCUE_OCIBAR + 4
+OCC_ACTION:                 .int
+    .struct OCC_ACTION + 4
 FFDC_TIMEBASE:              .int
     .struct FFDC_TIMEBASE + 4
 OCC_BUILD_NAME:             .byte
@@ -1028,6 +1031,9 @@ __save_ffdc_regs:
     # Save BCUE_OCIBAR
     _lwzi       %r5, %r5, PBA_BCUE_OCIBAR
     _stwi       %r5, %r3, BCUE_OCIBAR
+    # Save OCC_ACTION
+    _lwzi       %r5, %r5, PBA_OCCACT
+    _stwi       %r5, %r3, OCC_ACTION
     # Save ssx timebase
     _lwzsd      %r5, __ssx_timebase_frequency_mhz
     _stwi       %r5, %r3, FFDC_TIMEBASE
