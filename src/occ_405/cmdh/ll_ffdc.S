@@ -194,29 +194,48 @@
 # 388 (x184)        4       PBA_BCUE_DR
 # 392 (x188)        4       PBA_BCUE_OCIBAR
 # 396 (x18c)        4       PBA_OCCACT
-# 400 (x190)        4       SSX timebase
-# 404 (x194)        16      Build name
-# 420 (x1a4)        8       OCCLFIR
-# 428 (x1ac)        8       PBAFIR
-# 436 (x1b4)        4       CORES_DECON
+# 400 (x190)        4       PBA_BAR0
+# 404 (x194)        4       PBA_BAR1
+# 408 (x198)        4       PBA_BAR2
+# 412 (x19c)        4       PBA_BAR3
+# 416 (x1a0)        4       PBA_BARMSK0
+# 420 (x1a4)        4       PBA_BARMSK1
+# 424 (x1a8)        4       PBA_BARMSK2
+# 428 (x1ac)        4       PBA_BARMSK3
+# 432 (x1b0)        4       PBA_ERRRPT0
+# 436 (x1b4)        4       PBA_ERRRPT1
+# 440 (x1b8)        4       PBA_ERRRPT2
+# 444 (x1bc)        4       PBA_RBUFVAL0
+# 448 (x1c0)        4       PBA_RBUFVAL1
+# 452 (x1c4)        4       PBA_RBUFVAL2
+# 456 (x1c8)        4       PBA_RBUFVAL3
+# 460 (x1cc)        4       PBA_RBUFVAL4
+# 464 (x1d0)        4       PBA_RBUFVAL5
+# 468 (x1d4)        4       PBA_WBUFVAL0
+# 472 (x1d8)        4       PBA_WBUFVAL1
+# 476 (x1dc)        4       SSX timebase
+# 480 (x1e0)        16      Build name
+# 496 (x1f0)        8       OCCLFIR
+# 504 (x1f8)        8       PBAFIR
+# 512 (x200)        4       CORES_DECON
 #                   (64)    Main thread dump
-# 440 (x1b8)        1        Length of thread dump (64)
-# 441 (x1b9)        1        Priority
-# 442 (x1ba)        1        State
-# 443 (x1bb)        1        Flags
-# 444 (x1bc)        4        Timer
-# 448 (x1c0)        4        Semaphore
-# 452 (x1c4)        4        SRR0
-# 456 (x1c8)        4        SRR1
-# 460 (x1cc)        4        SRR2
-# 464 (x1d0)        4        SRR3
-# 468 (x1d4)        4        Link register
-# 472 (x1d8)        32       Thread stack trace
+# 516 (x204)        1        Length of thread dump (64)
+# 517 (x205)        1        Priority
+# 518 (x206)        1        State
+# 519 (x207)        1        Flags
+# 520 (x208)        4        Timer
+# 524 (x20c)        4        Semaphore
+# 528 (x210)        4        SRR0
+# 532 (x214)        4        SRR1
+# 536 (x218)        4        SRR2
+# 540 (x21c)        4        SRR3
+# 544 (x220)        4        Link register
+# 548 (x224)        32       Thread stack trace
 #
-# 504 (x1f8)        64      Command thread dump
-# 568 (x238)        64      DCOM thread dump
-# 632 (x278)        32      Stack trace
-# 664 (x298)        4       xffdcffdc End of buffer marker
+# 580 (x244)        64      Command thread dump
+# 644 (x284)        64      DCOM thread dump
+# 708 (x2c4)        32      Stack trace
+# 740 (x2e4)        4       xffdcffdc End of buffer marker
 # -----------------------------------------------------------------------------
 #
 
@@ -446,6 +465,46 @@ BCUE_OCIBAR:                     .int
     .struct BCUE_OCIBAR + 4
 OCC_ACTION:                 .int
     .struct OCC_ACTION + 4
+PBABAR0:                 .int
+    .struct PBABAR0 + 4
+PBABAR1:                 .int
+    .struct PBABAR1 + 4
+PBABAR2:                 .int
+    .struct PBABAR2 + 4
+PBABAR3:                 .int
+    .struct PBABAR3 + 4
+PBABARMSK0:                 .int
+    .struct PBABARMSK0 + 4
+PBABARMSK1:                 .int
+    .struct PBABARMSK1 + 4
+PBABARMSK2:                 .int
+    .struct PBABARMSK2 + 4
+PBABARMSK3:                 .int
+    .struct PBABARMSK3 + 4
+PBAERRRPT0:                 .int
+    .struct PBAERRRPT0 + 4
+PBAERRRPT1:                 .int
+    .struct PBAERRRPT1 + 4
+PBAERRRPT2:                 .int
+    .struct PBAERRRPT2 + 4
+PBARBUFVAL0:                 .int
+    .struct PBARBUFVAL0 + 4
+PBARBUFVAL1:                 .int
+    .struct PBARBUFVAL1 + 4
+PBARBUFVAL2:                 .int
+    .struct PBARBUFVAL2 + 4
+PBARBUFVAL3:                 .int
+    .struct PBARBUFVAL3 + 4
+PBARBUFVAL4:                 .int
+    .struct PBARBUFVAL4 + 4
+PBARBUFVAL5:                 .int
+    .struct PBARBUFVAL5 + 4
+PBAWBUFVAL0:                 .int
+    .struct PBAWBUFVAL0 + 4
+PBAWBUFVAL1:                 .int
+    .struct PBAWBUFVAL1 + 4
+
+
 FFDC_TIMEBASE:              .int
     .struct FFDC_TIMEBASE + 4
 OCC_BUILD_NAME:             .byte
@@ -1034,6 +1093,64 @@ __save_ffdc_regs:
     # Save OCC_ACTION
     _lwzi       %r5, %r5, PBA_OCCACT
     _stwi       %r5, %r3, OCC_ACTION
+    # Save PBABAR0
+    _lwzi       %r5, %r5, PBA_BAR0
+    _stwi       %r5, %r3, PBABAR0
+    # Save PBABAR1
+    _lwzi       %r5, %r5, PBA_BAR1
+    _stwi       %r5, %r3, PBABAR1
+    # Save PBABAR2
+    _lwzi       %r5, %r5, PBA_BAR2
+    _stwi       %r5, %r3, PBABAR2
+    # Save PBABAR3
+    _lwzi       %r5, %r5, PBA_BAR3
+    _stwi       %r5, %r3, PBABAR3
+    # Save PBABARMSK0
+    _lwzi       %r5, %r5, PBA_BARMSK0
+    _stwi       %r5, %r3, PBABARMSK0
+    # Save PBABARMSK1
+    _lwzi       %r5, %r5, PBA_BARMSK1
+    _stwi       %r5, %r3, PBABARMSK1
+    # Save PBABARMSK2
+    _lwzi       %r5, %r5, PBA_BARMSK2
+    _stwi       %r5, %r3, PBABARMSK2
+    # Save PBABARMSK3
+    _lwzi       %r5, %r5, PBA_BARMSK3
+    _stwi       %r5, %r3, PBABARMSK3
+    # Save PBAERRRPT0
+    _lwzi       %r5, %r5, PBA_ERRRPT0
+    _stwi       %r5, %r3, PBAERRRPT0
+    # Save PBAERRRPT1
+    _lwzi       %r5, %r5, PBA_ERRRPT1
+    _stwi       %r5, %r3, PBAERRRPT1
+    # Save PBAERRRPT2
+    _lwzi       %r5, %r5, PBA_ERRRPT2
+    _stwi       %r5, %r3, PBAERRRPT2
+    # Save PBARBUFVAL0
+    _lwzi       %r5, %r5, PBA_RBUFVAL0
+    _stwi       %r5, %r3, PBARBUFVAL0
+    # Save PBARBUFVAL1
+    _lwzi       %r5, %r5, PBA_RBUFVAL1
+    _stwi       %r5, %r3, PBARBUFVAL1
+    # Save PBARBUFVAL2
+    _lwzi       %r5, %r5, PBA_RBUFVAL2
+    _stwi       %r5, %r3, PBARBUFVAL2
+    # Save PBARBUFVAL3
+    _lwzi       %r5, %r5, PBA_RBUFVAL3
+    _stwi       %r5, %r3, PBARBUFVAL3
+    # Save PBARBUFVAL4
+    _lwzi       %r5, %r5, PBA_RBUFVAL4
+    _stwi       %r5, %r3, PBARBUFVAL4
+    # Save PBARBUFVAL5
+    _lwzi       %r5, %r5, PBA_RBUFVAL5
+    _stwi       %r5, %r3, PBARBUFVAL5
+    # Save PBAWBUFVAL0
+    _lwzi       %r5, %r5, PBA_WBUFVAL0
+    _stwi       %r5, %r3, PBAWBUFVAL0
+    # Save PBAWBUFVAL1
+    _lwzi       %r5, %r5, PBA_WBUFVAL1
+    _stwi       %r5, %r3, PBAWBUFVAL1
+
     # Save ssx timebase
     _lwzsd      %r5, __ssx_timebase_frequency_mhz
     _stwi       %r5, %r3, FFDC_TIMEBASE
