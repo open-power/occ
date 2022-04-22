@@ -238,6 +238,25 @@ void dump_ffdc(ffdc_t * data)
         printf("PBA_BCUE_DR: 0x%08X\n", data->pba_bcue_dr);
         printf("PBA_BCUE_OCIBAR: 0x%08X\n", data->pba_bcue_ocibar);
         printf("PBA_OCC_ACTION: 0x%08X\n", data->pba_occ_action);
+        printf("PBA_BAR0: 0x%08X\n", data->pba_bar0);
+        printf("PBA_BAR1: 0x%08X\n", data->pba_bar1);
+        printf("PBA_BAR2: 0x%08X\n", data->pba_bar2);
+        printf("PBA_BAR3: 0x%08X\n", data->pba_bar3);
+        printf("PBA_BARMSK0: 0x%08X\n", data->pba_barmsk0);
+        printf("PBA_BARMSK1: 0x%08X\n", data->pba_barmsk1);
+        printf("PBA_BARMSK2: 0x%08X\n", data->pba_barmsk2);
+        printf("PBA_BARMSK3: 0x%08X\n", data->pba_barmsk3);
+        printf("PBA_ERRRPT0: 0x%08X\n", data->pba_errrpt0);
+        printf("PBA_ERRRPT1: 0x%08X\n", data->pba_errrpt1);
+        printf("PBA_ERRRPT2: 0x%08X\n", data->pba_errrpt2);
+        printf("PBA_RBUFVAL0: 0x%08X\n", data->pba_rbufval0);
+        printf("PBA_RBUFVAL1: 0x%08X\n", data->pba_rbufval1);
+        printf("PBA_RBUFVAL2: 0x%08X\n", data->pba_rbufval2);
+        printf("PBA_RBUFVAL3: 0x%08X\n", data->pba_rbufval3);
+        printf("PBA_RBUFVAL4: 0x%08X\n", data->pba_rbufval4);
+        printf("PBA_RBUFVAL5: 0x%08X\n", data->pba_rbufval5);
+        printf("PBA_WBUFVAL0: 0x%08X\n", data->pba_wbufval0);
+        printf("PBA_WBUFVAL1: 0x%08X\n", data->pba_wbufval1);
     }
 
     printf("SSX Timebase: 0x%08X\n", data->ssx_timebase);
@@ -462,6 +481,25 @@ int main(int argc, char** argv)
         data.pba_bcue_dr = get_uint32(ffdc_file);
         data.pba_bcue_ocibar = get_uint32(ffdc_file);
         data.pba_occ_action = get_uint32(ffdc_file);
+        data.pba_bar0 = get_uint32(ffdc_file);
+        data.pba_bar1 = get_uint32(ffdc_file);
+        data.pba_bar2 = get_uint32(ffdc_file);
+        data.pba_bar3 = get_uint32(ffdc_file);
+        data.pba_barmsk0 = get_uint32(ffdc_file);
+        data.pba_barmsk1 = get_uint32(ffdc_file);
+        data.pba_barmsk2 = get_uint32(ffdc_file);
+        data.pba_barmsk3 = get_uint32(ffdc_file);
+        data.pba_errrpt0 = get_uint32(ffdc_file);
+        data.pba_errrpt1 = get_uint32(ffdc_file);
+        data.pba_errrpt2 = get_uint32(ffdc_file);
+        data.pba_rbufval0 = get_uint32(ffdc_file);
+        data.pba_rbufval1 = get_uint32(ffdc_file);
+        data.pba_rbufval2 = get_uint32(ffdc_file);
+        data.pba_rbufval3 = get_uint32(ffdc_file);
+        data.pba_rbufval4 = get_uint32(ffdc_file);
+        data.pba_rbufval5 = get_uint32(ffdc_file);
+        data.pba_wbufval0 = get_uint32(ffdc_file);
+        data.pba_wbufval1 = get_uint32(ffdc_file);
     }
 
     data.ssx_timebase = get_uint32(ffdc_file);
