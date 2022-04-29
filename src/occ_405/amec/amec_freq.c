@@ -1023,6 +1023,18 @@ void amec_slv_mem_voting_box(void)
     g_amec->mem_throttle_reason = l_reason;
     g_amec->mem_speed_request = l_vote;
 
+    // update the Memory OT Throttle Sensor
+    if( (g_amec->mem_speed_request < AMEC_MEMORY_MAX_STEP) &&
+        (kvm_reason == MEMORY_OVER_TEMP) )
+    {
+       // Memory speed is less than max indicate throttle due to OT
+        sensor_update(AMECSENSOR_PTR(MEMOTTHROT), 1);
+    }
+    else  // not currently throttled due to OT
+    {
+        sensor_update(AMECSENSOR_PTR(MEMOTTHROT), 0);
+    }
+
     //trace changes in memory throttling
     if( (l_reason != AMEC_MEM_VOTING_REASON_INIT) &&
         (l_reason != AMEC_MEM_VOTING_REASON_SLEW) )
