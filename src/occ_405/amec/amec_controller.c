@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2022                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -424,21 +424,6 @@ void amec_controller_dimm_thermal()
         *l_speed_request = (uint16_t) l_mem_speed;
 
     } // end for loop processing each memory sensor type
-
-    // Done processing all types now determine if any of them are driving throttling
-    // and update the Memory OT Throttle Sensor
-    if( (g_amec->thermaldimm.speed_request < AMEC_MEMORY_MAX_STEP) ||
-        (g_amec->thermalmcdimm.speed_request < AMEC_MEMORY_MAX_STEP) ||
-        (g_amec->thermalpmic.speed_request < AMEC_MEMORY_MAX_STEP) ||
-        (g_amec->thermalmcext.speed_request < AMEC_MEMORY_MAX_STEP) )
-    {
-       // Memory speed is less than max indicate throttle due to OT
-        sensor_update(AMECSENSOR_PTR(MEMOTTHROT), 1);
-    }
-    else  // not currently throttled due to OT
-    {
-        sensor_update(AMECSENSOR_PTR(MEMOTTHROT), 0);
-    }
 }
 
 
