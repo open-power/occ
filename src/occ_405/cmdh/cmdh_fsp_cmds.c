@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2021                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2022                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -942,12 +942,6 @@ errlHndl_t cmdh_reset_prep (const cmdh_fsp_cmd_t * i_cmd_ptr,
             }
         }
 
-        if (G_sysConfigData.system_type.kvm && isSafeStateRequested() &&
-            (l_cmd_ptr->reason != CMDH_PREP_POWER_OFF))
-        {
-            // Notify dcom thread to update opal table
-            ssx_semaphore_post(&G_dcomThreadWakeupSem);
-        }
         if (CURRENT_STATE() != OCC_STATE_STANDBY)
         {
             // Put OCC in stand-by state
@@ -970,6 +964,9 @@ errlHndl_t cmdh_reset_prep (const cmdh_fsp_cmd_t * i_cmd_ptr,
                 G_occ_external_req_state = OCC_STATE_STANDBY;
             }
         }
+
+        // Notify dcom thread to update opal table
+        ssx_semaphore_post(&G_dcomThreadWakeupSem);
 
     } while(0);
 
