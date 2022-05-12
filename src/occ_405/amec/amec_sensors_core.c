@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2021                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2022                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -139,8 +139,8 @@ void amec_update_proc_core_sensors(uint8_t i_core)
         g_amec->proc[0].core[i_core].prev_PC_RAW_CYCLES    = l_core_data_ptr->empath.raw_cycles;
         g_amec->proc[0].core[i_core].prev_PC_RUN_CYCLES    = l_core_data_ptr->empath.run_cycles;
         g_amec->proc[0].core[i_core].prev_PC_COMPLETED     = l_core_data_ptr->empath.complete;
-        if(G_allow_trace_flags & ALLOW_EMPATH_TRACE)
-            TRAC_IMP("core[0x%02X] EMPATH Complete 0x%08X", i_core, l_core_data_ptr->empath.complete);
+/*        if(G_allow_trace_flags & ALLOW_EMPATH_TRACE)
+            TRAC_IMP("core[0x%02X] EMPATH Complete 0x%08X", i_core, l_core_data_ptr->empath.complete); */
         g_amec->proc[0].core[i_core].prev_tod_2mhz         = l_core_data_ptr->tod_2mhz;
         g_amec->proc[0].core[i_core].prev_FREQ_SENS_BUSY   = l_core_data_ptr->empath.freq_sens_busy;
         g_amec->proc[0].core[i_core].prev_FREQ_SENS_FINISH = l_core_data_ptr->empath.freq_sens_finish;
@@ -639,6 +639,14 @@ void amec_calc_freq_and_util_sensors(CoreData * i_core_data_ptr, uint8_t i_core)
   else
   {
       l_core_util = (uint16_t) temp32;
+      if(G_allow_trace_flags & ALLOW_EMPATH_TRACE)
+      {
+          TRAC_IMP("core[0x%02X] Util 0x%04X", i_core, l_core_util);
+          TRAC_IMP("EMPATH RAW CYCLES 0x%08X", i_core_data_ptr->empath.raw_cycles);
+          TRAC_IMP("Previous RAW CYCLES 0x%08X", g_amec->proc[0].core[i_core].prev_PC_RAW_CYCLES);
+          TRAC_IMP("EMPATH RUN CYCLES 0x%08X", i_core_data_ptr->empath.run_cycles);
+          TRAC_IMP("Previous RUN CYCLES 0x%08X", g_amec->proc[0].core[i_core].prev_PC_RUN_CYCLES);
+      }
   }
   sensor_update(AMECSENSOR_ARRAY_PTR(UTILC0, i_core), l_core_util);
 
