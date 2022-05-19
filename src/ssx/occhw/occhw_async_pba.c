@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2020                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2022                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -39,6 +39,7 @@ BceQueue G_pba_bcde_queue;
 
 PbaxQueue G_pbax_read_queue[PBAX_QUEUES];
 
+PhantomBceFfdc G_phantom_bce_ffdc;
 
 ////////////////////////////////////////////////////////////////////////////
 // Local Data
@@ -564,12 +565,39 @@ bce_async_handler_full(void* arg, SsxIrqId irq, int priority)
     AsyncQueue* async_queue = (AsyncQueue*)arg;
     AsyncRequest* async_current = (AsyncRequest*)async_queue->current;
     BceQueue* queue = (BceQueue*)async_queue;
+    static uint8_t L_bce_phantom_count = 0;
 
     out32(G_bce_ctl[queue->engine], 0);
 
     if (SSX_ERROR_CHECK_KERNEL && (async_current == 0))
     {
-        SSX_PANIC(ASYNC_PHANTOM_INTERRUPT_BCE);
+        // ASYNC_PHANTOM_INTERRUPT_BCE
+
+        if(L_bce_phantom_count < 0xFF)
+           L_bce_phantom_count++;
+
+        G_phantom_bce_ffdc.count = L_bce_phantom_count;
+
+        // collect FFDC on only first instance
+        if(L_bce_phantom_count == 1)
+        {
+            G_phantom_bce_ffdc.pba_bar0 = in64(PBA_BAR0);
+            G_phantom_bce_ffdc.pba_bar1 = in64(PBA_BAR1);
+            G_phantom_bce_ffdc.pba_bar2 = in64(PBA_BAR2);
+            G_phantom_bce_ffdc.pba_bar3 = in64(PBA_BAR3);
+            G_phantom_bce_ffdc.pba_barmsk0 = in64(PBA_BARMSK0);
+            G_phantom_bce_ffdc.pba_barmsk1 = in64(PBA_BARMSK1);
+            G_phantom_bce_ffdc.pba_barmsk2 = in64(PBA_BARMSK2);
+            G_phantom_bce_ffdc.pba_barmsk3 = in64(PBA_BARMSK3);
+            G_phantom_bce_ffdc.pba_slvrst = in64(PBA_SLVRST);
+            G_phantom_bce_ffdc.pba_slvctl0 = in64(PBA_SLVCTL0);
+            G_phantom_bce_ffdc.pba_slvctl1 = in64(PBA_SLVCTL1);
+            G_phantom_bce_ffdc.pba_slvctl2 = in64(PBA_SLVCTL2);
+            G_phantom_bce_ffdc.pba_slvctl3 = in64(PBA_SLVCTL3);
+
+            // set status so FFDC will be logged
+            G_phantom_bce_ffdc.status = PHANTOM_BCE_FFDC;
+        }
     }
 
     if (async_current->run_method(async_current) == -ASYNC_REQUEST_COMPLETE)
