@@ -782,6 +782,24 @@ typedef struct
 
 } PbaUnitFfdc;
 
+typedef struct
+{
+    uint32_t status;
+    uint32_t count;
+    uint64_t pba_bar0;
+    uint64_t pba_bar1;
+    uint64_t pba_bar2;
+    uint64_t pba_bar3;
+    uint64_t pba_barmsk0;
+    uint64_t pba_barmsk1;
+    uint64_t pba_barmsk2;
+    uint64_t pba_barmsk3;
+    uint64_t pba_slvrst;
+    uint64_t pba_slvctl0;
+    uint64_t pba_slvctl1;
+    uint64_t pba_slvctl2;
+    uint64_t pba_slvctl3;
+}  PhantomBceFfdc;
 #endif  // __ASSEMBLER__
 
 ////////////////////////////////////////////////////////////////////////////
@@ -1477,6 +1495,9 @@ extern BceQueue G_pba_bcde_queue;
 /// Job queues for the PBAX circular buffers
 extern PbaxQueue G_pbax_read_queue[];
 
+// FFDC for phantom BCE interrupt
+extern PhantomBceFfdc G_phantom_bce_ffdc;
+#define PHANTOM_BCE_FFDC 0x42434500 // "BCE"
 
 // PBAX read buffers must be cache-line aligned since they are invalidated,
 // and furthermore must be aligned to the next higher power-of-two of their
