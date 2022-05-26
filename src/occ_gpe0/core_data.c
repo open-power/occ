@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2020                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2022                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -37,6 +37,7 @@ uint32_t get_core_data(uint32_t i_core,
                        CoreData* o_data)
 {
     uint32_t rc = 0;
+    uint32_t empath_rc = 0;
     uint32_t size = sizeof(CoreData) / sizeof(uint64_t);
     uint64_t* core_data64 = (uint64_t*)o_data;
     uint32_t quadSelect = CHIPLET_QUAD_BASE((i_core / CORES_PER_QUAD));
@@ -45,6 +46,7 @@ uint32_t get_core_data(uint32_t i_core,
     uint32_t coreSelect = quadSelect + CORE_REGION(i_core);
     uint32_t data32 = 0;
     uint64_t empath_scom_data = 0;
+    static uint32_t L_trace = 20;
 
     uint32_t i;
 
@@ -278,9 +280,14 @@ uint32_t get_core_data(uint32_t i_core,
             if(!rc)
             {
                 // GET PC status
-                rc = getscom(coreSelect, PC_STATUS_REG, &empath_scom_data);
-                if (rc)
+                empath_rc = getscom(coreSelect, PC_STATUS_REG, &empath_scom_data);
+                if(empath_rc)
                 {
+                    if( (L_trace) && (empath_rc != PCB_ERROR_CHIPLET_OFFLINE) )
+                    {
+                        L_trace--;
+                        PK_TRACE("get_core_data: core[0x%08x] EMPATH not valid PC_STATUS_REG fail rc[0x%08x]", i_core, empath_rc);
+                    }
                     break;
                 }
 
@@ -288,8 +295,25 @@ uint32_t get_core_data(uint32_t i_core,
                 {
                     o_data->empathValid = EMPATH_VALID;
                 }
+                else if(L_trace)
+                {
+                    L_trace--;
+                    PK_TRACE("get_core_data: core[0x%08x] empath not valid", i_core);
+                    PK_TRACE("get_core_data: EMPATH timeout PC_STATUS_REG[0x%08x%08x]",
+                             (uint32_t)(empath_scom_data>>32),
+                             (uint32_t)empath_scom_data);
+                }
             }
-
+            else
+            {
+                // save specific rc for empath so we don't overwrite with any SCOMs after this
+                empath_rc = rc;
+                if( (L_trace) && (empath_rc != PCB_ERROR_CHIPLET_OFFLINE) )
+                {
+                    L_trace--;
+                    PK_TRACE("get_core_data: core[0x%08x] EMPATH not valid rc[0x%08x]", i_core, empath_rc);
+                }
+            }
             rc = putscom(coreSelect, PC_ERR_MASK_REG, 0ull); //Unmask
             if (rc)
             {
@@ -297,7 +321,11 @@ uint32_t get_core_data(uint32_t i_core,
             }
 
         } // if not dd1
-
+        else if(L_trace)
+        {
+            L_trace = 0;  // only trace once if DD1
+            PK_TRACE("get_core_data: DD1 EMPATH not available core[0x%08x]", i_core);
+        }
 
         // ==============
         // DDS
@@ -336,6 +364,10 @@ uint32_t get_core_data(uint32_t i_core,
     // Restore any SIB masks that may have been on before.
     mtmsr((mfmsr() & ~(MSR_SEM | MSR_SIBRC | MSR_SIBRCA))
           | (org_sem & MSR_SEM));
+
+    // return the EMPATH rc if there is one
+    if(empath_rc)
+        return empath_rc;
 
     return rc;
 }

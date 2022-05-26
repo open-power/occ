@@ -79,8 +79,8 @@ extern hcode_elog_entry_t *G_hcode_elog_table;
 extern uint32_t            G_hcode_elog_table_slots;
 
 typedef enum {
-    ERRH_PHANTOM_BCE_INTERRUPT = 0x01,
-    // unused - 0x02,
+    ERRH_PHANTOM_BCE_INTERRUPT       =  0x01,
+    ERRH_EMPATH_FAILURE              =  0x02,
     // unused -  0x03,
     // unused -  0x04,
     // unused - 0x05

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2022                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -40,6 +40,7 @@
 #include "gpe_24x7_structs.h"
 #include "common.h"
 #include "occ_sys_config.h"
+#include "amec_sys.h"
 
 extern bool G_simics_environment;
 
@@ -113,6 +114,8 @@ bool G_proc_io_temp_expired = false;
 extern bool G_smf_mode;
 extern uint16_t G_allow_trace_flags;
 
+#define MAX_EMPATH_ERRORS 125 // 8ms * 125 = 1s
+
 // Function Specification
 //
 // Name: task_core_data
@@ -135,6 +138,8 @@ void task_core_data( task_t * i_task )
     ipc_core_data_parms_t * l_parms = (ipc_core_data_parms_t*)(l_bulk_core_data_ptr->gpe_req.cmd_data);
     static uint32_t L_trace_core_failure = 0;
     static uint32_t L_trace_complete_time = 0;
+    static uint8_t L_empath_error_count[MAX_CORES] = {0};
+    static bool L_log_empath_error = TRUE;
 
     do
     {
@@ -213,13 +218,50 @@ void task_core_data( task_t * i_task )
             {
                 G_empath_error_core_mask &=
                     ~(CORE0_PRESENT_MASK >> (l_bulk_core_data_ptr->current_core));
+                L_empath_error_count[l_bulk_core_data_ptr->current_core] = 0;
             }
             else
             {
                 G_empath_error_core_mask |=
                     (CORE0_PRESENT_MASK >> (l_bulk_core_data_ptr->current_core));
-            }
-        }
+                INCREMENT_ERR_HISTORY(ERRH_EMPATH_FAILURE);
+
+                // increment error count and log error if Idle Power Save is enabled
+                // IPS is the only function that requires EMPATH counters
+                if( (L_empath_error_count[l_bulk_core_data_ptr->current_core] < MAX_EMPATH_ERRORS) &&
+                    (g_amec->slv_ips_freq_request) && (!G_simics_environment) )
+                {
+                    L_empath_error_count[l_bulk_core_data_ptr->current_core]++;
+                    if( (L_log_empath_error) &&
+                        (L_empath_error_count[l_bulk_core_data_ptr->current_core] == MAX_EMPATH_ERRORS) )
+                    {
+                        TRAC_ERR("task_core_data: EMPATH read error core[0x%02X]", l_bulk_core_data_ptr->current_core);
+                        // only log this error once regardless of number of failed cores
+                        L_log_empath_error = FALSE;
+                        /* @
+                         * @errortype
+                         * @moduleid    PROC_TASK_CORE_DATA_MOD
+                         * @reasoncode  INTERNAL_HW_FAILURE
+                         * @userdata1   core
+                         * @userdata2   0
+                         * @userdata4   OCC_NO_EXTENDED_RC
+                         * @devdesc     Failure to read EMPATH counters
+                         */
+                        l_err = createErrl(PROC_TASK_CORE_DATA_MOD,            //modId
+                                           INTERNAL_HW_FAILURE,                //reasoncode
+                                           OCC_NO_EXTENDED_RC,                 //Extended reason code
+                                           ERRL_SEV_INFORMATIONAL,             //Severity
+                                           NULL,                               //Trace Buf
+                                           DEFAULT_TRACE_SIZE,                 //Trace Size
+                                           l_bulk_core_data_ptr->current_core, //userdata1
+                                           0);                                 //userdata2
+
+                        // Commit Error
+                        commitErrl(&l_err);
+                    }
+                }
+            }  // empath not valid
+        }  // if core present and no error
 
         // If the core is not present, then we need to point to the empty G_core_data
         // so that we don't use old/stale data from a leftover G_core_data

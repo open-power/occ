@@ -413,6 +413,13 @@ void amec_slv_proc_voting_box(void)
         l_kvm_throt_reason = OVERCURRENT;
     }
 
+    // Check IPS frequency request sent by Master OCC
+    if( (g_amec->slv_ips_freq_request) && (g_amec->slv_ips_freq_request < l_chip_fmax) )
+    {
+        l_chip_fmax = g_amec->slv_ips_freq_request;
+        l_chip_reason = AMEC_VOTING_REASON_IPS;
+    }
+
     for (k=0; k<MAX_NUM_CORES; k++)
     {
         if( CORE_PRESENT(k) && !CORE_OFFLINE(k) )
@@ -428,16 +435,6 @@ void amec_slv_proc_voting_box(void)
                 {
                     l_core_freq = g_amec->proc[0].core[k].core_perf.dps_freq_request;
                     l_core_reason = AMEC_VOTING_REASON_UTIL;
-                }
-            }
-
-            // Check IPS frequency request sent by Master OCC
-            if(g_amec->slv_ips_freq_request != 0)
-            {
-                if(g_amec->slv_ips_freq_request < l_core_freq)
-                {
-                    l_core_freq = g_amec->slv_ips_freq_request;
-                    l_core_reason = AMEC_VOTING_REASON_IPS;
                 }
             }
 

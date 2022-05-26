@@ -113,16 +113,62 @@ void amec_update_proc_core_sensors(uint8_t i_core)
 
         // just used the previous readings, make sure next update is with new previous readings
         L_prev_updated[i_core] = FALSE;
-    }
 
-    //-------------------------------------------------------
-    // Performance counter - This function should be called
-    // after amec_calc_freq_and_util_sensors().
-    //-------------------------------------------------------
-    if(!CORE_OFFLINE(i_core))
-    {
+        //-------------------------------------------------------
+        // Performance counter - This function should be called
+        // after amec_calc_freq_and_util_sensors().
+        //-------------------------------------------------------
         amec_calc_dps_util_counters(i_core);
     }
+    else if(CORE_EMPATH_ERROR(i_core) || CORE_OFFLINE(i_core))
+    {
+        // clear EMPATH sensors so old utilization will not be used, let good cores drive utilization decisions for IPS
+        sensor_update(AMECSENSOR_ARRAY_PTR(NUTILC0, i_core), 0);
+        sensor_update(AMECSENSOR_ARRAY_PTR(UTILC0, i_core), 0);
+        sensor_update(AMECSENSOR_ARRAY_PTR(IPSC0, i_core), 0);
+        sensor_update(AMECSENSOR_ARRAY_PTR(NOTBZEC0, i_core), 0);
+        sensor_update(AMECSENSOR_ARRAY_PTR(NOTFINC0, i_core), 0);
+        sensor_update(AMECSENSOR_ARRAY_PTR(FREQAC0, i_core), 0);
+
+        // Make updates for rolling average
+        // Determine the time interval for the rolling average calculation
+        l_time_interval = AMEC_DPS_SAMPLING_RATE * AMEC_IPS_AVRG_INTERVAL;
+
+        // Increment sample count
+        if(g_amec->proc[0].core[i_core].sample_count < UINT16_MAX)
+        {
+           g_amec->proc[0].core[i_core].sample_count++;
+        }
+
+        if(g_amec->proc[0].core[i_core].sample_count == l_time_interval)
+        {
+            // Increase resolution of the UTIL accumulator by two decimal places
+            l_temp32 = (uint32_t)AMECSENSOR_ARRAY_PTR(UTILC0,i_core)->accumulator * 100;
+            // Calculate average utilization of this core
+            l_temp32 = l_temp32 / g_amec->proc[0].core[i_core].sample_count;
+            g_amec->proc[0].core[i_core].avg_util = l_temp32;
+
+            // Increase resolution of the FREQA accumulator by two decimal places
+            l_temp32 = (uint32_t)AMECSENSOR_ARRAY_PTR(FREQAC0,i_core)->accumulator * 100;
+            // Calculate average frequency of this core
+            l_temp32 = l_temp32 / g_amec->proc[0].core[i_core].sample_count;
+            g_amec->proc[0].core[i_core].avg_freq = l_temp32;
+        }
+        else if(g_amec->proc[0].core[i_core].sample_count > l_time_interval)
+        {
+            // Calculate average utilization for this core
+            l_temp32 = (uint32_t) g_amec->proc[0].core[i_core].avg_util;
+            l_temp32 = l_temp32 * (l_time_interval-1);
+            l_temp32 = l_temp32 + l_core_util*100;
+            g_amec->proc[0].core[i_core].avg_util = l_temp32 / l_time_interval;
+
+            // Calculate average frequency for this core
+            l_temp32 = (uint32_t) g_amec->proc[0].core[i_core].avg_freq;
+            l_temp32 = l_temp32 * (l_time_interval-1);
+            l_temp32 = l_temp32 + l_core_freq*100;
+            g_amec->proc[0].core[i_core].avg_freq = l_temp32 / l_time_interval;
+        }
+    }  // else if CORE_EMPATH_ERROR OR CORE_OFFLINE
 
     //-------------------------------------------------------
     // Update voltage droop counters
@@ -139,8 +185,6 @@ void amec_update_proc_core_sensors(uint8_t i_core)
         g_amec->proc[0].core[i_core].prev_PC_RAW_CYCLES    = l_core_data_ptr->empath.raw_cycles;
         g_amec->proc[0].core[i_core].prev_PC_RUN_CYCLES    = l_core_data_ptr->empath.run_cycles;
         g_amec->proc[0].core[i_core].prev_PC_COMPLETED     = l_core_data_ptr->empath.complete;
-/*        if(G_allow_trace_flags & ALLOW_EMPATH_TRACE)
-            TRAC_IMP("core[0x%02X] EMPATH Complete 0x%08X", i_core, l_core_data_ptr->empath.complete); */
         g_amec->proc[0].core[i_core].prev_tod_2mhz         = l_core_data_ptr->tod_2mhz;
         g_amec->proc[0].core[i_core].prev_FREQ_SENS_BUSY   = l_core_data_ptr->empath.freq_sens_busy;
         g_amec->proc[0].core[i_core].prev_FREQ_SENS_FINISH = l_core_data_ptr->empath.freq_sens_finish;
@@ -776,12 +820,11 @@ void amec_calc_freq_and_util_sensors(CoreData * i_core_data_ptr, uint8_t i_core)
   }
 
   // Calculate the normalized utilization for this core
-  if(g_amec->proc[0].core[i_core].avg_freq != 0)
+  // First, revert back to the original resolution of the sensors
+  temp32 = g_amec->proc[0].core[i_core].avg_util / 100;
+  temp32a = g_amec->proc[0].core[i_core].avg_freq / 100;
+  if(temp32a != 0) // prevent divide by 0
   {
-      // First, revert back to the original resolution of the sensors
-      temp32 = g_amec->proc[0].core[i_core].avg_util / 100;
-      temp32a = g_amec->proc[0].core[i_core].avg_freq / 100;
-
       // Compute now the normalized utilization as follows:
       // Normalized utilization = (Average_utilization)/(Average_frequency) * Fnom
       // Note: The 100000 constant is to increase the precision of our division
@@ -797,6 +840,10 @@ void amec_calc_freq_and_util_sensors(CoreData * i_core_data_ptr, uint8_t i_core)
       {
           sensor_update(AMECSENSOR_ARRAY_PTR(NUTILC0, i_core), (uint16_t)temp32);
       }
+  }
+  else
+  {
+      sensor_update(AMECSENSOR_ARRAY_PTR(NUTILC0, i_core), 0);
   }
 }
 
