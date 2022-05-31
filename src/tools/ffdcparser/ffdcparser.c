@@ -257,11 +257,12 @@ void dump_ffdc(ffdc_t * data)
         printf("PBA_RBUFVAL5: 0x%08X\n", data->pba_rbufval5);
         printf("PBA_WBUFVAL0: 0x%08X\n", data->pba_wbufval0);
         printf("PBA_WBUFVAL1: 0x%08X\n", data->pba_wbufval1);
+        printf("PBA_SLVRST:   0x%08X\n", data->pba_slvrst);
     }
 
     printf("SSX Timebase: 0x%08X\n", data->ssx_timebase);
     printf("OCC Buildname: %s\n", data->buildname);
-    printf("OCC LFIR: 0x%016lX\n", data->occlfir);
+    printf("OCC LFIR not available\n");
     printf("PBA FIR: 0x%016lX\n", data->pbafir);
     printf("Cores Deconfigured: 0x%08X\n", data->cores_deconf);
     print_thread_data(&data->main, "MAIN");
@@ -500,12 +501,13 @@ int main(int argc, char** argv)
         data.pba_rbufval5 = get_uint32(ffdc_file);
         data.pba_wbufval0 = get_uint32(ffdc_file);
         data.pba_wbufval1 = get_uint32(ffdc_file);
+        data.pba_slvrst = get_uint32(ffdc_file);
     }
 
     data.ssx_timebase = get_uint32(ffdc_file);
     fgets(data.buildname, 16, ffdc_file);
     fgetc(ffdc_file);
-    data.occlfir = get_uint64(ffdc_file);
+    data.occlfir = get_uint64(ffdc_file);  // not really available
     data.pbafir = get_uint64(ffdc_file);
     data.cores_deconf = get_uint32(ffdc_file);
     get_thread_data(ffdc_file, &data.main);

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2021                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2022                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -1431,7 +1431,6 @@ void hmon_routine()
     static uint32_t L_noncritical_phantom_count = 0;
     static bool L_c_phantom_logged = FALSE;
     static bool L_nc_phantom_logged = FALSE;
-    static bool L_phantom_bce_logged = FALSE;
     bool l_log_phantom_error = FALSE;
 
     //use MAIN debug traces
@@ -1459,55 +1458,6 @@ void hmon_routine()
         if(!L_nc_phantom_logged)
         {
             L_nc_phantom_logged = TRUE;
-            l_log_phantom_error = TRUE;
-        }
-    }
-
-    //Check if there is a phantom BCE interrupt
-    if( (!l_log_phantom_error) &&
-        (G_phantom_bce_ffdc.status == PHANTOM_BCE_FFDC) )
-    {
-        // count is kept in the interrupt
-        G_error_history[ERRH_PHANTOM_BCE_INTERRUPT] = (uint8_t)G_phantom_bce_ffdc.count;
-
-        //log a phantom BCE error once
-        if(!L_phantom_bce_logged)
-        {
-            MAIN_TRAC_ERR("hmon_routine: phantom bce occurred! bar0[0x%08X%08X] bar1[0x%08X%08X]",
-                           (uint32_t)(G_phantom_bce_ffdc.pba_bar0>>32),
-                           (uint32_t)G_phantom_bce_ffdc.pba_bar0,
-                           (uint32_t)(G_phantom_bce_ffdc.pba_bar1>>32),
-                           (uint32_t)G_phantom_bce_ffdc.pba_bar1);
-            MAIN_TRAC_ERR(" bar2[0x%08X%08X] bar3[0x%08X%08X]",
-                           (uint32_t)(G_phantom_bce_ffdc.pba_bar2>>32),
-                           (uint32_t)G_phantom_bce_ffdc.pba_bar2,
-                           (uint32_t)(G_phantom_bce_ffdc.pba_bar3>>32),
-                           (uint32_t)G_phantom_bce_ffdc.pba_bar3);
-            MAIN_TRAC_ERR(" barmsk0[0x%08X%08X] barmsk1[0x%08X%08X]",
-                           (uint32_t)(G_phantom_bce_ffdc.pba_barmsk0>>32),
-                           (uint32_t)G_phantom_bce_ffdc.pba_barmsk0,
-                           (uint32_t)(G_phantom_bce_ffdc.pba_barmsk1>>32),
-                           (uint32_t)G_phantom_bce_ffdc.pba_barmsk1);
-            MAIN_TRAC_ERR(" barmsk2[0x%08X%08X] barmsk3[0x%08X%08X]",
-                           (uint32_t)(G_phantom_bce_ffdc.pba_barmsk2>>32),
-                           (uint32_t)G_phantom_bce_ffdc.pba_barmsk2,
-                           (uint32_t)(G_phantom_bce_ffdc.pba_barmsk3>>32),
-                           (uint32_t)G_phantom_bce_ffdc.pba_barmsk3);
-            MAIN_TRAC_ERR(" slvrst[0x%08X%08X]",
-                           (uint32_t)(G_phantom_bce_ffdc.pba_slvrst>>32),
-                           (uint32_t)G_phantom_bce_ffdc.pba_slvrst);
-            MAIN_TRAC_ERR(" slvctl0[0x%08X%08X] slvctl1[0x%08X%08X]",
-                           (uint32_t)(G_phantom_bce_ffdc.pba_slvctl0>>32),
-                           (uint32_t)G_phantom_bce_ffdc.pba_slvctl0,
-                           (uint32_t)(G_phantom_bce_ffdc.pba_slvctl1>>32),
-                           (uint32_t)G_phantom_bce_ffdc.pba_slvctl1);
-            MAIN_TRAC_ERR(" slvctl2[0x%08X%08X] slvctl3[0x%08X%08X]",
-                           (uint32_t)(G_phantom_bce_ffdc.pba_slvctl2>>32),
-                           (uint32_t)G_phantom_bce_ffdc.pba_slvctl2,
-                           (uint32_t)(G_phantom_bce_ffdc.pba_slvctl3>>32),
-                           (uint32_t)G_phantom_bce_ffdc.pba_slvctl3);
-
-            L_phantom_bce_logged = TRUE;
             l_log_phantom_error = TRUE;
         }
     }

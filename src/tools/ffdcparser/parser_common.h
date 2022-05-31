@@ -133,6 +133,7 @@ typedef struct __attribute__((packed,aligned(4))) ffdc
     uint32_t    pba_rbufval5;
     uint32_t    pba_wbufval0;
     uint32_t    pba_wbufval1;
+    uint32_t    pba_slvrst;
     uint32_t    ssx_timebase;
     char        buildname[16];
     uint64_t    occlfir;
