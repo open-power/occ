@@ -213,29 +213,30 @@
 # 464 (x1d0)        4       PBA_RBUFVAL5
 # 468 (x1d4)        4       PBA_WBUFVAL0
 # 472 (x1d8)        4       PBA_WBUFVAL1
-# 476 (x1dc)        4       SSX timebase
-# 480 (x1e0)        16      Build name
-# 496 (x1f0)        8       OCCLFIR
-# 504 (x1f8)        8       PBAFIR
-# 512 (x200)        4       CORES_DECON
+# 476 (x1dC)        4       PBA_SLVRST
+# 480 (x1e0)        4       SSX timebase
+# 484 (x1e4)        16      Build name
+# 500 (x1f4)        8       OCCLFIR -- not available reserved
+# 508 (x1fc)        8       PBAFIR
+# 516 (x204)        4       CORES_DECON
 #                   (64)    Main thread dump
-# 516 (x204)        1        Length of thread dump (64)
-# 517 (x205)        1        Priority
-# 518 (x206)        1        State
-# 519 (x207)        1        Flags
-# 520 (x208)        4        Timer
-# 524 (x20c)        4        Semaphore
-# 528 (x210)        4        SRR0
-# 532 (x214)        4        SRR1
-# 536 (x218)        4        SRR2
-# 540 (x21c)        4        SRR3
-# 544 (x220)        4        Link register
-# 548 (x224)        32       Thread stack trace
+# 520 (x208)        1        Length of thread dump (64)
+# 521 (x209)        1        Priority
+# 522 (x20a)        1        State
+# 523 (x20b)        1        Flags
+# 524 (x20c)        4        Timer
+# 528 (x210)        4        Semaphore
+# 532 (x214)        4        SRR0
+# 536 (x218)        4        SRR1
+# 540 (x21c)        4        SRR2
+# 544 (x220)        4        SRR3
+# 548 (x224)        4        Link register
+# 552 (x228)        32       Thread stack trace
 #
-# 580 (x244)        64      Command thread dump
-# 644 (x284)        64      DCOM thread dump
-# 708 (x2c4)        32      Stack trace
-# 740 (x2e4)        4       xffdcffdc End of buffer marker
+# 584 (x248)        64      Command thread dump
+# 648 (x288)        64      DCOM thread dump
+# 712 (x2c8)        32      Stack trace
+# 744 (x2e8)        4       xffdcffdc End of buffer marker
 # -----------------------------------------------------------------------------
 #
 
@@ -503,7 +504,8 @@ PBAWBUFVAL0:                 .int
     .struct PBAWBUFVAL0 + 4
 PBAWBUFVAL1:                 .int
     .struct PBAWBUFVAL1 + 4
-
+PBASLVRST:                   .int
+    .struct PBASLVRST + 4
 
 FFDC_TIMEBASE:              .int
     .struct FFDC_TIMEBASE + 4
@@ -1150,6 +1152,9 @@ __save_ffdc_regs:
     # Save PBAWBUFVAL1
     _lwzi       %r5, %r5, PBA_WBUFVAL1
     _stwi       %r5, %r3, PBAWBUFVAL1
+    # Save PBASLVRST
+    _lwzi       %r5, %r5, PBA_SLVRST
+    _stwi       %r5, %r3, PBASLVRST
 
     # Save ssx timebase
     _lwzsd      %r5, __ssx_timebase_frequency_mhz
@@ -1162,35 +1167,11 @@ __save_ffdc_regs:
     li          %r5, 16
     bl          memcpy
 
-    # SCOM the OCCLFIR, both words, into the buffer
-    # The _getsom call will destroy r0 and r3-r11, but we restore all gprs at
-    # the end before returning.
-    # Make the scom timeout = __ssx_timebase_frequency_mhz * 10 usecs
-    # Load timebase freq from small data area in r3
-    _lwzsd      %r3, __ssx_timebase_frequency_mhz
-    # Load 10 to r4
-    li          %r4, 10
-    # Load r5 and r6 with high/low order timeout (64 bits), set high to 0 since
-    # we know the timeout will be less than 32 bits in this case, approx. 10 *
-    # 600
-    li          %r5, 0
-    # r6 gets the low 32 bits of the product of r3 and r4
-    mullw       %r6, %r3, %r4
-    # Put scom address in r3
-    #_liwa       %r3, OCC_SCOM_OCCLFIR
-    # Save the FFDC buffer ptr in r4, _getscom saves the scom output at r4
-    #_liwa       %r4, OCCLFIR
-    # Call _getscom (non-panic version with timeout), timeout is 10us
-    #bl          _getscom
+    # No OCCLFIR.  OCCLFIR is SCOM only, no SCOM available
 
-    # SCOM the PBAFIR into the buffer
-    #_lwzsd      %r3, __ssx_timebase_frequency_mhz
-    #li          %r4, 10
-    #li          %r5, 0
-    #mullw       %r6, %r3, %r4
-    #_liwa       %r3, PBA_FIR
-    #_liwa       %r4, PBAFIR
-    #bl          _getscom
+    # Save PBAFIR
+    _lwzi       %r5, %r5, PBA_FIR
+    _stwi       %r5, %r3, PBAFIR
 
     # Save core (de)configuration
     _liw        %r5, OCB_CCSR
