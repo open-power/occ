@@ -68,7 +68,7 @@ typedef enum
     DBUG_GET_AND_CLEAR_AME_SENSOR = 0x0C,  // does DBUG_GET_AME_SENSOR and clears sensor data
     DBUG_DUMP_RAW_AD          = 0x0D,
     DBUG_CLEAR_ERRH           = 0x0E,   // clear all error history counters
-//  free = 0x0F,
+    DBUG_DUMP_SOCKET_PCAP     = 0x0F,
 //  free = 0x10,
     DBUG_WRITE_SENSOR         = 0x11,
 //  free = 0x12,
@@ -179,6 +179,29 @@ typedef struct __attribute__ ((packed))
     cmdh_dbug_apss_data_t   ApssCh[MAX_APSS_ADC_CHANNELS];
     uint8_t                 checksum[2];
 } cmdh_dbug_apss_data_resp_t;
+
+// DBUG_DUMP_SOCKET_PCAP response struct
+typedef struct __attribute__ ((packed))
+{
+    struct   cmdh_fsp_rsp_header;
+    uint16_t vdd_socket_pcap_w;
+    uint16_t vdd_socket_low_w;
+    uint16_t total_socket_pcap_w;
+    uint16_t total_socket_low_w;
+    uint16_t delta_chip_mhz_per_watt_drop;
+    uint16_t delta_chip_mhz_per_watt_raise;
+    uint16_t num_ticks_drop_wait;
+    uint16_t num_ticks_raise_wait;
+    uint16_t current_freq;
+    uint16_t vdd_freq_vote;
+    uint16_t total_freq_vote;
+    uint16_t vdd_curr_power;
+    uint16_t vdd_max_power;
+    uint16_t non_vdd_curr_power;
+    uint16_t non_vdd_max_power;
+    uint8_t  proportional_control;
+    uint8_t  checksum[2];
+} cmdh_dbug_socket_data_resp_t;
 
 // DBUG_DUMP_AME_SENSOR command struct
 typedef struct __attribute__ ((packed))

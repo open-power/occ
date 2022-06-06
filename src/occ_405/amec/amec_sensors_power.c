@@ -283,23 +283,23 @@ bool amec_update_apss_sensors(void)
                 l_bulk_voltage = 12000;
             }
 
-            if (OCC_MASTER == G_occ_role)
+            // Update channel sensors for all channels (except voltage sense and gnd)
+            for (l_idx = 0; l_idx < MAX_APSS_ADC_CHANNELS; l_idx++)
             {
-                // Update channel sensors for all channels (except voltage sense and gnd)
-                for (l_idx = 0; l_idx < MAX_APSS_ADC_CHANNELS; l_idx++)
+                if(l_idx == G_sysConfigData.apss_adc_map.current_12v_stby)
                 {
-                    if(l_idx == G_sysConfigData.apss_adc_map.current_12v_stby)
+                    // Save value of 12V Standby Current (.01A) in a sensor for lab use only
+                    temp32 = ADC_CONVERTED_VALUE(l_idx)/100;  // convert mA to .01A
+                    sensor_update(AMECSENSOR_PTR(CUR12VSTBY), (uint16_t) temp32);
+                }
+                else if((l_idx != G_sysConfigData.apss_adc_map.sense_12v) &&
+                        (l_idx != G_sysConfigData.apss_adc_map.remote_gnd))
+                {
+                    temp32 = ROUND_POWER(ADC_CONVERTED_VALUE(l_idx) * l_bulk_voltage);
+                    sensor_update(AMECSENSOR_PTR(PWRAPSSCH00 + l_idx), (uint16_t) temp32);
+                    if (OCC_MASTER == G_occ_role)
                     {
-                        // Save value of 12V Standby Current (.01A) in a sensor for lab use only
-                        temp32 = ADC_CONVERTED_VALUE(l_idx)/100;  // convert mA to .01A
-                        sensor_update(AMECSENSOR_PTR(CUR12VSTBY), (uint16_t) temp32);
-                    }
-                    else if((l_idx != G_sysConfigData.apss_adc_map.sense_12v) &&
-                            (l_idx != G_sysConfigData.apss_adc_map.remote_gnd))
-                    {
-                        temp32 = ROUND_POWER(ADC_CONVERTED_VALUE(l_idx) * l_bulk_voltage);
-                        sensor_update(AMECSENSOR_PTR(PWRAPSSCH00 + l_idx), (uint16_t) temp32);
-                        // extra debug traces if the value seems too high
+                        // extra debug traces if the value seems too high, trace from master only
                         if( (l_idx != G_sysConfigData.apss_adc_map.total_current_12v) &&
                             (temp32 >= DEBUG_HIGH_READ) && (L_trace_high_channel_reading[l_idx] < NUM_DEBUG_TRACE) )
                         {
@@ -315,7 +315,9 @@ bool amec_update_apss_sensors(void)
                         }
                     }
                 }
-
+            }
+            if (OCC_MASTER == G_occ_role)
+            {
                 amec_update_apss_gpio();
             }
 

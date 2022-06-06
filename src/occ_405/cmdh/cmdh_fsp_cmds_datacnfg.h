@@ -52,6 +52,7 @@ typedef enum
    DATA_FORMAT_THRM_THRESHOLDS       = 0x13,
    DATA_FORMAT_AVSBUS_CONFIG         = 0x14,
    DATA_FORMAT_GPU                   = 0x15,
+   DATA_FORMAT_SOCKET_PCAP           = 0x17,
 } eConfigDataFormatVersion;
 
 // Enum of the various Cnfg Data Masks that are used
@@ -68,6 +69,7 @@ typedef enum
    DATA_MASK_MEM_CFG               = 0x00000200,
    DATA_MASK_MEM_THROT             = 0x00000400,
    DATA_MASK_GPU                   = 0x00000800,
+   DATA_MASK_SOCKET_PCAP           = 0x00001000,
 } eConfigDataPriorityMask;
 
 typedef enum
@@ -238,6 +240,28 @@ typedef struct __attribute__ ((packed))
     uint8_t              version;
     cmdh_pcap_config_data_t   pcap_config;
 }cmdh_pcap_config_t;
+
+// Used by TMGT to send OCC the Socket Power config data.
+typedef struct __attribute__ ((packed))
+{
+    uint16_t vdd_socket_pcap_w; // power cap for socket Vdd power in 1W for Vdd socket power to be above before freq is lowered
+    uint16_t vdd_socket_low_w;  // Lower threshold in 1W for Vdd socket power to fall below before frequency is raised
+    uint16_t total_socket_pcap_w; // power cap for total socket power in 1W for total socket power to be above before freq is lowered
+    uint16_t total_socket_low_w;  // Lower threshold in 1W for total socket power to fall below before frequency is raised
+    uint16_t delta_chip_mhz_per_watt_drop;  // Number of MHz to decrease freq for every watt over pcap
+    uint16_t delta_chip_mhz_per_watt_raise; // Number of MHz to increase freq for every watt under pcap
+    uint16_t num_ticks_drop_wait; // number of ticks to wait before decreasing freq again when over pcap to allow power reading
+    uint16_t num_ticks_raise_wait; // number of ticks to wait before increasing freq again when under pcap to allow power reading
+    uint8_t  proportional_control; // 0=non-proportional control, raise/drop will be 1W step size.  Non-zero proportional control
+} cmdh_socket_pwr_config_data_t;
+
+typedef struct __attribute__ ((packed))
+{
+    struct cmdh_fsp_cmd_header;
+    uint8_t              format;
+    uint8_t              version;
+    cmdh_socket_pwr_config_data_t   socket_pwr_config;
+}cmdh_socket_pwr_config_t;
 
 typedef struct __attribute__ ((packed))
 {

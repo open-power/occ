@@ -450,6 +450,19 @@ typedef struct
   mem_throt_config_data_v40_t mem_throt_limits[MAX_NUM_MEM_CONTROLLERS];
 
   // --------------------------------------
+  // Socket power capping Information
+  // --------------------------------------
+  uint16_t vdd_socket_pcap_w;
+  uint16_t vdd_socket_low_w;
+  uint16_t total_socket_pcap_w;
+  uint16_t total_socket_low_w;
+  uint16_t delta_chip_mhz_per_watt_drop;
+  uint16_t delta_chip_mhz_per_watt_raise;
+  uint16_t num_ticks_drop_wait;
+  uint16_t num_ticks_raise_wait;
+  uint8_t  socket_pcap_proportional_control;
+
+  // --------------------------------------
   // GPU Information for error callout and GPU power capping
   // --------------------------------------
   uint32_t gpu_sensor_ids[MAX_NUM_GPU_PER_DOMAIN];

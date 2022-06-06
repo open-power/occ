@@ -325,6 +325,14 @@ typedef struct
   //Set by amec_slv_check_apss_fail
   uint16_t apss_pmax_clip_freq;
 
+  //Maximum frequency allowed on this chip by Vdd socket power capping
+  //Set by amec_socket_pcap_calc()
+  uint16_t socket_vdd_pcap_clip_freq;
+
+  //Maximum frequency allowed on this chip by total socket power capping
+  //Set by amec_socket_pcap_calc()
+  uint16_t socket_total_pcap_clip_freq;
+
 } amec_proc_pwr_votes_t;
 
 //-------------------------------------------------------------

@@ -33,7 +33,7 @@ enum occCmdhModuleId
     DATA_STORE_GENERIC_DATA             =  CMDH_COMP_ID | 0x00,
     DATA_STORE_FREQ_DATA                =  CMDH_COMP_ID | 0x01,
     DATA_STORE_PCAP_DATA                =  CMDH_COMP_ID | 0x02,
-    // 0x03 free
+    DATA_STORE_SOCKET_DATA              =  CMDH_COMP_ID | 0x03,
     CMDH_GENERIC_CMD_FAILURE            =  CMDH_COMP_ID | 0x04,
     DATA_STORE_SYS_DATA                 =  CMDH_COMP_ID | 0x05,
     DATA_STORE_APSS_DATA                =  CMDH_COMP_ID | 0x06,

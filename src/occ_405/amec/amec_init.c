@@ -568,6 +568,8 @@ void amec_init_gamec_struct(void)
   //Initialize processor power votes
   g_amec->proc[0].pwr_votes.apss_pmax_clip_freq = 0xFFFF;
   g_amec->proc[0].pwr_votes.ppb_fmax = 0xFFFF;
+  g_amec->proc[0].pwr_votes.socket_vdd_pcap_clip_freq = 0xFFFF;
+  g_amec->proc[0].pwr_votes.socket_total_pcap_clip_freq = 0xFFFF;
 
   //Initialize stream buffer recording parameters
   g_amec->recordflag=0;      // Never enable recording until requested via Amester API call

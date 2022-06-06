@@ -363,6 +363,36 @@ void amec_slv_proc_voting_box(void)
         }
     }
 
+    // Vdd socket power capping
+    if(g_amec->proc[0].pwr_votes.socket_vdd_pcap_clip_freq < l_chip_fmax)
+    {
+        l_chip_fmax = g_amec->proc[0].pwr_votes.socket_vdd_pcap_clip_freq;
+        l_chip_reason = AMEC_VOTING_REASON_SOCKET_VDD_CAP;
+        if(l_report_throttle_freq <= l_chip_fmax)
+        {
+            l_kvm_throt_reason = PCAP_EXCEED_REPORT;
+        }
+        else
+        {
+            l_kvm_throt_reason = POWERCAP;
+        }
+    }
+
+    // Total socket power capping
+    if(g_amec->proc[0].pwr_votes.socket_total_pcap_clip_freq < l_chip_fmax)
+    {
+        l_chip_fmax = g_amec->proc[0].pwr_votes.socket_total_pcap_clip_freq;
+        l_chip_reason = AMEC_VOTING_REASON_TOTAL_SOCKET_CAP;
+        if(l_report_throttle_freq <= l_chip_fmax)
+        {
+            l_kvm_throt_reason = PCAP_EXCEED_REPORT;
+        }
+        else
+        {
+            l_kvm_throt_reason = POWERCAP;
+        }
+    }
+
     // Pmax_clip frequency request if there is an APSS failure
     if(g_amec->proc[0].pwr_votes.apss_pmax_clip_freq < l_chip_fmax)
     {
@@ -619,6 +649,34 @@ void amec_slv_proc_voting_box(void)
                 {
                    l_sensor = getSensorByGsid(TEMPVDD);
                    TRAC_ERR("Low frequency due to Vdd VRM OT current temp[%d] max temp[%d]",
+                             l_sensor->sample, l_sensor->sample_max);
+                }
+                else if(l_current_reason == AMEC_VOTING_REASON_SOCKET_VDD_CAP)
+                {
+                   if( (G_pbax_id.chip_id == 0) || (G_pbax_id.chip_id == 1) )
+                       l_sensor = getSensorByGsid(PWRAPSSCH02);
+                   else
+                       l_sensor = getSensorByGsid(PWRAPSSCH03);
+
+                   TRAC_ERR("Low frequency due to socket Vdd Pcap[%d] Current Vdd power[%d] max Vdd power[%d]",
+                             G_sysConfigData.vdd_socket_pcap_w, l_sensor->sample, l_sensor->sample_max);
+                }
+                else if(l_current_reason == AMEC_VOTING_REASON_TOTAL_SOCKET_CAP)
+                {
+                   if( (G_pbax_id.chip_id == 0) || (G_pbax_id.chip_id == 1) )
+                       l_sensor = getSensorByGsid(PWRAPSSCH02);
+                   else
+                       l_sensor = getSensorByGsid(PWRAPSSCH03);
+
+                   TRAC_ERR("Low frequency due to total socket Pcap[%d] Current Vdd power[%d] max Vdd power[%d]",
+                             G_sysConfigData.total_socket_pcap_w, l_sensor->sample, l_sensor->sample_max);
+
+                   if( (G_pbax_id.chip_id == 0) || (G_pbax_id.chip_id == 1) )
+                       l_sensor = getSensorByGsid(PWRAPSSCH04);
+                   else
+                       l_sensor = getSensorByGsid(PWRAPSSCH05);
+
+                   TRAC_ERR("Non Vdd socket power[%d] max[%d]",
                              l_sensor->sample, l_sensor->sample_max);
                 }
             }  // if OCC reason not power cap
