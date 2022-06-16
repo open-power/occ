@@ -462,6 +462,7 @@ void amec_health_check_dimm_timeout()
                                l_redundancy_lost = TRUE;
                                // since there is another sensor mark that this DIMM sensor is no longer enabled
                                G_dimm_enabled_sensors.bytes[l_membuf] &= ( ~(DIMM_SENSOR0 >> l_dimm) );
+                               G_dimm_temp_expired_bitmap.bytes[l_membuf] &= ( ~(DIMM_SENSOR0 >> l_dimm) );
                            }
                        }
                     }
