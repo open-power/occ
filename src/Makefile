@@ -5,7 +5,7 @@
 #
 # OpenPOWER OnChipController Project
 #
-# Contributors Listed Below - COPYRIGHT 2014,2021
+# Contributors Listed Below - COPYRIGHT 2014,2022
 # [+] International Business Machines Corp.
 #
 #
@@ -59,6 +59,10 @@ endif
 
 ifndef OCCUTIL_DIR
 export OCCUTIL_DIR = $(abspath tools/occutil)
+endif
+
+ifndef EBMCTOOLS_DIR
+export EBMCTOOLS_DIR = $(abspath tools/parser/ebmc)
 endif
 
 ifndef PK_SRCDIR
@@ -132,6 +136,9 @@ wofparser: $(TOOLS_OBJDIR) $(PARSER_DIR)/wofparser.c  $(PARSER_DIR)/parser_commo
 
 occutil: $(TOOLS_OBJDIR)/occutil
 	(cd $(OCCUTIL_DIR) && make)
+
+b2a00.py:
+	(cd $(EBMCTOOLS_DIR) && ./genPelSrcParser.pl)
 
 $(TOOLS_OBJDIR):
 	mkdir -p $(TOOLS_OBJDIR)/
