@@ -1388,6 +1388,7 @@ void occ_ipc_setup()
     {
         // Log single error for all error cases, just look at trace to see where it failed.
         /* @
+         * @errortype
          * @moduleid   OCC_IPC_SETUP
          * @reasonCode SSX_GENERIC_FAILURE
          * @severity   ERRL_SEV_UNRECOVERABLE

@@ -342,7 +342,6 @@ if ($DEBUG)
 my %rcModValuesUsed;
 my %rcModValuesLineNos;
 my %srcList;
-my %displayDataEntries;
 my %PYdisplayDataEntries;
 
 foreach my $file (@filesToParse)
@@ -359,6 +358,8 @@ foreach my $file (@filesToParse)
     #     * @moduleid       I2C_PERFORM_OP
     #     * @userdata1      i_opType
     #     * @userdata2      addr
+    #     * @userdata3      data
+    #     * @userdata4      ERC_GENERIC_ERROR
     #     * @devdesc        Invalid Operation type.
     #     * @custdec        Firmware Error
     #     */
@@ -611,7 +612,7 @@ foreach my $file (@filesToParse)
             my $shortFile = substr($file, length($base)+1);
             if (exists($rcModValuesUsed{$rcModValue}))
             {
-                print ("$0: WARNING: duplicate moduleid/reasoncode tag ($rcModValue) in\n");
+                print ("$0: ERROR: duplicate moduleid/reasoncode tag ($rcModValue) in\n");
                 my $i;
                 for $i ( 0 .. $#{ $rcModValuesLineNos{$rcModValue} } )
                 {
@@ -619,22 +620,11 @@ foreach my $file (@filesToParse)
                 }
                 print "    $shortFile\:$errorTagLineNo\n";
                 print ("$0:   moduleid is '$modId', reasoncode is '$rc'\n");
-                #exit(1);
+                exit(1);
             }
 
             $rcModValuesUsed{$rcModValue} = 1;
             push(@{ $rcModValuesLineNos{$rcModValue} }, $shortFile.":".$errorTagLineNo);
-
-            # Create the data entry code for this error
-            my $dataEntryCode = "    {\n"
-                              . "     0x$modIdValue,   // Module Id\n"
-                              . "     0x$rcValue,  // ReasonCode\n"
-                              . "     \"$desc\",\n"
-                              . "     \"$modId\",\n"
-                              . "     \"$rc\",\n"
-                              . "     \"$userDataTextOnly[0]\",\n"
-                              . "     \"$userDataTextOnly[1]\"\n"
-                              . "    },\n\n";
 
             # Create the Python version of the data entry code for this error
             my $pythonDataEntryCode = "      \"$rcModValue\": { \"devdesc\": \"$desc\",\n"
@@ -662,10 +652,8 @@ foreach my $file (@filesToParse)
             my $compValue = $rcValue;
             $compValue =~ s/..$//;
 
-            # Add the data entry code to displayDataEntries
-            $displayDataEntries{$modIdValue}{$rcValue} = $dataEntryCode;
             # Add the data entry code to PYdisplayDataEntries
-            $PYdisplayDataEntries{$modIdValue}{$rcValue} = $pythonDataEntryCode;
+            $PYdisplayDataEntries{$rcModValue} = $pythonDataEntryCode;
         }
     }
 
@@ -750,10 +738,7 @@ print PYFILE "\"\"\"\n\n";
 print PYFILE "srcInfo = {\n";
 foreach my $modID (sort hexToDecCmp keys(%PYdisplayDataEntries))
 {
-    foreach my $rc (sort hexToDecCmp keys(%{$PYdisplayDataEntries{$modID}}))
-    {
-        print PYFILE $PYdisplayDataEntries{$modID}{$rc};
-    }
+    print PYFILE $PYdisplayDataEntries{$modID};
 }
 print PYFILE "          }\n\n";
 

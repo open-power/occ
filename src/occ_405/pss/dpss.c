@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2022                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -134,6 +134,7 @@ errlHndl_t dpss_oversubscription_irq_initialize()
         TRAC_ERR("%s: Failed IRQ setup.", __FUNCTION__);
 
         /*@
+         * @errortype
          * @moduleid   PSS_MID_DPSS_OVS_IRQ_INIT
          * @reasonCode SSX_GENERIC_FAILURE
          * @severity   ERRL_SEV_PREDICTIVE
@@ -161,6 +162,7 @@ errlHndl_t dpss_oversubscription_irq_initialize()
             TRAC_ERR("%s: Failed to set the IRQ handler.", __FUNCTION__);
 
             /*@
+             * @errortype
              * @moduleid   PSS_MID_DPSS_OVS_IRQ_INIT
              * @reasonCode SSX_GENERIC_FAILURE
              * @severity   ERRL_SEV_PREDICTIVE
