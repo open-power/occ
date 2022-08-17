@@ -136,7 +136,7 @@ errlHndl_t dpss_oversubscription_irq_initialize()
         /*@
          * @errortype
          * @moduleid   PSS_MID_DPSS_OVS_IRQ_INIT
-         * @reasonCode SSX_GENERIC_FAILURE
+         * @reasoncode SSX_GENERIC_FAILURE
          * @severity   ERRL_SEV_PREDICTIVE
          * @userdata1  ssx_irq_setup return code
          * @userdata4  ERC_SSX_IRQ_SETUP_FAILURE
@@ -164,7 +164,7 @@ errlHndl_t dpss_oversubscription_irq_initialize()
             /*@
              * @errortype
              * @moduleid   PSS_MID_DPSS_OVS_IRQ_INIT
-             * @reasonCode SSX_GENERIC_FAILURE
+             * @reasoncode SSX_GENERIC_FAILURE
              * @severity   ERRL_SEV_PREDICTIVE
              * @userdata1  ssx_irq_handler_set return code
              * @userdata4  ERC_SSX_IRQ_HANDLER_SET_FAILURE

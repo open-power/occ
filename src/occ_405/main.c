@@ -1390,7 +1390,7 @@ void occ_ipc_setup()
         /* @
          * @errortype
          * @moduleid   OCC_IPC_SETUP
-         * @reasonCode SSX_GENERIC_FAILURE
+         * @reasoncode SSX_GENERIC_FAILURE
          * @severity   ERRL_SEV_UNRECOVERABLE
          * @userdata1  IPC return code
          * @userdata4  OCC_NO_EXTENDED_RC
