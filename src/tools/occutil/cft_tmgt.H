@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2020,2021                        */
+/* Contributors Listed Below - COPYRIGHT 2020,2022                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -32,6 +32,8 @@
 
 #include "cft_utils.H"
 
+// Flag when true will force commands to be sent via BMC (instead of HTMGT)
+extern bool G_cmdViaBmc;
 
 enum htmgt_command
 {

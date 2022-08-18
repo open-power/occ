@@ -32,7 +32,7 @@
 #include "cft_utils.H"
 #include <cmtReturnCodes.H>
 
-#define DEFAULT_SBE_TIMEOUT 30 // seconds
+#define DEFAULT_SBE_TIMEOUT 300 // seconds
 
 unsigned int G_verbose = 0;
 unsigned int G_sbe_timeout = DEFAULT_SBE_TIMEOUT;
@@ -271,11 +271,27 @@ bool update_sbe_fifo(ecmdChipTarget &i_target, const char *new_value)
 }
 
 
-uint32_t cmtOCCSendReceive(ecmdChipTarget &i_target,
-                           ecmdDataBuffer &i_data,
-                           uint8_t       *&o_responseData,
-                           uint32_t       &o_responseSize,
-                           const uint32_t  i_timeout)
+// The SBE communication with Hostboot is not really a command/response interface:
+//   1. sbe puts data into memory
+//   2. sbe (or maybe cft) hits hw reg to cause an interrupt
+//   3. cft starts polling for command complete
+//   4. phyp sees interrupt and calls hbrt
+//   5. hbrt sets cfam bits to indicate command in progress
+//   6. hbrt reads memory, does stuff, writes memory
+//   7. hbrt sets cfam bits to indicate command complete
+//   8. cft finishes and gives data back to caller
+// Hostboot can hold off the request for an indeterminate time while handling other
+//   tasks or commands.
+// If SBE puts another command in memory before HBRT finishes the prior command,
+//   Hostboot will notice that the buffer changed and flag an error: BC8A2837
+//   indicating that the response buffer changed
+// This design implies that the user should not implment a timeout/retry, because
+//   that can trigger errors once Hostboot finishes processing other operations.
+uint32_t sbeWriteToHostboot(ecmdChipTarget &i_target,
+                            ecmdDataBuffer &i_data,
+                            uint8_t       *&o_responseData,
+                            uint32_t       &o_responseSize,
+                            const uint32_t  i_timeout)
 {
     uint32_t l_rc = CMT_SUCCESS;
 
@@ -292,34 +308,34 @@ uint32_t cmtOCCSendReceive(ecmdChipTarget &i_target,
         // Clear complete bit in CFAM reg (if it was set)
         ecmdDataBuffer l_regData;
         if (G_verbose >= 2)
-            printf("cmtOCCSendReceive: Checking CFAM reg for complete bit - getCfamRegister(0x%04X)\n",
+            printf("sbeWriteToHostboot: Checking CFAM reg for complete bit - getCfamRegister(0x%04X)\n",
                    CFAM_REGISTER_ADDRESS);
         l_rc = getCfamRegister(i_target,CFAM_REGISTER_ADDRESS,l_regData);
         if(l_rc)
         {
-            cmtOutputError("ERROR: cmtOCCSendReceive: getCfamRegister() failed. RC=0x%08X\n", l_rc);
+            cmtOutputError("ERROR: sbeWriteToHostboot: getCfamRegister() failed. RC=0x%08X\n", l_rc);
             break;
         }
         if (l_regData.isBitSet(CMT_HBRT_CMD_COMPLETE_BIT))
         {
             l_rc = l_regData.clearBit(CMT_HBRT_CMD_COMPLETE_BIT);
             if (l_rc)
-                printf("ERROR: cmtOCCSendReceive: clearing bit %d in ecmdDataBuffer failed with rc=0x%08X\n",
+                printf("ERROR: sbeWriteToHostboot: clearing bit %d in ecmdDataBuffer failed with rc=0x%08X\n",
                        CMT_HBRT_CMD_COMPLETE_BIT, l_rc);
 
             if (G_verbose >= 2)
-                printf("cmtOCCSendReceive: Clearing complete bit in CFAM reg (putCfamRegister)\n");
+                printf("sbeWriteToHostboot: Clearing complete bit in CFAM reg (putCfamRegister)\n");
             l_rc = putCfamRegister(i_target, CFAM_REGISTER_ADDRESS, l_regData);
             if (l_rc)
             {
-                printf("ERROR: cmtOCCSendReceive: putCfamRegister failed to clear complete bit rc=0x%08X\n", l_rc);
+                printf("ERROR: sbeWriteToHostboot: putCfamRegister failed to clear complete bit rc=0x%08X\n", l_rc);
                 break;
             }
         }
 
         if (G_verbose >= 2)
         {
-            printf("cmtOCCSendReceive: calling putMemPba(0x%08X)\n", (unsigned int)HOST_PASS_THROUGH_MEM_ADDRESS);
+            printf("sbeWriteToHostboot: calling putMemPba(0x%08X)\n", (unsigned int)HOST_PASS_THROUGH_MEM_ADDRESS);
             uint8_t l_buffer[l_bytes];
             i_data.memCopyOut(l_buffer, l_bytes);
             dumpHex(l_buffer, l_bytes);
@@ -342,13 +358,17 @@ uint32_t cmtOCCSendReceive(ecmdChipTarget &i_target,
             l_polling_interval = i_timeout;
         }
         uint32_t l_attempt = 0;
+        bool tracedWaiting = false;
         if (G_verbose || (G_sbe_timeout != DEFAULT_SBE_TIMEOUT))
-            printf("cmtOCCSendReceive: Waiting for command complete (timeout=%d sec, %d sec between CFAM queries)\n",
-                   l_timeout, l_polling_interval);
-        do {
+        {
+            printf("sbeWriteToHostboot: Waiting for command complete (timeout=%d sec, %d sec between CFAM queries)\n",
+                   i_timeout, l_polling_interval);
+            tracedWaiting = true;
+        }
+        do { // Loop on the CFAM register to know when hostboot has completed the command or failed
             sleep(l_polling_interval);
             if (G_verbose >= 3)
-                printf("cmtOCCSendReceive: calling getCfamRegister(0x%04X) (%d attempts remaining)\n",
+                printf("sbeWriteToHostboot: calling getCfamRegister(0x%04X) (%d attempts remaining)\n",
                        CFAM_REGISTER_ADDRESS, l_timeout-l_attempt);
             l_rc = getCfamRegister(i_target,CFAM_REGISTER_ADDRESS,l_regData);
             if(l_rc) {
@@ -356,6 +376,16 @@ uint32_t cmtOCCSendReceive(ecmdChipTarget &i_target,
                 break;
             }
             l_attempt++;
+
+            if (!tracedWaiting)
+            {
+                if ((l_attempt*l_polling_interval >= 30))
+                {
+                    printf("sbeWriteToHostboot: SBE request still not completed after %d sec (timeout is %d sec)\n",
+                           l_attempt * l_polling_interval, i_timeout);
+                    tracedWaiting = true;
+                }
+            }
         } while ((l_attempt < l_timeout) && (!l_regData.isBitSet(CMT_HBRT_CMD_COMPLETE_BIT)));
 
 
@@ -364,20 +394,20 @@ uint32_t cmtOCCSendReceive(ecmdChipTarget &i_target,
         }
 
         if ( (l_attempt == l_timeout) && (!l_regData.isBitSet(CMT_HBRT_CMD_COMPLETE_BIT)) ) {
-            cmtOutputError("Host pass through commmand has timed out! (%d sec)\n", i_timeout);
+            cmtOutputError("sbeWriteToHostboot: Host pass through commmand has timed out! (%d sec)\n", i_timeout);
             l_rc = CMT_HOST_PASSTHROUGH_TIMEOUT;
             break;
         }
         else if ((G_verbose >= 2) || (l_attempt*l_polling_interval > 10))
         {
-            printf("cmtOCCSendReceive: request completed in %d sec\n",
+            printf("sbeWriteToHostboot: request completed in %d sec\n",
                    l_attempt * l_polling_interval);
         }
 
         ecmdDataBuffer l_header;
         //Reading 128 bytes to get data size from HBRT header
         if (G_verbose >= 2)
-            printf("cmtOCCSendReceive: calling getMemPba(0x%08X, %d)\n",
+            printf("sbeWriteToHostboot: calling getMemPba(0x%08X, %d)\n",
                    (unsigned int)HOST_PASS_THROUGH_MEM_ADDRESS, DATA_128_BYTE_ALLIGN);
         l_rc = getMemPba(i_target, HOST_PASS_THROUGH_MEM_ADDRESS, DATA_128_BYTE_ALLIGN, l_header,(PBA_MODE_LCO|PBA_OPTION_PASSTHROUGH));
         if(l_rc) {
@@ -412,7 +442,7 @@ uint32_t cmtOCCSendReceive(ecmdChipTarget &i_target,
             uint32_t l_remainingRespSize = l_responseSize - DATA_128_BYTE_ALLIGN;
             l_bytes = ((l_remainingRespSize)%DATA_128_BYTE_ALLIGN)? (l_remainingRespSize-(l_remainingRespSize%DATA_128_BYTE_ALLIGN)+DATA_128_BYTE_ALLIGN) : l_remainingRespSize;
             if (G_verbose >= 2)
-                printf("cmtOCCSendReceive: calling getMemPba(0x%08X, %d bytes)\n",
+                printf("sbeWriteToHostboot: calling getMemPba(0x%08X, %d bytes)\n",
                        (unsigned int)HOST_PASS_THROUGH_MEM_ADDRESS_128, l_bytes);
             l_rc = getMemPba(i_target, HOST_PASS_THROUGH_MEM_ADDRESS_128, l_bytes, l_tempData,(PBA_MODE_LCO|PBA_OPTION_PASSTHROUGH));
             if(l_rc) {
@@ -660,7 +690,7 @@ uint32_t send_bmc_command(const char *i_cmd, std::string& o_results)
                 if (G_verbose)
                 {
                     printf("send_bmc_command response: %s\n", l_output.c_str());
-                fflush(stdout);
+                    fflush(stdout);
                 }
                 o_results = l_output;
             }
@@ -680,5 +710,63 @@ uint32_t send_bmc_command(const char *i_cmd, std::string& o_results)
     return l_rc;
 
 } // send_bmc_command()
+
+
+// Convert BMC byte array string to uint8_t hex buffer and return length
+// hexBuffer will be allocated by function and must be freed by caller.
+uint16_t bmc_to_array(const std::string& strBuffer, uint8_t*& hexBuffer)
+{
+    unsigned int hexBufferLength = 0;
+    hexBuffer = nullptr;
+
+    if (strBuffer.compare(0, 3, "ai ") != 0)
+    {
+        cmtOutputError("bmc_to_array: Unexpected BMC buffer data: %.8s\n", strBuffer.c_str());
+        return 0;
+    }
+
+    const char* c = strBuffer.data();
+    c += 3; // skip "ai "
+
+    // Get the array length (first data byte)
+    sscanf(c, "%d", &hexBufferLength);
+    while(c[0] != ' ') c++;
+    c++;
+
+    if (hexBufferLength > 0)
+    {
+        hexBuffer = (uint8_t*)malloc(hexBufferLength);
+        uint16_t offset = 0;
+        while (c < strBuffer.data()+strBuffer.size())
+        {
+            unsigned int value;
+            sscanf(c, "%ud", &value);
+            hexBuffer[offset++] = value & 0xFF;
+            if (value > 0xFF) cmtOutputError("bmc_to_array: INVALID BYTE: %d at offset %d\n", value, offset);
+            while(c[0] != ' ') c++;
+            c++;
+            if (offset == hexBufferLength) break;
+        }
+
+        if (offset < hexBufferLength)
+        {
+            cmtOutputError("bmc_to_array: Data truncated to %d bytes (instead of %d)\n", offset, hexBufferLength);
+            hexBufferLength = offset;
+        }
+    }
+
+    return hexBufferLength;
+}
+
+
+// Return timestamp string HH:MM:SS
+char *get_timestamp()
+{
+    static char timestamp[32];
+    const time_t timer = time(NULL);
+    struct tm *tm_info = localtime(&timer);
+    strftime(timestamp, sizeof(timestamp), "%H:%M:%S", tm_info);
+    return timestamp;
+}
 
 

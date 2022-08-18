@@ -1,7 +1,7 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/tools/occutil/cft_tmgt.C $                                */
+/* $Source: src/tools/cft/cftocctool.C $                                  */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
@@ -33,6 +33,7 @@
 #include "cft_tmgt.H"
 #include <unistd.h> // sleep
 
+bool G_cmdViaBmc = true;
 
 const uint16_t  HTMGT_CMD_CLASS   = 0x00E0;
 const uint16_t  HTMGT_CMD_CODE    = 0x0001;
@@ -128,6 +129,7 @@ uint32_t send_hbrt_command(const htmgt_command i_cmd,
                            const uint32_t i_timeout = G_sbe_timeout);
 
 void parse_htmgt_response(const uint8_t i_cmd,
+                          const uint8_t* i_cmd_data,
                           const uint8_t *i_rsp_data,
                           const uint16_t i_rsp_len);
 
@@ -220,11 +222,11 @@ uint32_t occ_cmd_via_htmgt(const uint8_t i_occNum,
         }
 
         if (G_verbose)
-            printf("occ_cmd_via_htmgt: calling cmtOCCSendReceive()\n");
-        l_rc = cmtOCCSendReceive(l_target,l_data,l_responseData,l_responseSize);
+            printf("occ_cmd_via_htmgt: calling sbeWriteToHostboot()\n");
+        l_rc = sbeWriteToHostboot(l_target,l_data,l_responseData,l_responseSize);
         if (l_rc)
         {
-            cmtOutputError("%s : cmtOCCSendReceive() failed. RC=0x%08X\n", __FUNCTION__, l_rc);
+            cmtOutputError("%s : sbeWriteToHostboot() failed. RC=0x%08X\n", __FUNCTION__, l_rc);
             parseTmgtError(l_rc);
             l_rc = CMT_SEND_RECEIVE_FAILURE;
             break;
@@ -365,7 +367,7 @@ uint32_t send_hbrt_command(const htmgt_command i_cmd,
     {
         if ((l_rsp_len > 0) && (l_rsp_data != NULL))
         {
-            parse_htmgt_response(i_cmd, l_rsp_data, l_rsp_len);
+            parse_htmgt_response(i_cmd, i_cmd_data, l_rsp_data, l_rsp_len);
             free(l_rsp_data);
         }
     }
@@ -445,11 +447,11 @@ uint32_t send_hbrt_command(const htmgt_command i_cmd,
         }
 
         if (G_verbose)
-            printf("send_hbrt_command: calling cmtOCCSendReceive()\n");
-        l_rc = cmtOCCSendReceive(l_target, l_data, i_rsp_data, i_rsp_len, i_timeout);
+            printf("send_hbrt_command: calling sbeWriteToHostboot()\n");
+        l_rc = sbeWriteToHostboot(l_target, l_data, i_rsp_data, i_rsp_len, i_timeout);
         if (l_rc)
         {
-            cmtOutputError("%s : cmtOCCSendReceive() failed. RC=0x%08X\n", __FUNCTION__, l_rc);
+            cmtOutputError("%s : sbeWriteToHostboot() failed. RC=0x%08X\n", __FUNCTION__, l_rc);
             parseTmgtError(l_rc);
             l_rc = CMT_SEND_RECEIVE_FAILURE;
             break;
@@ -465,6 +467,7 @@ uint32_t send_hbrt_command(const htmgt_command i_cmd,
 
 
 void parse_htmgt_response(const uint8_t i_cmd,
+                          const uint8_t* i_cmd_data,
                           const uint8_t *i_rsp_data,
                           const uint16_t i_rsp_len)
 {
@@ -482,6 +485,10 @@ void parse_htmgt_response(const uint8_t i_cmd,
 
             case HTMGT_QUERY_MODE_FUNC:
                 l_rc = parse_query_mode_func(i_rsp_data, i_rsp_len);
+                break;
+
+            case HTMGT_SEND_OCC_CMD:
+                l_rc = parse_occ_response(i_cmd_data[1], i_cmd_data, i_rsp_data, i_rsp_len);
                 break;
 
             default:
@@ -512,8 +519,8 @@ int parse_tmgt_info(const uint8_t *i_rsp_data, const uint16_t i_rsp_len)
         else
         {
             printf("HTMGT State: %s (0x%02X), HTMGT Mode: %s (0x%02X), %d OCC (master:OCC%d), resetCount:%d,",
-               getStateString(data->state), data->state, getModeString(data->mode), data->mode,
-               data->num_occs, data->master, data->system_reset_count);
+                   getStateString(data->state), data->state, getModeString(data->mode), data->mode,
+                   data->num_occs, data->master, data->system_reset_count);
         }
         if (data->safe_mode)
         {
@@ -615,7 +622,7 @@ uint32_t send_tmgt_pmcomplex_reset(const bool i_clear_reset_count)
     {
         if (i_clear_reset_count)
         {
-            printf("Requesting clear of reset counts\n");
+            printf("Requesting clear of OCC reset counts\n");
             l_rc = send_fsp_command("tmgtclient --reset_occ_clear 0");
         }
         else
@@ -625,7 +632,7 @@ uint32_t send_tmgt_pmcomplex_reset(const bool i_clear_reset_count)
         }
         if (l_rc == CMT_SUCCESS)
         {
-            l_rc = tmgt_waitforstate(0x03);
+            l_rc = tmgt_waitforstate(OCC_STATE_ACTIVE);
         }
     }
     else
@@ -641,16 +648,16 @@ uint32_t send_tmgt_pmcomplex_reset(const bool i_clear_reset_count)
             }
         }
 
-        printf("Waiting up to 5 minutes for reset to complete...\n");
+        printf("Waiting for the PM Complex reset to complete - %s\n", get_timestamp());
         l_rc = send_hbrt_command(HTMGT_RESET_PM_COMPLEX, NULL, 0, 300);
         if (l_rc == CMT_SUCCESS)
         {
-            l_rc = tmgt_waitforstate(0x03);
+            l_rc = tmgt_waitforstate(OCC_STATE_ACTIVE);
         }
 
         if (i_clear_reset_count)
         {
-            printf("Requesting 2nd clear of reset counts\n");
+            printf("Requesting 2nd clear of the OCC reset counts\n");
             const uint32_t l_clear_rc = send_hbrt_command(HTMGT_CLEAR_RESET_COUNTS, NULL, 0);
             if (l_clear_rc)
             {
@@ -735,17 +742,6 @@ uint32_t tmgt_flags(const uint32_t i_flag_data,
 } // end send_tmgt_command()
 
 
-// Return timestamp string HH:MM:SS
-char *get_timestamp()
-{
-    static char timestamp[32];
-    const time_t timer = time(NULL);
-    struct tm *tm_info = localtime(&timer);
-    strftime(timestamp, sizeof(timestamp), "%H:%M:%S", tm_info);
-    return timestamp;
-}
-
-
 uint32_t tmgt_waitforstate(const uint8_t i_state)
 {
     uint32_t l_rc = CMT_SUCCESS;
@@ -753,7 +749,7 @@ uint32_t tmgt_waitforstate(const uint8_t i_state)
     if (isFsp())
     {
         const char *target_state = "";
-        if (i_state == 0x03)
+        if (i_state == OCC_STATE_ACTIVE)
             target_state = "active";
         else
         {
@@ -780,6 +776,10 @@ uint32_t tmgt_waitforstate(const uint8_t i_state)
             uint8_t * rsp_ptr = NULL;
             uint32_t rsp_len = 0;
             l_rc = send_hbrt_command(HTMGT_QUERY_STATE, NULL, 0, rsp_ptr, rsp_len);
+            if (l_rc != CMT_SUCCESS)
+            {
+                break;
+            }
             if ((rsp_ptr != NULL) && (rsp_len > 0))
             {
                 if (rsp_len >= 2)

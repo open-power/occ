@@ -1,7 +1,7 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/tools/occutil/occutil.C $                                 */
+/* $Source: src/tools/cft/occutil.C $                                     */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
@@ -46,7 +46,8 @@ void usage()
         printf("        --query        Query mode and function\n");
         printf("        --active_wait  Wait for the OCCs to get to active state\n");
         printf("        -S guid=XX     Dump speecified OCC sensor by GUID\n");
-        printf("        -S type=XX,loc=XX Dump OCC sensors (type/loc are both optional)\n");
+        printf("        -S type=XX,loc=XX  Dump OCC sensors (type/loc are both optional)\n");
+        printf("        -SC type=XX,loc=XX Dump OCC sensors (clears sensors after reading)\n");
         printf("           types: 0x1=Generic, 0x2=Current, 0x4=Voltage, 0x8=Temperature,\n");
         printf("                  0x10=Utilization, 0x20=Time, 0x40=Frequency, 0x80=Power,\n");
         printf("                  0x200=Performance, 0x400=WOF\n");
@@ -71,10 +72,11 @@ void usage()
         printf("    Options:\n");
         printf("        -o #           Target specified OCC instance\n");
         printf("        -n #           Target specified node (FSP only)\n");
+        printf("        --htmgt        Send OCC cmds via HTMGT (instead of BMC)\n");
         printf("        -D XX...       Data for other commands (XX is a hex string)\n");
         printf("        -v|-v2|-v3     Verbose (-v2 includes ECMD packets)\n");
         printf("        --STO #        Use SBE timeout to # seconds (default: %d)\n", G_sbe_timeout);
-        printf("\n    last update:  30-Mar 2022\n");
+        printf("\n    last update: 25-Aug-2022\n");
 }
 
 
@@ -118,6 +120,7 @@ int main (int argc, char *argv[])
     uint8_t l_state = 0;
     uint16_t l_mode = 0;
     uint16_t l_freq = 0;
+    bool l_clear_sensors = false;
 
     // Parse the parameters
     for (int ii = 1; ii < argc; ii++)
@@ -243,6 +246,10 @@ int main (int argc, char *argv[])
             {
                 G_verbose = 3;
             }
+            else if (strcmp(argv[ii], "--htmgt") == 0)
+            {
+                G_cmdViaBmc = false;
+            }
 
             // COMMANDS:
 
@@ -333,9 +340,13 @@ int main (int argc, char *argv[])
                 }
             }
             else if (strcmp(argv[ii], "-I") == 0) { op = OP_TMGT_INFO; }
-            else if (strcmp(argv[ii], "-S") == 0)
+            else if ((strcmp(argv[ii], "-S") == 0) || (strcmp(argv[ii], "-SC") == 0))
             {
                 op = OP_OCC_SENSORS;
+                if (strcmp(argv[ii], "-SC") == 0)
+                {
+                    l_clear_sensors = true;
+                }
                 if ((ii+1 < argc) && (argv[ii+1][0] != '-'))
                 {
                     ++ii;
@@ -538,7 +549,7 @@ int main (int argc, char *argv[])
 
             case OP_ACTIVE_WAIT:
                 {
-                    rc = tmgt_waitforstate(0x03);
+                    rc = tmgt_waitforstate(OCC_STATE_ACTIVE);
                 }
                 break;
 
@@ -550,7 +561,7 @@ int main (int argc, char *argv[])
 
             case OP_OCC_SENSORS:
                 {
-                    rc = get_occ_sensors(l_occ, l_fsp_node);
+                    rc = get_occ_sensors(l_occ, l_fsp_node, l_clear_sensors);
                 }
                 break;
 

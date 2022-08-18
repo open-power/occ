@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2020,2021                        */
+/* Contributors Listed Below - COPYRIGHT 2020,2022                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -151,6 +151,12 @@ struct occ_poll_rsp_t
 
 
 
+// Parse OCC response that include response header
+int parse_occ_response_header(const uint8_t  i_cmd,
+                              const uint8_t* i_cmd_data,
+                              const uint8_t *i_rsp_data,
+                              const uint16_t i_rsp_len);
+// Parse OCC response that does not include response header
 int parse_occ_response(const uint8_t  i_cmd,
                        const uint8_t* i_cmd_data,
                        const uint8_t *i_rsp_data,
@@ -250,18 +256,47 @@ const char * getPollExtStatus(const uint8_t i_flags)
     // from src/occ_405/cmdh/cmdh_fsp_cmds.h
     static char string[256] = "";
     string[0] = '\0';
-    if (i_flags & 0x80) strcat(string, "Throttle-ProcOverTemp ");
-    if (i_flags & 0x40) strcat(string, "Throttle-Power ");
-    if (i_flags & 0x20) strcat(string, "MemThrot-OverTemp ");
-    if (i_flags & 0x10) strcat(string, "QuickPowerDrop ");
-    if (i_flags & 0x08) strcat(string, "Throttle-VddOverTemp ");
-    if (i_flags & 0x04) strcat(string, "GPU2-Throttled ");
-    if (i_flags & 0x02) strcat(string, "GPU1-Throttled ");
-    if (i_flags & 0x01) strcat(string, "GPU0-Throttled ");
-    if (i_flags & 0x00) strcat(string, "UNKNOWN ");
-    unsigned int len = strlen(string);
-    if ((len > 0) && (string[len-1] == ' ')) string[len-1]='\0';
-   return string;
+    if (i_flags != 0xFF)
+    {
+        if (i_flags & 0x80) strcat(string, "Throttle-ProcOverTemp ");
+        if (i_flags & 0x40) strcat(string, "Throttle-Power ");
+        if (i_flags & 0x20) strcat(string, "MemThrot-OverTemp ");
+        if (i_flags & 0x10) strcat(string, "QuickPowerDrop ");
+        if (i_flags & 0x08) strcat(string, "Throttle-VddOverTemp ");
+        if (i_flags & 0x04) strcat(string, "GPU2-Throttled ");
+        if (i_flags & 0x02) strcat(string, "GPU1-Throttled ");
+        if (i_flags & 0x01) strcat(string, "GPU0-Throttled ");
+        if (i_flags & 0x00) strcat(string, "UNKNOWN ");
+        unsigned int len = strlen(string);
+        if ((len > 0) && (string[len-1] == ' ')) string[len-1]='\0';
+    }
+    return string;
+}
+
+
+const char * getRspStatusString(uint8_t status)
+{
+    // from src/occ_405/cmdh/cmdh_fsp.h
+    const char *string = "";
+    switch (status)
+    {
+        case 0x00: string="SUCCESS"; break;
+        case 0x01: string="CONDITIONAL_SUCCESS"; break;
+        case 0x11: string="INVALID_COMMAND"; break;
+        case 0x12: string="INVALID_CMD_LENGTH"; break;
+        case 0x13: string="INVALID_DATA"; break;
+        case 0x14: string="CHECKSUM_FAIL"; break;
+        case 0x15: string="INTERNAL_FAIL"; break;
+        case 0x16: string="INVALID_STATE"; break;
+        case 0x17: string="NO_SUPPORT_IN_SMF_MODE"; break;
+        case 0xE0: string="EXCEPTION-PANIC"; break;
+        case 0xE1: string="EXCEPTION-INIT_CHECKPOINT"; break;
+        case 0xE2: string="EXCEPTION-WATCHDOG_TIMER"; break;
+        case 0xE3: string="EXCEPTION-OCB_TIMER"; break;
+        case 0xE5: string="EXCEPTION-INIT_FAILURE"; break;
+        case 0xFF: string="CMD_IN_PROGRESS"; break;
+    }
+    return string;
 }
 
 
@@ -339,13 +374,40 @@ const char * getApssFuncName(uint8_t i_funcId)
     }
 }
 
+const char * getWofReason(const uint32_t i_flags)
+{
+    // from src/occ_405/cmdh/cmdh_fsp_cmds.h
+    static char string[256] = "";
+    string[0] = '\0';
+    if (i_flags & 0x80) strcat(string, "Throttle-ProcOverTemp ");
+
+    if (i_flags & 0x00000001) strcat(string, "NO_WOF_HEADER_MASK ");
+    if (i_flags & 0x00000004) strcat(string, "INVALID_VDD_VDN ");
+    if (i_flags & 0x00000010) strcat(string, "PGPE_WOF_DISABLED ");
+    if (i_flags & 0x00000020) strcat(string, "PSTATE_PROTOCOL_OFF ");
+    if (i_flags & 0x00000040) strcat(string, "VRT_REQ_TIMEOUT ");
+    if (i_flags & 0x00000080) strcat(string, "CONTROL_REQ_TIMEOUT ");
+    if (i_flags & 0x00000100) strcat(string, "STATE_CHANGE ");
+    if (i_flags & 0x00000400) strcat(string, "MODE_NO_SUPPORT_MASK ");
+    if (i_flags & 0x00020000) strcat(string, "OCC_WOF_DISABLED ");
+    if (i_flags & 0x00040000) strcat(string, "OPPB_WOF_DISABLED ");
+    if (i_flags & 0x00080000) strcat(string, "SYSTEM_WOF_DISABLE ");
+    if (i_flags & 0x00100000) strcat(string, "RESET_LIMIT_REACHED ");
+    unsigned int len = strlen(string);
+    if ((len > 0) && (string[len-1] == ' ')) string[len-1]='\0';
+    return string;
+}
+
 
 const char * getHistoryName(uint8_t id)
 {
     // from src/occ_405/errl/errl.h
-    const char *string = "";
+    const char *string = "unknown";
     switch (id)
     {
+        case 0x01: string="PhantomBCE"; break;
+        case 0x02: string="EmpathFail"; break;
+        case 0x03: string="NUTIL0Freq"; break;
         case 0x07: string="VddReadFail"; break;
         case 0x09: string="VddOverCurrent"; break;
         case 0x0B: string="InvalidApssData"; break;
@@ -391,17 +453,52 @@ uint32_t send_occ_command(const uint8_t i_occ,
 
     uint8_t *rsp_ptr = NULL;
     uint32_t rsp_length = 0;
+    char subcmd[8] = "";
+    if ((i_cmd == 0x40) || (i_cmd == 0x53))
+    {
+        sprintf(subcmd, " / 0x%02X", i_cmd_data[0]);
+    }
+
     if (isFsp())
     {
-        printf("Sending %s (0x%02X) command to OCC%d in node %d\n",
-               getCmdString(i_cmd), i_cmd, i_occ, i_node);
+        printf("Sending %s (0x%02X%s) command to OCC%d in node %d\n",
+               getCmdString(i_cmd), i_cmd, subcmd, i_occ, i_node);
         rc = occ_cmd_via_tmgt(i_occ, i_cmd, i_cmd_data, i_len, rsp_ptr, rsp_length, i_node);
     }
     else
     {
-        printf("Sending %s (0x%02X) command to OCC%d\n",
-               getCmdString(i_cmd), i_cmd, i_occ);
-        rc = occ_cmd_via_htmgt(i_occ, i_cmd, i_cmd_data, i_len, rsp_ptr, rsp_length);
+        if (G_cmdViaBmc)
+        {
+            printf("Sending %s (0x%02X%s) command to OCC%d via BMC\n",
+                   getCmdString(i_cmd), i_cmd, subcmd, i_occ);
+            char command[5300];
+            sprintf(command, "busctl call org.open_power.OCC.Control /org/open_power/control/occ%d"
+                    " org.open_power.OCC.PassThrough Send ai %d %d %d %d",
+                    i_occ, i_len+3, i_cmd, i_len >> 8, i_len & 0xFF);
+            for (int i = 0; i < i_len; ++i)
+            {
+                char append[8] = "";
+                sprintf(append, " %d", i_cmd_data[i]);
+                strcat(command, append);
+            }
+            std::string results;
+            rc = send_bmc_command(command, results);
+            if ((rc == CMT_SUCCESS) && (results.compare(0, 3, "ai ") != 0))
+            {
+                cmtOutputError("send_occ_command: BMC request failed: %s\n", results.c_str());
+                rc = CMT_REQUEST_FAILED;
+            }
+            else
+            {
+                rsp_length = bmc_to_array(results, rsp_ptr);
+            }
+        }
+        else
+        {
+            printf("Sending %s (0x%02X) command to OCC%d via HTMGT\n",
+                   getCmdString(i_cmd), i_cmd, i_occ);
+            rc = occ_cmd_via_htmgt(i_occ, i_cmd, i_cmd_data, i_len, rsp_ptr, rsp_length);
+        }
     }
 
     if (rc == CMT_SUCCESS)
@@ -409,7 +506,10 @@ uint32_t send_occ_command(const uint8_t i_occ,
         printf("%s (0x%02X) response has %d bytes (0x%04X)\n", getCmdString(i_cmd), i_cmd, rsp_length, rsp_length);
         if ((rsp_length > 0) && (rsp_ptr != NULL))
         {
-            parse_occ_response(i_cmd, i_cmd_data, rsp_ptr, rsp_length);
+            if (G_cmdViaBmc)
+                parse_occ_response_header(i_cmd, i_cmd_data, rsp_ptr, rsp_length);
+            else
+                parse_occ_response(i_cmd, i_cmd_data, rsp_ptr, rsp_length);
             if ((rsp_ptr != NULL) && (rsp_length > 0)) free(rsp_ptr);
         }
         else
@@ -423,9 +523,24 @@ uint32_t send_occ_command(const uint8_t i_occ,
         cmtOutputError("**** ERROR: Attempt to send %s (0x%02X) command returned 0x%02X\n",
                        getCmdString(i_cmd), i_cmd, rc);
     }
+
     return rc;
 }
 
+
+int parse_occ_response_header(const uint8_t  i_cmd,
+                              const uint8_t* i_cmd_data,
+                              const uint8_t *i_rsp_data,
+                              const uint16_t i_rsp_len)
+{
+    printf("  Sequence: 0x%02X\n", i_rsp_data[0]);
+    printf("   Command: 0x%02X\n", i_rsp_data[1]);
+    printf("    Status: 0x%02X  %s\n", i_rsp_data[2], getRspStatusString(i_rsp_data[2]));
+    uint16_t data_len = ((i_rsp_data[3])<<8) + i_rsp_data[4];
+    printf("  Data Len: 0x%04X  (%d)\n", data_len, data_len);
+
+    return parse_occ_response(i_cmd, i_cmd_data, &i_rsp_data[5], i_rsp_len - 5);
+}
 
 int parse_occ_response(const uint8_t  i_cmd,
                        const uint8_t* i_cmd_data,
@@ -435,11 +550,6 @@ int parse_occ_response(const uint8_t  i_cmd,
     int rc = 0;
 
     // response header already removed
-    //printf("  Sequence: 0x%02X\n", i_rsp_data[0]);
-    //printf("   Command: 0x%02X\n", i_rsp_data[1]);
-    //printf("    Status: 0x%02X\n", i_rsp_data[2]);
-    //uint16_t data_len = ((i_rsp_data[3])<<8) + i_rsp_data[4];
-    //printf("  Data Len: 0x%04X  (%d)\n", data_len, data_len);
     switch(i_cmd)
     {
         case 0x00:
@@ -486,9 +596,12 @@ int parse_occ_poll(const uint8_t *i_rsp_data, const uint16_t i_rsp_len)
     printf("Confg Reqd: 0x%02X\n", data->config_data);
     printf("     State: 0x%02X  %s\n", data->state, getStateString(data->state));
     printf("      Mode: 0x%02X  %s\n", data->mode, getModeString(data->mode));
-    printf("IPS Status: 0x%02X  %s %s\n", data->ips_status.word,
-           (data->ips_status.ips_enabled) ? "ENABLED" : "DISABLED",
-           (data->ips_status.ips_active) ? "and ACTIVE" : "");
+    if (data->status.master_occ)
+        printf("IPS Status: 0x%02X  %s %s\n", data->ips_status.word,
+               (data->ips_status.ips_enabled) ? "ENABLED" : "DISABLED",
+               (data->ips_status.ips_active) ? "and ACTIVE" : "");
+    else
+        printf("IPS Status: 0x%02X  N/A\n", data->ips_status.word);
     printf("   Elog ID: 0x%02X  %s\n", data->errl_id, data->errl_id ? "" : "(no error)");
     printf(" Elog Addr: 0x%08X\n", htonl(data->errl_address));
     printf("  Elog Len: 0x%04X\n", htonl(data->errl_length));
@@ -636,10 +749,13 @@ int parse_occ_poll(const uint8_t *i_rsp_data, const uint16_t i_rsp_len)
                                    htons(*(uint16_t*)&dblock[sindex+9]), dblock[sindex+11],
                                    dblock[sindex+6], htons(*(uint16_t*)&dblock[sindex+9]));
                         else
-                            printf("\"%-4.4s\" %02X %02X %02X%02X %08X   WOF disabled, reason",
+                        {
+                            const uint32_t reason = UINT32_GET(&dblock[sindex+8]);
+                            printf("\"%-4.4s\" %02X %02X %02X%02X %08X   WOF disabled: %s",
                                    (char*)&name, flags, dblock[sindex+5],
                                    dblock[sindex+6], dblock[sindex+7],
-                                   htonl(*(uint32_t*)&dblock[sindex+8]));
+                                   htonl(*(uint32_t*)&dblock[sindex+8]), getWofReason(reason));
+                        }
                     }
                     else if (name == ntohl(0x45525248)) // ERRH
                     {
@@ -688,6 +804,7 @@ int parse_occ_debug_passthru(const uint8_t *i_cmd_data,
         switch(i_cmd_data[0])
         {
             case 0x07: // Get Multiple Sensor Data
+            case 0x0C: // Get Multiple Sensor Data (with clear)
                 {
                     struct sensor_t
                     {
@@ -833,11 +950,12 @@ uint32_t get_occ_trace(const uint8_t i_occ, const uint8_t i_node)
         bool l_modifiedConfig = false;
         ecmdChipTarget l_target;
 #if 0
-        // disable SBE FIFO for occtoolp10
+        // enable SBE FIFO for occtoolp10 for better performance
         ecmdTargetInit(l_target);
-        l_modifiedConfig = update_sbe_fifo(l_target, CMT_SBE_FIFO_OFF);
+        l_modifiedConfig = update_sbe_fifo(l_target, CMT_SBE_FIFO_ON);
+        // Does not change it for this system() call - so had to add to command:
 #else
-        sprintf(command, "setconfig USE_SBE_FIFO off; "
+        sprintf(command, "setconfig USE_SBE_FIFO on; "
                 "/afs/rch/usr2/cjcain/bin/occtoolp10 -trace -s %s -o %d",
                 G_occ_string_file, i_occ);
 #endif
@@ -854,7 +972,8 @@ uint32_t get_occ_trace(const uint8_t i_occ, const uint8_t i_node)
 
 
 int get_occ_sensors(const uint8_t i_occ,
-                    const uint8_t i_node)
+                    const uint8_t i_node,
+                    const bool i_clear)
 {
     int rc = 0;
 
@@ -865,7 +984,9 @@ int get_occ_sensors(const uint8_t i_occ,
     }
     else
     {
-        uint8_t cmd_data[] = { 0x07, uint8_t(G_sensor_type >> 8), uint8_t(G_sensor_type & 0xFF),
+        uint8_t subcmd = 0x07;
+        if (i_clear) subcmd = 0x0C;
+        uint8_t cmd_data[] = { subcmd, uint8_t(G_sensor_type >> 8), uint8_t(G_sensor_type & 0xFF),
             uint8_t(G_sensor_loc >> 8), uint8_t(G_sensor_loc & 0xFF) };
         send_occ_command(i_occ, 0x40, cmd_data, sizeof(cmd_data), i_node);
     }

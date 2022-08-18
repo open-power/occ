@@ -83,11 +83,11 @@ void dumpHex(const uint8_t *data, const unsigned int i_len);
 void initHeader(cmtHeader & i_header, uint32_t i_lengthOfMsg);
 void ecmdTargetInit(ecmdChipTarget &o_target);
 bool update_sbe_fifo(ecmdChipTarget &i_target, const char *new_value = NULL);
-uint32_t cmtOCCSendReceive(ecmdChipTarget &i_target,
-                           ecmdDataBuffer &i_data,
-                           uint8_t       *&o_responseData,
-                           uint32_t       &o_responseSize,
-                           const uint32_t  i_timeout = G_sbe_timeout);
+uint32_t sbeWriteToHostboot(ecmdChipTarget &i_target,
+                            ecmdDataBuffer &i_data,
+                            uint8_t       *&o_responseData,
+                            uint32_t       &o_responseSize,
+                            const uint32_t  i_timeout = G_sbe_timeout);
 
 bool isFsp();
 
@@ -99,5 +99,12 @@ uint32_t send_fsp_command_rspdata(const char * i_cmd,
 
 uint32_t send_bmc_command(const char *i_cmd);
 uint32_t send_bmc_command(const char *i_cmd, std::string& o_results);
+
+// Convert BMC byte array string to uint8_t hex buffer and return length
+// hexBuffer will be allocated by function and must be freed by caller.
+uint16_t bmc_to_array(const std::string& strBuffer, uint8_t*& hexBuffer);
+
+// Return timestamp string HH:MM:SS
+char *get_timestamp();
 
 #endif

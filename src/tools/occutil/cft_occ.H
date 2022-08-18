@@ -95,6 +95,12 @@ uint32_t get_occ_trace(const uint8_t i_occ = 0,
                        const uint8_t i_node = 0);
 
 int get_occ_sensors(const uint8_t i_occ = 0,
-                    const uint8_t i_node = 0);
+                    const uint8_t i_node = 0,
+                    const bool i_clear = false);
 
+// Parse OCC response that does not include response header
+int parse_occ_response(const uint8_t  i_cmd,
+                       const uint8_t* i_cmd_data,
+                       const uint8_t *i_rsp_data,
+                       const uint16_t i_rsp_len);
 #endif
