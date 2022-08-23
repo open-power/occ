@@ -418,11 +418,11 @@ void amec_ppb_fmax_calc(void)
         {
             G_sysConfigData.master_ppb_fmax = g_amec->sys.fmin_max_throttled;
         }
-        if(G_allow_trace_flags & ALLOW_PCAP_TRACE)
+/*        if(G_allow_trace_flags & ALLOW_PCAP_TRACE)
         {
             TRAC_INFO("ppb_fmax[%d] power_avail[%d]  l_drop[%d]",
                        G_sysConfigData.master_ppb_fmax, l_power_avail, l_drop);
-        }
+        } */
     }//End of Master code
 }
 
@@ -466,6 +466,313 @@ void amec_power_control(void)
     {
         // No system power reading for power capping set pcap frequency votes to max
         g_amec->proc[0].pwr_votes.ppb_fmax = 0xFFFF;
+    }
+}
+
+//////////////////////////
+// Function Specification
+//
+// Name: amec_socket_pcap_calc
+//
+// Description: Calculate socket power capping frequency vote for Vdd or total socket
+//
+// Thread: Real Time Loop
+//
+// End Function Specification
+void amec_socket_pcap_calc(bool i_vdd_only)
+{
+    /*------------------------------------------------------------------------*/
+    /*  Local Variables                                                       */
+    /*------------------------------------------------------------------------*/
+    int32_t        l_power_avail = 0;
+    int32_t        l_change = 0;
+    uint32_t       l_temp32 = 0;
+    uint16_t       l_power = 0;
+    uint16_t       l_pcap_w = 0;
+    uint16_t       l_low_w = 0;
+    uint16_t       l_last_freq = 0;
+    uint16_t       l_new_freq = 0;
+    uint16_t       l_vote_from_current_freq = 0;
+    uint16_t       l_vote_from_current_clip = 0;
+    uint16_t       l_ticks_lower_wait = 0;
+    uint16_t       l_ticks_increase_wait = 0;
+    static uint8_t L_ticks_lower_wait = 0;
+    static uint8_t L_ticks_lower_wait_vdd = 0;
+    static uint8_t L_ticks_increase_wait = 0;
+    static uint8_t L_ticks_increase_wait_vdd = 0;
+
+    /*------------------------------------------------------------------------*/
+    /*  Code                                                                  */
+    /*------------------------------------------------------------------------*/
+
+    // set up locals based on if doing Vdd only or total socket power capping
+    if(i_vdd_only == TRUE)
+    {
+        l_pcap_w = G_sysConfigData.vdd_socket_pcap_w;
+        l_low_w = G_sysConfigData.vdd_socket_low_w;
+        l_last_freq = g_amec->proc[0].pwr_votes.socket_vdd_pcap_clip_freq;
+        l_ticks_lower_wait = L_ticks_lower_wait_vdd;
+        l_ticks_increase_wait = L_ticks_increase_wait_vdd;
+    }
+    else
+    {
+        l_pcap_w = G_sysConfigData.total_socket_pcap_w;
+        l_low_w = G_sysConfigData.total_socket_low_w;
+        l_last_freq = g_amec->proc[0].pwr_votes.socket_total_pcap_clip_freq;
+        l_ticks_lower_wait = L_ticks_lower_wait;
+        l_ticks_increase_wait = L_ticks_increase_wait;
+    }
+
+    // Read power and set control variables for either Vdd or total socket capping
+    // channel assignments were verified in data_store_socket_pwr_config()
+    if( (G_pbax_id.chip_id == 0) || (G_pbax_id.chip_id == 1) )
+    {
+        // DCM 0 uses channels 2 (Vdd) and 4 (Vio/Vcs/Vdn)
+        l_power = AMECSENSOR_PTR(PWRAPSSCH02)->sample;
+
+        if(i_vdd_only == FALSE)
+        {
+           l_power += AMECSENSOR_PTR(PWRAPSSCH04)->sample;
+        }
+    }
+    else if( (G_pbax_id.chip_id == 2) || (G_pbax_id.chip_id == 3) )
+    {
+        // DCM 1 uses channels 3 (Vdd) and 5 (Vio/Vcs/Vdn)
+        l_power = AMECSENSOR_PTR(PWRAPSSCH03)->sample;
+
+        if(i_vdd_only == FALSE)
+        {
+           l_power += AMECSENSOR_PTR(PWRAPSSCH05)->sample;
+        }
+    }
+    else
+    {
+        // no support
+        G_sysConfigData.vdd_socket_pcap_w = 0xFFFF;
+        G_sysConfigData.total_socket_pcap_w = 0xFFFF;
+    }
+
+    // make sure we have a power reading i.e. supported
+    if(l_power)
+    {
+        l_power_avail = l_pcap_w - l_power;
+        if(l_power_avail <= 0)
+        {
+            // l_power_avail is negative meaning we need to shed power
+
+            // no more waiting if need to increase next time
+            l_ticks_increase_wait = 0;
+
+            // make sure we aren't waiting for a previous reduction to take effect
+            if(l_ticks_lower_wait == 0)
+            {
+               if(G_sysConfigData.socket_pcap_proportional_control)
+               {
+                  // negate to make l_change positive
+                  l_change = (int32_t)(G_sysConfigData.delta_chip_mhz_per_watt_drop * (-l_power_avail));
+               }
+               else // non-proportional control always only one drop size
+               {
+                  l_change = (int32_t)G_sysConfigData.delta_chip_mhz_per_watt_drop;
+               }
+
+               // make sure we drop by at least 1 Pstate
+               if(l_change < G_mhz_per_pstate)
+               {
+                  l_change = G_mhz_per_pstate;
+               }
+               if(G_allow_trace_flags & ALLOW_PCAP_TRACE)
+               {
+                  if(i_vdd_only)
+                     TRAC_INFO("DEBUG VDD SOCKET PCAP change[%d] power_avail[%d] FREQA[%d]",
+                                l_change, l_power_avail, AMECSENSOR_PTR(FREQA)->sample);
+                  else
+                     TRAC_INFO("DEBUG TOTAL SOCKET PCAP change[%d] power_avail[%d] FREQA[%d]",
+                                l_change, l_power_avail, AMECSENSOR_PTR(FREQA)->sample);
+               }
+
+               // To make sure there is a drop use the smaller freq vote from current frequency and last vote
+
+               // Determine new freq from current frequency
+               if(l_change < AMECSENSOR_PTR(FREQA)->sample)
+               {
+                   l_vote_from_current_freq = AMECSENSOR_PTR(FREQA)->sample - l_change;
+               }
+               else
+               {
+                   l_vote_from_current_freq = g_amec->sys.fmin_max_throttled;
+               }
+               // Determine new freq from last freq vote
+               if(l_change < l_last_freq)
+               {
+                   l_vote_from_current_clip = l_last_freq - l_change;
+               }
+               else
+               {
+                   l_vote_from_current_clip = g_amec->sys.fmin_max_throttled;
+               }
+
+               // Now set new freq to the lower of the two
+               if( l_vote_from_current_freq && l_vote_from_current_clip )
+               {
+                   if(l_vote_from_current_freq < l_vote_from_current_clip)
+                   {
+                       l_new_freq = l_vote_from_current_freq;
+                   }
+                   else
+                   {
+                       l_new_freq = l_vote_from_current_clip;
+                   }
+               }
+               else if( l_vote_from_current_freq && (l_vote_from_current_clip == 0) )
+               {
+                       l_new_freq = l_vote_from_current_freq;
+               }
+               else
+               {
+                       l_new_freq = l_vote_from_current_clip;
+               }
+
+               // wait for another reduction to allow power reading to show effect of this change
+               l_ticks_lower_wait = G_sysConfigData.num_ticks_drop_wait;
+            }  // if l_ticks_lower_wait == 0
+            else // wait to lower more
+            {
+               l_ticks_lower_wait--;
+            }
+
+            if(G_allow_trace_flags & ALLOW_PCAP_TRACE)
+            {
+                TRAC_INFO("NEGATIVE POWER l_vote_from_current_clip[%d] l_vote_from_current_freq[%d] l_new_freq[%d]",
+                          l_vote_from_current_clip, l_vote_from_current_freq, l_new_freq);
+            }
+        } // if negative power available i.e. over pcap
+
+        else
+        {
+            // l_power_avail is positive i.e. under cap
+            // no more waiting if need to lower next time
+            l_ticks_lower_wait = 0;
+
+            if(l_power < l_low_w)
+            {
+               // power is below the low threshold OK to raise freq
+               // first make sure we aren't waiting for a previous increase
+               if(l_ticks_increase_wait == 0)
+               {
+                  if(G_sysConfigData.socket_pcap_proportional_control)
+                  {
+                     l_change = (int32_t)(G_sysConfigData.delta_chip_mhz_per_watt_raise * (l_power_avail));
+                  }
+                  else // non-proportional control always only one increase size
+                  {
+                     l_change = (int32_t)G_sysConfigData.delta_chip_mhz_per_watt_raise;
+                  }
+
+                  // make sure we raise by at least 1 Pstate
+                  if(l_change < G_mhz_per_pstate)
+                  {
+                     l_change = G_mhz_per_pstate;
+                  }
+
+                  // prevent wrapping
+                  l_temp32 = (uint32_t)(l_last_freq + l_change);
+                  if(l_temp32 < G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MAX_FREQ])
+                  {
+                      l_new_freq = l_last_freq + l_change;
+                  }
+                  else
+                  {
+                      l_new_freq = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MAX_FREQ];
+                  }
+
+                  // wait for another increase
+                  l_ticks_increase_wait = G_sysConfigData.num_ticks_raise_wait;
+               }  // if l_ticks_increase_wait == 0
+               else // wait to increase freq more
+               {
+                  l_ticks_increase_wait--;
+               }
+            }
+
+            if(G_allow_trace_flags & ALLOW_PCAP_TRACE)
+            {
+                TRAC_INFO("POSITIVE POWER l_change[%d] l_new_freq[%d] l_last_freq[%d]",
+                           l_change, l_new_freq, l_last_freq);
+            }
+        }  // else under power cap
+
+        // if l_new_freq is 0 that means no change, keep last freq vote
+        if(l_new_freq == 0)
+            l_new_freq = l_last_freq;
+
+        // Final bounds checking
+        if(l_new_freq > G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MAX_FREQ])
+        {
+            l_new_freq = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MAX_FREQ];
+        }
+
+        if(l_new_freq < g_amec->sys.fmin_max_throttled)
+        {
+            l_new_freq = g_amec->sys.fmin_max_throttled;
+        }
+
+        if(i_vdd_only)
+        {
+            L_ticks_lower_wait_vdd = l_ticks_lower_wait;
+            L_ticks_increase_wait_vdd = l_ticks_increase_wait;
+            g_amec->proc[0].pwr_votes.socket_vdd_pcap_clip_freq = l_new_freq;
+        }
+        else
+        {
+            L_ticks_lower_wait = l_ticks_lower_wait;
+            L_ticks_increase_wait = l_ticks_increase_wait;
+            g_amec->proc[0].pwr_votes.socket_total_pcap_clip_freq = l_new_freq;
+        }
+
+    } // if have power reading
+}
+
+//////////////////////////
+// Function Specification
+//
+// Name: amec_socket_power_control
+//
+// Description: Calculate socket power capping frequency votes
+//
+// Thread: Real Time Loop runs every tick
+//
+// End Function Specification
+void amec_socket_power_control(void)
+{
+    /*------------------------------------------------------------------------*/
+    /*  Local Variables                                                       */
+    /*------------------------------------------------------------------------*/
+
+    /*------------------------------------------------------------------------*/
+    /*  Code                                                                  */
+    /*------------------------------------------------------------------------*/
+
+    // Calculate frequency vote for Vdd only if enabled
+    if( G_sysConfigData.vdd_socket_pcap_w && (G_sysConfigData.vdd_socket_pcap_w != 0xFFFF) )
+    {
+        amec_socket_pcap_calc(TRUE);
+    }
+    else
+    {
+        // No Vdd socket power capping set frequency vote to unrestricted
+        g_amec->proc[0].pwr_votes.socket_vdd_pcap_clip_freq = 0xFFFF;
+    }
+
+    // Calculate frequency vote for total socket if enabled
+    if( G_sysConfigData.total_socket_pcap_w && (G_sysConfigData.total_socket_pcap_w != 0xFFFF) )
+    {
+        amec_socket_pcap_calc(FALSE);
+    }
+    else
+    {
+        // No total socket power capping set frequency vote to unrestricted
+        g_amec->proc[0].pwr_votes.socket_total_pcap_clip_freq = 0xFFFF;
     }
 }
 

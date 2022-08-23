@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2021                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2022                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -448,6 +448,19 @@ typedef struct
   // --------------------------------------
   // This array holds throttle configuration parameters for memory
   mem_throt_config_data_v40_t mem_throt_limits[MAX_NUM_MEM_CONTROLLERS];
+
+  // --------------------------------------
+  // Socket power capping Information
+  // --------------------------------------
+  uint16_t vdd_socket_pcap_w;
+  uint16_t vdd_socket_low_w;
+  uint16_t total_socket_pcap_w;
+  uint16_t total_socket_low_w;
+  uint16_t delta_chip_mhz_per_watt_drop;
+  uint16_t delta_chip_mhz_per_watt_raise;
+  uint16_t num_ticks_drop_wait;
+  uint16_t num_ticks_raise_wait;
+  uint8_t  socket_pcap_proportional_control;
 
   // --------------------------------------
   // GPU Information for error callout and GPU power capping

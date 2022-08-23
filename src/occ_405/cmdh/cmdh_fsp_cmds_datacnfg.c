@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2021                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2022                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -63,6 +63,15 @@
 #define DATA_VRM_FAULT_VERSION     0x01
 
 #define DATA_AVSBUS_VERSION_30     0x30
+
+// Hard codes for Rainier Vdd socket power capping
+#define RAINIER_VDD_SOCKET_CAP_W          625
+#define RAINIER_VDD_SOCKET_LOW_CAP_W      625  // no hysteresis
+#define RAINIER_DELTA_CHIP_MHZ_PER_W_DEC   87  // 5 Pstates
+#define RAINIER_DELTA_CHIP_MHZ_PER_W_INC   17  // 1 Pstate
+#define RAINIER_NUM_TICKS_DEC_WAIT          5  // 2.5ms
+#define RAINIER_NUM_TICKS_INC_WAIT          1  // 500us
+#define RAINIER_PROPORTIONAL_CONTROL        0  // non-proportional
 
 extern uint8_t G_occ_interrupt_type;
 
@@ -790,6 +799,38 @@ errlHndl_t data_store_apss_config(const cmdh_fsp_cmd_t * i_cmd_ptr,
                 ( (G_pwr_reading_type == PWR_READING_TYPE_APSS) && (l_v20_data_sz == l_data_length) ) )
        {
           l_err = data_store_apss_config_v20(l_cmd_ptr, o_rsp_ptr);
+
+          if(!l_err)
+          {
+              // Turn on Vdd socket power capping to prevent Vdd VRM slow trip on Rainier
+              // we know Rainier based on hard coded APSS config
+              if( (G_apss_ch_to_function[2] == ADC_VDD_PROC_0) &&
+                  (G_apss_ch_to_function[3] == ADC_VDD_PROC_1) &&
+                  (G_apss_ch_to_function[4] == ADC_VCS_VIO_VPCIE_PROC_0) &&
+                  (G_apss_ch_to_function[5] == ADC_VCS_VIO_VPCIE_PROC_1) )
+              {
+                 G_sysConfigData.vdd_socket_pcap_w = RAINIER_VDD_SOCKET_CAP_W;
+                 G_sysConfigData.vdd_socket_low_w = RAINIER_VDD_SOCKET_LOW_CAP_W;
+                 G_sysConfigData.delta_chip_mhz_per_watt_drop = RAINIER_DELTA_CHIP_MHZ_PER_W_DEC;
+                 G_sysConfigData.delta_chip_mhz_per_watt_raise = RAINIER_DELTA_CHIP_MHZ_PER_W_INC;
+                 G_sysConfigData.num_ticks_drop_wait = RAINIER_NUM_TICKS_DEC_WAIT;
+                 G_sysConfigData.num_ticks_raise_wait = RAINIER_NUM_TICKS_INC_WAIT;
+                 G_sysConfigData.socket_pcap_proportional_control = RAINIER_PROPORTIONAL_CONTROL;
+
+                 // No total socket power capping
+                 G_sysConfigData.total_socket_pcap_w = 0;
+                 G_sysConfigData.total_socket_low_w  = 0;
+
+                 CMDH_TRAC_IMP("data_store_apss_config: Enabling Vdd power cap[%04dW] drop[%04d mhz] raise[%04d mhz]",
+                                G_sysConfigData.vdd_socket_pcap_w,
+                                G_sysConfigData.delta_chip_mhz_per_watt_drop,
+                                G_sysConfigData.delta_chip_mhz_per_watt_raise);
+                 CMDH_TRAC_IMP("data_store_apss_config: Alg wait times decrease[%04d ticks] increase[%04d ticks] Proportional[%02d]",
+                                G_sysConfigData.num_ticks_drop_wait,
+                                G_sysConfigData.num_ticks_raise_wait,
+                                G_sysConfigData.socket_pcap_proportional_control);
+              }
+          }
        }
        else if( (G_pwr_reading_type != PWR_READING_TYPE_NONE) || (l_data_length != 4) )
        {
@@ -2114,6 +2155,191 @@ errlHndl_t data_store_ips_config(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
 // Function Specification
 //
+// Name:  data_store_socket_pwr_config
+//
+// Description: Store socket power configuration data from TMGT
+//
+// End Function Specification
+errlHndl_t data_store_socket_pwr_config(const cmdh_fsp_cmd_t * i_cmd_ptr,
+                                              cmdh_fsp_rsp_t * o_rsp_ptr)
+{
+    errlHndl_t                      l_err = NULL;
+
+    // Cast the command to the struct for this format
+    cmdh_socket_pwr_config_t * l_cmd_ptr = (cmdh_socket_pwr_config_t *)i_cmd_ptr;
+    uint16_t                        l_data_length = 0;
+    uint32_t                        l_sys_data_sz = 0;
+    bool                            l_invalid_input = TRUE; //Assume bad input
+    bool                            l_supported = TRUE; //Assume socket capping supported
+    bool                            l_log_no_support_error = FALSE;
+
+    // Socket capping is only supported on Rainier, we know Rainier by APSS proc channel assignment
+    // and no other P10 system matches this.  APSS config MUST be sent prior to this config packet
+    if( (G_apss_ch_to_function[2] != ADC_VDD_PROC_0) ||
+        (G_apss_ch_to_function[3] != ADC_VDD_PROC_1) ||
+        (G_apss_ch_to_function[4] != ADC_VCS_VIO_VPCIE_PROC_0) ||
+        (G_apss_ch_to_function[5] != ADC_VCS_VIO_VPCIE_PROC_1) )
+    {
+        // we will log an error later only if data is to enable a power cap
+        l_supported = FALSE;
+    }
+
+    l_data_length = CMDH_DATALEN_FIELD_UINT16(l_cmd_ptr);
+
+    // Check length and version
+    if(l_cmd_ptr->version == 0)
+    {
+        l_sys_data_sz = sizeof(cmdh_socket_pwr_config_t) - sizeof(cmdh_fsp_cmd_header_t);
+        if(l_sys_data_sz == l_data_length)
+        {
+            l_invalid_input = FALSE;
+        }
+    }
+
+    if(l_invalid_input)
+    {
+        CMDH_TRAC_ERR("data_store_socket_pwr_config: Invalid Socket Power Data packet! Version[0x%02X] Data_size[%u] Expected Size[%u]",
+                 l_cmd_ptr->version,
+                 l_data_length,
+                 l_sys_data_sz);
+
+        /* @
+         * @errortype
+         * @moduleid    DATA_STORE_SOCKET_DATA
+         * @reasoncode  INVALID_INPUT_DATA
+         * @userdata1   data size
+         * @userdata2   packet version
+         * @userdata4   OCC_NO_EXTENDED_RC
+         * @devdesc     OCC recieved an invalid data packet from the FSP
+         */
+        l_err = createErrl(DATA_STORE_SOCKET_DATA,
+                           INVALID_INPUT_DATA,
+                           OCC_NO_EXTENDED_RC,
+                           ERRL_SEV_UNRECOVERABLE,
+                           NULL,
+                           DEFAULT_TRACE_SIZE,
+                           l_data_length,
+                           (uint32_t)l_cmd_ptr->version);
+
+        // Callout firmware
+        addCalloutToErrl(l_err,
+                         ERRL_CALLOUT_TYPE_COMPONENT_ID,
+                         ERRL_COMPONENT_ID_FIRMWARE,
+                         ERRL_CALLOUT_PRIORITY_HIGH);
+    }
+    else  // version and length is valid, store the data
+    {
+        G_sysConfigData.vdd_socket_pcap_w     = l_cmd_ptr->socket_pwr_config.vdd_socket_pcap_w;
+        G_sysConfigData.vdd_socket_low_w      = l_cmd_ptr->socket_pwr_config.vdd_socket_low_w;
+        G_sysConfigData.total_socket_pcap_w   = l_cmd_ptr->socket_pwr_config.total_socket_pcap_w;
+        G_sysConfigData.total_socket_low_w    = l_cmd_ptr->socket_pwr_config.total_socket_low_w;
+        G_sysConfigData.delta_chip_mhz_per_watt_drop = l_cmd_ptr->socket_pwr_config.delta_chip_mhz_per_watt_drop;
+        G_sysConfigData.delta_chip_mhz_per_watt_raise = l_cmd_ptr->socket_pwr_config.delta_chip_mhz_per_watt_raise;
+        G_sysConfigData.num_ticks_drop_wait = l_cmd_ptr->socket_pwr_config.num_ticks_drop_wait;
+        G_sysConfigData.num_ticks_raise_wait = l_cmd_ptr->socket_pwr_config.num_ticks_raise_wait;
+        G_sysConfigData.socket_pcap_proportional_control = l_cmd_ptr->socket_pwr_config.proportional_control;
+
+        // Change Data Request Mask to indicate we got this data
+        G_data_cnfg->data_mask |= DATA_MASK_SOCKET_PCAP;
+        if( (G_sysConfigData.vdd_socket_pcap_w) && (G_sysConfigData.vdd_socket_pcap_w != 0xFFFF) )
+        {
+           if(l_supported)
+           {
+              CMDH_TRAC_IMP("Vdd Socket Power Cap enabled [%d W] low[%d W] drop[%d mhz] raise[%d mhz]",
+                             G_sysConfigData.vdd_socket_pcap_w,
+                             G_sysConfigData.vdd_socket_low_w,
+                             G_sysConfigData.delta_chip_mhz_per_watt_drop,
+                             G_sysConfigData.delta_chip_mhz_per_watt_raise);
+           }
+           else
+              l_log_no_support_error = TRUE;
+        }
+        else
+        {
+           CMDH_TRAC_IMP("Vdd Socket Power Cap 0x%04X disabled! last clip %d Mhz",
+                          G_sysConfigData.vdd_socket_pcap_w,
+                          g_amec->proc[0].pwr_votes.socket_vdd_pcap_clip_freq);
+
+           g_amec->proc[0].pwr_votes.socket_vdd_pcap_clip_freq = 0xFFFF;
+        }
+
+        if( (G_sysConfigData.total_socket_pcap_w) && (G_sysConfigData.total_socket_pcap_w != 0xFFFF) )
+        {
+           if(l_supported)
+           {
+              CMDH_TRAC_IMP("Total Socket Power Cap enabled [%d W] low[%d W] drop[%d mhz] raise[%d mhz]",
+                             G_sysConfigData.total_socket_pcap_w,
+                             G_sysConfigData.total_socket_low_w,
+                             G_sysConfigData.delta_chip_mhz_per_watt_drop,
+                             G_sysConfigData.delta_chip_mhz_per_watt_raise);
+           }
+           else
+              l_log_no_support_error = TRUE;
+        }
+        else
+        {
+           CMDH_TRAC_IMP("Total Socket Power Cap 0x%04X disabled! last clip %d Mhz",
+                          G_sysConfigData.total_socket_pcap_w,
+                          g_amec->proc[0].pwr_votes.socket_total_pcap_clip_freq);
+
+           g_amec->proc[0].pwr_votes.socket_total_pcap_clip_freq = 0xFFFF;
+        }
+
+        if(l_log_no_support_error)
+        {
+           // Disable and make sure clips are unbounded
+           G_sysConfigData.vdd_socket_pcap_w = 0xFFFF;
+           G_sysConfigData.total_socket_pcap_w = 0xFFFF;
+           g_amec->proc[0].pwr_votes.socket_vdd_pcap_clip_freq = 0xFFFF;
+           g_amec->proc[0].pwr_votes.socket_total_pcap_clip_freq = 0xFFFF;
+
+           // Power cap data comes from MRW, send back invalid config data error
+           CMDH_TRAC_ERR("data_store_socket_pwr_config: Socket Power Capping not supported! APSS FIDs: ch2[0x%02X] ch3[0x%02X] ch4[0x%02X] ch5[0x%02X]",
+                G_apss_ch_to_function[2],
+                G_apss_ch_to_function[3],
+                G_apss_ch_to_function[4],
+                G_apss_ch_to_function[5]);
+
+           /* @
+            * @errortype
+            * @moduleid    DATA_STORE_SOCKET_DATA
+            * @reasoncode  INVALID_CONFIG_DATA
+            * @userdata1   Vdd Pcap
+            * @userdata2   total socket pcap
+            * @userdata4   OCC_NO_EXTENDED_RC
+            * @devdesc     Socket Power cappig not supported
+            */
+           l_err = createErrl(DATA_STORE_SOCKET_DATA,
+                              INVALID_CONFIG_DATA,
+                              OCC_NO_EXTENDED_RC,
+                              ERRL_SEV_UNRECOVERABLE,
+                              NULL,
+                              DEFAULT_TRACE_SIZE,
+                              (uint32_t)l_cmd_ptr->socket_pwr_config.vdd_socket_pcap_w,
+                              (uint32_t)l_cmd_ptr->socket_pwr_config.total_socket_pcap_w);
+
+           // Callout firmware
+           addCalloutToErrl(l_err,
+                            ERRL_CALLOUT_TYPE_COMPONENT_ID,
+                            ERRL_COMPONENT_ID_FIRMWARE,
+                            ERRL_CALLOUT_PRIORITY_HIGH);
+        }
+        else if(l_supported)
+        {
+           CMDH_TRAC_IMP("data_store_socket_pwr_config: Alg wait times freq decrease[%d ticks] freq increase[%d ticks] Proportional[%d]",
+                          G_sysConfigData.num_ticks_drop_wait,
+                          G_sysConfigData.num_ticks_raise_wait,
+                          G_sysConfigData.socket_pcap_proportional_control);
+        }
+    }
+
+    return l_err;
+
+} // end data_store_socket_pwr_config()
+
+
+// Function Specification
+//
 // Name:   DATA_store_cnfgdata
 //
 // Description: Process Set Configuration Data cmd based on format (type) byte
@@ -2237,6 +2463,17 @@ errlHndl_t DATA_store_cnfgdata (const cmdh_fsp_cmd_t * i_cmd_ptr,
             if(NULL == l_errlHndl)
             {
                 l_new_data = DATA_MASK_MEM_THROT;
+            }
+            break;
+
+        case DATA_FORMAT_SOCKET_PCAP:
+            // Store the socket power cap data in G_sysConfigData
+            l_errlHndl = data_store_socket_pwr_config(i_cmd_ptr, o_rsp_ptr);
+
+            if(NULL == l_errlHndl)
+            {
+                // Set this in case AMEC needs to know about this
+                l_new_data = DATA_MASK_SOCKET_PCAP;
             }
             break;
 

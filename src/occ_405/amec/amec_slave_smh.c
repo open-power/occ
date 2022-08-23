@@ -432,7 +432,11 @@ void amec_slv_common_tasks_post(void)
         // getting any APSS data from Master
         amec_slv_check_apss_fail();
 
-        // Check if it is time to Call amec_power_control
+        // Check Processor socket power
+        if(G_present_cores)
+            amec_socket_power_control();
+
+        // Check if it is time to Call amec_power_control for total node power cap
         L_run_pcap_ticks++;
         if(L_run_pcap_ticks == NUM_TICKS_RUN_PCAP)
         {

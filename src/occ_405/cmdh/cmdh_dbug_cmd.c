@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2021                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2022                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -1213,6 +1213,89 @@ void dbug_clear_errh(const cmdh_fsp_cmd_t * i_cmd_ptr,
     return;
 }
 
+// Function Specification
+//
+// Name:  dbug_socket_pcap_dump
+//
+// Description: Dump out socket power capping data
+//
+// End Function Specification
+void dbug_socket_pcap_dump (const cmdh_fsp_cmd_t * i_cmd_ptr,
+                             cmdh_fsp_rsp_t * o_rsp_ptr)
+{
+    uint8_t                      l_rc = ERRL_RC_SUCCESS;
+    uint16_t                     l_resp_data_length = 0;
+    cmdh_dbug_socket_data_resp_t *l_resp_ptr = (cmdh_dbug_socket_data_resp_t*) o_rsp_ptr;
+    sensor_t                     *l_vdd_sensor_ptr = NULL;
+    sensor_t                     *l_no_vdd_sensor_ptr = NULL;
+
+    do
+    {
+        // Do sanity check on the function inputs
+        if ((NULL == i_cmd_ptr) || (NULL == o_rsp_ptr))
+        {
+            l_rc = ERRL_RC_INTERNAL_FAIL;
+            break;
+        }
+        // get power sensors
+        if( (G_pbax_id.chip_id == 0) || (G_pbax_id.chip_id == 1) )
+        {
+            // DCM 0 uses channels 2 (Vdd) and 4 (Vio/Vcs/Vdn)
+            l_vdd_sensor_ptr = getSensorByGsid(PWRAPSSCH02);
+            l_no_vdd_sensor_ptr = getSensorByGsid(PWRAPSSCH04);
+        }
+        else
+        {
+            // DCM 1 uses channels 3 (Vdd) and 5 (Vio/Vcs/Vdn)
+            l_vdd_sensor_ptr = getSensorByGsid(PWRAPSSCH03);
+            l_no_vdd_sensor_ptr = getSensorByGsid(PWRAPSSCH05);
+        }
+
+        l_resp_ptr->vdd_socket_pcap_w = G_sysConfigData.vdd_socket_pcap_w;
+        l_resp_ptr->vdd_socket_low_w = G_sysConfigData.vdd_socket_low_w;
+        l_resp_ptr->total_socket_pcap_w = G_sysConfigData.total_socket_pcap_w;
+        l_resp_ptr->total_socket_low_w = G_sysConfigData.total_socket_low_w;
+        l_resp_ptr->delta_chip_mhz_per_watt_drop = G_sysConfigData.delta_chip_mhz_per_watt_drop;
+        l_resp_ptr->delta_chip_mhz_per_watt_raise = G_sysConfigData.delta_chip_mhz_per_watt_raise;
+        l_resp_ptr->num_ticks_drop_wait = G_sysConfigData.num_ticks_drop_wait;
+        l_resp_ptr->num_ticks_raise_wait = G_sysConfigData.num_ticks_raise_wait;
+        l_resp_ptr->proportional_control = G_sysConfigData.socket_pcap_proportional_control;
+
+        l_resp_ptr->current_freq = AMECSENSOR_PTR(FREQA)->sample;
+
+        l_resp_ptr->vdd_curr_power = l_vdd_sensor_ptr->sample;
+        l_resp_ptr->vdd_max_power = l_vdd_sensor_ptr->sample_max;
+        l_resp_ptr->vdd_freq_vote = g_amec->proc[0].pwr_votes.socket_vdd_pcap_clip_freq;
+
+        l_resp_ptr->non_vdd_curr_power = l_no_vdd_sensor_ptr->sample;
+        l_resp_ptr->non_vdd_max_power = l_no_vdd_sensor_ptr->sample_max;
+        l_resp_ptr->total_freq_vote = g_amec->proc[0].pwr_votes.socket_total_pcap_clip_freq;
+
+        TRAC_IMP("DBG_PCAP_SOCKET_CONTROL  Proportional Control[%02d]",
+                  l_resp_ptr->proportional_control);
+        TRAC_IMP("DBG_PCAP_SOCKET_CONTROL  MhzDropPerW[%04d MHz] MhzRaisePerW[%04d MHz] DropWait[%04d ticks] IncreaseWait[%04d ticks]",
+                  l_resp_ptr->delta_chip_mhz_per_watt_drop, l_resp_ptr->delta_chip_mhz_per_watt_raise,
+                  l_resp_ptr->num_ticks_drop_wait, l_resp_ptr->num_ticks_raise_wait);
+        TRAC_IMP("DBG_PCAP_SOCKET_FREQ  CurrentF[%04d MHz] VddFClip[%04d MHz] TotalFClip[%04d MHz]",
+                  l_resp_ptr->current_freq, l_resp_ptr->vdd_freq_vote,
+                  l_resp_ptr->total_freq_vote);
+        TRAC_IMP("DBG_PCAP_SOCKET_VDD   Pcap[%04d W] Low[%04d W]       CurrentPwr[%04d W]        MaxPwr[%04d W]",
+                  l_resp_ptr->vdd_socket_pcap_w, l_resp_ptr->vdd_socket_low_w,
+                  l_resp_ptr->vdd_curr_power, l_resp_ptr->vdd_max_power);
+        TRAC_IMP("DBG_PCAP_SOCKET_TOTAL Pcap[%04d W] Low[%04d W] CurrentNonVddPwr[%04d W]  MaxNonVddPwr[%04d W]",
+                  l_resp_ptr->total_socket_pcap_w, l_resp_ptr->total_socket_low_w,
+                  l_resp_ptr->non_vdd_curr_power, l_resp_ptr->non_vdd_max_power);
+
+    }while(0);
+
+    // Populate the response data header
+    l_resp_data_length = sizeof(cmdh_dbug_socket_data_resp_t) - CMDH_DBUG_FSP_RESP_LEN;
+    G_rsp_status = l_rc;
+    o_rsp_ptr->data_length[0] = ((uint8_t *)&l_resp_data_length)[0];
+    o_rsp_ptr->data_length[1] = ((uint8_t *)&l_resp_data_length)[1];
+}
+
+
 
 // Function Specification
 //
@@ -1476,6 +1559,10 @@ void cmdh_dbug_cmd (const cmdh_fsp_cmd_t * i_cmd_ptr,
 
         case DBUG_CLEAR_ERRH:
              dbug_clear_errh(i_cmd_ptr, o_rsp_ptr);
+             break;
+
+        case DBUG_DUMP_SOCKET_PCAP:
+             dbug_socket_pcap_dump(i_cmd_ptr, o_rsp_ptr);
              break;
 
         case DBUG_WRITE_SENSOR:

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2021                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2022                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -61,6 +61,8 @@ typedef enum
 typedef enum
 {
     AMEC_VOTING_REASON_INIT             = 0x00000000,
+    AMEC_VOTING_REASON_SOCKET_VDD_CAP   = 0x00000001, // Vdd socket power cap
+    AMEC_VOTING_REASON_TOTAL_SOCKET_CAP = 0x00000002, // total socket power cap
     AMEC_VOTING_REASON_PROC_THRM        = 0x00000040, // processor OT
     AMEC_VOTING_REASON_OVER_CURRENT     = 0x00000200, // WOF off, clipping from OCS dirty bits
     AMEC_VOTING_REASON_OVERRIDE         = 0x00000400, // mfg auto slew command
@@ -78,6 +80,8 @@ typedef enum
 
 // these power/thermal reasons should result in a performance loss error
 #define FREQ_REASON_PERF_LOSS_ERROR ( AMEC_VOTING_REASON_PROC_THRM | \
+                                      AMEC_VOTING_REASON_SOCKET_VDD_CAP | \
+                                      AMEC_VOTING_REASON_TOTAL_SOCKET_CAP | \
                                       AMEC_VOTING_REASON_PPB_HARD_CAP | \
                                       AMEC_VOTING_REASON_APSS_PMAX | \
                                       AMEC_VOTING_REASON_VDD_THRM \

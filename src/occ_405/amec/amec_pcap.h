@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2022                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -71,8 +71,11 @@ typedef struct amec_pcap
 // Functions
 //*************************************************************************
 
-// Calls all power control algorithms
+// Calls all power control algorithms for node power capping
 void amec_power_control();
+
+// Check Processor socket power
+void amec_socket_power_control();
 
 #endif
 
