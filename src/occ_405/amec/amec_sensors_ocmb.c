@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2022                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -153,7 +153,6 @@ void amec_update_ocmb_dimm_dts_sensors(OcmbMemData * i_sensor_cache, uint8_t i_m
     uint16_t l_dts[NUM_DIMMS_PER_OCMB] = {0};
     int32_t  l_dimm_temp, l_prev_temp;
     static uint8_t L_ran_once[MAX_NUM_OCMBS] = {FALSE};
-    static bool    L_ot_traced[MAX_NUM_OCMBS][NUM_DIMMS_PER_OCMB] = {{false}};
 
     amec_membuf_t* l_membuf_ptr = &g_amec->proc[0].memctl[i_membuf].membuf;
 
@@ -289,23 +288,7 @@ void amec_update_ocmb_dimm_dts_sensors(OcmbMemData * i_sensor_cache, uint8_t i_m
             }
         }
 
-        //Check if at or above the error temperature
-        if(l_dts[k] >= g_amec->thermaldimm.ot_error)
-        {
-            //Set a bit so that this dimm can be called out by the thermal thread
-            G_dimm_overtemp_bitmap.bytes[i_membuf] |= (DIMM_SENSOR0 >> k);
-            // trace first time OT per DIMM
-            if( !L_ot_traced[i_membuf][k] )
-            {
-               TRAC_ERR("amec_update_ocmb_dimm_dts_sensors: Mem Buf[%d] DIMM[%d] reached error temp[%d]. current[%d]",
-                        i_membuf,
-                        k,
-                        g_amec->thermaldimm.ot_error,
-                        l_dts[k]);
-               L_ot_traced[i_membuf][k] = true;
-            }
-
-        }
+        // overtemp will be checked in amec_update_ocmb_temp_sensors() based on dts FRU type
     }
 
     // Update the temperatures for this membuf

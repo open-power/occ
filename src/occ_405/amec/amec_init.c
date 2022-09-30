@@ -562,9 +562,6 @@ void amec_init_gamec_struct(void)
     amec_core_perf_counter_ctor(&g_amec->proc[0].core[l_idx].core_perf, 0, l_idx);
   }
 
-  //Initialize processor fields
-  g_amec->proc[0].core_max_freq = 0xFFFF;
-
   //Initialize processor power votes
   g_amec->proc[0].pwr_votes.apss_pmax_clip_freq = 0xFFFF;
   g_amec->proc[0].pwr_votes.ppb_fmax = 0xFFFF;
