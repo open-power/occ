@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2014,2020                        */
+/* Contributors Listed Below - COPYRIGHT 2014,2022                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -58,14 +58,14 @@
 
 typedef enum CHKPOINT
 {
-    BOOT_TEST_SRAM_CHKPOINT =               0x00000001,
-    BOOT_LOAD_IMAGE_CHKPOINT =              0x00000002,
-    BOOT_LOAD_GPE0_CHKPOINT =               0x00000003,
-    BOOT_LOAD_GPE1_CHKPOINT =               0x00000004,
-    BOOT_CALCULTE_CHKSUM_CHKPOINT_405 =     0x00000005,
-    BOOT_CALCULTE_CHKSUM_CHKPOINT_GPE0 =    0x00000006,
-    BOOT_CALCULTE_CHKSUM_CHKPOINT_GPE1 =    0x00000007,
-    BOOT_GET_NEST_FREQ_CHKPOINT =           0x00000008,
+    BOOT_TEST_GPE_SRAM_CHKPOINT =           0x00000001,
+    BOOT_TEST_405_SRAM_CHKPOINT =           0x00000002,
+    BOOT_LOAD_IMAGE_CHKPOINT =              0x00000003,
+    BOOT_LOAD_GPE0_CHKPOINT =               0x00000004,
+    BOOT_LOAD_GPE1_CHKPOINT =               0x00000005,
+    BOOT_CALCULTE_CHKSUM_CHKPOINT_405 =     0x00000006,
+    BOOT_CALCULTE_CHKSUM_CHKPOINT_GPE0 =    0x00000007,
+    BOOT_CALCULTE_CHKSUM_CHKPOINT_GPE1 =    0x00000008,
     BOOT_SSX_BOOT_CALL_CHKPOINT =           0x00000009,
     BOOT_SSX_RETURNED_CHKPOINT =            0x0000000A
 }CHKPOINT;
@@ -74,15 +74,19 @@ typedef enum CHKPOINT
 
 #define SRAM_TEST_START_ADDRESS     0xFFF00000
 #define SRAM_START_ADDRESS_FULL     0xFFF00000
-#define SRAM_START_ADDRESS_405      0xFFF40000
 #define SRAM_START_ADDRESS_GPE0     0xFFF01000
-#define SRAM_START_ADDRESS_GPE1     0xFFF10000
-#define SRAM_TEST_END_ADDRESS       0xFFFFFFEF
-#define SRAM_END_ADDRESS_405        0xFFFFFFEF
 #define SRAM_END_ADDRESS_GPE0       0xFFF0FFFF
+#define SRAM_START_ADDRESS_GPE1     0xFFF10000
 #define SRAM_END_ADDRESS_GPE1       0xFFF1FFFF
+#define SRAM_START_ADDRESS_405      0xFFF40000
+#define SRAM_TEST_END_ADDRESS_405   0xFFFFFF9F
+#define SRAM_START_ADDRESS_DBUG     0xFFFFFFA0
+#define SRAM_END_ADDRESS_DBUG       0xFFFFFFBF
+#define SRAM_END_ADDRESS_405        0xFFFFFFEF
+
 #define SRAM_TEST_BIT_PATTERN       0xA5A5A5A5
 #define EYE_CATCHER_ADDRESS         0x1234ABCD
+#define CHECKSUM_FAIL               0xDEADBEEF
 
 #define BOOT_LOADER_ID              "OCC Boot Image\0"
 
@@ -97,6 +101,24 @@ typedef enum CHKPOINT
 #define WRITE_TO_SPRGx_AND_HALT(rc,data2,data3) \
     ({__asm__ __volatile__ ("mtsprg1 %0;" "mtsprg2 %1;" "mtsprg3 %2;" "tw 31,0,0;": : \
                             "r" (rc), "r" (data2), "r" (data3));})
+
+// Data for boot debug
+// 0xFFFFFFA0 - 0xFFFFFFA3: Checkpoint
+// 0xFFFFFFA4 - 0xFFFFFFA7: Checkpoint data 1
+// 0xFFFFFFA8 - 0xFFFFFFAB: Checkpoint data 2
+// 0xFFFFFFAC - 0xFFFFFFAF: Checkpoint data 3
+// 0xFFFFFFB0 - 0xFFFFFFBF: Resered for future use
+#define BOOT_DEBUG(i_ckp, i_data1, i_data2, i_data3) \
+{ \
+uint32_t* l_address = (uint32_t *)SRAM_START_ADDRESS_DBUG; \
+*l_address = i_ckp;    \
+l_address++;           \
+*l_address = i_data1;  \
+l_address++;           \
+*l_address = i_data2;  \
+l_address++;           \
+*l_address = i_data3;  \
+}
 
 //*************************************************************************/
 // Structures

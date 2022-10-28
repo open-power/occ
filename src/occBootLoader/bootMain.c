@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2014,2020                        */
+/* Contributors Listed Below - COPYRIGHT 2014,2022                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -87,9 +87,17 @@ void main()
     uint8_t* l_gpe0_src_ptr = 0;
     uint8_t* l_gpe1_src_ptr = 0;
 
-    // set checkpoint to boot test SRAM
 
-    WRITE_TO_SPRG0(BOOT_TEST_SRAM_CHKPOINT);
+    // First test boot debug SRAM so we can use it
+    l_rc = boot_test_sram(SRAM_START_ADDRESS_DBUG, SRAM_END_ADDRESS_405);
+    if(0 != l_rc)
+    {
+        WRITE_TO_SPRG1_AND_HALT(l_rc);
+    }
+
+    // set checkpoint to boot test GPE SRAM
+    WRITE_TO_SPRG0(BOOT_TEST_GPE_SRAM_CHKPOINT);
+    BOOT_DEBUG(BOOT_TEST_GPE_SRAM_CHKPOINT, SRAM_START_ADDRESS_GPE0, SRAM_END_ADDRESS_GPE1, 0);
 
 #ifndef VPO
     // This is ifdef'd out b/c it takes too long to run in VPO
@@ -101,12 +109,17 @@ void main()
     l_rc = boot_test_sram(SRAM_START_ADDRESS_GPE0, SRAM_END_ADDRESS_GPE1);
     if(0 != l_rc)
     {
+        BOOT_DEBUG(BOOT_TEST_GPE_SRAM_CHKPOINT, SRAM_START_ADDRESS_GPE0, SRAM_END_ADDRESS_GPE1, l_rc);
         WRITE_TO_SPRG1_AND_HALT(l_rc);
     }
 
-    l_rc = boot_test_sram(SRAM_START_ADDRESS_405, SRAM_END_ADDRESS_405);
+    WRITE_TO_SPRG0(BOOT_TEST_405_SRAM_CHKPOINT);
+    BOOT_DEBUG(BOOT_TEST_405_SRAM_CHKPOINT, SRAM_START_ADDRESS_405, SRAM_TEST_END_ADDRESS_405, 0);
+
+    l_rc = boot_test_sram(SRAM_START_ADDRESS_405, SRAM_TEST_END_ADDRESS_405);
     if(0 != l_rc)
     {
+    BOOT_DEBUG(BOOT_TEST_405_SRAM_CHKPOINT, SRAM_START_ADDRESS_405, SRAM_TEST_END_ADDRESS_405, l_rc);
         WRITE_TO_SPRG1_AND_HALT(l_rc);
     }
 #endif
@@ -118,6 +131,7 @@ void main()
 
     // set checkpoint to boot load main application image to SRAM
     WRITE_TO_SPRG0(BOOT_LOAD_IMAGE_CHKPOINT);
+    BOOT_DEBUG(BOOT_LOAD_IMAGE_CHKPOINT, l_hdrPtr->start_addr, l_hdrPtr->image_size, 0);
 
     // Load main application image to SRAM including main application header
     l_rc = boot_load_405(l_hdrPtr);
@@ -125,33 +139,36 @@ void main()
     // If failed to load image, write failed return code to SPRG1 and halt
     if(0 != l_rc)
     {
+        BOOT_DEBUG(BOOT_LOAD_IMAGE_CHKPOINT, l_hdrPtr->start_addr, l_hdrPtr->image_size, l_rc);
         WRITE_TO_SPRG1_AND_HALT(l_rc);
     }
-
-    // set checkpoint to load gpe0 into SRAM
-    WRITE_TO_SPRG0(BOOT_LOAD_GPE0_CHKPOINT);
 
     // Load GPE0
     l_gpe0_start_addr = (uint32_t) (((uint32_t) l_hdrPtr) + l_hdrPtr->image_size);
     l_gpe0_src_ptr = (uint8_t*) (((uint32_t)l_hdrPtr) + l_hdrPtr->image_size);
+    // set checkpoint to load gpe0 into SRAM
+    WRITE_TO_SPRG0(BOOT_LOAD_GPE0_CHKPOINT);
+    BOOT_DEBUG(BOOT_LOAD_GPE0_CHKPOINT, l_gpe0_start_addr, l_hdrPtr->gpe0_size, 0);
 
     l_rc = boot_load_gpe0(l_gpe0_start_addr, l_hdrPtr->gpe0_size, l_gpe0_src_ptr);
 
     if(0 != l_rc)
     {
+        BOOT_DEBUG(BOOT_LOAD_GPE0_CHKPOINT, l_gpe0_start_addr, l_hdrPtr->gpe0_size, l_rc);
         WRITE_TO_SPRG1_AND_HALT(l_rc);
     }
-
-    WRITE_TO_SPRG0(BOOT_LOAD_GPE1_CHKPOINT);
 
     // Load GPE1
     l_gpe1_start_addr = l_gpe0_start_addr + l_hdrPtr->gpe0_size;
     l_gpe1_src_ptr = (uint8_t*) (((uint32_t)l_gpe0_src_ptr) + l_hdrPtr->gpe0_size);
+    WRITE_TO_SPRG0(BOOT_LOAD_GPE1_CHKPOINT);
+    BOOT_DEBUG(BOOT_LOAD_GPE1_CHKPOINT, l_gpe1_start_addr, l_hdrPtr->gpe1_size, 0);
 
     l_rc = boot_load_gpe1(l_gpe1_start_addr, l_hdrPtr->gpe1_size, l_gpe1_src_ptr);
 
     if(0 != l_rc)
     {
+        BOOT_DEBUG(BOOT_LOAD_GPE1_CHKPOINT, l_gpe1_start_addr, l_hdrPtr->gpe1_size, l_rc);
         WRITE_TO_SPRG1_AND_HALT(l_rc);
     }
 
@@ -161,6 +178,7 @@ void main()
 
     // set checkpoint to calculate checksum
     WRITE_TO_SPRG0(BOOT_CALCULTE_CHKSUM_CHKPOINT_405);
+    BOOT_DEBUG(BOOT_CALCULTE_CHKSUM_CHKPOINT_405, l_hdrPtr->start_addr, l_hdrPtr->image_size, 0);
 
     // Calculate checksum for 405 SRAM
     uint32_t l_checksum = calChecksum(l_hdrPtr->start_addr,
@@ -170,10 +188,12 @@ void main()
     // If checksum does not match, store bad checksum into SPRG1 and halt
     if(l_checksum != l_hdrPtr->checksum)
     {
+        BOOT_DEBUG(BOOT_CALCULTE_CHKSUM_CHKPOINT_405, l_checksum, l_hdrPtr->checksum, CHECKSUM_FAIL);
         WRITE_TO_SPRG1_AND_HALT(l_checksum);
     }
 
     WRITE_TO_SPRG0(BOOT_CALCULTE_CHKSUM_CHKPOINT_GPE0);
+    BOOT_DEBUG(BOOT_CALCULTE_CHKSUM_CHKPOINT_GPE0, SRAM_START_ADDRESS_GPE0, l_hdrPtr->gpe0_size, 0);
 
     // Calculate checksum for GPE0 SRAM
     l_checksum = calChecksum(SRAM_START_ADDRESS_GPE0,
@@ -183,10 +203,12 @@ void main()
     // If checksum does not match, store bad checksum into SPRG1 and halt
     if(l_checksum != l_hdrPtr->gpe0_checksum)
     {
+        BOOT_DEBUG(BOOT_CALCULTE_CHKSUM_CHKPOINT_GPE0, l_checksum, l_hdrPtr->gpe0_checksum, CHECKSUM_FAIL);
         WRITE_TO_SPRGx_AND_HALT(l_checksum, l_hdrPtr->gpe0_checksum, l_hdrPtr->gpe0_size);
     }
 
     WRITE_TO_SPRG0(BOOT_CALCULTE_CHKSUM_CHKPOINT_GPE1);
+    BOOT_DEBUG(BOOT_CALCULTE_CHKSUM_CHKPOINT_GPE1, SRAM_START_ADDRESS_GPE1, l_hdrPtr->gpe1_size, 0);
 
     // Calculate checksum for GPE1 SRAM
     l_checksum = calChecksum(SRAM_START_ADDRESS_GPE1,
@@ -196,14 +218,13 @@ void main()
     // If checksum does not match, store bad checksum into SPRG1 and halt
     if(l_checksum != l_hdrPtr->gpe1_checksum)
     {
+        BOOT_DEBUG(BOOT_CALCULTE_CHKSUM_CHKPOINT_GPE1, l_checksum, l_hdrPtr->gpe1_checksum, CHECKSUM_FAIL);
         WRITE_TO_SPRGx_AND_HALT(l_checksum, l_hdrPtr->gpe1_checksum, l_hdrPtr->gpe1_size);
     }
 
-    // set checkpoint to get nest frequency
-    WRITE_TO_SPRG0(BOOT_GET_NEST_FREQ_CHKPOINT);
-
     // set checkpoint to call to SSX_BOOT
     WRITE_TO_SPRG0(BOOT_SSX_BOOT_CALL_CHKPOINT);
+    BOOT_DEBUG(BOOT_SSX_BOOT_CALL_CHKPOINT, l_hdrPtr->ep_addr, l_hdrPtr->start_addr, l_hdrPtr->image_size);
 
     // create function pointer pointing to main application header entry point
     // address.
@@ -213,6 +234,7 @@ void main()
     // set checkpoint to return from ssx_boot. This should never happen so
     // halt at this point.
     WRITE_TO_SPRG0(BOOT_SSX_RETURNED_CHKPOINT);
+    BOOT_DEBUG(BOOT_SSX_RETURNED_CHKPOINT, l_hdrPtr->ep_addr, 0, 0);
     WRITE_TO_SPRG1_AND_HALT(l_hdrPtr->ep_addr);
 }
 
@@ -275,7 +297,7 @@ uint32_t boot_load_405(const imageHdr_t* i_hdrAddr)
     uint32_t l_mainAppDestRange = (i_hdrAddr->start_addr) +
                                  (i_hdrAddr->image_size-1);
 
-    // Make sure main application destination rang address falls within SRAM
+    // Make sure main application destination range address falls within SRAM
     // range.
     if((l_mainAppDestRange < SRAM_START_ADDRESS_405) ||
        (l_mainAppDestRange > SRAM_END_ADDRESS_405))
