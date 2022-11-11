@@ -166,7 +166,7 @@ typedef struct
 
   // Current temperatures for the on board DTS sensors aka "DIMM" but what the sensor
   // really represents (i.e. DRAM, PMIC...) is defined in dimm_temps[].temp_fru_type
-  fru_temp_t dimm_temps[NUM_DIMMS_PER_OCMB];
+  fru_temp_t dimm_temps[MAX_NUM_DTS_PER_OCMB];
 
   // Temperature of this membuf
   sensor_t tempmembuf;

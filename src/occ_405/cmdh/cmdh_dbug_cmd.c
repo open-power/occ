@@ -74,7 +74,7 @@ uint16_t G_allow_trace_flags = 0x0000;
 uint32_t G_internal_flags    = 0;
 extern bool G_smf_mode;
 uint64_t G_inject_dimm = 0;
-uint32_t G_inject_dimm_trace[MAX_NUM_OCMBS][NUM_DIMMS_PER_OCMB] = {{0}};
+uint32_t G_inject_dimm_trace[MAX_NUM_OCMBS][MAX_NUM_DTS_PER_OCMB] = {{0}};
 
 // SSX Block Copy Request for copying data from HOMER to SRAM
 BceRequest G_debug_pba_request;
@@ -828,7 +828,7 @@ void cmdh_dbug_dimm_inject( const cmdh_fsp_cmd_t * i_cmd_ptr,
                 if (dimms != 0)
                 {
                     unsigned int k;
-                    for(k=0; k < NUM_DIMMS_PER_OCMB; k++)
+                    for(k=0; k < MAX_NUM_DTS_PER_OCMB; k++)
                     {
                         if (dimms & (1 << k))
                         {

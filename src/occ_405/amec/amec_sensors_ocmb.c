@@ -56,7 +56,7 @@ uint16_t            G_membuf_temp_updated_bitmap = 0;
 
 extern uint8_t      G_membuf_needs_recovery;
 extern uint64_t G_inject_dimm;
-extern uint32_t G_inject_dimm_trace[MAX_NUM_OCMBS][NUM_DIMMS_PER_OCMB];
+extern uint32_t G_inject_dimm_trace[MAX_NUM_OCMBS][MAX_NUM_DTS_PER_OCMB];
 extern uint32_t G_num_ocmb_reads_per_1000s;
 extern uint16_t G_allow_trace_flags;
 
@@ -150,14 +150,22 @@ void amec_update_ocmb_dimm_dts_sensors(OcmbMemData * i_sensor_cache, uint8_t i_m
 #define MAX_MEM_TEMP_CHANGE 4
 
     uint32_t k;
-    uint16_t l_dts[NUM_DIMMS_PER_OCMB] = {0};
+    uint16_t l_dts[MAX_NUM_DTS_PER_OCMB] = {0};
+    uint8_t  l_max_dts_per_membuf = 0;
     int32_t  l_dimm_temp, l_prev_temp;
     static uint8_t L_ran_once[MAX_NUM_OCMBS] = {FALSE};
 
     amec_membuf_t* l_membuf_ptr = &g_amec->proc[0].memctl[i_membuf].membuf;
 
+    if(G_sysConfigData.mem_type == MEM_TYPE_OCM_DDR5)
+         l_max_dts_per_membuf = NUM_DTS_PER_OCMB_DDR5;
+    else if(G_sysConfigData.mem_type == MEM_TYPE_OCM_DDR4)
+         l_max_dts_per_membuf = NUM_DTS_PER_OCMB_DDR4;
+    else // must be i2c, no "dimm" dts used from cache line
+         l_max_dts_per_membuf = 0;
+
     // Harvest thermal data for all dimms
-    for(k=0; k < NUM_DIMMS_PER_OCMB; k++)
+    for(k=0; k < l_max_dts_per_membuf; k++)
     {
         if(!MEMBUF_SENSOR_ENABLED(i_membuf, k))
         {
@@ -292,7 +300,7 @@ void amec_update_ocmb_dimm_dts_sensors(OcmbMemData * i_sensor_cache, uint8_t i_m
     }
 
     // Update the temperatures for this membuf
-    for(k = 0; k < NUM_DIMMS_PER_OCMB; k++)
+    for(k = 0; k < l_max_dts_per_membuf; k++)
     {
         l_membuf_ptr->dimm_temps[k].cur_temp =  l_dts[k];
     }
@@ -453,7 +461,15 @@ void amec_update_ocmb_temp_sensors(void)
     uint8_t  l_ot_error = 0;
     uint8_t  l_cur_temp = 0;
     uint8_t  l_fru_type = DATA_FRU_NOT_USED;
-    static bool L_ot_traced[MAX_NUM_OCMBS][NUM_DIMMS_PER_OCMB] = {{false}};
+    uint8_t  l_max_dts_per_membuf = 0;
+    static bool L_ot_traced[MAX_NUM_OCMBS][MAX_NUM_DTS_PER_OCMB] = {{false}};
+
+    if(G_sysConfigData.mem_type == MEM_TYPE_OCM_DDR5)
+         l_max_dts_per_membuf = NUM_DTS_PER_OCMB_DDR5;
+    else if(G_sysConfigData.mem_type == MEM_TYPE_OCM_DDR4)
+         l_max_dts_per_membuf = NUM_DTS_PER_OCMB_DDR4;
+    else // must be i2c, no "dimm" dts used from cache line
+         l_max_dts_per_membuf = 0;
 
     for(k=0; k < MAX_NUM_OCMBS; k++)
     {
@@ -465,7 +481,7 @@ void amec_update_ocmb_temp_sensors(void)
 
         // process each of the thermal sensors (stored as "dimm" temps)
         // based on what type they are for and finding the hottest for each type
-        for(l_dimm=0; l_dimm < NUM_DIMMS_PER_OCMB; l_dimm++)
+        for(l_dimm=0; l_dimm < l_max_dts_per_membuf; l_dimm++)
         {
            l_fru_type = g_amec->proc[0].memctl[k].membuf.dimm_temps[l_dimm].temp_fru_type;
            l_cur_temp = g_amec->proc[0].memctl[k].membuf.dimm_temps[l_dimm].cur_temp;

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2016,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2016,2022                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -264,7 +264,7 @@ void memory_init()
         // Check if memory task is running
         if(!rtl_task_is_runnable(TASK_ID_MEMORY_DATA))
         {
-            if (MEM_TYPE_OCM == G_sysConfigData.mem_type)
+            if (IS_OCM_MEM_TYPE(G_sysConfigData.mem_type))
             {
                 ocmb_init();
             }

@@ -83,7 +83,7 @@ uint64_t amec_mem_get_huid(uint8_t i_membuf, uint8_t i_dimm)
 {
     uint64_t l_huid = 0;
 
-    if( (i_membuf < MAX_NUM_OCMBS) && (i_dimm < NUM_DIMMS_PER_OCMB) )
+    if( (i_membuf < MAX_NUM_OCMBS) && (i_dimm < MAX_NUM_DTS_PER_OCMB) )
     {
         l_huid = (uint64_t)G_sysConfigData.dimm_huids[i_membuf][i_dimm];
 
@@ -173,8 +173,8 @@ void amec_health_check_dimm_temp()
            l_callouts_count = 0;
         }
 
-        //find the dimm(s) that need to be called out for this port
-        for(l_dimm = 0; l_dimm < NUM_DIMMS_PER_OCMB; l_dimm++)
+        //find the dts(es) that need to be called out for this port
+        for(l_dimm = 0; l_dimm < MAX_NUM_DTS_PER_OCMB; l_dimm++)
         {
             if (!(l_new_callouts & (DIMM_SENSOR0 >> l_dimm)))
             {
@@ -311,7 +311,7 @@ void amec_health_check_dimm_timeout()
     uint32_t    l_redundancy_lost_callouts_count = 0;
     uint64_t    l_huid;
     uint8_t     l_max_membuf = 0; // number of membufs
-    uint8_t     l_max_dimm_per_membuf = 0; // dimms per membuf
+    uint8_t     l_max_dts_per_membuf = 0; // Number DTS per membuf
     uint8_t     l_ocm_dts_type_expired_bitmap = 0;
     bool        l_redundancy_lost = FALSE;
     ERRL_SEVERITY l_severity = ERRL_SEV_PREDICTIVE;
@@ -351,7 +351,12 @@ void amec_health_check_dimm_timeout()
         }
 
         l_max_membuf = MAX_NUM_OCMBS;
-        l_max_dimm_per_membuf = NUM_DIMMS_PER_OCMB;
+        if(G_sysConfigData.mem_type == MEM_TYPE_OCM_DDR5)
+            l_max_dts_per_membuf = NUM_DTS_PER_OCMB_DDR5;
+        else if(G_sysConfigData.mem_type == MEM_TYPE_OCM_DDR4)
+            l_max_dts_per_membuf = NUM_DTS_PER_OCMB_DDR4;
+        else // must be i2c, no "dimm" dts used from cache line
+            l_max_dts_per_membuf = 0;
 
         //iterate across all ports incrementing dimm sensor timers as needed
         for(l_membuf = 0; l_membuf < MAX_NUM_OCMBS; l_membuf++)
@@ -370,7 +375,7 @@ void amec_health_check_dimm_timeout()
             }
 
             //There's at least one dimm requiring an increment, find the dimm
-            for(l_dimm = 0; l_dimm < NUM_DIMMS_PER_OCMB; l_dimm++)
+            for(l_dimm = 0; l_dimm < l_max_dts_per_membuf; l_dimm++)
             {
                 //not this one, check if we need to clear the dimm timeout and go to the next one
                 if(!(l_need_inc.bytes[l_membuf] & (DIMM_SENSOR0 >> l_dimm)))
@@ -450,7 +455,7 @@ void amec_health_check_dimm_timeout()
                     l_fru->flags |= FRU_SENSOR_STATUS_REDUNDANCY_LOST;
 
                     // if there is a good "DIMM" sensor then this is loss of redundancy only
-                    for(l_other_dimm = 0; l_other_dimm < NUM_DIMMS_PER_OCMB; l_other_dimm++)
+                    for(l_other_dimm = 0; l_other_dimm < l_max_dts_per_membuf; l_other_dimm++)
                     {
                        // make sure the other sensor is being used
                        if( (l_other_dimm != l_dimm) &&
@@ -601,7 +606,7 @@ void amec_health_check_dimm_timeout()
             }
 
             //iterate over all dimms
-            for(l_dimm = 0; l_dimm < NUM_DIMMS_PER_OCMB; l_dimm++)
+            for(l_dimm = 0; l_dimm < l_max_dts_per_membuf; l_dimm++)
             {
                 //not this one, go to next one
                 if(!(l_need_clr.bytes[l_membuf] & (DIMM_SENSOR0 >> l_dimm)))
@@ -636,7 +641,7 @@ void amec_health_check_dimm_timeout()
         for(l_membuf = 0; l_membuf < l_max_membuf; l_membuf++)
         {
             //iterate over all "dimm" DTS readings
-            for(l_dimm = 0; l_dimm < l_max_dimm_per_membuf; l_dimm++)
+            for(l_dimm = 0; l_dimm < l_max_dts_per_membuf; l_dimm++)
             {
                 if(G_dimm_temp_expired_bitmap.bytes[l_membuf] & (DIMM_SENSOR0 >> l_dimm))
                 {

@@ -504,7 +504,7 @@ void amec_slv_state_0(void)
   //-------------------------------------------------------
   // Update memory buffer sensors (for this tick)
   //-------------------------------------------------------
-  if(MEM_TYPE_OCM == G_sysConfigData.mem_type)
+  if(IS_OCM_MEM_TYPE(G_sysConfigData.mem_type))
   {
       amec_update_ocmb_sensors(MEMBUF_0+L_membuf_addr);
       if(L_membuf_addr)
@@ -548,7 +548,7 @@ void amec_slv_state_1(void)
     //-------------------------------------------------------
     // Update memory buffer sensors (for this tick)
     //-------------------------------------------------------
-    if(MEM_TYPE_OCM == G_sysConfigData.mem_type)
+    if(IS_OCM_MEM_TYPE(G_sysConfigData.mem_type))
     {
         amec_update_ocmb_sensors(MEMBUF_1+L_membuf_addr);
         if(L_membuf_addr)
@@ -577,7 +577,7 @@ void amec_slv_state_2(void)
   //-------------------------------------------------------
   // Update memory buffer sensors (for this tick)
   //-------------------------------------------------------
-  if(MEM_TYPE_OCM == G_sysConfigData.mem_type)
+  if(IS_OCM_MEM_TYPE(G_sysConfigData.mem_type))
   {
       amec_update_ocmb_sensors(MEMBUF_2+L_membuf_addr);
       if(L_membuf_addr)
@@ -607,7 +607,7 @@ void amec_slv_state_3(void)
   //-------------------------------------------------------
   // Update memory buffer sensors (for this tick)
   //-------------------------------------------------------
-  if(MEM_TYPE_OCM == G_sysConfigData.mem_type)
+  if(IS_OCM_MEM_TYPE(G_sysConfigData.mem_type))
   {
       amec_update_ocmb_sensors(MEMBUF_3+L_membuf_addr);
       if(L_membuf_addr)
@@ -634,7 +634,7 @@ void amec_slv_state_4(void)
   //-------------------------------------------------------
   // Update memory buffer sensors (for this tick)
   //-------------------------------------------------------
-  if(MEM_TYPE_OCM == G_sysConfigData.mem_type)
+  if(IS_OCM_MEM_TYPE(G_sysConfigData.mem_type))
   {
       amec_update_ocmb_sensors(MEMBUF_4+L_membuf_addr);
       if(L_membuf_addr)
@@ -662,7 +662,7 @@ void amec_slv_state_5(void)
   //-------------------------------------------------------
   // Update memory buffer sensors (for this tick)
   //-------------------------------------------------------
-  if(MEM_TYPE_OCM == G_sysConfigData.mem_type)
+  if(IS_OCM_MEM_TYPE(G_sysConfigData.mem_type))
   {
       amec_update_ocmb_sensors(MEMBUF_5+L_membuf_addr);
       if(L_membuf_addr)
@@ -695,7 +695,7 @@ void amec_slv_state_6(void)
   //-------------------------------------------------------
   // Update memory buffer sensors (for this tick)
   //-------------------------------------------------------
-  if(MEM_TYPE_OCM == G_sysConfigData.mem_type)
+  if(IS_OCM_MEM_TYPE(G_sysConfigData.mem_type))
   {
       amec_update_ocmb_sensors(MEMBUF_6+L_membuf_addr);
       if(L_membuf_addr)
@@ -722,7 +722,7 @@ void amec_slv_state_7(void)
   //-------------------------------------------------------
   // Update memory buffer sensors (for this tick)
   //-------------------------------------------------------
-  if(MEM_TYPE_OCM == G_sysConfigData.mem_type)
+  if(IS_OCM_MEM_TYPE(G_sysConfigData.mem_type))
   {
       amec_update_ocmb_sensors(MEMBUF_7+L_membuf_addr);
       if(L_membuf_addr)
@@ -1394,7 +1394,7 @@ void amec_slv_substate_7_0(void)
     // Call memory thermal controller based on DIMM temperature
     amec_controller_dimm_thermal();
 
-    if(MEM_TYPE_OCM == G_sysConfigData.mem_type)
+    if(IS_OCM_MEM_TYPE(G_sysConfigData.mem_type))
     {
         // Call memory thermal controller based on membuf temperature
         amec_controller_membuf_thermal();

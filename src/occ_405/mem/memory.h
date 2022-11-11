@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2014,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2014,2022                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -33,8 +33,10 @@
 
 typedef enum
 {
-    MEM_TYPE_UNKNOWN = 0x00,
-    MEM_TYPE_OCM     = 0xA0,
+    MEM_TYPE_UNKNOWN      = 0x00,
+    MEM_TYPE_OCM_DDR4     = 0xA0,
+    MEM_TYPE_OCM_DDR5     = 0xB0,
+    MEM_TYPE_OCM_DDR4_I2C = 0xC0,
 } MEMORY_TYPE;
 
 typedef enum

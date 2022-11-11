@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2022                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -211,7 +211,7 @@ occSysConfigData_t G_sysConfigData =
     // -----------------------------------------------------------
     .membuf_huids = {0},
     .dimm_huids = {{0,0},{0,0}},
-    .mem_type = MEM_TYPE_OCM,
+    .mem_type = MEM_TYPE_OCM_DDR4,
     .ips_mem_pwr_ctl = MEM_PWR_CTL_OFF,
     .default_mem_pwr_ctl = MEM_PWR_CTL_OFF,
 

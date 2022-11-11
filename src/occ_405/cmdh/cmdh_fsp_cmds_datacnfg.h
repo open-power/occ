@@ -355,9 +355,9 @@ typedef struct __attribute__ ((packed))
     uint32_t                   hw_sensor_id;
     uint32_t                   temp_sensor_id;
     uint8_t                    memory_type;
-    uint8_t                    dimm_info1;  // Mem DTS 0 or 1
-    uint8_t                    dimm_info2;  // Temperature type
-    uint8_t                    dimm_info3;  // Reserved
+    uint8_t                    dimm_info1;
+    uint8_t                    dimm_info2;
+    uint8_t                    dimm_info3;
 }cmdh_mem_cfg_data_set_t;
 
 typedef struct __attribute__ ((packed))

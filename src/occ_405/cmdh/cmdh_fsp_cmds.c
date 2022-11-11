@@ -133,7 +133,7 @@ errlHndl_t cmdh_tmgt_poll (const cmdh_fsp_cmd_t * i_cmd_ptr,
 ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
 {
     ERRL_RC                     l_rc  = ERRL_RC_INTERNAL_FAIL;
-    int                         k = 0, l_max_sensors = 0;
+    int                         k = 0, l_max_sensors = 0, l_max_dts_per_membuf = 0;
     int                         l_err_hist_idx = 0, l_sens_list_idx = 0;
     cmdh_poll_sensor_db_t       l_sensorHeader;
     static unsigned int         L_num_hcode_elogs = 0;
@@ -301,7 +301,7 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
     l_sensorHeader.count  = 0;
 
     //Initialize to max number of possible temperature sensors.
-    l_max_sensors = MAX_NUM_CORES + MAX_NUM_MEM_CONTROLLERS + (MAX_NUM_MEM_CONTROLLERS * NUM_DIMMS_PER_OCMB) + (MAX_NUM_GPU_PER_DOMAIN * 2);
+    l_max_sensors = MAX_NUM_CORES + MAX_NUM_MEM_CONTROLLERS + (MAX_NUM_MEM_CONTROLLERS * MAX_NUM_DTS_PER_OCMB) + (MAX_NUM_GPU_PER_DOMAIN * 2);
     l_max_sensors++;  // +1 for VRM
     cmdh_poll_temp_sensor_t l_tempSensorList[l_max_sensors];
     memset(l_tempSensorList, 0x00, sizeof(l_tempSensorList));
@@ -346,8 +346,15 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
 
             l_sensorHeader.count++;
 
+            if(G_sysConfigData.mem_type == MEM_TYPE_OCM_DDR5)
+                l_max_dts_per_membuf = NUM_DTS_PER_OCMB_DDR5;
+            else if(G_sysConfigData.mem_type == MEM_TYPE_OCM_DDR4)
+                l_max_dts_per_membuf = NUM_DTS_PER_OCMB_DDR4;
+            else // must be i2c, no "dimm" dts used from cache line
+                l_max_dts_per_membuf = 0;
+
             //Add entries for present dimms associated with current memory buffer l_membuf.
-            for(l_dimm=0; l_dimm < NUM_DIMMS_PER_OCMB; l_dimm++)
+            for(l_dimm=0; l_dimm < l_max_dts_per_membuf; l_dimm++)
             {
                 l_temp_sid = g_amec->proc[0].memctl[l_membuf].membuf.dimm_temps[l_dimm].temp_sid;
 

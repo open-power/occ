@@ -55,9 +55,17 @@
 #define NUM_PORT_PAIRS_PER_MEM_BUF      2
 
 #define NUM_MBAS_PER_OCMB               1
-#define NUM_DIMMS_PER_OCMB              2
-#define OCMB_TYPE_LOCATION_MASK (MAX_NUM_OCMBS-1)
-#define IS_OCM_MEM_TYPE(type) (((type) & (~OCMB_TYPE_LOCATION_MASK)) == MEM_TYPE_OCM)
+#define NUM_DTS_PER_OCMB_DDR4           2
+#define NUM_DTS_PER_OCMB_DDR5           4
+#define MAX_NUM_DTS_PER_OCMB            4  // max of DDR4 and DDR5
+#define OCMB_TYPE_TYPE_MASK             0xF0
+#define OCMB_TYPE_LOCATION_MASK         0x0F
+#define IS_OCM_MEM_TYPE(type) ((type == MEM_TYPE_OCM_DDR4) || \
+                               (type == MEM_TYPE_OCM_DDR5) || \
+                               (type == MEM_TYPE_OCM_DDR4_I2C))
+#define IS_OCM_DDR4_MEM_TYPE(type) ((type == MEM_TYPE_OCM_DDR4) || \
+                                    (type == MEM_TYPE_OCM_DDR4_I2C))
+#define IS_OCM_DDR5_MEM_TYPE(type) (type == MEM_TYPE_OCM_DDR5)
 
 #define UPPER_LIMIT_PROC_FREQ_MHZ     6000
 
@@ -438,7 +446,7 @@ typedef struct
   // Memory Configuration Data
   // --------------------------------------
   uint32_t membuf_huids[MAX_NUM_OCMBS];
-  uint32_t dimm_huids[MAX_NUM_OCMBS][NUM_DIMMS_PER_OCMB];
+  uint32_t dimm_huids[MAX_NUM_OCMBS][MAX_NUM_DTS_PER_OCMB];
   uint8_t mem_type;
   uint8_t ips_mem_pwr_ctl;     // IPS memory power control
   uint8_t default_mem_pwr_ctl; // default memory power control
