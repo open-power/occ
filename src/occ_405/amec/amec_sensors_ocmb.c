@@ -155,10 +155,32 @@ void amec_update_ocmb_dimm_dts_sensors(OcmbMemData * i_sensor_cache, uint8_t i_m
     int32_t  l_dimm_temp, l_prev_temp;
     static uint8_t L_ran_once[MAX_NUM_OCMBS] = {FALSE};
 
+    // defaults for DDR4
+    bool    l_memdts0_valid = i_sensor_cache->status.fields.memdts0_valid;
+    bool    l_memdts0_err = i_sensor_cache->status.fields.memdts0_err;
+    bool    l_memdts1_valid = i_sensor_cache->status.fields.memdts1_valid;
+    bool    l_memdts1_err = i_sensor_cache->status.fields.memdts1_err;
+    bool    l_memdts2_valid = TRUE;
+    bool    l_memdts2_err = FALSE;
+    bool    l_memdts3_valid = TRUE;
+    bool    l_memdts3_err = FALSE;
+
+    OcmbMemDataDDR5* l_ddr5_sensor_cache = (OcmbMemDataDDR5*)i_sensor_cache;
+
     amec_membuf_t* l_membuf_ptr = &g_amec->proc[0].memctl[i_membuf].membuf;
 
-    if(G_sysConfigData.mem_type == MEM_TYPE_OCM_DDR5)
+    if(IS_OCM_DDR5_MEM_TYPE(G_sysConfigData.mem_type))
+    {
          l_max_dts_per_membuf = NUM_DTS_PER_OCMB_DDR5;
+         l_memdts0_valid = l_ddr5_sensor_cache->status.fields.memdts0_valid;
+         l_memdts0_err = l_ddr5_sensor_cache->status.fields.memdts0_err;
+         l_memdts1_valid = l_ddr5_sensor_cache->status.fields.memdts1_valid;
+         l_memdts1_err = l_ddr5_sensor_cache->status.fields.memdts1_err;
+         l_memdts2_valid = l_ddr5_sensor_cache->status.fields.memdts2_valid;
+         l_memdts2_err = l_ddr5_sensor_cache->status.fields.memdts2_err;
+         l_memdts3_valid = l_ddr5_sensor_cache->status.fields.memdts3_valid;
+         l_memdts3_err = l_ddr5_sensor_cache->status.fields.memdts3_err;
+    }
     else if(G_sysConfigData.mem_type == MEM_TYPE_OCM_DDR4)
          l_max_dts_per_membuf = NUM_DTS_PER_OCMB_DDR4;
     else // must be i2c, no "dimm" dts used from cache line
@@ -199,7 +221,11 @@ void amec_update_ocmb_dimm_dts_sensors(OcmbMemData * i_sensor_cache, uint8_t i_m
 
         // The dimm dts reading is mangled
         // see ekb/chips/ocmb/explorer/procedures/hwp/memory/lab/sdk/temp_sensor/exp_temperature_sensor_utils.H
-        l_dimm_temp = decode_ocmb_dimm_dts(i_sensor_cache->memdts[k]);
+        // same decode is used for DDR4 and DDR5
+        if(IS_OCM_DDR5_MEM_TYPE(G_sysConfigData.mem_type))
+            l_dimm_temp = decode_ocmb_dimm_dts(l_ddr5_sensor_cache->memdts[k]);
+        else
+            l_dimm_temp = decode_ocmb_dimm_dts(i_sensor_cache->memdts[k]);
 
         l_prev_temp = l_fru->cur_temp;
         if(!l_prev_temp)
@@ -208,12 +234,10 @@ void amec_update_ocmb_dimm_dts_sensors(OcmbMemData * i_sensor_cache, uint8_t i_m
         }
 
         //Check DTS status bits.  VALID NEW if valid and !err
-        if((k == 0 &&
-            i_sensor_cache->status.fields.memdts0_valid &&
-            (!i_sensor_cache->status.fields.memdts0_err)) ||
-           (k == 1 &&
-            i_sensor_cache->status.fields.memdts1_valid &&
-            (!i_sensor_cache->status.fields.memdts1_err)))
+        if((k == 0 && l_memdts0_valid && (!l_memdts0_err)) ||
+           (k == 1 && l_memdts1_valid && (!l_memdts1_err)) ||
+           (k == 2 && l_memdts2_valid && (!l_memdts2_err)) ||
+           (k == 3 && l_memdts3_valid && (!l_memdts3_err)) )
         {
             //make sure temperature is within a 'reasonable' range.
             if(l_dimm_temp < MIN_VALID_DIMM_TEMP ||
@@ -263,8 +287,10 @@ void amec_update_ocmb_dimm_dts_sensors(OcmbMemData * i_sensor_cache, uint8_t i_m
         {
             //convert status number to a flag
             uint8_t l_status_flag = 0;
-            if((k == 0 && i_sensor_cache->status.fields.memdts0_err) ||
-               (k == 1 && i_sensor_cache->status.fields.memdts1_err))
+            if((k == 0 && l_memdts0_err) ||
+               (k == 1 && l_memdts1_err) ||
+               (k == 2 && l_memdts2_err) ||
+               (k == 3 && l_memdts3_err))
             {
                 l_status_flag = FRU_SENSOR_STATUS_ERROR;
             }
@@ -289,8 +315,7 @@ void amec_update_ocmb_dimm_dts_sensors(OcmbMemData * i_sensor_cache, uint8_t i_m
             l_dts[k] = l_prev_temp;
 
             //request recovery (disable and re-enable sensor cache collection)
-            if(i_sensor_cache->status.fields.memdts0_err ||
-               i_sensor_cache->status.fields.memdts1_err)
+            if(l_memdts0_err || l_memdts1_err || l_memdts2_err || l_memdts3_err)
             {
                 G_membuf_needs_recovery |= MEMBUF0_PRESENT_MASK >> i_membuf;
             }
@@ -327,9 +352,30 @@ void amec_update_ocmb_dts_sensors(OcmbMemData * i_sensor_cache, uint8_t i_membuf
     int32_t  l_prev_temp;
     static uint8_t L_ran_once[MAX_NUM_OCMBS] = {FALSE};
 
-    // The ubdts0 is in 1/100 deg C.
-    // Add 50 for rounding
-    l_sens_temp = (50l + i_sensor_cache->ubdts0)/100l;
+    // defaults for DDR4
+    bool    l_ubdts0_valid = i_sensor_cache->status.fields.ubdts0_valid;
+    bool    l_ubdts0_err = i_sensor_cache->status.fields.ubdts0_err;
+
+    OcmbMemDataDDR5* l_ddr5_sensor_cache = (OcmbMemDataDDR5*)i_sensor_cache;
+
+    if(IS_OCM_DDR4_MEM_TYPE(G_sysConfigData.mem_type))
+    {
+        // The ubdts0 is in 1/100 deg C.
+        // Add 50 for rounding
+        l_sens_temp = (50l + i_sensor_cache->ubdts0)/100l;
+    }
+    else // DDR5
+    {
+        l_ubdts0_valid = l_ddr5_sensor_cache->status.fields.ubdts0_valid;
+        l_ubdts0_err = l_ddr5_sensor_cache->status.fields.ubdts0_err;
+
+        // Temp in 1/16 deg C
+        l_sens_temp = l_ddr5_sensor_cache->ubdts0 >> 4;
+
+        // round up if needed
+        if((l_ddr5_sensor_cache->ubdts0 % 16) >= 8)
+            l_sens_temp += 1;
+    }
 
     amec_membuf_t* l_membuf_ptr = &g_amec->proc[0].memctl[i_membuf].membuf;
     fru_temp_t* l_fru = &l_membuf_ptr->membuf_hottest;
@@ -343,8 +389,7 @@ void amec_update_ocmb_dts_sensors(OcmbMemData * i_sensor_cache, uint8_t i_membuf
         }
 
         //Check DTS status bits
-        if( (i_sensor_cache->status.fields.ubdts0_valid) &&
-            (!i_sensor_cache->status.fields.ubdts0_err) )
+        if( (l_ubdts0_valid) && (!l_ubdts0_err) )
         {
             //make sure temperature is within a 'reasonable' range.
             if( (l_sens_temp < MIN_VALID_MEMBUF_TEMP) ||
@@ -396,7 +441,7 @@ void amec_update_ocmb_dts_sensors(OcmbMemData * i_sensor_cache, uint8_t i_membuf
             {
                 //Trace the error if we haven't traced it already for this sensor
                 if( (!(l_fru->flags & FRU_SENSOR_STATUS_INVALID)) &&
-                    (i_sensor_cache->status.fields.ubdts0_err) )
+                    (l_ubdts0_err) )
                 {
                     TRAC_ERR("Membuf %d temp sensor error.", i_membuf);
                 }
@@ -464,7 +509,7 @@ void amec_update_ocmb_temp_sensors(void)
     uint8_t  l_max_dts_per_membuf = 0;
     static bool L_ot_traced[MAX_NUM_OCMBS][MAX_NUM_DTS_PER_OCMB] = {{false}};
 
-    if(G_sysConfigData.mem_type == MEM_TYPE_OCM_DDR5)
+    if(IS_OCM_DDR5_MEM_TYPE(G_sysConfigData.mem_type))
          l_max_dts_per_membuf = NUM_DTS_PER_OCMB_DDR5;
     else if(G_sysConfigData.mem_type == MEM_TYPE_OCM_DDR4)
          l_max_dts_per_membuf = NUM_DTS_PER_OCMB_DDR4;
@@ -592,7 +637,10 @@ void amec_perfcount_ocmb_getmc( OcmbMemData * i_sensor_cache,
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
 
+    // DDR4
     OcmbMemData * l_sensor_cache = i_sensor_cache;
+    // DDR5
+    OcmbMemDataDDR5* l_ddr5_sensor_cache = (OcmbMemDataDDR5*)i_sensor_cache;
 
     l_num_ticks = amec_diff_adjust_for_overflow(CURRENT_TICK, L_tick[i_membuf]);
     L_tick[i_membuf] = CURRENT_TICK;
@@ -608,7 +656,15 @@ void amec_perfcount_ocmb_getmc( OcmbMemData * i_sensor_cache,
     // MWRMx (0.0001 Memory write requests per sec)
     // -------------------------------------------------------------------------
 
-    l_cache_write = l_sensor_cache->mba_wr;
+    if(IS_OCM_DDR4_MEM_TYPE(G_sysConfigData.mem_type))
+    {
+       l_cache_write = l_sensor_cache->mba_wr;
+    }
+    else // DDR5
+    {
+       l_cache_write = l_ddr5_sensor_cache->side0_wr + l_ddr5_sensor_cache->side1_wr;
+    }
+
     l_prev_write = g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].perf.wr_cnt_accum;
     temp32 = amec_diff_adjust_for_overflow(l_cache_write, l_prev_write);
 
@@ -642,7 +698,15 @@ void amec_perfcount_ocmb_getmc( OcmbMemData * i_sensor_cache,
     // MRDMx (0.0001 Memory read requests per sec)
     // -------------------------------------------------------------------------
 
-    l_cache_read = l_sensor_cache->mba_rd;
+    if(IS_OCM_DDR4_MEM_TYPE(G_sysConfigData.mem_type))
+    {
+       l_cache_read = l_sensor_cache->mba_rd;
+    }
+    else // DDR5
+    {
+       l_cache_read = l_ddr5_sensor_cache->side0_rd + l_ddr5_sensor_cache->side1_rd;
+    }
+
     l_prev_read = g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].perf.rd_cnt_accum;
     temp32 = amec_diff_adjust_for_overflow(l_cache_read, l_prev_read);
 
