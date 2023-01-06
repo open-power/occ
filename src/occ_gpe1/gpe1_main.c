@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2020                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2023                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -57,7 +57,7 @@ MemBufGetMemDataParms_t G_dataParms;
 MemBufConfiguration_t G_membufConfiguration;
 OcmbMemData G_escache;
 
-int gpe_ocmb_configuration_create(MemBufConfiguration_t* o_config);
+int gpe_ocmb_configuration_create(MemBufConfiguration_t* o_config, uint32_t i_max_dts);
 int get_ocmb_sensorcache(MemBufConfiguration_t* i_config,
                          MemBufGetMemDataParms_t* i_parms);
 #endif
@@ -118,7 +118,7 @@ int main(int argc, char **argv)
 
     G_membufConfiguration.config = 0xf000ff00;
 
-    rc = gpe_ocmb_configuration_create(&G_membufConfiguration);
+    rc = gpe_ocmb_configuration_create(&G_membufConfiguration, 2);
 
     PK_TRACE("gpe_ocmb_configuration_create rc = %d",rc);
 

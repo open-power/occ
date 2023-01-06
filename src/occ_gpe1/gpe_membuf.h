@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2023                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -107,12 +107,13 @@ void gpe_inband_scom(MemBufConfiguration_t* i_config,
 
 /**
  * Populate a MemBufConfiguration object for ocmb
+ * @param[in] max number of dts to check for
  * @param[out] 8 byte aligned pointer to the MemBufConfiguration object.
  * @return  [0 | return code]
  * @note  The MemBufConfiguration object is shared with the 405 so
  * it needs to be in non-cacheable sram.
  */
-int gpe_ocmb_configuration_create(MemBufConfiguration_t * o_config);
+int gpe_ocmb_configuration_create(MemBufConfiguration_t * o_config, uint32_t i_max_dts);
 
 /**
  * Reset ocmb deadman timer count and emergency throttles

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2016,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2016,2023                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -355,10 +355,11 @@ int ocmb_check_sensor_cache_enabled(MemBufConfiguration_t * i_config,
     return rc;
 }
 
-int gpe_ocmb_configuration_create(MemBufConfiguration_t* o_config)
+int gpe_ocmb_configuration_create(MemBufConfiguration_t* o_config, uint32_t i_max_dts)
 {
     int rc = 0;
     int i = 0;
+    int dts_num = 0;
     int designated_sync = -1;
     mcfgpr_t mcfgpr;
     uint64_t*   ptr64 = (uint64_t*)o_config;
@@ -498,6 +499,7 @@ int gpe_ocmb_configuration_create(MemBufConfiguration_t* o_config)
         }
 
         // Find out which DTS are present
+        PK_TRACE("gpe_ocmb_configuration_create: max DTS per OCMB %d",i_max_dts);
         for(i = 0; i < OCCHW_N_MEMBUF; ++i)
         {
             if( o_config->baseAddress[i] != 0 )
@@ -515,55 +517,56 @@ int gpe_ocmb_configuration_create(MemBufConfiguration_t* o_config)
                 {
                     if(sensor.fields.present)
                     {
-                        o_config->dts_config |= CONFIG_UBDTS0(i);
+                        o_config->ubdts_config |= CHIP_CONFIG_MEMBUF(i);
                     }
                 }
 
-                rc = membuf_get_scom(o_config, i, MMIO_D0THERM, &(sensor.value));
-                if(rc)
+                for(dts_num = 0; dts_num < i_max_dts; ++dts_num)
                 {
-                    PK_TRACE("gpe_ocmb_configuration_create failed to read"
-                             " MMIO_D0THERM for OCMB %d. rc = %d",
-                             i, rc);
-                    ++fail_count;
-                }
-                else
-                {
-                    if(sensor.fields.present)
+                    if(dts_num == 0)
+                        rc = membuf_get_scom(o_config, i, MMIO_D0THERM, &(sensor.value));
+                    else if(dts_num == 1)
+                        rc = membuf_get_scom(o_config, i, MMIO_D1THERM, &(sensor.value));
+                    else if(dts_num == 2)
+                        rc = membuf_get_scom(o_config, i, MMIO_D2THERM, &(sensor.value));
+                    else if(dts_num == 3)
+                        rc = membuf_get_scom(o_config, i, MMIO_D3THERM, &(sensor.value));
+                    else // we were given an invalid max
                     {
-                        o_config->dts_config |= CONFIG_MEMDTS0(i);
+                        PK_TRACE("gpe_ocmb_configuration_create: Invalid input i_max_dts[%d]",i_max_dts);
+                        ++fail_count;
+                        break;
                     }
-                }
 
-                rc = membuf_get_scom(o_config, i, MMIO_D1THERM, &(sensor.value));
-                if(rc)
-                {
-                    PK_TRACE("gpe_ocmb_configuration_create failed to read"
-                             " MMIO_D1THERM for OCMB %d. rc = %d",
-                             i, rc);
-                    ++fail_count;
-                }
-                else
-                {
-                    if(sensor.fields.present)
+                    if(rc)
                     {
-                        o_config->dts_config |= CONFIG_MEMDTS1(i);
+                        PK_TRACE("gpe_ocmb_configuration_create failed to read"
+                                 " MMIO_D%1xTHERM for OCMB %d. rc = %d",
+                                 dts_num, i, rc);
+                        ++fail_count;
                     }
-                }
-
-                if(fail_count == 3)
+                    else
+                    {
+                        if(sensor.fields.present)
+                        {
+                            o_config->dts_config |= CONFIG_MEMDTSx(i, dts_num);
+                        }
+                    }
+                } // for each DTS
+                if(fail_count > i_max_dts)
                 {
                     // This OCMB is not configured correctly. Remove it.
                     o_config->config &= ~(CHIP_CONFIG_MEMBUF(i));
                     o_config->baseAddress[i] = 0;
                 }
                 rc = 0; // error not terminal. The 405 will notice any missing sensors.
-            }
-        }
+            } // if valid base address
+        } // for each OCMB
 
         PK_TRACE("OCMB dts_config: %08x%08x",
                  (uint32_t)(o_config->dts_config >> 32),
                  (uint32_t)(o_config->dts_config));
+        PK_TRACE("OCMB ubdts_config: %08x",o_config->ubdts_config);
         PK_TRACE("OCMB_config: %08x",o_config->config);
     }
     while( 0 );

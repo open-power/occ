@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2016,2018                        */
+/* Contributors Listed Below - COPYRIGHT 2016,2023                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -38,6 +38,7 @@ typedef struct
     GpeErrorStruct error;
     MemBufConfiguration_t * membufConfiguration;
     uint32_t mem_type;
+    uint32_t max_dts;
 
 } MemBufConfigParms_t;
 

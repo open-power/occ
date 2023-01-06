@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2023                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -29,9 +29,12 @@
 #define MMIO_MERRCTL  0x080108ea
 #define MMIO_MFIR     0x08010870
 #define MMIO_MFIR_AND 0x08010871
-#define MMIO_OCTHERM  0x08010851
-#define MMIO_D0THERM  0x08010852
-#define MMIO_D1THERM  0x08010853
+// SCOMable thermal registers
+#define MMIO_OCTHERM  0x08010851  // on chip
+#define MMIO_D0THERM  0x08010852  // "dimm" 0
+#define MMIO_D1THERM  0x08010853  // "dimm" 1
+#define MMIO_D2THERM  0x08010859  // "dimm" 2 only valid on DDR5
+#define MMIO_D3THERM  0x0801085A  // "dimm" 3 only valid on DDR5
 
 // N/M Throtling Control
 #define OCMB_MBA_FARB3Q 0x08011418

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2016,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2016,2023                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -92,8 +92,10 @@ typedef struct
     GpePbaParms scomParms;
 
     // Digital Thermal Sensor configuration bitmap.
-    // use CONFIG_UBDTS0(n) CONFIG_MEMDTS0(n) CONFIG_MEMDTS1(n) to set/test
+    // use CONFIG_MEMDTSx(n, x) to set/test
     uint64_t dts_config;
+    // use CHIP_CONFIG_MEMBUF(n) to set/test
+    uint32_t ubdts_config;
 
 
     /// A "chip configuration" bit mask denoting valid memory buffer.
@@ -228,15 +230,10 @@ typedef enum
 #define CHIP_CONFIG_MEMBUF(n) \
     ((0x80000000ul >> CHIP_CONFIG_MEMBUF_BASE) >> (n))
 
-//  These are used to setup the dts_config fields
-#define CONFIG_UBDTS0(n) \
-    (0x8000000000000000ull >> (4*n))
-
-#define CONFIG_MEMDTS0(n) \
-    (0x4000000000000000ull >> (4*n))
-
-#define CONFIG_MEMDTS1(n) \
-    (0x2000000000000000ull >> (4*n))
+//  Used to setup the dts_config fields
+// max allowed 16 membufs * 4 DTS
+#define CONFIG_MEMDTSx(membuf, x) \
+    (0x8000000000000000ull >> ((4*membuf)+x))
 
 #endif
 

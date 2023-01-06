@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2023                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -50,7 +50,7 @@ void gpe_membuf_init(ipc_msg_t* i_cmd, void* i_arg)
         if(payload->mem_type == MEMTYPE_OCMB)
         {
             PK_TRACE("Ocmb_configuration. MSR:%08x",mfmsr());
-            rc = gpe_ocmb_configuration_create(G_membuf_config);
+            rc = gpe_ocmb_configuration_create(G_membuf_config, payload->max_dts);
         }
         else
         {

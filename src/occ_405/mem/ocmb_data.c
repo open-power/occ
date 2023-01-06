@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2016,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2016,2023                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -154,6 +154,7 @@ void ocmb_init(void)
     int rc = 0;
     int gpe_request_rc = 0;
     int membuf_idx = 0;
+    int dts_num = 0;
     int l_reset_on_error = 1;
     uint32_t missing_membuf_bitmap = 0;
     GpeRequest l_gpe_request;
@@ -185,37 +186,27 @@ void ocmb_init(void)
         {
             if( G_membufConfiguration.baseAddress[membuf_idx] )
             {
-                // A valid inband Bar value was found, check for enabled DTS
+                // A valid inband Bar value was found.
                 // Enable dts if enabled in HW and configured by TMGT.
-                if(G_membufConfiguration.dts_config & CONFIG_MEMDTS0(membuf_idx))
+                for(dts_num = 0; dts_num < G_gpe_membuf_config_args.max_dts; ++dts_num)
                 {
-                   if(G_dimm_configured_sensors.bytes[membuf_idx] & DIMM_SENSOR0)
-                   {
-                       G_dimm_enabled_sensors.bytes[membuf_idx] |= DIMM_SENSOR0;
-                   }
-                   else
-                   {
-                       TRAC_INFO("ocmb_init: Membuf[%d] Ignoring DIMM sensor0 found "
-                                 "enabled in hardware, but not configured by TMGT.",
-                                 membuf_idx);
-                   }
-                }
+                    if(G_membufConfiguration.dts_config & CONFIG_MEMDTSx(membuf_idx, dts_num))
+                    {
+                       if(G_dimm_configured_sensors.bytes[membuf_idx] & (DIMM_SENSOR0 >> dts_num))
+                       {
+                           G_dimm_enabled_sensors.bytes[membuf_idx] |= (DIMM_SENSOR0 >> dts_num);
+                       }
+                       else
+                       {
+                           TRAC_INFO("ocmb_init: Membuf[%d] Ignoring DIMM sensor%02x found "
+                                     "enabled in hardware, but not configured by TMGT.",
+                                     membuf_idx, dts_num);
+                       }
+                    }
 
-                if(G_membufConfiguration.dts_config & CONFIG_MEMDTS1(membuf_idx))
-                {
-                   if(G_dimm_configured_sensors.bytes[membuf_idx] & (DIMM_SENSOR0 >> 1))
-                   {
-                       G_dimm_enabled_sensors.bytes[membuf_idx] |= (DIMM_SENSOR0 >> 1);
-                   }
-                   else
-                   {
-                       TRAC_INFO("ocmb_init: Membuf[%d] Ignoring DIMM sensor1 found "
-                                 "enabled in hardware, but not configured by TMGT.",
-                                 membuf_idx);
-                   }
-                }
+                } // for each DTS
 
-                if(G_membufConfiguration.dts_config & CONFIG_UBDTS0(membuf_idx))
+                if(G_membufConfiguration.ubdts_config & CHIP_CONFIG_MEMBUF(membuf_idx))
                 {
                     if((MEMBUF_PRESENT(membuf_idx)) &&
                        (g_amec->proc[0].memctl[membuf_idx].membuf.membuf_hottest.temp_fru_type != DATA_FRU_NOT_USED))
@@ -369,15 +360,20 @@ void ocmb_init(void)
         else if((G_dimm_enabled_sensors.dw[0] != G_dimm_configured_sensors.dw[0]) ||
                 (G_dimm_enabled_sensors.dw[1] != G_dimm_configured_sensors.dw[1]))
         {
-            TRAC_INFO("ocmb_init: There are TMGT configured DIMM sensors that are not configured"
-                     " in hardware. Bitmap of configured dimm dts: 0x%08X%08X %08X%08X",
-                     (uint32_t)(G_dimm_configured_sensors.dw[0]>>32),
-                     (uint32_t)G_dimm_configured_sensors.dw[0],
-                     (uint32_t)(G_dimm_configured_sensors.dw[1]>>32),
-                     (uint32_t)G_dimm_configured_sensors.dw[1]);
+            // we use G_dimm_configured_sensors to know which I2C DIMMs are present which
+            // won't show up enabled in hw so just ignore the mismatch for I2C type
+            if(G_sysConfigData.mem_type != MEM_TYPE_OCM_DDR4_I2C)
+            {
+                TRAC_INFO("ocmb_init: There are TMGT configured DIMM sensors that are not configured"
+                         " in hardware. Bitmap of configured dimm dts: 0x%08X%08X %08X%08X",
+                         (uint32_t)(G_dimm_configured_sensors.dw[0]>>32),
+                         (uint32_t)G_dimm_configured_sensors.dw[0],
+                         (uint32_t)(G_dimm_configured_sensors.dw[1]>>32),
+                         (uint32_t)G_dimm_configured_sensors.dw[1]);
 
-            rc = RC_DIMM_DTS_NOT_CONFIGURED;
-            l_reset_on_error = 0;
+                rc = RC_DIMM_DTS_NOT_CONFIGURED;
+                l_reset_on_error = 0;
+            }
         }
     }
 
@@ -474,6 +470,19 @@ uint32_t membuf_configuration_create()
     {
         G_gpe_membuf_config_args.membufConfiguration = &G_membufConfiguration;
         G_gpe_membuf_config_args.mem_type = MEMTYPE_OCMB;
+
+        // determine max number of dts there can be
+        // this excludes the ubdts which all memory types may have 1 ubdts
+        G_gpe_membuf_config_args.max_dts = 0; // default for OCC reading DIMMs via I2C
+        if( (IS_OCM_DDR4_MEM_TYPE(G_sysConfigData.mem_type)) &&
+            (G_sysConfigData.mem_type != MEM_TYPE_OCM_DDR4_I2C) )
+        {
+            G_gpe_membuf_config_args.max_dts = NUM_DTS_PER_OCMB_DDR4;
+        }
+        else if(IS_OCM_DDR5_MEM_TYPE(G_sysConfigData.mem_type))
+        {
+            G_gpe_membuf_config_args.max_dts = NUM_DTS_PER_OCMB_DDR5;
+        }
 
         rc = gpe_request_create(
                                 &l_request,                 // request
