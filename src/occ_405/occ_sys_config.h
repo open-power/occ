@@ -49,7 +49,7 @@
 
 #define MAX_NUM_MCU_PORTS        4
 
-#define NUM_DIMMS_PER_MEM_CONTROLLER    8
+#define MAX_NUM_I2C_DIMMS_PER_OCMB      1
 
 #define NUM_PROC_CHIPS_PER_OCC          1
 #define NUM_PORT_PAIRS_PER_MEM_BUF      2
@@ -66,6 +66,8 @@
 #define IS_OCM_DDR4_MEM_TYPE(type) ((type == MEM_TYPE_OCM_DDR4) || \
                                     (type == MEM_TYPE_OCM_DDR4_I2C))
 #define IS_OCM_DDR5_MEM_TYPE(type) (type == MEM_TYPE_OCM_DDR5)
+#define IS_I2C_MEM_TYPE(type) (type == MEM_TYPE_OCM_DDR4_I2C)
+
 
 #define UPPER_LIMIT_PROC_FREQ_MHZ     6000
 
@@ -448,6 +450,7 @@ typedef struct
   uint32_t membuf_huids[MAX_NUM_OCMBS];
   uint32_t dimm_huids[MAX_NUM_OCMBS][MAX_NUM_DTS_PER_OCMB];
   uint8_t mem_type;
+  uint8_t dimm_i2c_engine;     // only used for i2c memory type
   uint8_t ips_mem_pwr_ctl;     // IPS memory power control
   uint8_t default_mem_pwr_ctl; // default memory power control
 

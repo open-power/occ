@@ -123,8 +123,11 @@ void disable_membuf(uint32_t i_membuf)
         //remove checkstopped membuf from presence bitmap
         G_present_membufs &= ~(MEMBUF_BY_MASK(i_membuf));
 
-        // remove the dimm temperature sensors behind this membuf
-        G_dimm_enabled_sensors.bytes[i_membuf] = 0;
+        if(!IS_I2C_MEM_TYPE(G_sysConfigData.mem_type))
+        {
+            // remove the dimm temperature sensors behind this membuf
+            G_dimm_enabled_sensors.bytes[i_membuf] = 0;
+        }
 
         TRAC_IMP("Error detected on MemBuf[%d], G_present_membufs[0x%08X]",
                  i_membuf, G_present_membufs);
@@ -362,7 +365,7 @@ void ocmb_init(void)
         {
             // we use G_dimm_configured_sensors to know which I2C DIMMs are present which
             // won't show up enabled in hw so just ignore the mismatch for I2C type
-            if(G_sysConfigData.mem_type != MEM_TYPE_OCM_DDR4_I2C)
+            if(!IS_I2C_MEM_TYPE(G_sysConfigData.mem_type))
             {
                 TRAC_INFO("ocmb_init: There are TMGT configured DIMM sensors that are not configured"
                          " in hardware. Bitmap of configured dimm dts: 0x%08X%08X %08X%08X",
@@ -474,16 +477,17 @@ uint32_t membuf_configuration_create()
         // determine max number of dts there can be
         // this excludes the ubdts which all memory types may have 1 ubdts
         G_gpe_membuf_config_args.max_dts = 0; // default for OCC reading DIMMs via I2C
-        if( (IS_OCM_DDR4_MEM_TYPE(G_sysConfigData.mem_type)) &&
-            (G_sysConfigData.mem_type != MEM_TYPE_OCM_DDR4_I2C) )
+        if(!IS_I2C_MEM_TYPE(G_sysConfigData.mem_type))
         {
-            G_gpe_membuf_config_args.max_dts = NUM_DTS_PER_OCMB_DDR4;
+            if(IS_OCM_DDR4_MEM_TYPE(G_sysConfigData.mem_type))
+            {
+                G_gpe_membuf_config_args.max_dts = NUM_DTS_PER_OCMB_DDR4;
+            }
+            else if(IS_OCM_DDR5_MEM_TYPE(G_sysConfigData.mem_type))
+            {
+                G_gpe_membuf_config_args.max_dts = NUM_DTS_PER_OCMB_DDR5;
+            }
         }
-        else if(IS_OCM_DDR5_MEM_TYPE(G_sysConfigData.mem_type))
-        {
-            G_gpe_membuf_config_args.max_dts = NUM_DTS_PER_OCMB_DDR5;
-        }
-
         rc = gpe_request_create(
                                 &l_request,                 // request
                                 &G_async_gpe_queue1,        // gpe queue

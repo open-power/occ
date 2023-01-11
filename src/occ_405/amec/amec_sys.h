@@ -153,6 +153,9 @@ typedef struct
     // Indicates what this temperature is for used by amec_health_check_dimm_timeout()
     uint8_t  dts_type_mask;
 
+    // only used for I2C DIMMs
+    uint8_t  i2c_port;
+    uint8_t  i2c_address;
 }fru_temp_t;
 
 typedef struct

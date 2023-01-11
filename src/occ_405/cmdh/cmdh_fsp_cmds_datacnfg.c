@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2022                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2023                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -1704,6 +1704,7 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
     uint8_t                         l_dts_num = 0;
     uint8_t                         l_memory_type = 0;
     uint8_t                         num_data_sets = 0;
+    uint8_t                         l_i2c_engine;
     int                             i;
     bool                            l_i2c_memory = FALSE;
 
@@ -1717,6 +1718,7 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
         for(memctl=0; memctl < MAX_NUM_MEM_CONTROLLERS; ++memctl)
         {
             g_amec->proc[0].memctl[memctl].membuf.temp_sid = 0;
+
             for(dimm=0; dimm < MAX_NUM_DTS_PER_OCMB; ++dimm)
             {
                 g_amec->proc[0].memctl[memctl].membuf.dimm_temps[dimm].temp_sid = 0;
@@ -1890,10 +1892,62 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
                     else if(l_memory_type == MEM_TYPE_OCM_DDR4_I2C)
                     {
                        // Sensor must be read via I2C
-                       l_i2c_memory = TRUE;
-                       // i2c_engine = l_data_set->dimm_info1;
-                       // i2c_port = l_data_set->dimm_info2;
-                       // i2c_address = l_data_set->dimm_info3;
+
+                        l_i2c_engine = l_data_set->dimm_info1;
+                        // Only support engine C, D, or E
+                        if((l_i2c_engine != PIB_I2C_ENGINE_C) &&
+                           (l_i2c_engine != PIB_I2C_ENGINE_D) &&
+                           (l_i2c_engine != PIB_I2C_ENGINE_E))
+                        {
+                            CMDH_TRAC_ERR("data_store_mem_cfg: Invalid I2C engine. entry=%d, engine=%d",
+                                          i,
+                                          l_i2c_engine);
+                            cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
+                            break;
+                        }
+
+                        // save engine from first entry and verify remaining
+                        if(l_i2c_memory == FALSE)
+                        {
+                           l_i2c_memory = TRUE;
+                           G_sysConfigData.dimm_i2c_engine = l_i2c_engine;
+                        }
+                        // Engine must be the same for all DIMMs
+                        else if (l_i2c_engine != G_sysConfigData.dimm_i2c_engine)
+                        {
+                            CMDH_TRAC_ERR("data_store_mem_cfg: I2c engine mismatch. entry=%d, engine=%d, expected=%d",
+                                          i,
+                                          l_i2c_engine,
+                                          G_sysConfigData.dimm_i2c_engine);
+                            cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
+                            break;
+                        }
+
+                        // save the rest of the data.  Only 1 DIMM per OCMB supported, make sure didn't
+                        // already save a DIMM for this OCMB
+                        if(G_dimm_configured_sensors.bytes[l_membuf_num])
+                        {
+                            CMDH_TRAC_ERR("data_store_mem_cfg: Received more than 1 DIMM for OCMB[0x%02X]",
+                                      l_membuf_num);
+
+                            cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
+                            break;
+                        }
+                        else
+                        {
+                           // Store the hardware sensor ID
+                           G_sysConfigData.dimm_huids[l_membuf_num][0] = l_data_set->hw_sensor_id;
+                           // Store the temperature sensor ID
+                           g_amec->proc[0].memctl[l_membuf_num].membuf.dimm_temps[0].temp_sid = l_data_set->temp_sensor_id;
+                           // Store the i2c info
+                           g_amec->proc[0].memctl[l_membuf_num].membuf.dimm_temps[0].i2c_port = l_data_set->dimm_info2;
+                           g_amec->proc[0].memctl[l_membuf_num].membuf.dimm_temps[0].i2c_address = l_data_set->dimm_info3;
+                           // set fru type to DIMM
+                           g_amec->proc[0].memctl[l_membuf_num].membuf.dimm_temps[0].temp_fru_type = DATA_FRU_DIMM;
+                           g_amec->proc[0].memctl[l_membuf_num].membuf.dimm_temps[0].dts_type_mask = OCM_DTS_TYPE_DIMM_MASK;
+                           // mark this DIMM as present
+                           G_dimm_configured_sensors.bytes[l_membuf_num] = DIMM_SENSOR0;
+                        }
                     }
                     else
                     {

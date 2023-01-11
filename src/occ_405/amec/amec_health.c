@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2022                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2023                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -81,9 +81,17 @@ bool G_vrm_vdd_temp_expired = false;
 
 uint64_t amec_mem_get_huid(uint8_t i_membuf, uint8_t i_dimm)
 {
+    uint8_t  l_max_dimms = 0;
     uint64_t l_huid = 0;
 
-    if( (i_membuf < MAX_NUM_OCMBS) && (i_dimm < MAX_NUM_DTS_PER_OCMB) )
+    if(IS_I2C_MEM_TYPE(G_sysConfigData.mem_type))
+        l_max_dimms = MAX_NUM_I2C_DIMMS_PER_OCMB;
+    else if(IS_OCM_DDR4_MEM_TYPE(G_sysConfigData.mem_type))
+        l_max_dimms = NUM_DTS_PER_OCMB_DDR4;
+    else // must be DDR5
+        l_max_dimms = NUM_DTS_PER_OCMB_DDR5;
+
+    if( (i_membuf < MAX_NUM_OCMBS) && (i_dimm < l_max_dimms) )
     {
         l_huid = (uint64_t)G_sysConfigData.dimm_huids[i_membuf][i_dimm];
 
@@ -139,10 +147,11 @@ void amec_health_check_dimm_temp()
     uint16_t                    l_ot_error, l_max_temp;
     sensor_t                    *l_sensor;
     uint8_t                     l_dimm;
-    uint8_t                     l_port;
+    uint8_t                     l_membuf;
     uint32_t                    l_callouts_count = 0;
     uint8_t                     l_new_callouts;
     uint64_t                    l_huid;
+    uint8_t                     l_max_dimm_per_membuf = 0; // Number "DIMM" readings per membuf
     errlHndl_t                  l_err = NULL;
 
     // Check to see if any dimms have reached the error temperature that
@@ -153,28 +162,35 @@ void amec_health_check_dimm_temp()
         return;
     }
 
+    if(IS_I2C_MEM_TYPE(G_sysConfigData.mem_type))
+        l_max_dimm_per_membuf = MAX_NUM_I2C_DIMMS_PER_OCMB;
+    else if(IS_OCM_DDR4_MEM_TYPE(G_sysConfigData.mem_type))
+        l_max_dimm_per_membuf = NUM_DTS_PER_OCMB_DDR4;
+    else // must be DDR5
+        l_max_dimm_per_membuf = NUM_DTS_PER_OCMB_DDR5;
+
     //iterate over all dimms
-    for(l_port = 0; l_port < MAX_NUM_OCMBS; l_port++)
+    for(l_membuf = 0; l_membuf < MAX_NUM_OCMBS; l_membuf++)
     {
         //only callout a dimm if it hasn't been called out already
-        l_new_callouts = G_dimm_overtemp_bitmap.bytes[l_port] ^
-                         G_dimm_overtemp_logged_bitmap.bytes[l_port];
+        l_new_callouts = G_dimm_overtemp_bitmap.bytes[l_membuf] ^
+                         G_dimm_overtemp_logged_bitmap.bytes[l_membuf];
 
-        //skip to next port if no new callouts for this one
-        if (!l_new_callouts || (G_dimm_overtemp_bitmap.bytes[l_port] == 0))
+        //skip to next membuf if no new callouts for this one
+        if (!l_new_callouts || (G_dimm_overtemp_bitmap.bytes[l_membuf] == 0))
         {
             continue;
         }
 
-        // if the previous port had errors commit it so this port gets new error log
+        // if the previous OCMB had errors commit it so this membuf gets new error log
         if(l_err)
         {
            commitErrl(&l_err);
            l_callouts_count = 0;
         }
 
-        //find the dts(es) that need to be called out for this port
-        for(l_dimm = 0; l_dimm < MAX_NUM_DTS_PER_OCMB; l_dimm++)
+        //find the dts(es) that need to be called out for this membuf
+        for(l_dimm = 0; l_dimm < l_max_dimm_per_membuf; l_dimm++)
         {
             if (!(l_new_callouts & (DIMM_SENSOR0 >> l_dimm)))
             {
@@ -182,7 +198,7 @@ void amec_health_check_dimm_temp()
             }
 
             fru_temp_t* l_fru;
-            l_fru = &g_amec->proc[0].memctl[l_port].membuf.dimm_temps[l_dimm];
+            l_fru = &g_amec->proc[0].memctl[l_membuf].membuf.dimm_temps[l_dimm];
             switch(l_fru->temp_fru_type)
             {
                case DATA_FRU_DIMM:
@@ -212,20 +228,20 @@ void amec_health_check_dimm_temp()
                default:
                   // this is a code bug trace and let the error be logged for debug
                   TRAC_ERR("amec_health_check_dimm_temp: sensor[%04X] marked as OT has invalid type[%d]",
-                     (l_port<<8)|l_dimm, l_fru->temp_fru_type);
+                     (l_membuf<<8)|l_dimm, l_fru->temp_fru_type);
                   l_ot_error = 0xff;
                   l_max_temp = 0xff;
                   break;
             }
             TRAC_ERR("amec_health_check_dimm_temp: sensor[%04X] type[0x%02X] reached error temp[%d] current[%d]",
-                     (l_port<<8)|l_dimm, l_fru->temp_fru_type, l_ot_error, l_fru->cur_temp);
+                     (l_membuf<<8)|l_dimm, l_fru->temp_fru_type, l_ot_error, l_fru->cur_temp);
 
-            amec_mem_mark_logged(l_port,
+            amec_mem_mark_logged(l_membuf,
                                  l_dimm,
                                  &G_membuf_overtemp_logged_bitmap,
-                                 &G_dimm_overtemp_logged_bitmap.bytes[l_port]);
+                                 &G_dimm_overtemp_logged_bitmap.bytes[l_membuf]);
             TRAC_ERR("amec_health_check_dimm_temp: DIMM%04X overtemp - %dC",
-                     (l_port<<8)|l_dimm, l_fru->cur_temp);
+                     (l_membuf<<8)|l_dimm, l_fru->cur_temp);
 
             // Create single elog with up to MAX_CALLOUTS
             // this will be generic regardless of temperature sensor type, the callouts will be correct
@@ -235,10 +251,10 @@ void amec_health_check_dimm_temp()
                 //If we don't have an error log for the callout, create one
                 if(!l_err)
                 {
-                    TRAC_ERR("amec_health_check_dimm_temp: Creating log for port[%d] OT bitmap[0x%02X] logged bitmap[0x%02X]",
-                             l_port,
-                             G_dimm_overtemp_bitmap.bytes[l_port],
-                             G_dimm_overtemp_logged_bitmap.bytes[l_port]);
+                    TRAC_ERR("amec_health_check_dimm_temp: Creating log for membuf[%d] OT bitmap[0x%02X] logged bitmap[0x%02X]",
+                             l_membuf,
+                             G_dimm_overtemp_bitmap.bytes[l_membuf],
+                             G_dimm_overtemp_logged_bitmap.bytes[l_membuf]);
 
                     /* @
                      * @errortype
@@ -268,7 +284,7 @@ void amec_health_check_dimm_temp()
                 }
 
                 // Callout dimm
-                l_huid = amec_mem_get_huid(l_port, l_dimm);
+                l_huid = amec_mem_get_huid(l_membuf, l_dimm);
                 addCalloutToErrl(l_err,
                                  ERRL_CALLOUT_TYPE_HUID,
                                  l_huid,
@@ -277,7 +293,7 @@ void amec_health_check_dimm_temp()
                 l_callouts_count++;
             }
         }//iterate over dimms
-    }//iterate over ports
+    }//iterate over membufs
 
     if(l_err)
     {
@@ -310,8 +326,7 @@ void amec_health_check_dimm_timeout()
     uint32_t    l_callouts_count = 0;
     uint32_t    l_redundancy_lost_callouts_count = 0;
     uint64_t    l_huid;
-    uint8_t     l_max_membuf = 0; // number of membufs
-    uint8_t     l_max_dts_per_membuf = 0; // Number DTS per membuf
+    uint8_t     l_max_dimm_per_membuf = 0; // Number "DIMM" readings per membuf
     uint8_t     l_ocm_dts_type_expired_bitmap = 0;
     bool        l_redundancy_lost = FALSE;
     ERRL_SEVERITY l_severity = ERRL_SEV_PREDICTIVE;
@@ -350,22 +365,21 @@ void amec_health_check_dimm_timeout()
             break;
         }
 
-        l_max_membuf = MAX_NUM_OCMBS;
-        if(G_sysConfigData.mem_type == MEM_TYPE_OCM_DDR5)
-            l_max_dts_per_membuf = NUM_DTS_PER_OCMB_DDR5;
-        else if(G_sysConfigData.mem_type == MEM_TYPE_OCM_DDR4)
-            l_max_dts_per_membuf = NUM_DTS_PER_OCMB_DDR4;
-        else // must be i2c, no "dimm" dts used from cache line
-            l_max_dts_per_membuf = 0;
+        if(IS_I2C_MEM_TYPE(G_sysConfigData.mem_type))
+            l_max_dimm_per_membuf = MAX_NUM_I2C_DIMMS_PER_OCMB;
+        else if(IS_OCM_DDR4_MEM_TYPE(G_sysConfigData.mem_type))
+            l_max_dimm_per_membuf = NUM_DTS_PER_OCMB_DDR4;
+        else // must be DDR5
+            l_max_dimm_per_membuf = NUM_DTS_PER_OCMB_DDR5;
 
-        //iterate across all ports incrementing dimm sensor timers as needed
+        //iterate across all OCMBs incrementing dimm sensor timers as needed
         for(l_membuf = 0; l_membuf < MAX_NUM_OCMBS; l_membuf++)
         {
-            //any dimm timers on this port need incrementing?
+            //any dimm timers on this membuf need incrementing?
             if(!l_need_inc.bytes[l_membuf])
             {
-                // All dimm sensors were updated for this port
-                // Trace this fact and clear the expired byte for all DIMMs on this port
+                // All dimm sensors were updated for this membuf
+                // Trace this fact and clear the expired byte for all DIMMs on this membuf
                 if(G_dimm_temp_expired_bitmap.bytes[l_membuf])
                 {
                     G_dimm_temp_expired_bitmap.bytes[l_membuf] = 0;
@@ -375,7 +389,7 @@ void amec_health_check_dimm_timeout()
             }
 
             //There's at least one dimm requiring an increment, find the dimm
-            for(l_dimm = 0; l_dimm < l_max_dts_per_membuf; l_dimm++)
+            for(l_dimm = 0; l_dimm < l_max_dimm_per_membuf; l_dimm++)
             {
                 //not this one, check if we need to clear the dimm timeout and go to the next one
                 if(!(l_need_inc.bytes[l_membuf] & (DIMM_SENSOR0 >> l_dimm)))
@@ -443,7 +457,7 @@ void amec_health_check_dimm_timeout()
                     continue;
                 }
 
-                //temperature has expired.  Notify control algorithms which DIMM DTS and type
+                //temperature has expired.  Notify control algorithms which DIMM and type
                 if(!(G_dimm_temp_expired_bitmap.bytes[l_membuf] & (DIMM_SENSOR0 >> l_dimm)))
                 {
                     G_dimm_temp_expired_bitmap.bytes[l_membuf] |= (DIMM_SENSOR0 >> l_dimm);
@@ -451,26 +465,30 @@ void amec_health_check_dimm_timeout()
                              (l_membuf<<8)|l_dimm,
                              l_fru->temp_fru_type);
 
-                    // mark that this sensor is lost
-                    l_fru->flags |= FRU_SENSOR_STATUS_REDUNDANCY_LOST;
-
-                    // if there is a good "DIMM" sensor then this is loss of redundancy only
-                    for(l_other_dimm = 0; l_other_dimm < l_max_dts_per_membuf; l_other_dimm++)
+                    // for non i2c memory check for redundancy
+                    if(!IS_I2C_MEM_TYPE(G_sysConfigData.mem_type))
                     {
-                       // make sure the other sensor is being used
-                       if( (l_other_dimm != l_dimm) &&
-                           (MEMBUF_SENSOR_ENABLED(l_membuf, l_other_dimm)) )
-                       {
-                           if( !(g_amec->proc[0].memctl[l_membuf].membuf.dimm_temps[l_other_dimm].flags &
-                                 FRU_SENSOR_STATUS_REDUNDANCY_LOST) )
+                        // mark that this sensor is lost
+                        l_fru->flags |= FRU_SENSOR_STATUS_REDUNDANCY_LOST;
+
+                        // if there is a good "DIMM" sensor then this is loss of redundancy only
+                        for(l_other_dimm = 0; l_other_dimm < l_max_dimm_per_membuf; l_other_dimm++)
+                        {
+                           // make sure the other sensor is being used
+                           if( (l_other_dimm != l_dimm) &&
+                               (MEMBUF_SENSOR_ENABLED(l_membuf, l_other_dimm)) )
                            {
-                               l_redundancy_lost = TRUE;
-                               // since there is another sensor mark that this DIMM sensor is no longer enabled
-                               G_dimm_enabled_sensors.bytes[l_membuf] &= ( ~(DIMM_SENSOR0 >> l_dimm) );
-                               G_dimm_temp_expired_bitmap.bytes[l_membuf] &= ( ~(DIMM_SENSOR0 >> l_dimm) );
+                               if( !(g_amec->proc[0].memctl[l_membuf].membuf.dimm_temps[l_other_dimm].flags &
+                                 FRU_SENSOR_STATUS_REDUNDANCY_LOST) )
+                               {
+                                   l_redundancy_lost = TRUE;
+                                   // since there is another sensor mark that this DIMM sensor is no longer enabled
+                                   G_dimm_enabled_sensors.bytes[l_membuf] &= ( ~(DIMM_SENSOR0 >> l_dimm) );
+                                   G_dimm_temp_expired_bitmap.bytes[l_membuf] &= ( ~(DIMM_SENSOR0 >> l_dimm) );
+                               }
                            }
-                       }
-                    }
+                        }
+                    } // if not i2c type
                 }
                 //If we've already logged an error for this FRU go to the next one.
                 if(G_dimm_timeout_logged_bitmap.bytes[l_membuf] & (DIMM_SENSOR0 >> l_dimm))
@@ -578,7 +596,7 @@ void amec_health_check_dimm_timeout()
                 // Going to be resetting so no reason to check anymore ports
                 break;
             }
-        } //iterate over all ports
+        } //iterate over all membufs
 
         if(l_err)
         {
@@ -596,7 +614,7 @@ void amec_health_check_dimm_timeout()
             break;
         }
 
-        //iterate across all membufs/ports clearing dimm sensor timers as needed
+        //iterate across all membufs clearing dimm sensor timers as needed
         for(l_membuf = 0; l_membuf < MAX_NUM_OCMBS; l_membuf++)
         {
 
@@ -606,7 +624,7 @@ void amec_health_check_dimm_timeout()
             }
 
             //iterate over all dimms
-            for(l_dimm = 0; l_dimm < l_max_dts_per_membuf; l_dimm++)
+            for(l_dimm = 0; l_dimm < l_max_dimm_per_membuf; l_dimm++)
             {
                 //not this one, go to next one
                 if(!(l_need_clr.bytes[l_membuf] & (DIMM_SENSOR0 >> l_dimm)))
@@ -629,7 +647,7 @@ void amec_health_check_dimm_timeout()
                 }
 
             }//iterate over all dimms
-        }//iterate over all membufs/ports
+        }//iterate over all membufs
     }while(0);
 
     // For OCM the "DIMM" dts are used for different types.  Need to determine what type the
@@ -638,10 +656,10 @@ void amec_health_check_dimm_timeout()
     {
         // at least one sensor expired.  Set type for each expired sensor
         //iterate across all OCMBs
-        for(l_membuf = 0; l_membuf < l_max_membuf; l_membuf++)
+        for(l_membuf = 0; l_membuf < MAX_NUM_OCMBS; l_membuf++)
         {
             //iterate over all "dimm" DTS readings
-            for(l_dimm = 0; l_dimm < l_max_dts_per_membuf; l_dimm++)
+            for(l_dimm = 0; l_dimm < l_max_dimm_per_membuf; l_dimm++)
             {
                 if(G_dimm_temp_expired_bitmap.bytes[l_membuf] & (DIMM_SENSOR0 >> l_dimm))
                 {
