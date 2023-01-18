@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2023                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -238,6 +238,16 @@ extern void dumpHexString(const void *i_data, const unsigned int len, const char
 #else
   #define CNFG_DBG(frmt,args...)
   #define CNFG_DBG_HEXDUMP(data, len, string)
+#endif
+
+#ifdef DIMM_DEBUG
+  #define DIMM_DBG(frmt,args...)  \
+          DBG_PRINT(frmt,##args)
+  #define DIMM_DBG_HEXDUMP(data, len, string)  \
+          DEBUG_HEXDUMP(data, len, string)
+#else
+  #define DIMM_DBG(frmt,args...)
+  #define DIMM_DBG_HEXDUMP(data, len, string)
 #endif
 
 #ifdef MEM_DEBUG

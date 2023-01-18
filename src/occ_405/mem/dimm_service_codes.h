@@ -1,7 +1,7 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ_405/incl/comp_ids.h $                                 */
+/* $Source: src/occ_405/mem/dimm_service_codes.h $                        */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
@@ -23,70 +23,17 @@
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
 
-//Note: Be sure to mirror changes in this file to occ/plugins/tmgtTpmdCompIds.H!!!
-// If you don't, the ERRL plugin will eventually break, and you might break the
-// fips build for TMGT.
+#ifndef _DIMM_SERVICE_CODES_H_
+#define _DIMM_SERVICE_CODES_H_
 
-#ifndef _COMP_IDS_H
-#define _COMP_IDS_H
+#include <comp_ids.h>
 
-#define COMP_NAME_SIZE       4
+enum dimmModuleId
+{
+    DIMM_MID_STATE_MACHINE         =  DIMM_COMP_ID | 0x00,
+    DIMM_MID_NIMBUS_INIT           =  DIMM_COMP_ID | 0x01,
+    DIMM_MID_DIMM_SM               =  DIMM_COMP_ID | 0x02,
+    DIMM_MID_MARK_DIMM_FAILED      =  DIMM_COMP_ID | 0x03,
+};
 
-#define MAIN_COMP_ID         0x0100
-#define MAIN_COMP_NAME       "MAIN"
-
-#define TRAC_COMP_ID         0x0300
-#define TRAC_COMP_NAME       "TRAC"
-
-#define RTLS_COMP_ID         0x0400
-#define RTLS_COMP_NAME       "RTLS"
-
-#define THRD_COMP_ID         0x0500
-#define THRD_COMP_NAME       "THRD"
-
-#define SNSR_COMP_ID         0x0600
-#define SNSR_COMP_NAME       "SNSR"
-
-#define PSS_COMP_ID          0x0800
-#define PSS_COMP_NAME        "PSS"
-
-#define TMER_COMP_ID         0x0900
-#define TMER_COMP_NAME       "TMER"
-
-#define DCOM_COMP_ID         0x0A00
-#define DCOM_COMP_NAME       "DCOM"
-
-// Proc data
-#define PROC_COMP_ID         0x0B00
-#define PROC_COMP_NAME       "PROC"
-
-// Amec data
-#define AMEC_COMP_ID         0x0C00
-#define AMEC_COMP_NAME       "AMEC"
-
-// Command Handler
-#define CMDH_COMP_ID         0x0E00
-#define CMDH_COMP_NAME       "CMDH"
-
-// I2C DIMM State Manager
-#define DIMM_COMP_ID         0x0F00
-#define DIMM_COMP_NAME       "DIMM"
-
-// MEMORY Control
-#define MEM_COMP_ID          0x1000
-#define MEM_COMP_NAME        "MEM"
-
-// Workload Optimize Frequency
-#define WOF_COMP_ID          0x1100
-#define WOF_COMP_NAME        "WOF"
-
-// PGPE Interface
-#define PGPE_COMP_ID         0x1200
-#define PGPE_COMP_NAME       "PGPE"
-
-// GPU Interface
-#define GPU_COMP_ID          0x1300
-#define GPU_COMP_NAME        "GPU"
-
-#endif
-
+#endif /* #ifndef _DIMM_SERVICE_CODES_H_ */

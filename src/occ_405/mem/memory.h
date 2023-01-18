@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2014,2022                        */
+/* Contributors Listed Below - COPYRIGHT 2014,2023                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -31,6 +31,8 @@
 #define MEMBUF0_PRESENT_MASK      0x00008000ul
 #define DIMM_SENSOR0 0x80
 
+#define DIMM_TICK (CURRENT_TICK % MAX_NUM_TICKS)
+
 typedef enum
 {
     MEM_TYPE_UNKNOWN      = 0x00,
@@ -50,6 +52,15 @@ typedef enum
     MEMORY_CONTROL_RESERVED_6        = 0x40,
     MEMORY_CONTROL_RESERVED_7        = 0x80,
 } eMemoryControlTraceFlags;
+
+// Status for reading I2C DIMMs
+typedef enum
+{
+    DIMM_READ_SUCCESS =             0x00,
+    DIMM_READ_IN_PROGRESS =         0x01,
+    DIMM_READ_SCHEDULE_FAILED =     0xFA,
+    DIMM_READ_NOT_COMPLETE =        0xFF,
+} readStatus_e;
 
 // Enum for specifying each MemBuf
 enum eOccMemBuf
@@ -138,6 +149,10 @@ extern memory_control_task_t G_memory_control_task;
 #define MEMBUF_PRESENT(occ_membuf_id) \
          ((MEMBUF0_PRESENT_MASK >> occ_membuf_id) & G_present_membufs)
 
+//Returns 0 if the specified DIMM sensor is not enabled. Otherwise, returns none-zero.
+#define DIMM_SENSOR_ENABLED(membuf, dimm) \
+         ((DIMM_SENSOR0 >> dimm) & G_dimm_enabled_sensors.bytes[membuf])
+
 //Returns 0 if the specified membuf is not updated. Otherwise, returns none-zero.
 #define MEMBUF_UPDATED(occ_membuf_id) \
          ((MEMBUF0_PRESENT_MASK >> occ_membuf_id) & G_updated_membuf_mask)
@@ -150,6 +165,12 @@ extern memory_control_task_t G_memory_control_task;
 void task_memory_control( task_t * i_task );
 
 void memory_init();
+
+// I2C specific init
+void memory_i2c_init();
+
+// DIMM I2C state machine
+void task_dimm_sm(struct task *i_self);
 
 void disable_all_dimms();
 

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2020                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2023                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -74,6 +74,7 @@ IPC_FUNCIDS_TABLE_START
         IPC_FUNC_ID(IPC_ST_MEMBUF_SCOM_FUNCID)
         IPC_FUNC_ID(IPC_ST_MEMBUF_DATA_FUNCID)
         IPC_FUNC_ID(IPC_ST_MEMBUF_INIT_FUNCID)
+        IPC_FUNC_ID(IPC_ST_DIMM_SM_FUNCID)
     IPC_FUNCIDS_ST_END(OCCHW_INST_ID_GPE1)
 
     //Functions that are only supported by GPE2 should be defined here

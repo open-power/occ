@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2021                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2023                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -232,6 +232,10 @@ bool notify_host(const ext_intr_reason_t i_reason)
         {
             notifyReason = INTR_REASON_HTMGT_SERVICE_REQUIRED;
         }
+        else if (notifyReason & INTR_REASON_I2C_OWNERSHIP_CHANGE)
+        {
+            notifyReason = INTR_REASON_I2C_OWNERSHIP_CHANGE;
+        }
         else
         {
             INTR_TRAC_ERR("notify_host: G_host_notification_pending has unrecognized value: 0x%02X",
@@ -247,6 +251,9 @@ bool notify_host(const ext_intr_reason_t i_reason)
     {
         case INTR_REASON_HTMGT_SERVICE_REQUIRED:
             new_occmisc.fields.ext_intr_reason = INTR_REASON_HTMGT_SERVICE_REQUIRED;
+            break;
+        case INTR_REASON_I2C_OWNERSHIP_CHANGE:
+            new_occmisc.fields.ext_intr_reason = INTR_REASON_I2C_OWNERSHIP_CHANGE;
             break;
         case INTR_REASON_OPAL_SHARED_MEM_CHANGE:
             new_occmisc.fields.ext_intr_reason = INTR_REASON_OPAL_SHARED_MEM_CHANGE;

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2022                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2023                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -337,7 +337,7 @@ void amec_update_ocmb_dimm_dts_sensors(OcmbMemData * i_sensor_cache, uint8_t i_m
 //
 // Name: amec_update_ocmb_dts_sensors
 //
-// Description: Updates sensors that have data grabbed by the fast core data
+// Description: Updates mem buf temperature for given mem buf
 //
 // Thread: RealTime Loop
 //
@@ -499,7 +499,6 @@ void amec_update_ocmb_temp_sensors(void)
 {
     uint32_t k, l_dimm;
     uint32_t l_hot_dimm = 0;
-    uint32_t l_hot_mb = 0;
     uint32_t l_hot_mb_dimm = 0;
     uint32_t l_hot_pmic = 0;
     uint32_t l_hot_ext_mb = 0;
@@ -518,12 +517,6 @@ void amec_update_ocmb_temp_sensors(void)
 
     for(k=0; k < MAX_NUM_OCMBS; k++)
     {
-        // Find hottest temperature from all internal membufs for this Proc chip
-        if(g_amec->proc[0].memctl[k].membuf.membuf_hottest.cur_temp > l_hot_mb)
-        {
-            l_hot_mb = g_amec->proc[0].memctl[k].membuf.membuf_hottest.cur_temp;
-        }
-
         // process each of the thermal sensors (stored as "dimm" temps)
         // based on what type they are for and finding the hottest for each type
         for(l_dimm=0; l_dimm < l_max_dts_per_membuf; l_dimm++)
@@ -592,8 +585,12 @@ void amec_update_ocmb_temp_sensors(void)
         } // end for each "dimm" thermal sensor
     } // end for each OCMB
 
-    sensor_update(&g_amec->proc[0].tempdimmthrm,l_hot_dimm);
-    AMEC_DBG("HotMembuf=%d, HotDimm=%d\n", l_hot_mb, l_hot_dimm);
+    // Don't update DIMM if I2C type, this will be updated in update_hottest_dimm()
+    if(!(IS_I2C_MEM_TYPE(G_sysConfigData.mem_type)))
+    {
+        sensor_update(&g_amec->proc[0].tempdimmthrm,l_hot_dimm);
+        AMEC_DBG("HotDimm=%d\n", l_hot_dimm);
+    }
 
     sensor_update(&g_amec->proc[0].tempmcdimmthrm,l_hot_mb_dimm);
     AMEC_DBG("HotMCDimm=%d\n",l_hot_mb_dimm);

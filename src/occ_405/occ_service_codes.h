@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2022                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2023                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -114,6 +114,7 @@ enum occReasonCode
     APSS_12V_SENSE_HW_WORKAROUND    = 0xC6,
     ///  Request to read redundant APSS data failed
     REDUNDANT_APSS_GPE_FAILURE      = 0xCB,
+    DIMM_INVALID_STATE              = 0xD2,
 
     // PGPE Generic RC
     PGPE_FAILURE                    = 0xD3,
@@ -215,6 +216,7 @@ enum occExtReasonCode
     ERC_BCE_REQ_CALLBACK_TIMEOUT                = 0x0076,
 
     ERC_MEM_CONTROL_SCHEDULE_FAILURE            = 0x0080,
+    ERC_DIMM_SCHEDULE_FAILURE                   = 0x0081,
 
     ERC_FW_ZERO_FREQ_LIMIT                      = 0x0090,
 
