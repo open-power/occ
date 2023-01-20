@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ_405/occbuildname.c $                                  */
+/* $Source: src/occ_gpe1/gpe1_dimm.h $                                    */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2014,2023                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2023                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -23,17 +23,14 @@
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
 
-// BUILD_FIPS is a compiler environment variable that will be set by the
-// build team when compiling code for FSP supported systems.
-// Otherwise an open power occ version will be assigned below when code is
-// pushed up to github.
+#ifndef _GPE1_DIMM_H
+#define _GPE1_DIMM_H
 
-#ifdef BUILD_FIPS
+#include "gpe_export.h"
 
-volatile const char G_occ_buildname[16] __attribute__((section(".buildname"))) = /*<BuildName>*/  BUILD_FIPS  /*</BuildName>*/ ;
+void dimm_set_ffdc(GpeErrorStruct *o_error, uint32_t i_addr, uint32_t i_rc, uint64_t i_ffdc);
 
-#else
+void gpe_dimm_sm(ipc_msg_t* cmd, void* arg);
 
-volatile const char G_occ_buildname[16] __attribute__((section(".buildname"))) = /*<BuildName>*/  "op_p10_230120a\0"  /*</BuildName>*/ ;
 
-#endif
+#endif //_GPE1_DIMM_H

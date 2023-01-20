@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2023                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -26,6 +26,7 @@
 #include "ipc_async_cmd.h"
 #include "gpu_structs.h"
 #include "gpe_membuf.h"
+#include "gpe1_dimm.h"
 
 void gpe1_nop(ipc_msg_t* cmd, void* arg);
 void gpe_24x7(ipc_msg_t* cmd, void* arg);
@@ -80,7 +81,7 @@ IPC_HANDLER(gpe_gpu_init, 0)               // 3 - IPC_ST_GPE_GPU_INIT_FUNCID
 IPC_HANDLER(gpe_membuf_scom, 0)            // 4 - IPC_ST_MEMBUF_SCOM_FUNCID
 IPC_HANDLER(gpe_membuf_data, 0)            // 5 - IPC_ST_MEMBUF_DATA_FUNCID
 IPC_HANDLER(gpe_membuf_init, 0)            // 6 - IPC_ST_MEMBUF_INIT_FUNCID
-IPC_HANDLER_DEFAULT                        // 7
+IPC_HANDLER(gpe_dimm_sm, 0)                // 7 - IPC_ST_DIMM_SM_FUNCID
 IPC_HANDLER_DEFAULT                        // 8
 IPC_HANDLER_DEFAULT                        // 9
 IPC_HANDLER_DEFAULT                        // 10

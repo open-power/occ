@@ -5,7 +5,7 @@
 #
 # OpenPOWER OnChipController Project
 #
-# Contributors Listed Below - COPYRIGHT 2015,2019
+# Contributors Listed Below - COPYRIGHT 2015,2023
 # [+] International Business Machines Corp.
 #
 #
@@ -28,6 +28,7 @@ TOP-C-SOURCES = gpe1_main.c nop.c \
                 gpe1_24x7.c gpe_gpu_init.c \
                 gpe_membuf_scom.c \
                 gpe_membuf.c occ_gpe1_machine_check_handler.c \
+                gpe1_dimm_read.c gpe1_dimm_reset.c \
                 gpe_ocmb.c
 
 TOP-S-SOURCES = occ_gpe1_mck_handler.S
