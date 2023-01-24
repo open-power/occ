@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2023                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -124,7 +124,8 @@ task_t G_task_table[TASK_END] = {
     { FLAGS_AMEC_MASTER,           task_amec_master,               NULL },  // TASK_ID_AMEC_MASTER
     { FLAGS_CORE_DATA_CONTROL,     task_core_data_control,         NULL },  // TASK_ID_CORE_DATA_CONTROL
     { FLAGS_GPU_SM,                task_gpu_sm,                    NULL },  // TASK_ID_GPU_SM
-    { FLAGS_MEMORY_DATA,           task_memory_data,               NULL },  // TASK_ID_MEMORY_DATA
+    { FLAGS_MEMORY_DATA,           task_dimm_sm,                   NULL },  // TASK_ID_I2C_MEMORY read DIMM temp via i2c
+    { FLAGS_MEMORY_DATA,           task_memory_data,               NULL },  // TASK_ID_MEMORY_DATA read OCM cache line
     { FLAGS_MEMORY_CONTROL,        task_memory_control,            (void *) &G_memory_control_task },  // TASK_ID_MEMORY_CONTROL
     { FLAGS_NEST_DTS,              task_nest_dts,                  NULL },
     { FLAGS_24X7,                  task_24x7,                      NULL },  // TASK_ID_24X7
@@ -163,7 +164,7 @@ const uint8_t G_tick0_seq[] = {
 const uint8_t G_tick1_seq[] = {
                                 TASK_ID_SEND_VRT_TO_PGPE,
                                 TASK_ID_APSS_START,
-                                TASK_ID_GPU_SM,
+                                TASK_ID_I2C_MEMORY,
                                 TASK_ID_APSS_CONT,
                                 TASK_ID_APSS_DONE,
                                 TASK_ID_GET_TOD,
@@ -213,7 +214,7 @@ const uint8_t G_tick2_seq[] = {
 const uint8_t G_tick3_seq[] = {
                                 TASK_ID_SEND_VRT_TO_PGPE,
                                 TASK_ID_APSS_START,
-                                TASK_ID_GPU_SM,
+                                TASK_ID_I2C_MEMORY,
                                 TASK_ID_APSS_CONT,
                                 TASK_ID_APSS_DONE,
                                 TASK_ID_GET_TOD,
@@ -264,7 +265,7 @@ const uint8_t G_tick4_seq[] = {
 const uint8_t G_tick5_seq[] = {
                                 TASK_ID_SEND_VRT_TO_PGPE,
                                 TASK_ID_APSS_START,
-                                TASK_ID_GPU_SM,
+                                TASK_ID_I2C_MEMORY,
                                 TASK_ID_APSS_CONT,
                                 TASK_ID_APSS_DONE,
                                 TASK_ID_GET_TOD,
@@ -314,7 +315,7 @@ const uint8_t G_tick6_seq[] = {
 const uint8_t G_tick7_seq[] = {
                                 TASK_ID_SEND_VRT_TO_PGPE,
                                 TASK_ID_APSS_START,
-                                TASK_ID_GPU_SM,
+                                TASK_ID_I2C_MEMORY,
                                 TASK_ID_APSS_CONT,
                                 TASK_ID_APSS_DONE,
                                 TASK_ID_GET_TOD,
@@ -364,7 +365,7 @@ const uint8_t G_tick8_seq[] = {
 const uint8_t G_tick9_seq[] = {
                                 TASK_ID_SEND_VRT_TO_PGPE,
                                 TASK_ID_APSS_START,
-                                TASK_ID_GPU_SM,
+                                TASK_ID_I2C_MEMORY,
                                 TASK_ID_APSS_CONT,
                                 TASK_ID_APSS_DONE,
                                 TASK_ID_GET_TOD,
@@ -414,7 +415,7 @@ const uint8_t G_tick10_seq[] = {
 const uint8_t G_tick11_seq[] = {
                                 TASK_ID_SEND_VRT_TO_PGPE,
                                 TASK_ID_APSS_START,
-                                TASK_ID_GPU_SM,
+                                TASK_ID_I2C_MEMORY,
                                 TASK_ID_APSS_CONT,
                                 TASK_ID_APSS_DONE,
                                 TASK_ID_GET_TOD,
@@ -464,7 +465,7 @@ const uint8_t G_tick12_seq[] = {
 const uint8_t G_tick13_seq[] = {
                                 TASK_ID_SEND_VRT_TO_PGPE,
                                 TASK_ID_APSS_START,
-                                TASK_ID_GPU_SM,
+                                TASK_ID_I2C_MEMORY,
                                 TASK_ID_APSS_CONT,
                                 TASK_ID_APSS_DONE,
                                 TASK_ID_GET_TOD,
@@ -514,7 +515,7 @@ const uint8_t G_tick14_seq[] = {
 const uint8_t G_tick15_seq[] = {
                                 TASK_ID_SEND_VRT_TO_PGPE,
                                 TASK_ID_APSS_START,
-                                TASK_ID_GPU_SM,
+                                TASK_ID_I2C_MEMORY,
                                 TASK_ID_APSS_CONT,
                                 TASK_ID_APSS_DONE,
                                 TASK_ID_GET_TOD,

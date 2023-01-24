@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2016,2022                        */
+/* Contributors Listed Below - COPYRIGHT 2016,2023                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -57,7 +57,6 @@ memory_control_task_t G_memory_control_task =
 };
 
 void ocmb_init(void);
-
 
 // Function Specification
 //
@@ -267,37 +266,50 @@ void memory_init()
             if (IS_OCM_MEM_TYPE(G_sysConfigData.mem_type))
             {
                 ocmb_init();
-            }
+
+                // check if the init resulted in a reset
+                if(isSafeStateRequested())
+                {
+                    TRAC_ERR("memory_init: OCC is being reset, memory init failed (type=0x%02X)",
+                             G_sysConfigData.mem_type);
+                }
+                else
+                {
+                    // Initialization was successful.  Set task flags to allow memory
+                    // tasks to run and also prevent from doing initialization again.
+                    G_task_table[TASK_ID_MEMORY_DATA].flags = MEMORY_DATA_RTL_FLAGS;
+                    G_task_table[TASK_ID_MEMORY_CONTROL].flags = MEMORY_CONTROL_RTL_FLAGS;
+
+                    // check if need to also monitor DIMMs via I2C
+                    if(IS_I2C_MEM_TYPE(G_sysConfigData.mem_type))
+                    {
+                        memory_i2c_init();
+
+                        // check if the init resulted in a reset
+                        if(isSafeStateRequested())
+                        {
+                            TRAC_ERR("memory_init: OCC is being reset, I2C memory init failed");
+                            // don't allow the memory tasks to run since we will be reset
+                            G_task_table[TASK_ID_MEMORY_DATA].flags = RTL_FLAG_NONE;
+                            G_task_table[TASK_ID_MEMORY_CONTROL].flags = RTL_FLAG_NONE;
+                        }
+                        else
+                        {
+                            // I2C task Initialization was successful
+                            G_task_table[TASK_ID_I2C_MEMORY].flags = MEMORY_DATA_RTL_FLAGS;
+                        }
+                    }
+                }
+            } // if OCM memory type
             else
             {
-                TRAC_ERR("memory_init: Uknown memory type");
+                // currently all supported memory is OCM this should have been verified
+                // in data_store_mem_cfg() and error log created there
+                G_mem_monitoring_allowed = FALSE;
+                TRAC_ERR("memory_init: Uknown memory type 0x%02X", G_sysConfigData.mem_type);
             }
 
-            // check if the init resulted in a reset
-            if(isSafeStateRequested())
-            {
-                TRAC_ERR("memory_init: OCC is being reset, memory init failed (type=0x%02X)",
-                         G_sysConfigData.mem_type);
-            }
-            else
-            {
-                // Initialization was successful.  Set task flags to allow memory
-                // tasks to run and also prevent from doing initialization again.
-                G_task_table[TASK_ID_MEMORY_DATA].flags = MEMORY_DATA_RTL_FLAGS;
-                G_task_table[TASK_ID_MEMORY_CONTROL].flags = MEMORY_CONTROL_RTL_FLAGS;
-            }
-        }
-    }
+        } // if memory task not running
+    } // if G_mem_monitoring_allowed
 
 } // end memory_init()
-
-
-void disable_all_dimms()
-{
-    if (G_mem_monitoring_allowed)
-    {
-        TRAC_INFO("disable_all_dimms: DIMM temp collection is being stopped");
-        G_mem_monitoring_allowed = false;
-    }
-}
-

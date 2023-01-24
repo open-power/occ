@@ -36,6 +36,7 @@ INPUT ( amec_amester.o
         dcomMasterTx.o
         dcomSlaveRx.o
         dcomSlaveTx.o
+        dimm.o
         dpss.o
         errl.o
         ffdc.o

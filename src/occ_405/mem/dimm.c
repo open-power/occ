@@ -50,8 +50,8 @@ extern memory_control_task_t G_memory_control_task;
 
 extern data_cnfg_t * G_data_cnfg;
 
-uint64_t G_inject_dimm = 0;
-uint32_t G_inject_dimm_trace[MAX_NUM_OCMBS][MAX_NUM_I2C_DIMMS_PER_OCMB] = {{0}};
+extern uint64_t G_inject_dimm;
+extern uint32_t G_inject_dimm_trace[MAX_NUM_OCMBS][MAX_NUM_DTS_PER_OCMB];
 
 uint8_t G_dimm_state = DIMM_STATE_INIT;     // Curret state of DIMM state machine
 // G_maxDimmPort is the maximum I2C port number
@@ -65,6 +65,9 @@ uint8_t G_dimm_errorCount[MAX_NUM_OCMBS][MAX_NUM_I2C_DIMMS_PER_OCMB] = {{0}};
 
 // If still no i2c interrupt after MAX_TICK_COUNT_WAIT, then try next operation anyway
 #define MAX_TICK_COUNT_WAIT 2
+
+// first tick number that task_dimm_sm() runs in as defined in G_tick_table
+#define FIRST_I2C_DIMM_TICK 1
 
 // used for tracing
 #define OCMB_AND_DIMM ((G_dimm_sm_args.ocmb<<8) | G_dimm_sm_args.dimm)
@@ -397,7 +400,7 @@ uint8_t dimm_reset_sm()
     switch (G_dimm_state)
     {
         case DIMM_STATE_RESET_MASTER:
-            if (DIMM_TICK == 0)
+            if (DIMM_TICK == FIRST_I2C_DIMM_TICK)
             {
                 TRAC_INFO("dimm_reset_sm: Initiating I2C reset of engine %d", G_sysConfigData.dimm_i2c_engine);
                 L_new_dimm_args.i2cEngine = G_sysConfigData.dimm_i2c_engine;
@@ -655,9 +658,9 @@ void disable_all_dimms()
         G_mem_monitoring_allowed = false;
     }
 
-    if (MEM_TYPE_OCM_DDR4_I2C == G_sysConfigData.mem_type)
+    if(IS_I2C_MEM_TYPE(G_sysConfigData.mem_type))
     {
-        occ_i2c_lock_release(G_dimm_sm_args.i2cEngine);
+        occ_i2c_lock_release(G_sysConfigData.dimm_i2c_engine);
     }
 }
 
@@ -728,7 +731,9 @@ void task_dimm_sm(struct task *i_self)
 
         if (G_dimm_i2c_reset_required == false)
         {
-            if ((L_occ_owns_lock == false) && ((DIMM_TICK == 0) || (DIMM_TICK == 8)))
+            if( (L_occ_owns_lock == false) &&
+                ((DIMM_TICK == FIRST_I2C_DIMM_TICK) ||
+                 (DIMM_TICK == (FIRST_I2C_DIMM_TICK + 8))) )
             {
                 // Check if host gave up the I2C lock
                 L_occ_owns_lock = check_and_update_i2c_lock(engine);
@@ -913,8 +918,9 @@ void task_dimm_sm(struct task *i_self)
                             switch (G_dimm_state)
                             {
                                 case DIMM_STATE_WRITE_MODE:
-                                    // Only start a DIMM read on tick 0 or 8
-                                    if ((DIMM_TICK == 0) || (DIMM_TICK == 8))
+                                    // Only start a DIMM read every 8th tick
+                                    if ((DIMM_TICK == FIRST_I2C_DIMM_TICK) ||
+                                        (DIMM_TICK == (FIRST_I2C_DIMM_TICK + 8)) )
                                     {
                                         // If DIMM is not disabled start temp collection
                                         if(DIMM_SENSOR_ENABLED(L_ocmb, L_dimmIndex))

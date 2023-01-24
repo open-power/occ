@@ -46,7 +46,6 @@
 #include "state.h"
 #include "i2c.h"
 #include <amec_sys.h>
-// #include "memory.h"
 
 extern bool G_mem_monitoring_allowed;
 
