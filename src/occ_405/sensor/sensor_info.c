@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2022                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2023                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -341,6 +341,7 @@ const sensor_info_t G_sensor_info[]   =
   SENSOR_INFO_T_ENTRY(   UV_AVG,        "%\0",   AMEC_SENSOR_TYPE_WOF,  AMEC_SENSOR_LOC_PROC, AMEC_SENSOR_NONUM, AMEEFP_EVERY_TICK_HZ, AMEFP(  1,-1)  ),
   SENSOR_INFO_T_ENTRY(   OV_AVG,        "%\0",   AMEC_SENSOR_TYPE_WOF,  AMEC_SENSOR_LOC_PROC, AMEC_SENSOR_NONUM, AMEEFP_EVERY_TICK_HZ, AMEFP(  1,-1)  ),
   SENSOR_INFO_T_ENTRY(   FREQ_PSTATE,   " \0",  AMEC_SENSOR_TYPE_FREQ,  AMEC_SENSOR_LOC_PROC, AMEC_SENSOR_NONUM, AMEEFP_EVERY_TICK_HZ, AMEFP(  1, 0)  ),
+  SENSOR_INFO_T_ENTRY(   THROTTLE_ADDR, "%\0",   AMEC_SENSOR_TYPE_WOF,  AMEC_SENSOR_LOC_PROC, AMEC_SENSOR_NONUM, AMEEFP_EVERY_TICK_HZ, AMEFP(  1,-2)  ),
 };
 
 // Cause a compile error if we don't have all the sensors in the enum in the initialization list.

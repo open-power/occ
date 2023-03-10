@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2016,2021                        */
+/* Contributors Listed Below - COPYRIGHT 2016,2023                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -224,6 +224,10 @@ void call_wof_main( void )
                         // reset OC ceff adder
                         g_wof->vdd_oc_ceff_add = 0;
                         sensor_update(AMECSENSOR_PTR(OCS_ADDR), (uint16_t)g_wof->vdd_oc_ceff_add);
+
+                        // reset throttle ceff adder
+                        g_wof->vdd_throt_ceff_add = 0;
+                        sensor_update(AMECSENSOR_PTR(THROTTLE_ADDR), (uint16_t)g_wof->vdd_throt_ceff_add);
 
                         // calculate initial vrt, send gpeRequest
                         // Initial vrt is the last vrt in Main memory
@@ -1550,6 +1554,8 @@ void calculate_ceff_ratio_vcs( void )
 void calculate_ceff_ratio_vdd( void )
 {
     uint32_t l_raw_ceff_ratio = 0;
+    uint32_t l_ceff_ratio_oc_adjusted = 0;
+    uint32_t l_avg_pstate = 0;
     uint32_t l_temp32 = 0;
     uint64_t l_temp64 = 0;
 
@@ -1672,9 +1678,35 @@ void calculate_ceff_ratio_vdd( void )
             sensor_update(AMECSENSOR_PTR(CEFFVDDRATIO), (uint16_t)l_raw_ceff_ratio);
 
             // Now check the raw ceff ratio to prevent Over current by clipping to max of 100%
-            // this is saved to the parameter used by the rest of the wof alg
-            g_wof->ceff_ratio_vdd = prevent_over_current(l_raw_ceff_ratio);
-            // save the final adjusted Ceff ratio to a sensor
+            l_ceff_ratio_oc_adjusted = prevent_over_current(l_raw_ceff_ratio);
+
+            // Check if raw ceff needs to be adjusted to account for throttling that was put in place
+            pgpe_wof_values_t l_PgpeWofValues;
+            l_PgpeWofValues.dw0.value = g_wof->pgpe_wof_values_dw0;
+            l_avg_pstate = (uint32_t)l_PgpeWofValues.dw0.fields.average_pstate;
+
+            if(l_avg_pstate > G_oppb.pstate_min)
+            {
+                // In throttle range, adder is number of pstates in throttle range x 1.5625%
+                l_temp32 = (uint32_t)((l_avg_pstate - G_oppb.pstate_min) * 1562500);
+                g_wof->vdd_throt_ceff_add = l_temp32/10000;
+            }
+            else
+            {
+                // not in throttle range, no throttle adjustment
+                g_wof->vdd_throt_ceff_add = 0;
+            }
+
+            sensor_update(AMECSENSOR_PTR(THROTTLE_ADDR), (uint16_t)g_wof->vdd_throt_ceff_add);
+            g_wof->vdd_ceff_ratio_throt_adj = l_raw_ceff_ratio + g_wof->vdd_throt_ceff_add;
+
+            // the final ceff is the higher of the 2 adjusted
+            if(l_ceff_ratio_oc_adjusted > g_wof->vdd_ceff_ratio_throt_adj)
+                g_wof->ceff_ratio_vdd = l_ceff_ratio_oc_adjusted;
+            else
+                g_wof->ceff_ratio_vdd = g_wof->vdd_ceff_ratio_throt_adj;
+
+            // save the final adjusted Ceff ratio to a sensor this parameter is used by the rest of wof alg
             sensor_update(AMECSENSOR_PTR(CEFFVDDRATIOADJ), (uint16_t)g_wof->ceff_ratio_vdd);
         }
 
@@ -2976,7 +3008,7 @@ uint32_t prevent_over_current( uint32_t i_ceff_ratio )
     g_wof->vdd_ceff_ratio_adj_prev = l_clipped_ratio;
     L_ocs_dirty_prev = g_wof->ocs_dirty;
 
-    // update sensor for calculated CeffRatio addr
+    // update sensor for calculated CeffRatio addr due to dirty
     sensor_update(AMECSENSOR_PTR(OCS_ADDR), (uint16_t)g_wof->vdd_oc_ceff_add);
 
     return l_clipped_ratio;

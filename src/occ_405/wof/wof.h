@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2016,2021                        */
+/* Contributors Listed Below - COPYRIGHT 2016,2023                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -345,9 +345,9 @@ typedef struct __attribute__ ((packed))
     // [650] Fixed CeffRatio decrease addr defined in attribute
     uint16_t ocs_decrease_ceff;
 
-    // [652] OCC calculated CeffRatio Addr
+    // [652] OCC calculated CeffRatio Addr due to dirty
     uint16_t vdd_oc_ceff_add;
-    // [654] Final adjusted CeffRatio from previous tick
+    // [654] Final adjusted CeffRatio due to dirty only from previous tick
     uint16_t vdd_ceff_ratio_adj_prev;
     // [656] count of number of times not dirty (type 0)
     uint32_t ocs_not_dirty_count;
@@ -384,7 +384,11 @@ typedef struct __attribute__ ((packed))
     uint8_t interpolate_ambient_vrt;
     // [835] VRT contents last sent to PGPE
     uint8_t VRT[16];
-} amec_wof_t;  // 851 bytes total
+    // [851] OCC calculated CeffRatio Addr due to processor throttling
+    uint32_t vdd_throt_ceff_add;
+    // [855] Final adjusted CeffRatio due to processor throttling only
+    uint32_t vdd_ceff_ratio_throt_adj;
+} amec_wof_t;  // 859 bytes total
 
 // Structure used in g_amec to hold static WOF data
 typedef struct __attribute__ ((packed, aligned(128)))
@@ -433,6 +437,7 @@ typedef struct __attribute__ ((packed))
     sensor_t uv_avg_sensor;
     sensor_t ov_avg_sensor;
     sensor_t freq_pstate_sensor;
+    sensor_t throttle_addr_sensor;
 } amec_wof_sensors_t;
 
 typedef struct __attribute__ ((packed))

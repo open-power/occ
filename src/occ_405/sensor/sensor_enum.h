@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2022                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2023                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -641,6 +641,7 @@ enum e_gsid
     UV_AVG,
     OV_AVG,
     FREQ_PSTATE,   // average frequency pstate from PGPE dw0
+    THROTTLE_ADDR,
     // ------------------------------------------------------
     // END of Sensor List (this must be last entry)
     // ------------------------------------------------------

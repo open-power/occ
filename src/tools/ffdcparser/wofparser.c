@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2016,2021                        */
+/* Contributors Listed Below - COPYRIGHT 2016,2023                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -28,7 +28,7 @@
 #include <string.h>
 #include "parser_common.h"
 
-#define WOF_DATA_SIZE 851
+#define WOF_DATA_SIZE 859
 // NOTE: This tool is to be used when WOF Dynamic data is dumped by the OCC, and currently
 //       only accepts input files in binary format.
 
@@ -37,6 +37,7 @@ int main(int argc, char** argv)
 {
     FILE*       wof_file = NULL;
     uint32_t    i = 0;
+    uint8_t     l_extra_bytes = 0;
     uint8_t     l_vrt_header_byte0 = 0;
     uint8_t     l_vrt_header_byte1 = 0;
     uint8_t     l_vrt_header_byte2 = 0;
@@ -72,6 +73,8 @@ int main(int argc, char** argv)
     else if(file_size > WOF_DATA_SIZE)
     {
         fprintf(stderr, "WARNING: WOF data file size (%d) is more than %d expected\n", file_size, WOF_DATA_SIZE);
+        l_extra_bytes = file_size - WOF_DATA_SIZE;
+        fprintf(stderr, "WARNING: Assuming cmd header skipping first %d bytes\n", l_extra_bytes);
     }
     else
     {
@@ -80,6 +83,12 @@ int main(int argc, char** argv)
 
     // Print the data to stdout
     // Format should match amec_wof_t in /occ/src/occ_405/wof/wof.h
+    while(l_extra_bytes)
+    {
+         printf("EXTRA BYTE: %d\n", fgetc(wof_file));
+         l_extra_bytes--;
+    }
+
     printf("wof_disabled: 0x%08X\n", get_uint32(wof_file));
     printf("vdd_step_from_start: %d\n", get_uint16(wof_file));
     printf("vdd_override_index: %d\n", fgetc(wof_file));
@@ -117,7 +126,7 @@ int main(int argc, char** argv)
     printf("%08X\n", get_uint32(wof_file));
     printf("ceff_ratio_vdd_denominator: 0x%08X", get_uint32(wof_file));
     printf("%08X\n", get_uint32(wof_file));
-    printf("ceff_ratio_vdd in 0.01 percent: %d\n", get_uint32(wof_file));
+    printf("ceff_ratio_vdd in 0.01 percent (max of adjusted): %d\n", get_uint32(wof_file));
     printf("ceff_ratio_vcs_numerator: 0x%08X", get_uint32(wof_file));
     printf("%08X\n", get_uint32(wof_file));
     printf("ceff_ratio_vcs_denominator: 0x%08X", get_uint32(wof_file));
@@ -209,8 +218,8 @@ int main(int argc, char** argv)
     printf("     Reserved: 0x%08X\n", get_uint32(wof_file));
     printf("ocs_increase_ceff: %d\n", get_uint16(wof_file));
     printf("ocs_decrease_ceff: %d\n", get_uint16(wof_file));
-    printf("vdd_oc_ceff_add: %d\n", get_uint16(wof_file));
-    printf("vdd_ceff_ratio_adj_prev: %d\n", get_uint16(wof_file));
+    printf("Vdd Ceff add for OC only: %d\n", get_uint16(wof_file));
+    printf("Adjusted Vdd Ceff for OC only: %d\n", get_uint16(wof_file));
     printf("ocs_not_dirty_count: 0x%08X\n", get_uint32(wof_file));
     printf("ocs_not_dirty_type1_count: 0x%08X\n", get_uint32(wof_file));
     printf("ocs_dirty_type0_count: 0x%08X\n", get_uint32(wof_file));
@@ -280,6 +289,9 @@ int main(int argc, char** argv)
     printf("             Pstates: 0x%08X\n", get_uint32(wof_file));
     printf("                      0x%08X\n", get_uint32(wof_file));
     printf("                      0x%08X\n", get_uint32(wof_file));
+
+    printf("Vdd Ceff add for throttling: %d\n", get_uint32(wof_file));
+    printf("Throttling adjusted Vdd Ceff in 0.01 percent: %d\n", get_uint32(wof_file));
 
     // Close the file
     if(wof_file != NULL)
