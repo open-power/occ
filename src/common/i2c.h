@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2023                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -67,10 +67,11 @@
 #define PEEK_ERROR_MASK                 0x00000000FC000000
 #define PEEK_MORE_DATA                  0x0000000002000000
 
-// 0-15: Bit Rate Divisor - 0x0049 gives approx 391kHz (and allows margin for clock variation)
+// P10 : localbus = pib / 2 = (pau/4) / 2 = (2133/4) / 2 = 266.625
+// 0-15: Bit Rate Divisor - 0x00AE gives approx 400kHz (and allows margin for clock variation)
 // 16-21: Port Number (0-5)
 // 22-26: reserved (0s)
-#define I2C_MODE_REG_DIVISOR    0x0049000000000000
+#define I2C_MODE_REG_DIVISOR    0x00AE000000000000
 
 typedef enum
 {

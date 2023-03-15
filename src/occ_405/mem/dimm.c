@@ -397,6 +397,8 @@ uint8_t dimm_reset_sm()
     static uint8_t L_next_ocmb = 0;
     static dimm_sm_args_t L_new_dimm_args = {{{{0}}}};
 
+    DIMM_DBG("dimm_reset_sm: state 0x%02X (next OCMB %d) (tick=%d)", G_dimm_state, L_next_ocmb, DIMM_TICK);
+
     switch (G_dimm_state)
     {
         case DIMM_STATE_RESET_MASTER:
@@ -421,12 +423,14 @@ uint8_t dimm_reset_sm()
             if(ocmbIndex != MAX_NUM_OCMBS)
             {
                 L_new_dimm_args.i2cPort = g_amec->proc[0].memctl[ocmbIndex].membuf.dimm_temps[0].i2c_port;
+                DIMM_DBG("dimm_reset_sm: RESET_SLAVE_PORT (OCMB %d, port %d)", ocmbIndex, L_new_dimm_args.i2cPort);
                 if (schedule_dimm_req(DIMM_STATE_RESET_SLAVE_PORT, L_new_dimm_args))
                 {
                     nextState = DIMM_STATE_RESET_SLAVE_PORT_WAIT;
 
                     // setup to reset next port when this port reset is complete
-                    L_next_ocmb = ocmbIndex++;
+                    L_next_ocmb = ocmbIndex + 1;
+                    DIMM_DBG("dimm_reset_sm: incrementing to next OCMBk%d", L_next_ocmb);
                 }
             }
             else // done resetting ports

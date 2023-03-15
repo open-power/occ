@@ -86,7 +86,7 @@ extern void dumpHexString(const void *i_data, const unsigned int len, const char
 
 
 #define TRAC_ERR(frmt,args...)  \
-        TRACE(&g_des_array[ERR_TRACE_DESCRIPTOR],frmt,##args)
+        TRACE(&g_des_array[ERR_TRACE_DESCRIPTOR],"E>"frmt,##args)
 #define TRAC_INFO(frmt,args...)  \
         TRACE(&g_des_array[INF_TRACE_DESCRIPTOR],frmt,##args)
 #define TRAC_IMP(frmt,args...)  \

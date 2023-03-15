@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2018,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2018,2023                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -22,6 +22,9 @@
 /* permissions and limitations under the License.                         */
 /*                                                                        */
 /* IBM_PROLOG_END_TAG                                                     */
+
+//#define DEBUG_OCMB
+
 #include <stdint.h>
 #include "gpe_membuf.h"
 #include "gpe_pba_cntl.h"
@@ -353,7 +356,7 @@ int membuf_put_scom_all(MemBufConfiguration_t* i_config,
             uint32_t oci_addr;
 
             while( pba_check_busy() == MEMBUF_PBA_BUSY);
-            
+
             pba_rc = inband_scom_setup(i_config,
                                     instance,
                                     i_scom_address,
@@ -499,7 +502,7 @@ int membuf_scom_rmw_all(MemBufConfiguration_t* i_config,
             uint32_t oci_addr;
 
             while( pba_check_busy() == MEMBUF_PBA_BUSY);
-            
+
             pba_rc = inband_scom_setup(i_config,
                                         instance,
                                         i_scom_address,
@@ -557,7 +560,9 @@ void gpe_inband_scom(MemBufConfiguration_t* i_config,
 
     for(i = 0; i < i_parms->entries; ++i)
     {
+#ifdef DEBUG_OCMB
         PK_TRACE("gpe_inband_scom. cmdtype %d",i_parms->scomList[i].commandType);
+#endif
         switch(i_parms->scomList[i].commandType)
         {
             case MEMBUF_SCOM_NOP:
@@ -579,11 +584,13 @@ void gpe_inband_scom(MemBufConfiguration_t* i_config,
 
             case MEMBUF_SCOM_RMW:
 
+#ifdef DEBUG_OCMB
                 PK_TRACE("MEMBUF_SCOM_RMW. OCMB %d, addr(%08x) mask[0:31](%08x) data[0:31](%08x)",
                          i_parms->scomList[i].instanceNumber,
                          i_parms->scomList[i].scom,
                          (i_parms->scomList[i].mask) >> 32,
                          (i_parms->scomList[i].data) >> 32);
+#endif
 
                 rc = membuf_scom_rmw(i_config,
                                       i_parms->scomList[i].instanceNumber,
@@ -601,10 +608,12 @@ void gpe_inband_scom(MemBufConfiguration_t* i_config,
 
             case MEMBUF_SCOM_WRITE_ALL:
 
+#ifdef DEBUG_OCMB
                 PK_TRACE("MEMBUF_SCOM_WRITE_ALL addr(%08x) data(%08x%08x)",
                          i_parms->scomList[i].scom,
                          (i_parms->scomList[i].data) >> 32,
                          (i_parms->scomList[i].data));
+#endif
 
                 rc = membuf_put_scom_all(i_config,
                                           i_parms->scomList[i].scom,

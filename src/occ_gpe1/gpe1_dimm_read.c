@@ -47,6 +47,8 @@ void dimm_reset_master(ipc_msg_t* cmd, void* arg);
 void dimm_reset_slave(ipc_msg_t* cmd, void* arg);
 void dimm_reset_slave_status(ipc_msg_t* cmd, void* arg);
 
+// To test in cronus: (read engine 3 port 8 address 0x30 2 byte temp sensor)
+//   geti2c pu 3 8 30 2 5 1 -busspeed 400 -debug5.1i.f
 
 /*
  * Function Specifications:
@@ -131,7 +133,7 @@ void gpe_dimm_sm(ipc_msg_t* cmd, void* arg)
             break;
 
         default:
-            PK_TRACE("gpe_dimm_sm: Invalid state (0x%02X) received!", args->state);
+            PK_TRACE("E>gpe_dimm_sm: Invalid state (0x%02X) received!", args->state);
             args->error.rc = 0;
             gpe_set_ffdc(&(args->error), 0, GPE_RC_INVALID_STATE, args->state);
             break;
@@ -143,7 +145,7 @@ void gpe_dimm_sm(ipc_msg_t* cmd, void* arg)
     rc = ipc_send_rsp(cmd, IPC_RC_SUCCESS);
     if(rc)
     {
-        PK_TRACE("gpe_dimm_sm: Failed to send response back. Halting GPE1", rc);
+        PK_TRACE("E>gpe_dimm_sm: Failed to send response back. Halting GPE1", rc);
         gpe_set_ffdc(&(args->error), 0x00, GPE_RC_IPC_SEND_FAILED, rc);
         pk_halt();
     }
@@ -185,7 +187,7 @@ void dimm_write_int_mask(ipc_msg_t* cmd, void* arg)
     rc = putscom_abs(scomAddr, regValue);
     if(rc)
     {
-        PK_TRACE("dimm_write_int_mask: I2C_INTERRUPT_MASK_REG putscom 0x%08X->0x%08X%08X FAILED. rc = 0x%08x",
+        PK_TRACE("E>dimm_write_int_mask: I2C_INTERRUPT_MASK_REG putscom 0x%08X->0x%08X%08X FAILED. rc = 0x%08x",
                  scomAddr, WORD_HIGH(regValue), WORD_LOW(regValue), rc);
         gpe_set_ffdc(&(args->error), scomAddr, GPE_RC_SCOM_PUT_FAILED, rc);
     }
@@ -200,7 +202,7 @@ void dimm_write_int_mask(ipc_msg_t* cmd, void* arg)
     rc = getscom_abs(scomAddr, &regValue);
     if(rc)
     {
-        PK_TRACE("dimm_write_int_mask: I2C_STATUS_REG getscom 0x%08X FAILED. rc = 0x%08x - STATUS",
+        PK_TRACE("E>dimm_write_int_mask: I2C_STATUS_REG getscom 0x%08X FAILED. rc = 0x%08x - STATUS",
                  scomAddr, rc);
         gpe_set_ffdc(&(args->error), scomAddr, GPE_RC_SCOM_GET_FAILED, rc);
     }
@@ -246,24 +248,26 @@ void dimm_write_mode(ipc_msg_t* cmd, void* arg)
     // MODE_REGISTER
     scomAddr = I2C_MODE_REG | SCOM_ENGINE_OFFSET(args->i2cEngine);
     // 0-15: Bit Rate Divisor - 0x0049 gives approx 391kHz (and allows margin for clock variation)
-    // 16-21: Port Number (0-5)
+    // 16-21: Port Number (0-15)
     // 22-26: reserved (0s)
     regValue = I2C_MODE_REG_DIVISOR;
-    if ((args->i2cPort > 0) && (args->i2cPort < 6))
+    if ((args->i2cPort > 0) && (args->i2cPort < 16))
     {
         regValue |= ((uint64_t)args->i2cPort << 42);
     }
+    GPE1_DIMM_DBG("dimm_write_mode: I2C_MODE_REG ---> OCMB%d / port %d / divisor 0x%04X",
+                  args->ocmb, args->i2cPort, I2C_MODE_REG_DIVISOR);
     rc = putscom_abs(scomAddr, regValue);
     if(rc)
     {
-        PK_TRACE("dimm_write_mode: I2C_MODE_REG putscom 0x%08X->0x%08X%08X FAILED. rc = 0x%08x",
+        PK_TRACE("E>dimm_write_mode: I2C_MODE_REG putscom 0x%08X->0x%08X%08X FAILED. rc = 0x%08x",
                  scomAddr, WORD_HIGH(regValue), WORD_LOW(regValue), rc);
         gpe_set_ffdc(&(args->error), scomAddr, GPE_RC_SCOM_PUT_FAILED, rc);
     }
     else
     {
-        GPE1_DIMM_DBG("dimm_write_mode: putscom(0x%08X,0x%08X%08X) SUCCESS - MODE",
-                      scomAddr, WORD_HIGH(regValue), WORD_LOW(regValue));
+        GPE1_DIMM_DBG("dimm_write_mode: putscom(0x%08X,0x%08X%08X) SUCCESS - MODE (OCMB%d)",
+                      scomAddr, WORD_HIGH(regValue), WORD_LOW(regValue), args->ocmb);
     }
 
 } // end dimm_write_mode()
@@ -298,7 +302,7 @@ void dimm_write_ts_addr(ipc_msg_t* cmd, void* arg)
     rc = putscom_abs(scomAddr, regValue);
     if(rc)
     {
-        PK_TRACE("dimm_write_ts_addr: I2C_COMMAND_REG putscom 0x%08X->0x%08X%08X FAILED. rc = 0x%08x",
+        PK_TRACE("E>dimm_write_ts_addr: I2C_COMMAND_REG putscom 0x%08X->0x%08X%08X FAILED. rc = 0x%08x",
                  scomAddr, WORD_HIGH(regValue), WORD_LOW(regValue), rc);
         gpe_set_ffdc(&(args->error), scomAddr, GPE_RC_SCOM_PUT_FAILED, rc);
     }
@@ -314,7 +318,7 @@ void dimm_write_ts_addr(ipc_msg_t* cmd, void* arg)
         rc = putscom_abs(scomAddr, regValue);
         if(rc)
         {
-            PK_TRACE("dimm_write_ts_addr: I2C_FIFO_REG putscom 0x%08X->0x%08X%08X FAILED. rc = 0x%08x",
+            PK_TRACE("E>dimm_write_ts_addr: I2C_FIFO_REG putscom 0x%08X->0x%08X%08X FAILED. rc = 0x%08x",
                      scomAddr, WORD_HIGH(regValue), WORD_LOW(regValue), rc);
             gpe_set_ffdc(&(args->error), scomAddr, GPE_RC_SCOM_PUT_FAILED, rc);
         }
@@ -358,7 +362,7 @@ void dimm_initiate_read(ipc_msg_t* cmd, void* arg)
     rc = getscom_abs(scomAddr, &regValue);
     if(rc)
     {
-        PK_TRACE("dimm_initiate_read: I2C_STATUS_REG getscom 0x%08X FAILED. rc = 0x%08x",
+        PK_TRACE("E>dimm_initiate_read: I2C_STATUS_REG getscom 0x%08X FAILED. rc = 0x%08x",
                  scomAddr, rc);
         gpe_set_ffdc(&(args->error), scomAddr, GPE_RC_SCOM_GET_FAILED, rc);
     }
@@ -380,7 +384,7 @@ void dimm_initiate_read(ipc_msg_t* cmd, void* arg)
             rc = putscom_abs(scomAddr, regValue);
             if(rc)
             {
-                PK_TRACE("dimm_initiate_read: I2C_COMMAND_REG putscom 0x%08X->0x%08X%08X FAILED. rc = 0x%08x",
+                PK_TRACE("E>dimm_initiate_read: I2C_COMMAND_REG putscom 0x%08X->0x%08X%08X FAILED. rc = 0x%08x",
                          scomAddr, WORD_HIGH(regValue), WORD_LOW(regValue), rc);
                 gpe_set_ffdc(&(args->error), scomAddr, GPE_RC_SCOM_PUT_FAILED, rc);
             }
@@ -399,7 +403,7 @@ void dimm_initiate_read(ipc_msg_t* cmd, void* arg)
             if ((regValue & STATUS_ERROR_OR_COMPLETE_MASK) != 0)
             {
                 // I2C error was found
-                PK_TRACE("dimm_initiate_read: Error in status register: 0x%08X%08X",
+                PK_TRACE("E>dimm_initiate_read: Error in status register: 0x%08X%08X",
                          WORD_HIGH(regValue), WORD_LOW(regValue));
                 gpe_set_ffdc(&(args->error), scomAddr, GPE_RC_I2C_ERROR, regValue);
             }
@@ -446,7 +450,7 @@ void dimm_read_temp(ipc_msg_t* cmd, void* arg)
     rc = getscom_abs(scomAddr, &regValue);
     if(rc)
     {
-        PK_TRACE("dimm_read_temp: I2C_STATUS_REG getscom 0x%08X FAILED. rc = 0x%08x - STATUS #1",
+        PK_TRACE("E>dimm_read_temp: I2C_STATUS_REG getscom 0x%08X FAILED. rc = 0x%08x - STATUS #1",
                  scomAddr, rc);
         gpe_set_ffdc(&(args->error), scomAddr, GPE_RC_SCOM_GET_FAILED, rc);
     }
@@ -459,7 +463,7 @@ void dimm_read_temp(ipc_msg_t* cmd, void* arg)
         if ((regValue & STATUS_ERROR_MASK) != 0)
         {
             // I2C error was found
-            PK_TRACE("dimm_read_temp: Error in status register: 0x%08X%08X",
+            PK_TRACE("E>dimm_read_temp: Error in status register: 0x%08X%08X",
                      WORD_HIGH(regValue), WORD_LOW(regValue));
             gpe_set_ffdc(&(args->error), scomAddr, GPE_RC_I2C_ERROR, regValue);
         }
@@ -473,7 +477,7 @@ void dimm_read_temp(ipc_msg_t* cmd, void* arg)
                 rc = getscom_abs(scomAddr, &regValue);
                 if(rc)
                 {
-                    PK_TRACE("dimm_read_temp: I2C_FIFO4_REG getscom 0x%08X FAILED. rc = 0x%08x",
+                    PK_TRACE("E>dimm_read_temp: I2C_FIFO4_REG getscom 0x%08X FAILED. rc = 0x%08x",
                              scomAddr, rc);
                     gpe_set_ffdc(&(args->error), scomAddr, GPE_RC_SCOM_GET_FAILED, rc);
                 }
@@ -495,7 +499,7 @@ void dimm_read_temp(ipc_msg_t* cmd, void* arg)
                     if (regValue & PEEK_ERROR_MASK)
                     {
                         // I2C error was found
-                        PK_TRACE("dimm_read_temp: Error in FIFO4 peek data: 0x%08X%08X",
+                        PK_TRACE("E>dimm_read_temp: Error in FIFO4 peek data: 0x%08X%08X",
                                  WORD_HIGH(regValue), WORD_LOW(regValue));
                         gpe_set_ffdc(&(args->error), scomAddr, GPE_RC_I2C_ERROR, regValue);
                     }

@@ -1948,6 +1948,7 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
                            // mark this DIMM as present
                            G_dimm_configured_sensors.bytes[l_membuf_num] = DIMM_SENSOR0;
                         }
+                        l_num_dimms++;
                     }
                     else
                     {
