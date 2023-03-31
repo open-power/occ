@@ -28,7 +28,7 @@
 #include <string.h>
 #include "parser_common.h"
 
-#define WOF_DATA_SIZE 859
+#define WOF_DATA_SIZE 869
 // NOTE: This tool is to be used when WOF Dynamic data is dumped by the OCC, and currently
 //       only accepts input files in binary format.
 
@@ -43,6 +43,7 @@ int main(int argc, char** argv)
     uint8_t     l_vrt_header_byte2 = 0;
     uint8_t     l_vrt_header_byte3 = 0;
     uint8_t     l_temp_data = 0;
+    int16_t     l_signed16 = 0;
 
     // Verify a file was passed as an argument
     if(argc < 2)
@@ -292,6 +293,10 @@ int main(int argc, char** argv)
 
     printf("Vdd Ceff add for throttling: %d\n", get_uint32(wof_file));
     printf("Throttling adjusted Vdd Ceff in 0.01 percent: %d\n", get_uint32(wof_file));
+    printf("Throttling index percent in 0.000001: %d\n", get_uint32(wof_file));
+    printf("Throttling index offset from OCC Scratch 3: %d\n", get_uint32(wof_file));
+    l_signed16 = (int16_t)get_uint16(wof_file);
+    printf("Eco mode ceff addr 0.01 percent: %d\n", l_signed16);
 
     // Close the file
     if(wof_file != NULL)

@@ -1557,6 +1557,8 @@ void calculate_ceff_ratio_vdd( void )
     uint32_t l_ceff_ratio_oc_adjusted = 0;
     uint32_t l_avg_pstate = 0;
     uint32_t l_temp32 = 0;
+    uint32_t l_scratch_reg3 = 0;
+    uint32_t l_throttle_index_percent = 0;
     uint64_t l_temp64 = 0;
 
     static bool L_trace_error = TRUE;
@@ -1687,9 +1689,23 @@ void calculate_ceff_ratio_vdd( void )
 
             if(l_avg_pstate > G_oppb.pstate_min)
             {
-                // In throttle range, adder is number of pstates in throttle range x 1.5625%
-                l_temp32 = (uint32_t)((l_avg_pstate - G_oppb.pstate_min) * 1562500);
-                g_wof->vdd_throt_ceff_add = l_temp32/10000;
+                // In throttle range, read adder values from OCC scratch reg 3
+                l_scratch_reg3 = in32(OCB_OCCS3);
+                // bits 0:15 is throttle index ceff percentage in 0.0001% unit if 0 use 1.5625%
+                l_throttle_index_percent = (l_scratch_reg3 >> 16);
+                if(l_throttle_index_percent == 0)
+                    g_wof->throt_idx_percent = 1562500;
+                else // x100 to convert to 0.000001% unit
+                    g_wof->throt_idx_percent = l_throttle_index_percent * 100;
+
+                // bits 16:31 is throttle index offset
+                g_wof->throt_idx_offset = (l_scratch_reg3 & 0x0000FFFF);
+
+                // total throttle ceff adjustment is (number of pstates in throttle range + offset) x percentage
+                l_temp32 = (uint32_t)( (l_avg_pstate - G_oppb.pstate_min) + g_wof->throt_idx_offset );
+                l_temp32 = l_temp32 * g_wof->throt_idx_percent;
+                // /10000 to convert to final 0.01% unit
+                g_wof->vdd_throt_ceff_add = (uint32_t)(l_temp32/10000);
             }
             else
             {
@@ -1706,6 +1722,24 @@ void calculate_ceff_ratio_vdd( void )
             else
                 g_wof->ceff_ratio_vdd = g_wof->vdd_ceff_ratio_throt_adj;
 
+            //  if eco mode addr is set adjust ceff some more
+            if(g_wof->eco_mode_ceff_add > 0)
+            {
+               // positive addr is added on top of any previous adjustments
+               g_wof->ceff_ratio_vdd += g_wof->eco_mode_ceff_add;
+            }
+            else if(g_wof->eco_mode_ceff_add < 0)
+            {
+               // negative addr is only applied if there were no previous adjustments
+               if(l_raw_ceff_ratio == g_wof->ceff_ratio_vdd)
+               {
+                  // prevent overflow
+                  if(g_wof->ceff_ratio_vdd > -g_wof->eco_mode_ceff_add)
+                     g_wof->ceff_ratio_vdd += g_wof->eco_mode_ceff_add;
+                  else
+                     g_wof->ceff_ratio_vdd = 0;
+               }
+            }
             // save the final adjusted Ceff ratio to a sensor this parameter is used by the rest of wof alg
             sensor_update(AMECSENSOR_PTR(CEFFVDDRATIOADJ), (uint16_t)g_wof->ceff_ratio_vdd);
         }

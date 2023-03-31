@@ -388,7 +388,13 @@ typedef struct __attribute__ ((packed))
     uint32_t vdd_throt_ceff_add;
     // [855] Final adjusted CeffRatio due to processor throttling only
     uint32_t vdd_ceff_ratio_throt_adj;
-} amec_wof_t;  // 859 bytes total
+    // [859] throttle index ceff percentage in 0.000001% from OCC scratch reg 3 x100 or 1562500
+    uint32_t throt_idx_percent;
+    // [863] throttle index offset read from OCC scratch reg 3
+    uint32_t throt_idx_offset;
+    // [867] signed amount in 0.01% unit to add (or subtract) to ceff.  Set by Eco mode
+    int16_t eco_mode_ceff_add;
+} amec_wof_t;  // 869 bytes total
 
 // Structure used in g_amec to hold static WOF data
 typedef struct __attribute__ ((packed, aligned(128)))

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2022                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2023                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -94,7 +94,8 @@ typedef enum
     DBUG_DUMP_AME_SENSOR      = 0x26,
     DBUG_CLEAR_AME_SENSOR     = 0x27,
     DBUG_WOF_CONTROL          = 0x28,
-    DBUG_WOF_OCS              = 0x29
+    DBUG_WOF_OCS              = 0x29,
+    DBUG_WOF_SET_ECO_MODE     = 0x2A
 } DBUG_CMD;
 
 //*************************************************************************/
@@ -272,6 +273,22 @@ typedef struct __attribute__ ((packed))
     uint16_t    ceff_down_amount;
     uint8_t     checksum[CMDH_FSP_CHECKSUM_SIZE];
 } cmdh_dbug_wof_ocs_rsp_t;
+
+// DBUG_WOF_SET_ECO_MODE command struct
+typedef struct __attribute__ ((packed))
+{
+    struct      cmdh_fsp_cmd_header;    // Standard command header
+    uint8_t     sub_cmd;                // Debug sub-command
+    int16_t     eco_ceff_add;           // signed amount in 0.01% unit to add (or subtract) to ceff
+} cmdh_dbug_set_wof_eco_mode_cmd_t;
+
+// DBUG_WOF_SET_ECO_MODE response struct
+typedef struct __attribute__ ((packed))
+{
+    struct      cmdh_fsp_rsp_header;
+    int16_t     eco_ceff_add;
+    uint8_t     checksum[CMDH_FSP_CHECKSUM_SIZE];
+} cmdh_dbug_set_wof_eco_mode_rsp_t;
 
 // DBUG_ALLOW_TRACE command struct
 typedef struct __attribute__ ((packed))
