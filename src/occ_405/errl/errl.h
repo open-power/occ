@@ -80,7 +80,7 @@ extern uint32_t            G_hcode_elog_table_slots;
 
 typedef enum {
     // unused -  0x01,
-    ERRH_EMPATH_FAILURE              =  0x02,
+    // unused -  0x02,
     // unused -  0x03,
     // unused -  0x04,
     // unused - 0x05

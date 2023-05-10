@@ -224,7 +224,6 @@ void task_core_data( task_t * i_task )
             {
                 G_empath_error_core_mask |=
                     (CORE0_PRESENT_MASK >> (l_bulk_core_data_ptr->current_core));
-                INCREMENT_ERR_HISTORY(ERRH_EMPATH_FAILURE);
 
                 // increment error count and log error if Idle Power Save is enabled
                 // IPS is the only function that requires EMPATH counters

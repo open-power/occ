@@ -568,6 +568,11 @@ bce_async_handler_full(void* arg, SsxIrqId irq, int priority)
 
     if (SSX_ERROR_CHECK_KERNEL && (async_current == 0))
     {
+        // for phantom debug notify bit in OCCMISC will be configured to checkstop set that bit then panic
+        ocb_occmisc_t occmiscreg = {0};
+        occmiscreg.fields.firmware_notify = 1;
+        out32(OCB_OCCMISC_OR, occmiscreg.value);
+
         SSX_PANIC(ASYNC_PHANTOM_INTERRUPT_BCE);
     }
 
