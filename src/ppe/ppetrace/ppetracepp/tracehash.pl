@@ -6,7 +6,7 @@
 #
 # OpenPOWER OnChipController Project
 #
-# Contributors Listed Below - COPYRIGHT 2019
+# Contributors Listed Below - COPYRIGHT 2019,2023
 # [+] International Business Machines Corp.
 #
 #
@@ -699,6 +699,9 @@ sub assimilate_file($)
         while ( defined $line )
         {
             chop $line;    # remove EOL
+
+            $line =~ s/\%p/0x\%08X/g;   # Replace pointer format with hex value
+
             if ( $version eq "1" )
             {
                 ( $l_hash, $l_file, $l_str ) = split( /\|\|/, $line );
