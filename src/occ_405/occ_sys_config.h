@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2022                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2023                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -50,6 +50,8 @@
 #define MAX_NUM_MCU_PORTS        4
 
 #define MAX_NUM_I2C_DIMMS_PER_OCMB      1
+
+#define MAX_NUM_MEM_INT_PTS      12
 
 #define NUM_PROC_CHIPS_PER_OCC          1
 #define NUM_PORT_PAIRS_PER_MEM_BUF      2

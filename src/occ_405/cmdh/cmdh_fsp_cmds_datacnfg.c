@@ -57,6 +57,7 @@
 #define DATA_IPS_VERSION           0
 
 #define DATA_MEM_CFG_VERSION_30    0x30
+#define DATA_MEM_CFG_VERSION_31    0x31
 
 #define DATA_MEM_THROT_VERSION_40  0x40
 
@@ -1696,6 +1697,7 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
 {
     errlHndl_t                      l_err = NULL;
     cmdh_mem_cfg_v30_t*             l_cmd_ptr = (cmdh_mem_cfg_v30_t*)i_cmd_ptr;
+    cmdh_mem_cfg_v31_t*             l_cmd_v31_ptr = (cmdh_mem_cfg_v31_t*)i_cmd_ptr;
     uint16_t                        l_data_length = 0;
     uint16_t                        l_exp_data_length = 0;
     uint16_t                        l_ocmb_update_time_ms = 200;
@@ -1705,8 +1707,18 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
     uint8_t                         l_memory_type = 0;
     uint8_t                         num_data_sets = 0;
     uint8_t                         l_i2c_engine;
+    uint8_t                         l_dimm_info1 = 0;
+    uint8_t                         l_dimm_info2 = 0;
+    uint8_t                         l_dimm_info3 = 0;
+    uint8_t                         l_addl_data3 = 0;
+    uint8_t                         l_addl_data4 = 0;
+    uint16_t                        l_addl_data1 = 0;
+    uint16_t                        l_addl_data2 = 0;
+    uint32_t                        l_hw_sensor_id = 0;
+    uint32_t                        l_temp_sensor_id = 0;
     int                             i;
     bool                            l_i2c_memory = FALSE;
+    unsigned int                    l_membuf_num = 0;
 
     do
     {
@@ -1725,12 +1737,21 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
             }
         }
 
-        if(l_cmd_ptr->header.version == DATA_MEM_CFG_VERSION_30)
+        if( (l_cmd_ptr->header.version == DATA_MEM_CFG_VERSION_30) ||
+            (l_cmd_ptr->header.version == DATA_MEM_CFG_VERSION_31) )
         {
             num_data_sets = l_cmd_ptr->header.num_data_sets;
             // Verify the actual data length matches the expected data length for this version
-            l_exp_data_length = sizeof(cmdh_mem_cfg_header_v30_t) - sizeof(cmdh_fsp_cmd_header_t) +
-                                (num_data_sets * sizeof(cmdh_mem_cfg_data_set_t));
+            if(l_cmd_ptr->header.version == DATA_MEM_CFG_VERSION_30)
+            {
+                l_exp_data_length = sizeof(cmdh_mem_cfg_header_v3x_t) - sizeof(cmdh_fsp_cmd_header_t) +
+                                    (num_data_sets * sizeof(cmdh_mem_cfg_data_set_t));
+            }
+            else // DATA_MEM_CFG_VERSION_31
+            {
+                l_exp_data_length = sizeof(cmdh_mem_cfg_header_v3x_t) - sizeof(cmdh_fsp_cmd_header_t) +
+                                    (num_data_sets * sizeof(cmdh_mem_cfg_data_set_v31_t));
+            }
 
             if(l_exp_data_length != l_data_length)
             {
@@ -1763,7 +1784,11 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
         if (num_data_sets > 0)
         {
             // Store the memory type
-            l_memory_type = l_cmd_ptr->data_set[0].memory_type & OCMB_TYPE_TYPE_MASK;
+            if(l_cmd_ptr->header.version == DATA_MEM_CFG_VERSION_30)
+                l_memory_type = l_cmd_ptr->data_set[0].memory_type & OCMB_TYPE_TYPE_MASK;
+            else // version 0x31
+                l_memory_type = l_cmd_v31_ptr->data_set[0].memory_type & OCMB_TYPE_TYPE_MASK;
+
             // verify this is a valid memory type, currently only OCM types are valid
             if(IS_OCM_MEM_TYPE(l_memory_type))
                G_sysConfigData.mem_type = l_memory_type;
@@ -1775,35 +1800,59 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
                 break;
             }
 
-            // Store the hardware sensor ID and the temperature sensor ID
+            // Process each data set
             for(i=0; i<num_data_sets; i++)
             {
-                cmdh_mem_cfg_data_set_t* l_data_set;
-                l_data_set = &l_cmd_ptr->data_set[i];
-                l_memory_type = (l_data_set->memory_type & OCMB_TYPE_TYPE_MASK);
+                if(l_cmd_ptr->header.version == DATA_MEM_CFG_VERSION_30)
+                {
+                    cmdh_mem_cfg_data_set_t* l_data_set;
+                    l_data_set = &l_cmd_ptr->data_set[i];
+                    l_memory_type = (l_data_set->memory_type & OCMB_TYPE_TYPE_MASK);
+                    // Get the physical OCMB location from type
+                    l_membuf_num = (l_data_set->memory_type & OCMB_TYPE_LOCATION_MASK);
+                    l_hw_sensor_id = l_data_set->hw_sensor_id;
+                    l_temp_sensor_id = l_data_set->temp_sensor_id;
+                    l_dimm_info1 = l_data_set->dimm_info1;
+                    l_dimm_info2 = l_data_set->dimm_info2;
+                    l_dimm_info3 = l_data_set->dimm_info3;
+                }
+                else // version 0x31
+                {
+                    cmdh_mem_cfg_data_set_v31_t* l_data_set;
+                    l_data_set = &l_cmd_v31_ptr->data_set[i];
+                    l_memory_type = (l_data_set->memory_type & OCMB_TYPE_TYPE_MASK);
+                    // Get the physical OCMB location from type
+                    l_membuf_num = (l_data_set->memory_type & OCMB_TYPE_LOCATION_MASK);
+                    l_hw_sensor_id = l_data_set->hw_sensor_id;
+                    l_temp_sensor_id = l_data_set->temp_sensor_id;
+                    l_dimm_info1 = l_data_set->dimm_info1;
+                    l_dimm_info2 = l_data_set->dimm_info2;
+                    l_dimm_info3 = l_data_set->dimm_info3;
+                    l_addl_data1 = l_data_set->addl_data1;
+                    l_addl_data2 = l_data_set->addl_data2;
+                    l_addl_data3 = l_data_set->addl_data3;
+                    l_addl_data4 = l_data_set->addl_data4;
+                }
+
 
                 // No mixing DDR4 and DDR5 behind a proc. is allowed.
                 if( (IS_OCM_DDR4_MEM_TYPE(G_sysConfigData.mem_type) == IS_OCM_DDR4_MEM_TYPE(l_memory_type)) ||
                     (IS_OCM_DDR5_MEM_TYPE(G_sysConfigData.mem_type) == IS_OCM_DDR5_MEM_TYPE(l_memory_type)) )
                 {
-                    // Get the physical OCMB location from type
-                    unsigned int l_membuf_num = l_data_set->memory_type;
-                    l_membuf_num &= OCMB_TYPE_LOCATION_MASK;
-
                     // Validate the memory buffer num for this data set
                     if (l_membuf_num >= MAX_NUM_OCMBS)
                     {
-                        CMDH_TRAC_ERR("data_store_mem_cfg: Invalid memory buffer num[0x%02X] for entry %d type/mem_buf[0x%02X] ",
-                                      l_membuf_num, i, l_data_set->memory_type);
+                        CMDH_TRAC_ERR("data_store_mem_cfg: Invalid memory buffer num[0x%02X] for entry %d type[0x%02X] ",
+                                      l_membuf_num, i, l_memory_type);
                         cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
                         break;
                     }
 
                     // process dimm info1 byte
-                    if( (l_data_set->dimm_info1 == 0xFF) || (l_memory_type != MEM_TYPE_OCM_DDR4_I2C) )
+                    if( (l_dimm_info1 == 0xFF) || (l_memory_type != MEM_TYPE_OCM_DDR4_I2C) )
                     {
                        // DIMM info1 is a DTS number
-                       l_dts_num = l_data_set->dimm_info1;
+                       l_dts_num = l_dimm_info1;
 
                        // Validate the dts num for this data set
                        if(l_dts_num != 0xFF)
@@ -1812,15 +1861,15 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                ((l_memory_type == MEM_TYPE_OCM_DDR5) && (l_dts_num >= NUM_DTS_PER_OCMB_DDR5)) )
                            {
                               CMDH_TRAC_ERR("data_store_mem_cfg: Invalid memory data for type 0x%02X "
-                                            "(entry %d: type/mem_buf[0x%02X], dts[0x%02X])",
-                                            l_memory_type, i, l_data_set->memory_type, l_dts_num);
+                                            "(entry %d: mem_buf[0x%02X], dts[0x%02X])",
+                                            l_memory_type, i, l_membuf_num, l_dts_num);
                               cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
                               break;
                            }
                        }
 
                        // membuf must be present if at least one membuf or dimm dts is used.
-                       if(l_data_set->dimm_info2 != DATA_FRU_NOT_USED)
+                       if(l_dimm_info2 != DATA_FRU_NOT_USED)
                        {
                            G_present_membufs |= MEMBUF0_PRESENT_MASK >> l_membuf_num;
                        }
@@ -1828,49 +1877,71 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
                        if(l_dts_num == 0xFF) // sensors are for the Memory Buffer itself
                        {
                            // Store the hardware sensor ID
-                           G_sysConfigData.membuf_huids[l_membuf_num] = l_data_set->hw_sensor_id;
+                           G_sysConfigData.membuf_huids[l_membuf_num] = l_hw_sensor_id;
 
                            // Store the temperature sensor ID
-                           g_amec->proc[0].memctl[l_membuf_num].membuf.temp_sid = l_data_set->temp_sensor_id;
+                           g_amec->proc[0].memctl[l_membuf_num].membuf.temp_sid = l_temp_sensor_id;
 
                            // Store the thermal sensor type
-                           g_amec->proc[0].memctl[l_membuf_num].membuf.membuf_hottest.temp_fru_type = l_data_set->dimm_info2;
+                           g_amec->proc[0].memctl[l_membuf_num].membuf.membuf_hottest.temp_fru_type = l_dimm_info2;
+
+                           // Version 0x31 has additional data for OCMB
+                           if(l_cmd_ptr->header.version == DATA_MEM_CFG_VERSION_31)
+                           {
+                               // Additional data1 is Port 0 clock freq
+                               g_amec->proc[0].memctl[l_membuf_num].membuf.portpair[0].freq = l_addl_data1;
+
+                               // Additional data2 is Port 1 clock freq
+                               g_amec->proc[0].memctl[l_membuf_num].membuf.portpair[1].freq = l_addl_data2;
+
+                               // Additional data3 is Port 0 burst length
+                               g_amec->proc[0].memctl[l_membuf_num].membuf.portpair[0].burst_length = l_addl_data3;
+
+                               // Additional data4 is Port 1 burst length
+                               g_amec->proc[0].memctl[l_membuf_num].membuf.portpair[1].burst_length = l_addl_data4;
+
+                              CMDH_TRAC_INFO("data_store_mem_cfg: mem_buf 0x%02X P0_freq[0x%04X] P1_freq[0x%04X] P0_BL[0x%02X] P1_BL[0x%02X]",
+                                              l_membuf_num, g_amec->proc[0].memctl[l_membuf_num].membuf.portpair[0].freq,
+                                              g_amec->proc[0].memctl[l_membuf_num].membuf.portpair[1].freq,
+                                              g_amec->proc[0].memctl[l_membuf_num].membuf.portpair[0].burst_length,
+                                              g_amec->proc[0].memctl[l_membuf_num].membuf.portpair[1].burst_length);
+                           }
 
                            l_num_mem_bufs++;
                        }
                        else // individual DTS
                        {
                            // Track TMGT configured/requested DIMM sensors
-                           if(l_data_set->dimm_info2 != DATA_FRU_NOT_USED)
+                           if(l_dimm_info2 != DATA_FRU_NOT_USED)
                            {
                                G_dimm_configured_sensors.bytes[l_membuf_num] |= (DIMM_SENSOR0 >> l_dts_num);
                            }
 
                            // Store the hardware sensor ID
-                           G_sysConfigData.dimm_huids[l_membuf_num][l_dts_num] = l_data_set->hw_sensor_id;
+                           G_sysConfigData.dimm_huids[l_membuf_num][l_dts_num] = l_hw_sensor_id;
 
                            // Store the temperature sensor ID
-                           g_amec->proc[0].memctl[l_membuf_num].membuf.dimm_temps[l_dts_num].temp_sid = l_data_set->temp_sensor_id;
+                           g_amec->proc[0].memctl[l_membuf_num].membuf.dimm_temps[l_dts_num].temp_sid = l_temp_sensor_id;
 
                            // Store the temperature sensor fru type
                            // The 2 external temp sensors may be used for non-dimm fru type i.e. PMIC, mem controller...
                            // this fru type is coming from attributes setup by HWP during IPL and then read by (H)TMGT
-                           if(l_data_set->dimm_info2 == DATA_FRU_DIMM)
+                           if(l_dimm_info2 == DATA_FRU_DIMM)
                            {
                                  g_amec->proc[0].memctl[l_membuf_num].membuf.dimm_temps[l_dts_num].temp_fru_type = DATA_FRU_DIMM;
                                  g_amec->proc[0].memctl[l_membuf_num].membuf.dimm_temps[l_dts_num].dts_type_mask = OCM_DTS_TYPE_DIMM_MASK;
                            }
-                           else if(l_data_set->dimm_info2 == DATA_FRU_MEMCTRL_DRAM)
+                           else if(l_dimm_info2 == DATA_FRU_MEMCTRL_DRAM)
                            {
                                  g_amec->proc[0].memctl[l_membuf_num].membuf.dimm_temps[l_dts_num].temp_fru_type = DATA_FRU_MEMCTRL_DRAM;
                                  g_amec->proc[0].memctl[l_membuf_num].membuf.dimm_temps[l_dts_num].dts_type_mask = OCM_DTS_TYPE_MEMCTRL_DRAM_MASK;
                            }
-                           else if(l_data_set->dimm_info2 == DATA_FRU_PMIC)
+                           else if(l_dimm_info2 == DATA_FRU_PMIC)
                            {
                                  g_amec->proc[0].memctl[l_membuf_num].membuf.dimm_temps[l_dts_num].temp_fru_type = DATA_FRU_PMIC;
                                  g_amec->proc[0].memctl[l_membuf_num].membuf.dimm_temps[l_dts_num].dts_type_mask = OCM_DTS_TYPE_PMIC_MASK;
                            }
-                           else if(l_data_set->dimm_info2 == DATA_FRU_MEMCTRL_EXT)
+                           else if(l_dimm_info2 == DATA_FRU_MEMCTRL_EXT)
                            {
                                  g_amec->proc[0].memctl[l_membuf_num].membuf.dimm_temps[l_dts_num].temp_fru_type = DATA_FRU_MEMCTRL_EXT;
                                  g_amec->proc[0].memctl[l_membuf_num].membuf.dimm_temps[l_dts_num].dts_type_mask = OCM_DTS_TYPE_MEMCTRL_EXT_MASK;
@@ -1879,11 +1950,11 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
                            {
                                  g_amec->proc[0].memctl[l_membuf_num].membuf.dimm_temps[l_dts_num].temp_fru_type = DATA_FRU_NOT_USED;
                                  g_amec->proc[0].memctl[l_membuf_num].membuf.dimm_temps[l_dts_num].dts_type_mask = 0;
-                                 if (l_data_set->dimm_info2 != DATA_FRU_NOT_USED)
+                                 if (l_dimm_info2 != DATA_FRU_NOT_USED)
                                  {
                                        // not a valid fru type
                                        CMDH_TRAC_ERR("data_store_mem_cfg: Got invalid fru type[0x%02X] for mem buf[%d] dts[%d]",
-                                                     l_data_set->dimm_info2, l_membuf_num, l_dts_num);
+                                                     l_dimm_info2, l_membuf_num, l_dts_num);
                                  }
                            }
                            l_num_dimms++;
@@ -1893,7 +1964,7 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
                     {
                        // Sensor must be read via I2C
 
-                        l_i2c_engine = l_data_set->dimm_info1;
+                        l_i2c_engine = l_dimm_info1;
                         // Only support engine C, D, or E
                         if((l_i2c_engine != PIB_I2C_ENGINE_C) &&
                            (l_i2c_engine != PIB_I2C_ENGINE_D) &&
@@ -1936,12 +2007,12 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
                         else
                         {
                            // Store the hardware sensor ID
-                           G_sysConfigData.dimm_huids[l_membuf_num][0] = l_data_set->hw_sensor_id;
+                           G_sysConfigData.dimm_huids[l_membuf_num][0] = l_hw_sensor_id;
                            // Store the temperature sensor ID
-                           g_amec->proc[0].memctl[l_membuf_num].membuf.dimm_temps[0].temp_sid = l_data_set->temp_sensor_id;
+                           g_amec->proc[0].memctl[l_membuf_num].membuf.dimm_temps[0].temp_sid = l_temp_sensor_id;
                            // Store the i2c info
-                           g_amec->proc[0].memctl[l_membuf_num].membuf.dimm_temps[0].i2c_port = l_data_set->dimm_info2;
-                           g_amec->proc[0].memctl[l_membuf_num].membuf.dimm_temps[0].i2c_address = l_data_set->dimm_info3;
+                           g_amec->proc[0].memctl[l_membuf_num].membuf.dimm_temps[0].i2c_port = l_dimm_info2;
+                           g_amec->proc[0].memctl[l_membuf_num].membuf.dimm_temps[0].i2c_address = l_dimm_info3;
                            // set fru type to DIMM
                            g_amec->proc[0].memctl[l_membuf_num].membuf.dimm_temps[0].temp_fru_type = DATA_FRU_DIMM;
                            g_amec->proc[0].memctl[l_membuf_num].membuf.dimm_temps[0].dts_type_mask = OCM_DTS_TYPE_DIMM_MASK;
@@ -1964,7 +2035,7 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
                  {
                      // MISMATCH ON MEMORY TYPE!!
                      CMDH_TRAC_ERR("data_store_mem_cfg: Memory type mismatch at index %d (0x%02X vs 0x%02X)",
-                                   i, G_sysConfigData.mem_type, l_data_set->memory_type);
+                                   i, G_sysConfigData.mem_type, l_memory_type);
 
                      cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
                      break;
@@ -2278,6 +2349,174 @@ errlHndl_t data_store_ips_config(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
 // Function Specification
 //
+// Name:  data_store_memory_pwr_data
+//
+// Description: Store memory power data needed for WOF
+//
+// End Function Specification
+errlHndl_t data_store_memory_pwr_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
+                                            cmdh_fsp_rsp_t * o_rsp_ptr)
+{
+    errlHndl_t                      l_err = NULL;
+
+    cmdh_mem_pwr_data_t * l_cmd_ptr = (cmdh_mem_pwr_data_t *)i_cmd_ptr;
+    uint16_t                        l_data_length = 0;
+    uint16_t                        l_min_data_length = 0;
+    uint16_t                        l_remaining_data = 0;
+    uint16_t                        l_data_offset = 0;
+    uint8_t                         i, j;
+    bool                            l_interp_error = FALSE; // Assume interpolation points are ascending util
+    bool                            l_invalid_input = TRUE; //Assume bad input
+
+    l_data_length = CMDH_DATALEN_FIELD_UINT16((&l_cmd_ptr->header));
+
+    G_present_wof_pwr_data_membufs = 0;
+    // thermal constant of 0 disables WOF memory power credit, will be set if data checks out
+    g_amec->wof.mem_thermal_credit_constant = 0;
+
+    // Check version
+    if(l_cmd_ptr->header.version == 1)
+    {
+        // each OCMB must have at least 2 interpolation points
+        l_min_data_length = sizeof(cmdh_mem_pwr_data_header_t) - sizeof(cmdh_fsp_cmd_header_t) +
+                           (l_cmd_ptr->header.num_ocmbs * sizeof(cmdh_mem_pwr_data_set_t)) +
+                           (l_cmd_ptr->header.num_ocmbs * sizeof(cmdh_mem_pwr_interp_pt_t));
+        // keep track of data processed
+        l_remaining_data = l_data_length - sizeof(cmdh_mem_pwr_data_header_t) + sizeof(cmdh_fsp_cmd_header_t);
+
+        if(l_data_length >= l_min_data_length)
+        {
+            // Process each OCMB
+            for(i=0; i<l_cmd_ptr->header.num_ocmbs; i++)
+            {
+                uint8_t mem_buf = 0xFF;
+                uint8_t num_interp_pts = 0xFF;
+                uint16_t data_size = 0xFF;
+
+                uint32_t l_temp = (uint32_t)(&l_cmd_ptr->data_set[0]) + l_data_offset;
+                cmdh_mem_pwr_data_set_t* l_data_set;
+                l_data_set = (cmdh_mem_pwr_data_set_t*)l_temp;
+                mem_buf = l_data_set->ocmb_num;
+                num_interp_pts = l_data_set->num_interp_points;
+
+                // Validate parameters
+                if( (mem_buf >= MAX_NUM_OCMBS) ||
+                    (num_interp_pts < 2) || (num_interp_pts > MAX_NUM_MEM_INT_PTS) )
+                {
+                    CMDH_TRAC_ERR("data_store_memory_pwr_data: Invalid data for entry %d OCMB num %d num points %d",
+                                  i, mem_buf, num_interp_pts);
+                    break;
+                }
+
+                // calculate size of data for this OCMB
+                data_size = sizeof(cmdh_mem_pwr_data_set_t) +
+                            ( (num_interp_pts-1) * sizeof(cmdh_mem_pwr_interp_pt_t));
+
+                // Make sure have enough data
+                if(data_size > l_remaining_data)
+                {
+                    CMDH_TRAC_ERR("data_store_memory_pwr_data: Invalid length entry %d size %d > remaining data %d ",
+                                   i, data_size, l_remaining_data);
+                    break;
+                }
+                l_remaining_data -= data_size;
+                l_data_offset += data_size;
+
+                // Save interpolation points
+                for(j=0; j<num_interp_pts; j++)
+                {
+                    cmdh_mem_pwr_interp_pt_t* l_point;
+                    l_point = &l_data_set->interp_points[j];
+                    uint16_t util = l_point->util_cPercent;
+                    uint32_t power = l_point->power_cW;
+                    if((j!=0) && (util <= g_amec->proc[0].memctl[mem_buf].membuf.util_pwr_pt[j-1].util_cPercent))
+                    {
+                        l_interp_error = TRUE;
+                        CMDH_TRAC_ERR("data_store_memory_pwr_data: OCMB %d util[%d] %d not ascending previous util %d",
+                                      mem_buf, j, util, g_amec->proc[0].memctl[mem_buf].membuf.util_pwr_pt[j-1].util_cPercent);
+                        break;
+                    }
+                    g_amec->proc[0].memctl[mem_buf].membuf.util_pwr_pt[j].util_cPercent = util;
+                    g_amec->proc[0].memctl[mem_buf].membuf.util_pwr_pt[j].power_cW = power;
+                }
+                if(l_interp_error) // data failed stop processing all OCMBs
+                    break;
+
+                g_amec->proc[0].memctl[mem_buf].membuf.num_interp_pts = num_interp_pts;
+                G_present_wof_pwr_data_membufs |= (MEMBUF0_PRESENT_MASK >> mem_buf);
+
+                CMDH_TRAC_INFO("data_store_memory_pwr_data: OCMB %d has %d points",
+                                mem_buf, g_amec->proc[0].memctl[mem_buf].membuf.num_interp_pts);
+                CMDH_TRAC_INFO("[%d util][0x%08X cW] to [%d util][0x%08X cW]",
+                                g_amec->proc[0].memctl[mem_buf].membuf.util_pwr_pt[0].util_cPercent,
+                                g_amec->proc[0].memctl[mem_buf].membuf.util_pwr_pt[0].power_cW,
+                                g_amec->proc[0].memctl[mem_buf].membuf.util_pwr_pt[num_interp_pts-1].util_cPercent,
+                                g_amec->proc[0].memctl[mem_buf].membuf.util_pwr_pt[num_interp_pts-1].power_cW);
+            }  // for each OCMB
+
+            if(l_remaining_data)
+            {
+                CMDH_TRAC_ERR("data_store_memory_pwr_data: Unprocessed %d bytes of data length %d",
+                               l_remaining_data, l_data_length);
+            }
+            else if(!l_interp_error) // data is good
+            {
+                l_invalid_input = FALSE;
+                g_amec->wof.mem_thermal_credit_constant = l_cmd_ptr->header.thermal_credit_constant;
+                g_amec->wof.max_dimm_pwr_ocmb_cW = l_cmd_ptr->header.max_dimm_pwr_ocmb_cW;
+                g_amec->wof.num_ocmbs = l_cmd_ptr->header.num_ocmbs;
+                CMDH_TRAC_INFO("data_store_memory_pwr_data: Received %d OCMBs present bit mask 0x%04X",
+                                g_amec->wof.num_ocmbs, G_present_wof_pwr_data_membufs);
+                CMDH_TRAC_INFO("data_store_memory_pwr_data: Thermal constant 0x%04X max pwr per OCMB 0x%08X cW",
+                                g_amec->wof.mem_thermal_credit_constant, g_amec->wof.max_dimm_pwr_ocmb_cW);
+            }
+        }
+        else // not enough data
+        {
+           CMDH_TRAC_ERR("data_store_memory_pwr_data: Length %d needs to be at least %d for %d OCMBs",
+                          l_data_length, l_min_data_length, l_cmd_ptr->header.num_ocmbs);
+        }
+    }  // if version 1
+    else // invalid version
+    {
+        CMDH_TRAC_ERR("data_store_memory_pwr_data: Invalid Version[0x%02X]", l_cmd_ptr->header.version);
+    }
+
+    if(l_invalid_input)
+    {
+        G_present_wof_pwr_data_membufs = 0;
+
+        /* @
+         * @errortype
+         * @moduleid    DATA_STORE_MEM_PWR_DATA
+         * @reasoncode  INVALID_INPUT_DATA
+         * @userdata1   data size
+         * @userdata2   packet version
+         * @userdata4   OCC_NO_EXTENDED_RC
+         * @devdesc     OCC recieved an invalid data packet from the FSP
+         */
+        l_err = createErrl(DATA_STORE_MEM_PWR_DATA,
+                           INVALID_INPUT_DATA,
+                           OCC_NO_EXTENDED_RC,
+                           ERRL_SEV_UNRECOVERABLE,
+                           NULL,
+                           DEFAULT_TRACE_SIZE,
+                           l_data_length,
+                           (uint32_t)l_cmd_ptr->header.version);
+
+        // Callout firmware
+        addCalloutToErrl(l_err,
+                         ERRL_CALLOUT_TYPE_COMPONENT_ID,
+                         ERRL_COMPONENT_ID_FIRMWARE,
+                         ERRL_CALLOUT_PRIORITY_HIGH);
+    }
+
+    return l_err;
+
+} // end data_store_memory_pwr_data()
+
+// Function Specification
+//
 // Name:  data_store_socket_pwr_config
 //
 // Description: Store socket power configuration data from TMGT
@@ -2586,6 +2825,17 @@ errlHndl_t DATA_store_cnfgdata (const cmdh_fsp_cmd_t * i_cmd_ptr,
             if(NULL == l_errlHndl)
             {
                 l_new_data = DATA_MASK_MEM_THROT;
+            }
+            break;
+
+        case DATA_FORMAT_MEM_POWER:
+            // Store the memory power data
+            l_errlHndl = data_store_memory_pwr_data(i_cmd_ptr, o_rsp_ptr);
+
+            if(NULL == l_errlHndl)
+            {
+                // Set this in case AMEC needs to know about this
+                l_new_data = DATA_MASK_MEM_PWR;
             }
             break;
 

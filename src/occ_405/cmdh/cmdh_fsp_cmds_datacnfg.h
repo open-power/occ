@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2022                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2023                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -52,6 +52,7 @@ typedef enum
    DATA_FORMAT_THRM_THRESHOLDS       = 0x13,
    DATA_FORMAT_AVSBUS_CONFIG         = 0x14,
    DATA_FORMAT_GPU                   = 0x15,
+   DATA_FORMAT_MEM_POWER             = 0x16,
    DATA_FORMAT_SOCKET_PCAP           = 0x17,
 } eConfigDataFormatVersion;
 
@@ -70,6 +71,7 @@ typedef enum
    DATA_MASK_MEM_THROT             = 0x00000400,
    DATA_MASK_GPU                   = 0x00000800,
    DATA_MASK_SOCKET_PCAP           = 0x00001000,
+   DATA_MASK_MEM_PWR               = 0x00002000,
 } eConfigDataPriorityMask;
 
 typedef enum
@@ -345,7 +347,7 @@ typedef struct __attribute__ ((packed))
     uint8_t                 default_mem_pwr_ctl;  // default memory power control
     uint8_t                 ips_mem_pwr_ctl;      // Idle Power Save memory power control
     uint8_t                 num_data_sets;
-}cmdh_mem_cfg_header_v30_t;
+}cmdh_mem_cfg_header_v3x_t;  // same header for both versions 0x30 and 0x31
 
 // Config packet definition used to send
 // sensor mappings for membufs and dimms
@@ -362,9 +364,29 @@ typedef struct __attribute__ ((packed))
 
 typedef struct __attribute__ ((packed))
 {
-    cmdh_mem_cfg_header_v30_t   header;
+    uint32_t                   hw_sensor_id;
+    uint32_t                   temp_sensor_id;
+    uint8_t                    memory_type;
+    uint8_t                    dimm_info1;
+    uint8_t                    dimm_info2;
+    uint8_t                    dimm_info3;
+    uint16_t                   addl_data1;  // OCMB: Port 0 clock freq.   I2C DIMM: reserved
+    uint16_t                   addl_data2;  // OCMB: Port 1 clock freq.   I2C DIMM: reserved
+    uint8_t                    addl_data3;  // OCMB: Port 0 burst length. I2C DIMM: reserved
+    uint8_t                    addl_data4;  // OCMB: Port 1 burst length. I2C DIMM: reserved
+}cmdh_mem_cfg_data_set_v31_t;
+
+typedef struct __attribute__ ((packed))
+{
+    cmdh_mem_cfg_header_v3x_t   header;
     cmdh_mem_cfg_data_set_t data_set[1];
 }cmdh_mem_cfg_v30_t;
+
+typedef struct __attribute__ ((packed))
+{
+    cmdh_mem_cfg_header_v3x_t   header;
+    cmdh_mem_cfg_data_set_v31_t data_set[1];
+}cmdh_mem_cfg_v31_t;
 
 // Header data for mem throttle packet
 typedef struct __attribute__ ((packed))
@@ -412,6 +434,41 @@ typedef struct __attribute__ ((packed))
     cmdh_mem_throt_header_t          header;
     cmdh_mem_throt_data_set_v40_t    data_set[1];
 } cmdh_mem_throt_t;
+
+// Header data for memory power data packet
+typedef struct __attribute__ ((packed))
+{
+    struct cmdh_fsp_cmd_header;
+    uint8_t               format;
+    uint8_t               version;
+    uint16_t              thermal_credit_constant;
+    uint32_t              max_dimm_pwr_ocmb_cW;  // max DIMM pwr per OCMB in cW
+    uint8_t               reserved[7];
+    uint8_t               num_ocmbs;
+}cmdh_mem_pwr_data_header_t;
+
+typedef struct __attribute__ ((packed))
+{
+    uint16_t                     util_cPercent;
+    uint16_t                     int_pt_reserved;
+    uint32_t                     power_cW;
+}cmdh_mem_pwr_interp_pt_t;
+
+typedef struct __attribute__ ((packed))
+{
+    uint8_t                     ocmb_num;
+    uint8_t                     reserved[6];
+    uint8_t                     num_interp_points;
+    cmdh_mem_pwr_interp_pt_t    interp_points[1];
+}cmdh_mem_pwr_data_set_t;
+
+// Config packet definition used by TMGT to
+// send memory power data
+typedef struct __attribute__ ((packed))
+{
+    cmdh_mem_pwr_data_header_t  header;
+    cmdh_mem_pwr_data_set_t     data_set[1];
+} cmdh_mem_pwr_data_t;
 
 // Used to mark present the config data TMGT has sent us.
 typedef struct data_cnfg

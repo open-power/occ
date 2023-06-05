@@ -394,7 +394,13 @@ typedef struct __attribute__ ((packed))
     uint32_t throt_idx_offset;
     // [867] signed amount in 0.01% unit to add (or subtract) to ceff.  Set by Eco mode
     int16_t eco_mode_ceff_add;
-} amec_wof_t;  // 869 bytes total
+    // [869] Thermal credit constant for memory
+    uint16_t mem_thermal_credit_constant;
+    // [871] Worst case dimm power per OCMB in cW
+    uint32_t max_dimm_pwr_ocmb_cW;
+    // [875] Number of OCMBs
+    uint8_t num_ocmbs;
+} amec_wof_t;  // 876 bytes total
 
 // Structure used in g_amec to hold static WOF data
 typedef struct __attribute__ ((packed, aligned(128)))

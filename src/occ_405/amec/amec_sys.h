@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2022                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2023                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -122,6 +122,12 @@ typedef struct
   // The most recent throttle value sent to this MBA
   // This is used to only send values to the membuf when it changes.
   amec_mem_speed_t last_mem_speed_sent;
+
+  // OCMB clock frequency
+  uint16_t  freq;
+
+  // Burst Length
+  uint8_t   burst_length;
 } amec_portpair_t;
 
 // bit masks for fru_temp_t flags
@@ -160,6 +166,15 @@ typedef struct
 
 typedef struct
 {
+  // Utilization in c%
+  uint16_t util_cPercent;
+
+  // Power in cW
+  uint32_t  power_cW;
+} amec_membuf_int_pt_t;
+
+typedef struct
+{
   // Sub-structures under memory buffer
   union
   {
@@ -179,6 +194,11 @@ typedef struct
 
   // Sensor ID for reporting temperature to BMC and FSP
   uint32_t  temp_sid;
+
+  // Utilization to power interpolation points for WOF memory credit
+  uint8_t              num_interp_pts;
+  amec_membuf_int_pt_t util_pwr_pt[MAX_NUM_MEM_INT_PTS];
+
 } amec_membuf_t;
 
 typedef struct

@@ -68,9 +68,11 @@ GPE_BUFFER(MemBufGetMemDataParms_t G_membuf_data_parms);
 extern gpe_shared_data_t G_shared_gpe_data;
 
 //Global G_present_membufs is bitmask of all membufs
-//(1 = present, 0 = not present. Core 0 has the most significant bit)
+//(1 = present, 0 = not present. Membuf 0 has the most significant bit)
 uint32_t G_present_membufs = 0;
 uint32_t G_membuf_dts_enabled = 0;
+// indicates which membufs we have valid memory power interpolation data for
+uint32_t G_present_wof_pwr_data_membufs = 0;
 
 //Memory data collect structures used for task data pointers
 struct membuf_data_task {
