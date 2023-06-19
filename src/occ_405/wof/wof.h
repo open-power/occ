@@ -398,9 +398,13 @@ typedef struct __attribute__ ((packed))
     uint16_t mem_thermal_credit_constant;
     // [871] Worst case dimm power per OCMB in cW
     uint32_t max_dimm_pwr_ocmb_cW;
-    // [875] Number of OCMBs
-    uint8_t num_ocmbs;
-} amec_wof_t;  // 876 bytes total
+    // [875] indicates which membufs we have valid memory power interpolation data for
+    uint32_t ocmbs_present;
+    // [879] Total Worst case dimm power in cW
+    uint32_t max_dimm_pwr_total_cW;
+    // [883] Contains degrees C ambient is changed by to account for DIMM power
+    int8_t ambient_adj_for_dimm;
+} amec_wof_t;  // 884 bytes total
 
 // Structure used in g_amec to hold static WOF data
 typedef struct __attribute__ ((packed, aligned(128)))
@@ -521,6 +525,8 @@ void get_poundV_points( uint32_t i_freq_mhz,
 uint32_t calculate_exp_1p3(uint32_t i_x);
 
 void read_sensor_data( void );
+
+void calc_wof_dimm_adjustment( void );
 
 void setup_vdd( void );
 

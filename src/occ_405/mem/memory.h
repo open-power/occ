@@ -114,7 +114,6 @@ extern memory_throttle_t G_memoryThrottleLimits[MAX_NUM_MEM_CONTROLLERS];
 
 //Global is bitmask of membufs
 extern uint32_t G_present_membufs;
-extern uint32_t G_present_wof_pwr_data_membufs;
 extern uint32_t G_membuf_dts_enabled;
 
 //global bitmap of dimms that have ever gone over the error temperature

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2017,2021                        */
+/* Contributors Listed Below - COPYRIGHT 2017,2023                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -225,8 +225,8 @@ main_mem_sensor_t G_main_mem_sensors[] =
     MAIN_MEM_SENSOR              (MEMOTTHROT,     false,    false),
     MAIN_MEM_MEMORY_SENSORS      (MRDM,           false,    false),
     MAIN_MEM_MEMORY_SENSORS      (MWRM,           false,    false),
-    MAIN_MEM_MEMORY_SENSORS      (MEMSPSTATM,     true,     false),
-    MAIN_MEM_MEMORY_SENSORS      (MEMSPM,         false,    false),
+    MAIN_MEM_MEMORY_SENSORS      (MEMUTILM,       false,    false),
+    MAIN_MEM_MEMORY_SENSORS      (MEMUTILP1M,     false,    false),
     MAIN_MEM_SENSOR              (DDSAVG,         false,    false),
     MAIN_MEM_SENSOR              (DDSMIN,         false,    false),
 

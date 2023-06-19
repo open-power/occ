@@ -625,16 +625,33 @@ void amec_perfcount_ocmb_getmc( OcmbMemData * i_sensor_cache,
     /*------------------------------------------------------------------------*/
     /*  Local Variables                                                       */
     /*------------------------------------------------------------------------*/
-    uint32_t                    l_cache_read  = 0;
-    uint32_t                    l_cache_write = 0;
-    uint32_t                    l_prev_read   = 0;
-    uint32_t                    l_prev_write  = 0;
+    uint16_t                    l_memutil = 0;
+    uint16_t                    l_p1_memutil = 0;
+    uint32_t                    l_cache_read_total  = 0;
+    uint32_t                    l_cache_write_total = 0;
+    uint32_t                    l_cache_p0_write = 0;
+    uint32_t                    l_cache_p1_write = 0;
+    uint32_t                    l_cache_p0_read = 0;
+    uint32_t                    l_cache_p1_read = 0;
+    uint32_t                    l_prev_read_total   = 0;
+    uint32_t                    l_prev_p0_write  = 0;
+    uint32_t                    l_prev_p1_write  = 0;
+    uint32_t                    l_prev_p0_read  = 0;
+    uint32_t                    l_prev_p1_read  = 0;
+    uint32_t                    l_prev_write_total  = 0;
     uint32_t                    temp32        = 0;
-    uint64_t                    temp64        = 0;
     uint32_t                    tempreg       = 0;
     uint32_t                    l_num_ticks   = 0;
+    uint32_t                    l_read_diff   = 0;
+    uint32_t                    l_write_diff   = 0;
+    uint64_t                    l_time_over_freq = 0;
+    uint64_t                    l_clock_p001ns = 0;
+    uint64_t                    l_sample_time_p001ns  = 0;
+    uint64_t                    temp64        = 0;
     static uint8_t              L_accumulator_reads[MAX_NUM_OCMBS] = {0};
     static uint32_t             L_tick[MAX_NUM_OCMBS] = {0};
+    static bool                 L_traced_no_util_support = FALSE;
+
 
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
@@ -661,18 +678,26 @@ void amec_perfcount_ocmb_getmc( OcmbMemData * i_sensor_cache,
 
     if(IS_OCM_DDR4_MEM_TYPE(G_sysConfigData.mem_type))
     {
-       l_cache_write = l_sensor_cache->mba_wr;
+       l_cache_p0_write = l_sensor_cache->mba_wr;
+       l_cache_p1_write = 0; // no port 1
+       l_prev_p0_write = g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].perf.wr_cnt_accum;
+       l_prev_p1_write = 0; // no port 1
     }
     else // DDR5
     {
-       l_cache_write = l_ddr5_sensor_cache->side0_wr + l_ddr5_sensor_cache->side1_wr;
+       l_cache_p0_write = l_ddr5_sensor_cache->side0_wr;
+       l_cache_p1_write = l_ddr5_sensor_cache->side1_wr;
+       l_prev_p0_write = g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].perf.wr_cnt_accum;
+       l_prev_p1_write = g_amec->proc[0].memctl[i_membuf].membuf.portpair[1].perf.wr_cnt_accum;
     }
 
-    l_prev_write = g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].perf.wr_cnt_accum;
-    temp32 = amec_diff_adjust_for_overflow(l_cache_write, l_prev_write);
+    l_cache_write_total = l_cache_p0_write + l_cache_p1_write;
+    l_prev_write_total = l_prev_p0_write + l_prev_p1_write;
+    temp32 = amec_diff_adjust_for_overflow(l_cache_write_total, l_prev_write_total);
 
     // Save latest accumulator away for next time
-    g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].perf.wr_cnt_accum = l_cache_write;
+    g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].perf.wr_cnt_accum = l_cache_p0_write;
+    g_amec->proc[0].memctl[i_membuf].membuf.portpair[1].perf.wr_cnt_accum = l_cache_p1_write;
 
     temp64 = (uint64_t)((uint64_t)temp32 * (uint64_t)G_num_ocmb_reads_per_1000s);
     if( (L_accumulator_reads[i_membuf] >= MIN_OCMB_READS_FOR_BW_SENSOR)&&
@@ -692,7 +717,7 @@ void amec_perfcount_ocmb_getmc( OcmbMemData * i_sensor_cache,
         TRAC_INFO("amec_perfcount_ocmb_getmc[1]: Updating sensor MWRM%d[%d] num 500us ticks[%d]",
                    i_membuf, g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].perf.memwrite2ms, l_num_ticks);
         TRAC_INFO("amec_perfcount_ocmb_getmc[2]: Raw sensor cache Write data NEW[0x%08X] PREVIOUS[0x%08X]",
-                   l_cache_write, l_prev_write);
+                   l_cache_write_total, l_prev_write_total);
         TRAC_INFO("amec_perfcount_ocmb_getmc[3]: Write Difference[0x%08X] temp64[0x%08X%08X]",
                    temp32, (uint32_t)(temp64>>32), (uint32_t)temp64);
     }
@@ -703,18 +728,26 @@ void amec_perfcount_ocmb_getmc( OcmbMemData * i_sensor_cache,
 
     if(IS_OCM_DDR4_MEM_TYPE(G_sysConfigData.mem_type))
     {
-       l_cache_read = l_sensor_cache->mba_rd;
+       l_cache_p0_read = l_sensor_cache->mba_rd;
+       l_cache_p1_read = 0; // no port 1
+       l_prev_p0_read = g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].perf.rd_cnt_accum;
+       l_prev_p1_read = 0; // no port 1
     }
     else // DDR5
     {
-       l_cache_read = l_ddr5_sensor_cache->side0_rd + l_ddr5_sensor_cache->side1_rd;
+       l_cache_p0_read = l_ddr5_sensor_cache->side0_rd;
+       l_cache_p1_read = l_ddr5_sensor_cache->side1_rd;
+       l_prev_p0_read = g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].perf.rd_cnt_accum;
+       l_prev_p1_read = g_amec->proc[0].memctl[i_membuf].membuf.portpair[1].perf.rd_cnt_accum;
     }
 
-    l_prev_read = g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].perf.rd_cnt_accum;
-    temp32 = amec_diff_adjust_for_overflow(l_cache_read, l_prev_read);
+    l_cache_read_total = l_cache_p0_read + l_cache_p1_read;
+    l_prev_read_total = l_prev_p0_read + l_prev_p1_read;
+    temp32 = amec_diff_adjust_for_overflow(l_cache_read_total, l_prev_read_total);
 
     // Save latest accumulator away for next time
-    g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].perf.rd_cnt_accum = l_cache_read;
+    g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].perf.rd_cnt_accum = l_cache_p0_read;
+    g_amec->proc[0].memctl[i_membuf].membuf.portpair[1].perf.rd_cnt_accum = l_cache_p1_read;
 
     temp64 = (uint64_t)((uint64_t)temp32 * (uint64_t)G_num_ocmb_reads_per_1000s);
     if( (L_accumulator_reads[i_membuf] >= MIN_OCMB_READS_FOR_BW_SENSOR)&&
@@ -728,6 +761,86 @@ void amec_perfcount_ocmb_getmc( OcmbMemData * i_sensor_cache,
 
     g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].perf.memread2ms = tempreg;
 
+    // ---------------------------------------------------------------------------
+    //  MEMUTILMx / MEMUTILP1Mx sensors (memory utilization 0.01% for p0 and p1) =
+    //    [ ((diff in read accumulator) + (diff in write accumulator)) ] / (sample time in ns / ocmb clock ns) * burst_length
+    //    ocmb clock ns = [1 / (ocmb_freq_Mbps / 2) * 1000]
+    // ---------------------------------------------------------------------------
+    // MEMUTIL sensors are only supported if we received memory freq and burst length which both must be non-zero
+    if( (g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].freq == 0) ||
+        (g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].burst_length == 0) ||
+        ( IS_OCM_DDR5_MEM_TYPE(G_sysConfigData.mem_type) &&
+          ( (g_amec->proc[0].memctl[i_membuf].membuf.portpair[1].freq == 0) ||
+            (g_amec->proc[0].memctl[i_membuf].membuf.portpair[1].burst_length == 0)) ) )
+    {
+       l_memutil = 0;
+       l_p1_memutil = 0;
+       if(L_traced_no_util_support == FALSE)
+       {
+           L_traced_no_util_support = TRUE; // only trace once
+           TRAC_INFO("amec_perfcount_ocmb_getmc: Missing data.  No support for OCMB[%d] utilization.  OCMB freq[%d] burst length[%d]",
+                       i_membuf, g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].freq,
+                       g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].burst_length);
+           if(IS_OCM_DDR5_MEM_TYPE(G_sysConfigData.mem_type))
+           {
+              TRAC_INFO("amec_perfcount_ocmb_getmc: OCMB port 1 freq[%d] port 1burst length[%d]",
+                          g_amec->proc[0].memctl[i_membuf].membuf.portpair[1].freq,
+                          g_amec->proc[0].memctl[i_membuf].membuf.portpair[1].burst_length);
+           }
+       }
+    }
+    else
+    {
+       l_sample_time_p001ns = l_num_ticks * 500 * 1000 * 1000;  // ticks *500 --> us *1000 --> ns * 1000 --> .001ns
+
+       // calculate port 0 utilization
+       l_clock_p001ns = (1000 * 1000) / (g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].freq >> 1);
+       l_time_over_freq = l_sample_time_p001ns / l_clock_p001ns;
+       l_read_diff = amec_diff_adjust_for_overflow(l_cache_p0_read, l_prev_p0_read);
+       l_write_diff = amec_diff_adjust_for_overflow(l_cache_p0_write, l_prev_p0_write);
+       temp64 = (l_read_diff + l_write_diff) * g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].burst_length;
+       temp64 *= 10000; // times 10000 to convert to 0.01% unit
+       l_memutil = (uint16_t)(temp64 / l_time_over_freq);
+
+       if(G_allow_trace_flags & ALLOW_MEM_TRACE)
+       {
+           TRAC_INFO("amec_perfcount_ocmb_getmc[UTILM%]: l_sample_time_p001ns[0x%08X%08X]",
+                      i_membuf, (uint32_t)(l_sample_time_p001ns>>32), (uint32_t)l_sample_time_p001ns);
+           TRAC_INFO("amec_perfcount_ocmb_getmc[UTILM%]: l_clock_p001ns[0x%08X%08X]",
+                      i_membuf, (uint32_t)(l_clock_p001ns>>32), (uint32_t)l_clock_p001ns);
+           TRAC_INFO("amec_perfcount_ocmb_getmc[UTILM%]: l_read_diff[0x%08X]  l_write_diff[0x%08X]",
+                      i_membuf, l_read_diff, l_write_diff);
+           TRAC_INFO("amec_perfcount_ocmb_getmc[UTILM%] = 0x%04X;  temp64[0x%08X%08X]",
+                      i_membuf, l_memutil, (uint32_t)(temp64>>32), (uint32_t)temp64);
+       }
+
+       l_p1_memutil = 0;
+       if(IS_OCM_DDR5_MEM_TYPE(G_sysConfigData.mem_type))
+       {
+          // calculate port 1 utilization
+          l_clock_p001ns = (1000 * 1000) / (g_amec->proc[0].memctl[i_membuf].membuf.portpair[1].freq >> 1);
+          l_time_over_freq = l_sample_time_p001ns / l_clock_p001ns;
+          l_read_diff = amec_diff_adjust_for_overflow(l_cache_p1_read, l_prev_p1_read);
+          l_write_diff = amec_diff_adjust_for_overflow(l_cache_p1_write, l_prev_p1_write);
+          temp64 = (l_read_diff + l_write_diff) * g_amec->proc[0].memctl[i_membuf].membuf.portpair[1].burst_length;
+          temp64 *= 10000; // times 10000 to convert to 0.01% unit
+          l_p1_memutil = (uint16_t)(temp64 / l_time_over_freq);
+
+          if(G_allow_trace_flags & ALLOW_MEM_TRACE)
+          {
+              TRAC_INFO("amec_perfcount_ocmb_getmc[UTILP1M%]: l_sample_time_p001ns[0x%08X%08X]",
+                         i_membuf, (uint32_t)(l_sample_time_p001ns>>32), (uint32_t)l_sample_time_p001ns);
+              TRAC_INFO("amec_perfcount_ocmb_getmc[UTILP1M%]: l_clock_p001ns[0x%08X%08X]",
+                         i_membuf, (uint32_t)(l_clock_p001ns>>32), (uint32_t)l_clock_p001ns);
+              TRAC_INFO("amec_perfcount_ocmb_getmc[UTILP1M%]: l_read_diff[0x%08X]  l_write_diff[0x%08X]",
+                         i_membuf, l_read_diff, l_write_diff);
+              TRAC_INFO("amec_perfcount_ocmb_getmc[UTILP1M%] = 0x%04X;  temp64[0x%08X%08X]",
+                         i_membuf, l_p1_memutil, (uint32_t)(temp64>>32), (uint32_t)temp64);
+          }
+
+       }
+    }
+
     // only update sensors if have done defined minimum cache line reads to have a good starting accumulator
     if(L_accumulator_reads[i_membuf] >= MIN_OCMB_READS_FOR_BW_SENSOR)
     {
@@ -736,7 +849,7 @@ void amec_perfcount_ocmb_getmc( OcmbMemData * i_sensor_cache,
             TRAC_INFO("amec_perfcount_ocmb_getmc[4]: Updating MRD%d[%d]",
                        i_membuf, g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].perf.memread2ms);
             TRAC_INFO("amec_perfcount_ocmb_getmc[5]: Raw sensor cache Read data NEW[0x%08X] PREVIOUS[0x%08X]",
-                       l_cache_read, l_prev_read);
+                       l_cache_read_total, l_prev_read_total);
             TRAC_INFO("amec_perfcount_ocmb_getmc[6]: Read Difference[0x%08X] temp64[0x%08X%08X]",
                        temp32, (uint32_t)(temp64>>32), (uint32_t)temp64);
         }
@@ -745,6 +858,9 @@ void amec_perfcount_ocmb_getmc( OcmbMemData * i_sensor_cache,
 
         sensor_update( (&(g_amec->proc[0].memctl[i_membuf].mwr)),
                        g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].perf.memwrite2ms);
+
+        sensor_update( (&(g_amec->proc[0].memctl[i_membuf].memutil)), l_memutil);
+        sensor_update( (&(g_amec->proc[0].memctl[i_membuf].memutilp1)), l_p1_memutil);
     }
     else
     {
@@ -756,9 +872,9 @@ void amec_perfcount_ocmb_getmc( OcmbMemData * i_sensor_cache,
                        i_membuf, g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].perf.memread2ms,
                        g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].perf.memwrite2ms);
             TRAC_INFO("amec_perfcount_ocmb_getmc: MRDM%d Raw sensor cache Read data NEW[%d] PREVIOUS[%d]",
-                       i_membuf, l_cache_read, l_prev_read);
+                       i_membuf, l_cache_read_total, l_prev_read_total);
             TRAC_INFO("amec_perfcount_ocmb_getmc: MWRM%d Raw sensor cache Write data NEW[%d] PREVIOUS[%d]",
-                       i_membuf, l_cache_write, l_prev_write);
+                       i_membuf, l_cache_write_total, l_prev_write_total);
         }
     }
 

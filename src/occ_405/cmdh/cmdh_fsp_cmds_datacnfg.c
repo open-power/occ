@@ -2377,9 +2377,12 @@ errlHndl_t data_store_memory_pwr_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
     l_data_length = CMDH_DATALEN_FIELD_UINT16((&l_cmd_ptr->header));
 
-    G_present_wof_pwr_data_membufs = 0;
+    g_amec->wof.ocmbs_present = 0;
     // thermal constant of 0 disables WOF memory power credit, will be set if data checks out
     g_amec->wof.mem_thermal_credit_constant = 0;
+    // need to calculate total max power based on this data after verifying
+    // present OCMBs match OCMBs we receive pwr data for this is done during WOF
+    g_amec->wof.max_dimm_pwr_total_cW = 0;
 
     // Check version
     if(l_cmd_ptr->header.version == 1)
@@ -2443,6 +2446,13 @@ errlHndl_t data_store_memory_pwr_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                       mem_buf, j, util, g_amec->proc[0].memctl[mem_buf].membuf.util_pwr_pt[j-1].util_cPercent);
                         break;
                     }
+                    if((j!=0) && (power < g_amec->proc[0].memctl[mem_buf].membuf.util_pwr_pt[j-1].power_cW))
+                    {
+                        l_interp_error = TRUE;
+                        CMDH_TRAC_ERR("data_store_memory_pwr_data: OCMB %d power[%d] %d not ascending previous power %d",
+                                      mem_buf, j, power, g_amec->proc[0].memctl[mem_buf].membuf.util_pwr_pt[j-1].power_cW);
+                        break;
+                    }
                     g_amec->proc[0].memctl[mem_buf].membuf.util_pwr_pt[j].util_cPercent = util;
                     g_amec->proc[0].memctl[mem_buf].membuf.util_pwr_pt[j].power_cW = power;
                 }
@@ -2450,7 +2460,7 @@ errlHndl_t data_store_memory_pwr_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
                     break;
 
                 g_amec->proc[0].memctl[mem_buf].membuf.num_interp_pts = num_interp_pts;
-                G_present_wof_pwr_data_membufs |= (MEMBUF0_PRESENT_MASK >> mem_buf);
+                g_amec->wof.ocmbs_present |= (MEMBUF0_PRESENT_MASK >> mem_buf);
 
                 CMDH_TRAC_INFO("data_store_memory_pwr_data: OCMB %d has %d points",
                                 mem_buf, g_amec->proc[0].memctl[mem_buf].membuf.num_interp_pts);
@@ -2471,9 +2481,8 @@ errlHndl_t data_store_memory_pwr_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
                 l_invalid_input = FALSE;
                 g_amec->wof.mem_thermal_credit_constant = l_cmd_ptr->header.thermal_credit_constant;
                 g_amec->wof.max_dimm_pwr_ocmb_cW = l_cmd_ptr->header.max_dimm_pwr_ocmb_cW;
-                g_amec->wof.num_ocmbs = l_cmd_ptr->header.num_ocmbs;
                 CMDH_TRAC_INFO("data_store_memory_pwr_data: Received %d OCMBs present bit mask 0x%04X",
-                                g_amec->wof.num_ocmbs, G_present_wof_pwr_data_membufs);
+                                l_cmd_ptr->header.num_ocmbs, g_amec->wof.ocmbs_present);
                 CMDH_TRAC_INFO("data_store_memory_pwr_data: Thermal constant 0x%04X max pwr per OCMB 0x%08X cW",
                                 g_amec->wof.mem_thermal_credit_constant, g_amec->wof.max_dimm_pwr_ocmb_cW);
             }
@@ -2491,7 +2500,7 @@ errlHndl_t data_store_memory_pwr_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
     if(l_invalid_input)
     {
-        G_present_wof_pwr_data_membufs = 0;
+        g_amec->wof.ocmbs_present = 0;
 
         /* @
          * @errortype

@@ -400,8 +400,8 @@ const sensor_ptr_t G_amec_sensor_list[] =
   // ------------------------------------------------------
   MEMCONTROL_SENSOR_PTRS(MRDM,          &g_amec_sys.proc[0].memctl, mrd),
   MEMCONTROL_SENSOR_PTRS(MWRM,          &g_amec_sys.proc[0].memctl, mwr),
-  MEMCONTROL_SENSOR_PTRS(MEMSPM,        &g_amec_sys.proc[0].memctl, memsp),
-  MEMCONTROL_SENSOR_PTRS(MEMSPSTATM,    &g_amec_sys.proc[0].memctl, memspstat),
+  MEMCONTROL_SENSOR_PTRS(MEMUTILM,      &g_amec_sys.proc[0].memctl, memutil),
+  MEMCONTROL_SENSOR_PTRS(MEMUTILP1M,    &g_amec_sys.proc[0].memctl, memutilp1),
   MEMCONTROL_SENSOR_PTRS(TEMPMEMBUF,    &g_amec_sys.proc[0].memctl, membuf.tempmembuf),
 
   SENSOR_PTR(MEMOTTHROT,                &g_amec_sys.proc[0].memotthrot),
@@ -579,8 +579,8 @@ const minisensor_ptr_t G_amec_mini_sensor_list[] INIT_SECTION =
 
   MEMCONTROL_MINI_SENSOR_PTRS(MRDM, &G_dcom_slv_outbox_tx.mrd),
   MEMCONTROL_MINI_SENSOR_PTRS(MWRM, &G_dcom_slv_outbox_tx.mwr),
-  MEMCONTROL_MINI_SENSOR_PTRS_NULL(MEMSPM),
-  MEMCONTROL_MINI_SENSOR_PTRS_NULL(MEMSPSTATM),
+  MEMCONTROL_MINI_SENSOR_PTRS_NULL(MEMUTILM),
+  MEMCONTROL_MINI_SENSOR_PTRS_NULL(MEMUTILP1M),
   MEMCONTROL_MINI_SENSOR_PTRS_NULL(TEMPMEMBUF),
 
   MINI_SENSOR_PTR( MEMOTTHROT,   NULL),

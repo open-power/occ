@@ -28,7 +28,7 @@
 #include <string.h>
 #include "parser_common.h"
 
-#define WOF_DATA_SIZE 876
+#define WOF_DATA_SIZE 884
 // NOTE: This tool is to be used when WOF Dynamic data is dumped by the OCC, and currently
 //       only accepts input files in binary format.
 
@@ -44,6 +44,7 @@ int main(int argc, char** argv)
     uint8_t     l_vrt_header_byte3 = 0;
     uint8_t     l_temp_data = 0;
     int16_t     l_signed16 = 0;
+    int8_t      l_signed8 = 0;
 
     // Verify a file was passed as an argument
     if(argc < 2)
@@ -134,7 +135,8 @@ int main(int argc, char** argv)
     printf("%08X\n", get_uint32(wof_file));
     printf("ceff_ratio_vcs in 0.01 percent: %d\n", get_uint32(wof_file));
     printf("Vdd_chip_index: %d\n", fgetc(wof_file));
-    printf("ambient_adj_for_altitude: %d\n", fgetc(wof_file));
+    l_signed8 = (int8_t)fgetc(wof_file);
+    printf("ambient_adj_for_altitude: %d\n", l_signed8);
     printf("altitude: %d\n", get_uint16(wof_file));
     printf("Vcs_chip_index %d\n", fgetc(wof_file));
     printf("scaled_all_off_off_vdd_chip_ua_nc: 0x%08X\n", get_uint32(wof_file));
@@ -298,8 +300,11 @@ int main(int argc, char** argv)
     l_signed16 = (int16_t)get_uint16(wof_file);
     printf("Eco mode ceff addr 0.01 percent: %d\n", l_signed16);
     printf("Memory thermal credit constant: 0x%04X\n", get_uint16(wof_file));
-    printf("Worst case DIMM pwr per OCMB: 0x%08X\n", get_uint32(wof_file));
-    printf("Number OCMBs: %d\n", fgetc(wof_file));
+    printf("Worst case DIMM pwr per OCMB: 0x%08XcW\n", get_uint32(wof_file));
+    printf("OCMBs pwr data present: 0x%08X\n", get_uint32(wof_file));
+    printf("Total worst case DIMM pwr: 0x%08XcW\n", get_uint32(wof_file));
+    l_signed8 = (int8_t)fgetc(wof_file);
+    printf("ambient_adj_for_dimm: %d\n", l_signed8);
 
     // Close the file
     if(wof_file != NULL)

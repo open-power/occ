@@ -209,8 +209,8 @@ typedef struct
   // Performance Sensors
   sensor_t mrd;
   sensor_t mwr;
-  sensor_t memspstat;
-  sensor_t memsp;
+  sensor_t memutil;
+  sensor_t memutilp1;
 
 } amec_memctl_t;
 

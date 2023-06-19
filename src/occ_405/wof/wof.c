@@ -38,6 +38,7 @@
 #include <pgpe_interface.h>
 #include <avsbus.h>
 #include "common.h"             // For ignore_pgpe_error()
+#include "memory.h"
 //******************************************************************************
 // External Globals
 //******************************************************************************
@@ -1944,6 +1945,19 @@ void read_sensor_data( void )
            else
                g_wof->ambient_condition = 0;
        }
+       // If DIMM power credit is enabled determine adjustment to account for DIMM power
+       if(g_wof->mem_thermal_credit_constant && g_wof->max_dimm_pwr_ocmb_cW)
+       {
+           // determine g_wof->ambient_adj_for_dimm
+           calc_wof_dimm_adjustment();
+
+           if(g_wof->ambient_condition >= (-g_wof->ambient_adj_for_dimm))
+               g_wof->ambient_condition += g_wof->ambient_adj_for_dimm;
+           else
+               g_wof->ambient_condition = 0;
+       }
+       else
+           g_wof->ambient_adj_for_dimm = 0;
     }
 
     g_wof->curvdd_sensor  = getSensorByGsid(CURVDD)->sample;
@@ -1962,6 +1976,188 @@ void read_sensor_data( void )
     setup_vdd();
     setup_vcs();
     setup_racetrack();
+}
+
+/**
+ * calc_wof_dimm_adjustment
+ *
+ * Description: Calculate adjustment to ambient condition to account for DIMMs
+ */
+void calc_wof_dimm_adjustment( void )
+{
+    uint8_t  l_index1 = 0;
+    uint8_t  l_index2 = 0;
+    uint8_t  l_num_interp_pts = 0;
+    int8_t   l_signed = 1;
+    uint16_t l_ocmb_util = 0;
+    uint16_t l_util1 = 0;
+    uint16_t l_util2 = 0;
+    uint32_t l_ocmb_total_pwr_cW = 0;
+    uint32_t l_pwr1_cW = 0;
+    uint32_t l_pwr2_cW = 0;
+    uint32_t l_processed_ocmbs = 0;
+    uint32_t l_power_delta = 0;
+    uint64_t l_temp64 = 0;
+    uint64_t l_adjustment = 0;
+    int l_ocmb_num, i;
+    static bool L_traced_over_max = FALSE;
+
+    if(g_wof->max_dimm_pwr_total_cW == 0)
+    {
+        // first need to verify present OCMBs from WOF pwr data and memory config match
+        if(g_wof->ocmbs_present == G_present_membufs)
+        {
+           // data matches calculate total max dimm power
+           g_wof->max_dimm_pwr_total_cW = MAX_NUM_OCMBS * g_wof->max_dimm_pwr_ocmb_cW;
+           INTR_TRAC_INFO("calc_wof_dimm_adjustment: WOF DIMM credit enabled for OCMBs[0x%08X] max_dimm_pwr_total[%dcW]",
+                           g_wof->ocmbs_present, g_wof->max_dimm_pwr_total_cW);
+        }
+        else
+        {
+           // Mismatch in OCMB data disable WOF memory credit
+           INTR_TRAC_ERR("calc_wof_dimm_adjustment: Mismatch OCMB Present[0x%08X] and OCMB WOF Pwr data[0x%08X]",
+                          G_present_membufs, g_wof->ocmbs_present);
+           g_wof->mem_thermal_credit_constant = 0;
+        }
+    }
+
+    if(g_wof->mem_thermal_credit_constant)
+    {
+       for(l_ocmb_num = 0; l_ocmb_num < MAX_NUM_OCMBS; l_ocmb_num++)
+       {
+           if(MEMBUF_PRESENT(l_ocmb_num))
+           {
+              l_ocmb_util = getSensorByGsid((uint16_t)(MEMUTILM0 + l_ocmb_num))->sample;
+              if(IS_OCM_DDR5_MEM_TYPE(G_sysConfigData.mem_type))
+              {
+                  // add port 1 utilization
+                  l_ocmb_util += getSensorByGsid((uint16_t)(MEMUTILP1M0 + l_ocmb_num))->sample;
+              }
+
+              // find the interpolation points for l_ocmb_util
+              l_index1 = 0;
+              l_index2 = 0;
+              l_num_interp_pts = g_amec->proc[0].memctl[l_ocmb_num].membuf.num_interp_pts;
+              if(l_num_interp_pts == 0)
+              {
+                 // no interpolation points, disable memory power credit
+                 INTR_TRAC_ERR("calc_wof_dimm_adjustment: OCMB[%d] has no interpolation points",
+                                l_ocmb_num);
+                 g_wof->mem_thermal_credit_constant = 0;
+                 break;
+              }
+              else if(l_ocmb_util >= g_amec->proc[0].memctl[l_ocmb_num].membuf.util_pwr_pt[l_num_interp_pts-1].util_cPercent)
+              {
+                 // set to last index
+                 l_index1 = l_num_interp_pts - 1;
+                 l_index2 = l_num_interp_pts - 1;
+              }
+              else
+              {
+                 for(i = 0; i < l_num_interp_pts; i++)
+                 {
+                     if(l_ocmb_util <= g_amec->proc[0].memctl[l_ocmb_num].membuf.util_pwr_pt[i].util_cPercent)
+                     {
+                        l_index1 = i;
+                        l_index2 = i;
+                        // set point 1 to be the previous point, leave equal to 2nd point
+                        // if util was found to be below first point or equal to point
+                        if( (i != 0) &&
+                            (l_ocmb_util != g_amec->proc[0].memctl[l_ocmb_num].membuf.util_pwr_pt[i].util_cPercent) )
+                        {
+                            l_index1 = i-1;
+                        }
+                        break;
+                     }
+                 }
+              }
+
+              // interpolate power for l_ocmb_util
+              l_util1 = g_amec->proc[0].memctl[l_ocmb_num].membuf.util_pwr_pt[l_index1].util_cPercent;
+              l_util2 = g_amec->proc[0].memctl[l_ocmb_num].membuf.util_pwr_pt[l_index2].util_cPercent;
+              l_pwr1_cW = g_amec->proc[0].memctl[l_ocmb_num].membuf.util_pwr_pt[l_index1].power_cW;
+              l_pwr2_cW = g_amec->proc[0].memctl[l_ocmb_num].membuf.util_pwr_pt[l_index2].power_cW;
+              l_ocmb_total_pwr_cW += interpolate_linear(l_ocmb_util,
+                                                        l_util1,
+                                                        l_util2,
+                                                        l_pwr1_cW,
+                                                        l_pwr2_cW,
+                                                        TRUE);  // round up
+              l_processed_ocmbs |= (MEMBUF0_PRESENT_MASK >> l_ocmb_num);
+           } // if OCMB present
+       }  // for each OCMB
+
+       if(G_present_membufs != l_processed_ocmbs)
+       {
+           // Mismatch in present OCMBs and OCMBs processed
+           INTR_TRAC_ERR("calc_wof_dimm_adjustment: Mismatch OCMB Present[0x%08X] and processed OCMBs[0x%08X]",
+                          G_present_membufs, l_processed_ocmbs);
+           // disable WOF memory credit
+           g_wof->mem_thermal_credit_constant = 0;
+       }
+    }  // if enabled
+
+    // make sure didn't hit an error during processing causing disable
+    if(g_wof->mem_thermal_credit_constant)
+    {
+       // check if total power is over the max
+       if(l_ocmb_total_pwr_cW > g_wof->max_dimm_pwr_total_cW)
+       {
+          l_signed = 1;
+          l_power_delta = (uint32_t)(l_ocmb_total_pwr_cW - g_wof->max_dimm_pwr_total_cW);
+          if( (L_traced_over_max == FALSE) || (G_allow_trace_flags & ALLOW_MEM_TRACE) )
+          {
+              // trace once if we are over max
+              L_traced_over_max = TRUE;
+              INTR_TRAC_ERR("calc_wof_dimm_adjustment: Total dimm power[%dcW] > max[%dcW]",
+                             l_ocmb_total_pwr_cW, g_wof->max_dimm_pwr_total_cW);
+          }
+       }
+       else
+       {
+          l_signed = -1;  // reduce ambient for being under max
+          l_power_delta = (uint32_t)(g_wof->max_dimm_pwr_total_cW - l_ocmb_total_pwr_cW);
+       }
+       l_adjustment = (uint64_t)((uint64_t)l_power_delta * (uint64_t)g_wof->mem_thermal_credit_constant);
+
+       if(G_allow_trace_flags & ALLOW_MEM_TRACE)
+       {
+            INTR_TRAC_INFO("MEM PWR DBUG1: ocmb_total_pwr[%dcW] - max_dimm_pwr_total[%dcW] =",
+                           l_ocmb_total_pwr_cW, g_wof->max_dimm_pwr_total_cW);
+            INTR_TRAC_INFO("MEM PWR DBUG2: power_delta[%d] * mem_thermal_credit_constant[%d] =",
+                           l_power_delta, g_wof->mem_thermal_credit_constant);
+            INTR_TRAC_INFO("MEM PWR DBUG3: l_adjustment[0x%08X%08X]",
+                           (uint32_t)(l_adjustment>>32), (uint32_t)l_adjustment);
+       }
+       // adjustment / 1,000,000 -->
+       //                           10,000 for mem_thermal_credit_constant sent to OCC as x10,000
+       //                           100 for cW-->W
+       l_temp64 = l_adjustment / (uint64_t)1000000;
+       if(G_allow_trace_flags & ALLOW_MEM_TRACE)
+       {
+            INTR_TRAC_INFO("MEM PWR DBUG4: l_adjustment/1,000,000 = 0x%04X",
+                           (uint16_t)l_temp64);
+       }
+
+       // round up if we are over max power
+       if(l_signed == 1)
+       {
+           // make sure at least 1 degree is added to ambient
+           if((l_temp64 == 0) || (l_adjustment % 1000000))
+               l_temp64++;
+       }
+
+       g_wof->ambient_adj_for_dimm = (int8_t)(l_temp64 * l_signed);
+
+
+       if(G_allow_trace_flags & ALLOW_MEM_TRACE)
+       {
+            INTR_TRAC_INFO("MEM PWR DBUG5: signed[%d] final dimm adj[%d]",
+                            l_signed, g_wof->ambient_adj_for_dimm);
+       }
+    } // if no error
+    else
+       g_wof->ambient_adj_for_dimm = 0;
 }
 
 /**
