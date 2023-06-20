@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2021                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2023                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -322,10 +322,15 @@ errlHndl_t SMGR_mode_transition_to_disabled()
 
     CURRENT_MODE() = OCC_MODE_DISABLED;
 
-    // WOF is disabled in disabled mode
-    set_clear_wof_disabled( SET,
-                            WOF_RC_MODE_NO_SUPPORT_MASK,
-                            ERC_WOF_MODE_NO_SUPPORT_MASK );
+    // Shouldn't be getting mode with OPAL but ignore changes to
+    // WOF_RC_MODE_NO_SUPPORT_MASK since it is controlled by inband WOF command
+    if(!G_sysConfigData.system_type.kvm)
+    {
+       // WOF is disabled in disabled mode
+       set_clear_wof_disabled( SET,
+                               WOF_RC_MODE_NO_SUPPORT_MASK,
+                               ERC_WOF_MODE_NO_SUPPORT_MASK );
+    }
     TRAC_IMP("SMGR: Mode to Disabled Transition Completed");
 
     return l_errlHndl;
@@ -350,10 +355,15 @@ errlHndl_t SMGR_mode_transition_to_powersave()
 
     CURRENT_MODE() = OCC_MODE_PWRSAVE;
 
-    // WOF is disabled in SPS mode
-    set_clear_wof_disabled( SET,
-                            WOF_RC_MODE_NO_SUPPORT_MASK,
-                            ERC_WOF_MODE_NO_SUPPORT_MASK );
+    // Shouldn't be getting mode with OPAL but ignore changes to
+    // WOF_RC_MODE_NO_SUPPORT_MASK since it is controlled by inband WOF command
+    if(!G_sysConfigData.system_type.kvm)
+    {
+       // WOF is disabled in SPS mode
+       set_clear_wof_disabled( SET,
+                               WOF_RC_MODE_NO_SUPPORT_MASK,
+                               ERC_WOF_MODE_NO_SUPPORT_MASK );
+    }
 
     TRAC_IMP("SMGR: Mode to PowerSave Transition Completed");
 
@@ -492,11 +502,15 @@ errlHndl_t SMGR_mode_transition_to_static_freq_point()
 
         CURRENT_MODE() = OCC_MODE_STATIC_FREQ_POINT;
 
-        // WOF is disabled in this mode
-        set_clear_wof_disabled( SET,
-                                WOF_RC_MODE_NO_SUPPORT_MASK,
-                                ERC_WOF_MODE_NO_SUPPORT_MASK );
-
+        // Shouldn't be getting mode with OPAL but ignore changes to
+        // WOF_RC_MODE_NO_SUPPORT_MASK since it is controlled by inband WOF command
+        if(!G_sysConfigData.system_type.kvm)
+        {
+            // WOF is disabled in this mode
+            set_clear_wof_disabled( SET,
+                                    WOF_RC_MODE_NO_SUPPORT_MASK,
+                                    ERC_WOF_MODE_NO_SUPPORT_MASK );
+        }
         TRAC_IMP("SMGR: Mode to Static Frequency Point frequency %dMHz Transition Completed", l_freq);
     }
     return l_errlHndl;
@@ -535,11 +549,15 @@ errlHndl_t SMGR_mode_transition_to_ffo()
 
         CURRENT_MODE() = OCC_MODE_FFO;
 
-        // WOF is disabled in FFO
-        set_clear_wof_disabled( SET,
-                                WOF_RC_MODE_NO_SUPPORT_MASK,
-                                ERC_WOF_MODE_NO_SUPPORT_MASK );
-
+        // Shouldn't be getting mode with OPAL but ignore changes to
+        // WOF_RC_MODE_NO_SUPPORT_MASK since it is controlled by inband WOF command
+        if(!G_sysConfigData.system_type.kvm)
+        {
+            // WOF is disabled in FFO
+            set_clear_wof_disabled( SET,
+                                    WOF_RC_MODE_NO_SUPPORT_MASK,
+                                    ERC_WOF_MODE_NO_SUPPORT_MASK );
+        }
         TRAC_IMP("SMGR: Mode to FFO frequency %dMHz Transition Completed", G_occ_master_mode_parm);
     }
     else
@@ -592,10 +610,17 @@ errlHndl_t SMGR_mode_transition_to_fmax()
     l_errlHndl = amec_set_freq_range(OCC_MODE_FMAX);
 
     CURRENT_MODE() = OCC_MODE_FMAX;
-    // WOF is disabled in Fmax
-    set_clear_wof_disabled( SET,
-                            WOF_RC_MODE_NO_SUPPORT_MASK,
-                            ERC_WOF_MODE_NO_SUPPORT_MASK );
+
+    // Shouldn't be getting mode with OPAL but ignore changes to
+    // WOF_RC_MODE_NO_SUPPORT_MASK since it is controlled by inband WOF command
+    if(!G_sysConfigData.system_type.kvm)
+    {
+       // WOF is disabled in Fmax
+       set_clear_wof_disabled( SET,
+                               WOF_RC_MODE_NO_SUPPORT_MASK,
+                               ERC_WOF_MODE_NO_SUPPORT_MASK );
+    }
+
     TRAC_IMP("SMGR: Mode to Fmax Transition Completed");
 
     return l_errlHndl;
@@ -618,10 +643,15 @@ errlHndl_t SMGR_mode_transition_to_dyn_perf()
     l_errlHndl = amec_set_freq_range(OCC_MODE_DYN_PERF);
 
     CURRENT_MODE() = OCC_MODE_DYN_PERF;
-    // WOF is enabled in dynamic performance mode, clear the mode bit
-    set_clear_wof_disabled( CLEAR,
-                            WOF_RC_MODE_NO_SUPPORT_MASK,
-                            ERC_WOF_MODE_NO_SUPPORT_MASK );
+    // Shouldn't be getting mode with OPAL but ignore changes to
+    // WOF_RC_MODE_NO_SUPPORT_MASK since it is controlled by inband WOF command
+    if(!G_sysConfigData.system_type.kvm)
+    {
+       // WOF is enabled in dynamic performance mode, clear the mode bit
+       set_clear_wof_disabled( CLEAR,
+                               WOF_RC_MODE_NO_SUPPORT_MASK,
+                               ERC_WOF_MODE_NO_SUPPORT_MASK );
+    }
 
     TRAC_IMP("SMGR: Mode to Dynamic Performance Transition Completed");
 
@@ -645,11 +675,15 @@ errlHndl_t SMGR_mode_transition_to_max_perf()
     l_errlHndl = amec_set_freq_range(OCC_MODE_MAX_PERF);
 
     CURRENT_MODE() = OCC_MODE_MAX_PERF;
-    // WOF is enabled in max performance mode, clear the mode bit
-    set_clear_wof_disabled( CLEAR,
-                            WOF_RC_MODE_NO_SUPPORT_MASK,
-                            ERC_WOF_MODE_NO_SUPPORT_MASK );
-
+    // Shouldn't be getting mode with OPAL but ignore changes to
+    // WOF_RC_MODE_NO_SUPPORT_MASK since it is controlled by inband WOF command
+    if(!G_sysConfigData.system_type.kvm)
+    {
+       // WOF is enabled in max performance mode, clear the mode bit
+       set_clear_wof_disabled( CLEAR,
+                               WOF_RC_MODE_NO_SUPPORT_MASK,
+                               ERC_WOF_MODE_NO_SUPPORT_MASK );
+    }
     TRAC_IMP("SMGR: Mode to Maximum Performance Transition Completed");
 
     return l_errlHndl;

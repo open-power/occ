@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2023                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -633,7 +633,7 @@ int pgpe_clip_update(void)
         {
             TRAC_IMP("pgpe_clip_update: Scheduling clip update: min[0x%02X], max[0x%02X]",
                      G_clip_update_parms.ps_val_clip_min, pstate);
-            //L_first_trace = FALSE;
+            L_first_trace = FALSE;
         }
         // always trace change on PowerVM since setting clips is very rare with PowerVM which uses PMCR set
         else if( (G_allow_trace_flags & ALLOW_CLIP_TRACE) || (!G_sysConfigData.system_type.kvm) )

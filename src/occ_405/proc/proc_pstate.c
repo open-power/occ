@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2021                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2023                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -367,6 +367,12 @@ void populate_opal_dynamic_data()
     {
         // Inband wants WOF enabled but OCC can't enable
         G_opal_dynamic_table.dynamic.wof_state = INBAND_WOF_CONTROL_OCC_DISABLE;
+    }
+    else if( (G_sysConfigData.inband_wof_control == INBAND_WOF_CONTROL_ENABLE) &&
+             (g_amec->wof.wof_init_state != WOF_ENABLED) )
+    {
+        // Inband wants WOF enabled but it has not been enabled yet
+        G_opal_dynamic_table.dynamic.wof_state = INBAND_WOF_CONTROL_DISABLE;
     }
     else
     {
@@ -819,6 +825,17 @@ void check_for_opal_updates(void)
                 dynamic_data_change = true;
                 TRAC_INFO("check_for_opal_updates: Unable to enable WOF due to WOF disable[0x%08X]",
                            g_amec->wof.wof_disabled);
+            }
+        }
+        else if( (G_sysConfigData.inband_wof_control == INBAND_WOF_CONTROL_ENABLE) &&
+                 (g_amec->wof.wof_init_state != WOF_ENABLED) )
+        {
+            // Inband wants WOF enabled but it has not been enabled yet
+            if(G_opal_dynamic_table.dynamic.wof_state != INBAND_WOF_CONTROL_DISABLE)
+            {
+               dynamic_data_change = true;
+               TRAC_INFO("check_for_opal_updates: WOF state change 0x%02X->0x%02X",
+                          G_opal_dynamic_table.dynamic.wof_state, INBAND_WOF_CONTROL_DISABLE);
             }
         }
         else if(G_opal_dynamic_table.dynamic.wof_state != G_sysConfigData.inband_wof_control)

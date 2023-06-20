@@ -1490,7 +1490,14 @@ errlHndl_t data_store_sys_config(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                    WOF_RC_MODE_NO_SUPPORT_MASK,
                                    ERC_WOF_MODE_NO_SUPPORT_MASK);
         }
-
+        else if(G_sysConfigData.system_type.kvm)
+        {
+            // Default WOF enabled for OPAL
+            G_sysConfigData.inband_wof_control = INBAND_WOF_CONTROL_ENABLE;
+            set_clear_wof_disabled(CLEAR,
+                                   WOF_RC_MODE_NO_SUPPORT_MASK,
+                                   ERC_WOF_MODE_NO_SUPPORT_MASK);
+        }
         //Write core temp sensor ids
         //Core Temp sensors are always in sequence in the table
         for (l_coreIndex = 0; l_coreIndex < MAX_CORES; l_coreIndex++)
