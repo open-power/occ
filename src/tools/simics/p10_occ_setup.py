@@ -5,7 +5,7 @@
 #
 # OpenPOWER OnChipController Project
 #
-# Contributors Listed Below - COPYRIGHT 2019,2020
+# Contributors Listed Below - COPYRIGHT 2019,2023
 # [+] International Business Machines Corp.
 #
 #
@@ -229,7 +229,12 @@ def hexDumpPanic(stringArray):
     command = "!"+tools_directory+"/asm2bin "+hex_filename
     print("\n==> Converting Panic to binary:" + command)
     run_command(command)
-    command = "!"+tools_directory+"/ffdcparser "+hex_filename+".bin"
+    ffdcparser=tools_directory+"/ffdcparser"
+    occrepo = os.environ.get('OCCREPO')
+    if (occrepo != ""):
+        if os.path.isfile(occrepo+"/occ/obj/tools/ffdcparser"):
+            ffdcparser=occrepo+"/occ/obj/tools/ffdcparser"
+    command = "!"+ffdcparser+" "+hex_filename+".bin"
     print("\n==> Parsing Panic Data: " + command + "\n")
     run_command(command)
 
@@ -907,13 +912,9 @@ def ValidateCmd(FLG_VRB, SeqNumExpected, FLG_LAST, flg_quiet):
         RC = 1
 
     if (RC):
-        if (RC == 0xE0):
-            # Parse OCC Panic
-            hexDumpPanic(mylist)
-        elif (RC >= 0xE0) and (RC <= 0xEF):
-            # Dump exception buffer
+        if (RC >= 0xE0) and (RC <= 0xEF):
             print("\n**** OCC EXCEPTION ENCOUNTERED (ValidateCmd 2) ****");
-            hexDumpString(mylist)
+            hexDumpPanic(mylist)
         elif (RC != 0xFD) or (FLG_LAST):
             # dont dump buffer on timeout, unless last
             if (RtnCode >= 0x10):
@@ -1487,13 +1488,9 @@ def read_cmd_func(flg_Cmd, Cmd_arg, flg_verbose ):
 
     if flg_Cmd:
         if (len(DataList) > 0):
-            if (RtnCode == 0xE0):
-                # Parse OCC Panic
-                hexDumpPanic(mylist)
-            elif (RtnCode >= 0xE0) and (RtnCode <= 0xEF):
-                # Dump exception buffer
+            if (RtnCode >= 0xE0) and (RtnCode <= 0xEF):
                 print("\n**** OCC EXCEPTION ENCOUNTERED (read_cmd_func) ****");
-                hexDumpString(mylist)
+                hexDumpPanic(mylist)
             elif (RtnCode != 0):
                 print("\tElog ID                : " + "0x%02X" % DataList[0])
                 parsed = 1

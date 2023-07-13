@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2016,2022                        */
+/* Contributors Listed Below - COPYRIGHT 2016,2023                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -237,33 +237,33 @@ void dump_ffdc(ffdc_t * data)
         printf("PBA_BCUE_STAT: 0x%08X\n", data->pba_bcue_stat);
         printf("PBA_BCUE_DR: 0x%08X\n", data->pba_bcue_dr);
         printf("PBA_BCUE_OCIBAR: 0x%08X\n", data->pba_bcue_ocibar);
-        printf("PBA_OCC_ACTION: 0x%08X\n", data->pba_occ_action);
-        printf("PBA_BAR0: 0x%08X\n", data->pba_bar0);
-        printf("PBA_BAR1: 0x%08X\n", data->pba_bar1);
-        printf("PBA_BAR2: 0x%08X\n", data->pba_bar2);
-        printf("PBA_BAR3: 0x%08X\n", data->pba_bar3);
-        printf("PBA_BARMSK0: 0x%08X\n", data->pba_barmsk0);
-        printf("PBA_BARMSK1: 0x%08X\n", data->pba_barmsk1);
-        printf("PBA_BARMSK2: 0x%08X\n", data->pba_barmsk2);
-        printf("PBA_BARMSK3: 0x%08X\n", data->pba_barmsk3);
-        printf("PBA_ERRRPT0: 0x%08X\n", data->pba_errrpt0);
-        printf("PBA_ERRRPT1: 0x%08X\n", data->pba_errrpt1);
-        printf("PBA_ERRRPT2: 0x%08X\n", data->pba_errrpt2);
-        printf("PBA_RBUFVAL0: 0x%08X\n", data->pba_rbufval0);
-        printf("PBA_RBUFVAL1: 0x%08X\n", data->pba_rbufval1);
-        printf("PBA_RBUFVAL2: 0x%08X\n", data->pba_rbufval2);
-        printf("PBA_RBUFVAL3: 0x%08X\n", data->pba_rbufval3);
-        printf("PBA_RBUFVAL4: 0x%08X\n", data->pba_rbufval4);
-        printf("PBA_RBUFVAL5: 0x%08X\n", data->pba_rbufval5);
-        printf("PBA_WBUFVAL0: 0x%08X\n", data->pba_wbufval0);
-        printf("PBA_WBUFVAL1: 0x%08X\n", data->pba_wbufval1);
+        printf("PBA_OCC_ACTION:  not available\n");
+        printf("PBA_BAR0: not available\n");
+        printf("PBA_BAR1: not available\n");
+        printf("PBA_BAR2: not available\n");
+        printf("PBA_BAR3: not available\n");
+        printf("PBA_BARMSK0: not available\n");
+        printf("PBA_BARMSK1: not available\n");
+        printf("PBA_BARMSK2: not available\n");
+        printf("PBA_BARMSK3: not available\n");
+        printf("PBA_ERRRPT0: not available\n");
+        printf("PBA_ERRRPT1: not available\n");
+        printf("PBA_ERRRPT2: not available\n");
+        printf("PBA_RBUFVAL0: not available\n");
+        printf("PBA_RBUFVAL1: not available\n");
+        printf("PBA_RBUFVAL2: not available\n");
+        printf("PBA_RBUFVAL3: not available\n");
+        printf("PBA_RBUFVAL4: not available\n");
+        printf("PBA_RBUFVAL5: not available\n");
+        printf("PBA_WBUFVAL0: not available\n");
+        printf("PBA_WBUFVAL1: not available\n");
         printf("PBA_SLVRST:   0x%08X\n", data->pba_slvrst);
     }
 
     printf("SSX Timebase: 0x%08X\n", data->ssx_timebase);
     printf("OCC Buildname: %s\n", data->buildname);
     printf("OCC LFIR not available\n");
-    printf("PBA FIR: 0x%016lX\n", data->pbafir);
+    printf("PBA FIR: not available\n");
     printf("Cores Deconfigured: 0x%08X\n", data->cores_deconf);
     print_thread_data(&data->main, "MAIN");
     print_thread_data(&data->cmdh, "CMDH");

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2022                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2023                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -1092,66 +1092,26 @@ __save_ffdc_regs:
     # Save BCUE_OCIBAR
     _lwzi       %r5, %r5, PBA_BCUE_OCIBAR
     _stwi       %r5, %r3, BCUE_OCIBAR
-    # Save OCC_ACTION
-    _lwzi       %r5, %r5, PBA_OCCACT
-    _stwi       %r5, %r3, OCC_ACTION
-    # Save PBABAR0
-    _lwzi       %r5, %r5, PBA_BAR0
-    _stwi       %r5, %r3, PBABAR0
-    # Save PBABAR1
-    _lwzi       %r5, %r5, PBA_BAR1
-    _stwi       %r5, %r3, PBABAR1
-    # Save PBABAR2
-    _lwzi       %r5, %r5, PBA_BAR2
-    _stwi       %r5, %r3, PBABAR2
-    # Save PBABAR3
-    _lwzi       %r5, %r5, PBA_BAR3
-    _stwi       %r5, %r3, PBABAR3
-    # Save PBABARMSK0
-    _lwzi       %r5, %r5, PBA_BARMSK0
-    _stwi       %r5, %r3, PBABARMSK0
-    # Save PBABARMSK1
-    _lwzi       %r5, %r5, PBA_BARMSK1
-    _stwi       %r5, %r3, PBABARMSK1
-    # Save PBABARMSK2
-    _lwzi       %r5, %r5, PBA_BARMSK2
-    _stwi       %r5, %r3, PBABARMSK2
-    # Save PBABARMSK3
-    _lwzi       %r5, %r5, PBA_BARMSK3
-    _stwi       %r5, %r3, PBABARMSK3
-    # Save PBAERRRPT0
-    _lwzi       %r5, %r5, PBA_ERRRPT0
-    _stwi       %r5, %r3, PBAERRRPT0
-    # Save PBAERRRPT1
-    _lwzi       %r5, %r5, PBA_ERRRPT1
-    _stwi       %r5, %r3, PBAERRRPT1
-    # Save PBAERRRPT2
-    _lwzi       %r5, %r5, PBA_ERRRPT2
-    _stwi       %r5, %r3, PBAERRRPT2
-    # Save PBARBUFVAL0
-    _lwzi       %r5, %r5, PBA_RBUFVAL0
-    _stwi       %r5, %r3, PBARBUFVAL0
-    # Save PBARBUFVAL1
-    _lwzi       %r5, %r5, PBA_RBUFVAL1
-    _stwi       %r5, %r3, PBARBUFVAL1
-    # Save PBARBUFVAL2
-    _lwzi       %r5, %r5, PBA_RBUFVAL2
-    _stwi       %r5, %r3, PBARBUFVAL2
-    # Save PBARBUFVAL3
-    _lwzi       %r5, %r5, PBA_RBUFVAL3
-    _stwi       %r5, %r3, PBARBUFVAL3
-    # Save PBARBUFVAL4
-    _lwzi       %r5, %r5, PBA_RBUFVAL4
-    _stwi       %r5, %r3, PBARBUFVAL4
-    # Save PBARBUFVAL5
-    _lwzi       %r5, %r5, PBA_RBUFVAL5
-    _stwi       %r5, %r3, PBARBUFVAL5
-    # Save PBAWBUFVAL0
-    _lwzi       %r5, %r5, PBA_WBUFVAL0
-    _stwi       %r5, %r3, PBAWBUFVAL0
-    # Save PBAWBUFVAL1
-    _lwzi       %r5, %r5, PBA_WBUFVAL1
-    _stwi       %r5, %r3, PBAWBUFVAL1
+    # OCC_ACTION (SCOM only)
+    # PBABAR0 (SCOM only)
+    # PBABAR1 (SCOM only)
+    # PBABAR2 (SCOM only)
+    # PBABAR3 (SCOM only)
+    # PBABARMSK0 (SCOM only)
+    # PBABARMSK1 (SCOM only)
+    # PBABARMSK2 (SCOM only)
+    # PBABARMSK3 (SCOM only)
+    # PBAERRRPT0 (SCOM only)
+    # PBAERRRPT1 (SCOM only)
+    # PBAERRRPT2 (SCOM only)
+    # PBARBUFVAL0 (SCOM only)
+    # PBARBUFVAL1 (SCOM only)
+    # PBARBUFVAL2 (SCOM only)
+    # PBARBUFVAL3 (SCOM only)
+    # PBARBUFVAL4 (SCOM only)
+    # PBARBUFVAL5 (SCOM only)
+    # PBAWBUFVAL0 (SCOM only)
+    # PBAWBUFVAL1 (SCOM only)
     # Save PBASLVRST
     _lwzi       %r5, %r5, PBA_SLVRST
     _stwi       %r5, %r3, PBASLVRST
@@ -1168,10 +1128,7 @@ __save_ffdc_regs:
     bl          memcpy
 
     # No OCCLFIR.  OCCLFIR is SCOM only, no SCOM available
-
-    # Save PBAFIR
-    _lwzi       %r5, %r5, PBA_FIR
-    _stwi       %r5, %r3, PBAFIR
+    # PBAFIR (SCOM only)
 
     # Save core (de)configuration
     _liw        %r5, OCB_CCSR
