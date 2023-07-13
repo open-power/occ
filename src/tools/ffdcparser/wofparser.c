@@ -28,7 +28,7 @@
 #include <string.h>
 #include "parser_common.h"
 
-#define WOF_DATA_SIZE 884
+#define WOF_DATA_SIZE 890
 // NOTE: This tool is to be used when WOF Dynamic data is dumped by the OCC, and currently
 //       only accepts input files in binary format.
 
@@ -299,10 +299,12 @@ int main(int argc, char** argv)
     printf("Throttling index offset from OCC Scratch 3: %d\n", get_uint32(wof_file));
     l_signed16 = (int16_t)get_uint16(wof_file);
     printf("Eco mode ceff addr 0.01 percent: %d\n", l_signed16);
+    printf("Eco mode max frequency degrade -%dMHz\n", get_uint16(wof_file));
     printf("Memory thermal credit constant: 0x%04X\n", get_uint16(wof_file));
     printf("Worst case DIMM pwr per OCMB: 0x%08XcW\n", get_uint32(wof_file));
     printf("OCMBs pwr data present: 0x%08X\n", get_uint32(wof_file));
     printf("Total worst case DIMM pwr: 0x%08XcW\n", get_uint32(wof_file));
+    printf("Total present DIMM preheat pwr: 0x%08XcW\n", get_uint32(wof_file));
     l_signed8 = (int8_t)fgetc(wof_file);
     printf("ambient_adj_for_dimm: %d\n", l_signed8);
 

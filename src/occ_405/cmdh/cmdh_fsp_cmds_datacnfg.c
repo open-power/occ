@@ -1896,10 +1896,26 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
                            if(l_cmd_ptr->header.version == DATA_MEM_CFG_VERSION_31)
                            {
                                // Additional data1 is Port 0 clock freq
-                               g_amec->proc[0].memctl[l_membuf_num].membuf.portpair[0].freq = l_addl_data1;
+                               g_amec->proc[0].memctl[l_membuf_num].membuf.portpair[0].data_rate_Mbps = l_addl_data1;
+                               if(l_addl_data1 >> 1)
+                                  g_amec->proc[0].memctl[l_membuf_num].membuf.portpair[0].addr_clock_p001ns = 1000000 / (l_addl_data1 >> 1);
+                               else
+                               {
+                                  CMDH_TRAC_ERR("data_store_mem_cfg: Port0 mem buf[%d] data_rate[%dMbps]/2 is 0!",
+                                                  l_membuf_num, l_addl_data1);
+                                  g_amec->proc[0].memctl[l_membuf_num].membuf.portpair[0].addr_clock_p001ns = 0;
+                               }
 
                                // Additional data2 is Port 1 clock freq
-                               g_amec->proc[0].memctl[l_membuf_num].membuf.portpair[1].freq = l_addl_data2;
+                               g_amec->proc[0].memctl[l_membuf_num].membuf.portpair[1].data_rate_Mbps = l_addl_data2;
+                               if(l_addl_data2 >> 1)
+                                  g_amec->proc[0].memctl[l_membuf_num].membuf.portpair[1].addr_clock_p001ns = 1000000 / (l_addl_data2 >> 1);
+                               else
+                               {
+                                  CMDH_TRAC_ERR("data_store_mem_cfg: Port1 mem buf[%d] data_rate[%dMbps]/2 is 0!",
+                                                 l_membuf_num, l_addl_data2);
+                                  g_amec->proc[0].memctl[l_membuf_num].membuf.portpair[1].addr_clock_p001ns = 0;
+                               }
 
                                // Additional data3 is Port 0 burst length
                                g_amec->proc[0].memctl[l_membuf_num].membuf.portpair[0].burst_length = l_addl_data3;
@@ -1907,11 +1923,17 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                // Additional data4 is Port 1 burst length
                                g_amec->proc[0].memctl[l_membuf_num].membuf.portpair[1].burst_length = l_addl_data4;
 
-                              CMDH_TRAC_INFO("data_store_mem_cfg: mem_buf 0x%02X P0_freq[0x%04X] P1_freq[0x%04X] P0_BL[0x%02X] P1_BL[0x%02X]",
-                                              l_membuf_num, g_amec->proc[0].memctl[l_membuf_num].membuf.portpair[0].freq,
-                                              g_amec->proc[0].memctl[l_membuf_num].membuf.portpair[1].freq,
-                                              g_amec->proc[0].memctl[l_membuf_num].membuf.portpair[0].burst_length,
-                                              g_amec->proc[0].memctl[l_membuf_num].membuf.portpair[1].burst_length);
+                              CMDH_TRAC_INFO("data_store_mem_cfg: mem_buf 0x%02X data rate[%dMbps] clock[%d (0.001ns)] Burst Length[%d]",
+                                              l_membuf_num, g_amec->proc[0].memctl[l_membuf_num].membuf.portpair[0].data_rate_Mbps,
+                                              g_amec->proc[0].memctl[l_membuf_num].membuf.portpair[0].addr_clock_p001ns,
+                                              g_amec->proc[0].memctl[l_membuf_num].membuf.portpair[0].burst_length);
+                              if(IS_OCM_DDR5_MEM_TYPE(G_sysConfigData.mem_type))
+                              {
+                                 CMDH_TRAC_INFO("data_store_mem_cfg: mem_buf 0x%02X Port1 data rate[%dMbps] Port1 clock[%d (0.001ns)] Port1 BL[%d]",
+                                                 l_membuf_num, g_amec->proc[0].memctl[l_membuf_num].membuf.portpair[1].data_rate_Mbps,
+                                                 g_amec->proc[0].memctl[l_membuf_num].membuf.portpair[1].addr_clock_p001ns,
+                                                 g_amec->proc[0].memctl[l_membuf_num].membuf.portpair[1].burst_length);
+                              }
                            }
 
                            l_num_mem_bufs++;

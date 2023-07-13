@@ -100,6 +100,7 @@ typedef struct
 {
     uint32_t wr_cnt_accum;
     uint32_t rd_cnt_accum;
+    uint32_t frame_count;
     uint16_t memwrite2ms;
     uint16_t memread2ms;
 } amec_chpair_perf_counter_t;
@@ -123,8 +124,10 @@ typedef struct
   // This is used to only send values to the membuf when it changes.
   amec_mem_speed_t last_mem_speed_sent;
 
-  // OCMB clock frequency
-  uint16_t  freq;
+  // OCMB frequency
+  uint16_t  data_rate_Mbps;  // Memory data rate comes in mem config data
+  // OCMB Address clock in 0.001ns calculated from data_rate_Mbps
+  uint16_t  addr_clock_p001ns;
 
   // Burst Length
   uint8_t   burst_length;

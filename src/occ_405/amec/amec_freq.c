@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2022                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2023                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -120,7 +120,9 @@ errlHndl_t amec_set_freq_range(const OCC_MODE i_mode)
     uint16_t                    l_freq_min  = 0;
     uint32_t                    l_freq_min_at_max_throttle  = 0;
     uint16_t                    l_freq_max  = 0;
+    uint16_t                    l_temp_max = 0;
     uint32_t                    l_steps = 0;
+    bool                        l_check_for_eco_mode = FALSE;
 
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
@@ -157,6 +159,7 @@ errlHndl_t amec_set_freq_range(const OCC_MODE i_mode)
         else // WOF is enabled
         {
             l_freq_max = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_VPD_UT];
+            l_check_for_eco_mode = TRUE;
         }
     }
     else  // Set max based on specific mode
@@ -184,6 +187,7 @@ errlHndl_t amec_set_freq_range(const OCC_MODE i_mode)
 
           case OCC_MODE_MAX_PERF:
               l_freq_max = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_MAX_PERF];
+              l_check_for_eco_mode = TRUE;
               break;
 
           case OCC_MODE_FMAX:
@@ -201,7 +205,35 @@ errlHndl_t amec_set_freq_range(const OCC_MODE i_mode)
       {
           // clip to WOF base since WOF is disabled
           l_freq_max = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_WOF_BASE];
+          l_check_for_eco_mode = FALSE;
       }
+    }
+
+    if((l_check_for_eco_mode) && (g_amec->wof.eco_mode_freq_degrade_mhz))
+    {
+        // eco mode is set, drop max freq
+        if(l_freq_max > g_amec->wof.eco_mode_freq_degrade_mhz)
+        {
+            l_temp_max = l_freq_max - g_amec->wof.eco_mode_freq_degrade_mhz;
+            // make sure max didn't fall below min
+            if(l_temp_max < l_freq_min)
+            {
+                TRAC_ERR("amec_set_freq_range: max freq[%dMHz] - eco freq degrade[%dMHz] < min freq[%dMHz] ",
+                           l_freq_max, g_amec->wof.eco_mode_freq_degrade_mhz, l_freq_min);
+                l_freq_max = l_freq_min;
+            }
+            else
+            {
+                TRAC_INFO("amec_set_freq_range: Eco mode freq degrade[%dMHz] taken from Fmax[%dMHz] new Fmax[%dMHz]",
+                           g_amec->wof.eco_mode_freq_degrade_mhz, l_freq_max, l_temp_max);
+                l_freq_max = l_temp_max;
+            }
+        }
+        else
+        {
+            TRAC_ERR("amec_set_freq_range: NOT applying eco freq degrade[%dMHz] > max freq[%dMHz]",
+                      g_amec->wof.eco_mode_freq_degrade_mhz, l_freq_max);
+        }
     }
 
     if( (l_freq_min == 0) || (l_freq_max == 0) || (l_freq_min_at_max_throttle == 0))

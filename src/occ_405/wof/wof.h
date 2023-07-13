@@ -394,17 +394,21 @@ typedef struct __attribute__ ((packed))
     uint32_t throt_idx_offset;
     // [867] signed amount in 0.01% unit to add (or subtract) to ceff.  Set by Eco mode
     int16_t eco_mode_ceff_add;
-    // [869] Thermal credit constant for memory
+    // [869] MHz to reduce maximum frequency by.  Set by Eco mode
+    uint16_t eco_mode_freq_degrade_mhz;
+    // [871] Thermal credit constant for memory
     uint16_t mem_thermal_credit_constant;
-    // [871] Worst case dimm power per OCMB in cW
+    // [873] Worst case dimm power per OCMB in cW
     uint32_t max_dimm_pwr_ocmb_cW;
-    // [875] indicates which membufs we have valid memory power interpolation data for
+    // [877] indicates which membufs we have valid memory power interpolation data for
     uint32_t ocmbs_present;
-    // [879] Total Worst case dimm power in cW
+    // [881] Total Worst case dimm power in cW
     uint32_t max_dimm_pwr_total_cW;
-    // [883] Contains degrees C ambient is changed by to account for DIMM power
+    // [885] Total DDIMM preheat power in cW
+    uint32_t total_dimm_preheat_pwr_cW;
+    // [889] Contains degrees C ambient is changed by to account for DIMM power
     int8_t ambient_adj_for_dimm;
-} amec_wof_t;  // 884 bytes total
+} amec_wof_t;  // 890 bytes total
 
 // Structure used in g_amec to hold static WOF data
 typedef struct __attribute__ ((packed, aligned(128)))

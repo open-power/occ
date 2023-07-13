@@ -280,6 +280,7 @@ typedef struct __attribute__ ((packed))
     struct      cmdh_fsp_cmd_header;    // Standard command header
     uint8_t     sub_cmd;                // Debug sub-command
     int16_t     eco_ceff_add;           // signed amount in 0.01% unit to add (or subtract) to ceff
+    uint16_t    freq_degrade_mhz;       // Mhz to reduce max frequency by
 } cmdh_dbug_set_wof_eco_mode_cmd_t;
 
 // DBUG_WOF_SET_ECO_MODE response struct
@@ -287,6 +288,7 @@ typedef struct __attribute__ ((packed))
 {
     struct      cmdh_fsp_rsp_header;
     int16_t     eco_ceff_add;
+    uint16_t    freq_degrade_mhz;
     uint8_t     checksum[CMDH_FSP_CHECKSUM_SIZE];
 } cmdh_dbug_set_wof_eco_mode_rsp_t;
 

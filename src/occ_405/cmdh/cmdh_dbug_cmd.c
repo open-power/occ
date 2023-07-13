@@ -36,6 +36,7 @@
 #include <cmdh_fsp_cmds.h>
 #include <memory.h>
 #include <memory_data.h>
+#include <amec_freq.h>
 #include <proc_data.h>
 #include <apss.h>
 #include <gpe_export.h>
@@ -762,15 +763,26 @@ void cmdh_dbug_wof_eco_mode( const cmdh_fsp_cmd_t * i_cmd_ptr,
     }
     else
     {
-        // Save the ceff addr
+        // Save the ceff addr and freq degrade
         g_amec->wof.eco_mode_ceff_add = l_cmd_ptr->eco_ceff_add;
+        if(g_amec->wof.eco_mode_freq_degrade_mhz != l_cmd_ptr->freq_degrade_mhz)
+        {
+           g_amec->wof.eco_mode_freq_degrade_mhz = l_cmd_ptr->freq_degrade_mhz;
 
-        TRAC_INFO("DEBUG - ECO mode ceff addr set[%d]",
-                   g_amec->wof.eco_mode_ceff_add);
+           // if WOF isn't disabled set the new freq clip range else it will be
+           // applied when wof is enabled
+           if(!g_amec->wof.wof_disabled)
+              amec_set_freq_range(CURRENT_MODE());
+        }
+
+        TRAC_INFO("DEBUG - ECO mode ceff addr set[%d] Freq degrade[%dMHz]",
+                   g_amec->wof.eco_mode_ceff_add, g_amec->wof.eco_mode_freq_degrade_mhz);
 
         // Fill in response data
         l_rsp_ptr->eco_ceff_add = g_amec->wof.eco_mode_ceff_add;
         l_resp_data_length = sizeof(g_amec->wof.eco_mode_ceff_add);
+        l_rsp_ptr->freq_degrade_mhz = g_amec->wof.eco_mode_freq_degrade_mhz;
+        l_resp_data_length += sizeof(g_amec->wof.eco_mode_freq_degrade_mhz);
     }
 
     // fill in response data length

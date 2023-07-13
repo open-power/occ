@@ -2001,6 +2001,8 @@ void calc_wof_dimm_adjustment( void )
     uint64_t l_adjustment = 0;
     int l_ocmb_num, i;
     static bool L_traced_over_max = FALSE;
+    static uint8_t L_trace_over_max_count = 2;
+    static uint8_t L_trace_count = 2;
 
     if(g_wof->max_dimm_pwr_total_cW == 0)
     {
@@ -2100,30 +2102,34 @@ void calc_wof_dimm_adjustment( void )
     // make sure didn't hit an error during processing causing disable
     if(g_wof->mem_thermal_credit_constant)
     {
+       g_wof->total_dimm_preheat_pwr_cW = l_ocmb_total_pwr_cW;
        // check if total power is over the max
-       if(l_ocmb_total_pwr_cW > g_wof->max_dimm_pwr_total_cW)
+       if(g_wof->total_dimm_preheat_pwr_cW > g_wof->max_dimm_pwr_total_cW)
        {
           l_signed = 1;
-          l_power_delta = (uint32_t)(l_ocmb_total_pwr_cW - g_wof->max_dimm_pwr_total_cW);
-          if( (L_traced_over_max == FALSE) || (G_allow_trace_flags & ALLOW_MEM_TRACE) )
+          l_power_delta = (uint32_t)(g_wof->total_dimm_preheat_pwr_cW - g_wof->max_dimm_pwr_total_cW);
+          if( (L_traced_over_max == FALSE) ||
+              ( (G_allow_trace_flags & ALLOW_MEM_TRACE) && L_trace_over_max_count ))
           {
               // trace once if we are over max
               L_traced_over_max = TRUE;
-              INTR_TRAC_ERR("calc_wof_dimm_adjustment: Total dimm power[%dcW] > max[%dcW]",
-                             l_ocmb_total_pwr_cW, g_wof->max_dimm_pwr_total_cW);
+              if(L_trace_over_max_count)
+                  L_trace_over_max_count--;
+              INTR_TRAC_ERR("calc_wof_dimm_adjustment: Total dimm preheat power[%dcW] > max[%dcW]",
+                             g_wof->total_dimm_preheat_pwr_cW, g_wof->max_dimm_pwr_total_cW);
           }
        }
        else
        {
           l_signed = -1;  // reduce ambient for being under max
-          l_power_delta = (uint32_t)(g_wof->max_dimm_pwr_total_cW - l_ocmb_total_pwr_cW);
+          l_power_delta = (uint32_t)(g_wof->max_dimm_pwr_total_cW - g_wof->total_dimm_preheat_pwr_cW);
        }
        l_adjustment = (uint64_t)((uint64_t)l_power_delta * (uint64_t)g_wof->mem_thermal_credit_constant);
 
-       if(G_allow_trace_flags & ALLOW_MEM_TRACE)
+       if((G_allow_trace_flags & ALLOW_MEM_TRACE) && L_trace_count)
        {
             INTR_TRAC_INFO("MEM PWR DBUG1: ocmb_total_pwr[%dcW] - max_dimm_pwr_total[%dcW] =",
-                           l_ocmb_total_pwr_cW, g_wof->max_dimm_pwr_total_cW);
+                           g_wof->total_dimm_preheat_pwr_cW, g_wof->max_dimm_pwr_total_cW);
             INTR_TRAC_INFO("MEM PWR DBUG2: power_delta[%d] * mem_thermal_credit_constant[%d] =",
                            l_power_delta, g_wof->mem_thermal_credit_constant);
             INTR_TRAC_INFO("MEM PWR DBUG3: l_adjustment[0x%08X%08X]",
@@ -2133,7 +2139,7 @@ void calc_wof_dimm_adjustment( void )
        //                           10,000 for mem_thermal_credit_constant sent to OCC as x10,000
        //                           100 for cW-->W
        l_temp64 = l_adjustment / (uint64_t)1000000;
-       if(G_allow_trace_flags & ALLOW_MEM_TRACE)
+       if((G_allow_trace_flags & ALLOW_MEM_TRACE) && L_trace_count)
        {
             INTR_TRAC_INFO("MEM PWR DBUG4: l_adjustment/1,000,000 = 0x%04X",
                            (uint16_t)l_temp64);
@@ -2152,8 +2158,18 @@ void calc_wof_dimm_adjustment( void )
 
        if(G_allow_trace_flags & ALLOW_MEM_TRACE)
        {
-            INTR_TRAC_INFO("MEM PWR DBUG5: signed[%d] final dimm adj[%d]",
-                            l_signed, g_wof->ambient_adj_for_dimm);
+            if(L_trace_count)
+            {
+                L_trace_count--;
+                INTR_TRAC_INFO("MEM PWR DBUG5: signed[%d] final dimm adj[%d]",
+                                l_signed, g_wof->ambient_adj_for_dimm);
+            }
+       }
+       else
+       {
+           // reset trace counts for ALLOW_MEM_TRACE to be set
+           L_trace_count = 2;
+           L_trace_over_max_count = 2;
        }
     } // if no error
     else
