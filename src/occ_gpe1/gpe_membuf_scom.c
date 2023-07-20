@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2018,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2018,2023                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -146,16 +146,24 @@ int inband_scom_setup(MemBufConfiguration_t* i_config,
 {
     int rc = 0;
 
-    uint64_t pb_addr = i_config->baseAddress[i_membuf_instance];
-    pb_addr |= ((uint64_t)i_scom_address << 3);
+    if((i_membuf_instance >= OCCHW_N_MEMBUF) ||
+       (i_config->baseAddress[i_membuf_instance] == 0))
+    {
+        PK_TRACE("inband_scom_setup. membuf %d invalid", i_membuf_instance);
+        rc = MEMBUF_INVALID_ADDRESS;
+    }
+    else
+    {
+        uint64_t pb_addr = i_config->baseAddress[i_membuf_instance];
+        pb_addr |= ((uint64_t)i_scom_address << 3);
 
 #if defined(__USE_PBASLV__)
-    pba_slvctln_t slvctln;
-    // put bits 23:36 of address into slvctln extended addr
-    PPE_LVD((i_config->scomParms).slvctl_address, slvctln.value);
-    slvctln.fields.extaddr = pb_addr >> 27;
-    pbaslvctl_reset(&(i_config->scomParms));
-    PPE_STVD((i_config->scomParms).slvctl_address, slvctln.value);
+        pba_slvctln_t slvctln;
+        // put bits 23:36 of address into slvctln extended addr
+        PPE_LVD((i_config->scomParms).slvctl_address, slvctln.value);
+        slvctln.fields.extaddr = pb_addr >> 27;
+        pbaslvctl_reset(&(i_config->scomParms));
+        PPE_STVD((i_config->scomParms).slvctl_address, slvctln.value);
 #else
 
     {
@@ -182,13 +190,13 @@ int inband_scom_setup(MemBufConfiguration_t* i_config,
     }
 
 #endif
-    // oci address pb_addr[37:63] -> oci_addr[5:31]
-    *o_oci_addr = (uint32_t)(pb_addr & 0x07ffffffull);
+        // oci address pb_addr[37:63] -> oci_addr[5:31]
+        *o_oci_addr = (uint32_t)(pb_addr & 0x07ffffffull);
 
-    // upper nibble is PBA region and BAR_SELECT
-    *o_oci_addr  |= ((PBA_BAR_MEMBUF | 0x8) << 28);
-    PK_TRACE_DBG("OCI mapped scom addr: %08x",*o_oci_addr);
-
+        // upper nibble is PBA region and BAR_SELECT
+        *o_oci_addr  |= ((PBA_BAR_MEMBUF | 0x8) << 28);
+        PK_TRACE_DBG("OCI mapped scom addr: %08x",*o_oci_addr);
+    }
     return rc;
 }
 
