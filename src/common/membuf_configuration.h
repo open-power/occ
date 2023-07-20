@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2016,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2016,2023                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -153,6 +153,7 @@ enum
     MEMBUF_CHANNEL_CHECKSTOP = 203,
     MEMBUF_SCACHE_ERROR = 204,
     MEMBUF_PBA_BUSY = 205,
+    MEMBUF_INVALID_ADDRESS = 206,
 };
 
 // Inband Scom Operations
