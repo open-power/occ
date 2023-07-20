@@ -155,6 +155,7 @@ enum
     MEMBUF_CHANNEL_CHECKSTOP = 203,
     MEMBUF_SCACHE_ERROR = 204,
     MEMBUF_PBA_BUSY = 205,
+    MEMBUF_INVALID_ADDRESS = 206,
 };
 
 // Inband Scom Operations
