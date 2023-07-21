@@ -722,19 +722,26 @@ function send_occ_cmd
     fi
 
     let cmd_data_length=${#occ_cmd_data}/2
-    let csum=0x"$sequence"+0x$occ_cmd+$cmd_data_length; # seq# + cmd + length
+    let csum=0x"$sequence"+0x$occ_cmd+$((($cmd_data_length>>8)+($cmd_data_length&0xFF))); # seq# + cmd + length
 
     if [ "$interface" == "cronus" ]; then
         if [ $sensor_summary -eq 0 ]; then
             echo -e "${blue}Sending 0x$occ_cmd command to OCC${occ} w/$cmd_data_length bytes of data (via cronus)...${normal}"
         fi
         # First, store the command in command buffer in SRAM
-        #TODO: Checksums for lengths > 255 bytes!!
+        #printf "INITIAL CSUM: 0x%04X (seq 0x%02X)\n" $csum $sequence
         if [ $cmd_data_length -gt 0 ]; then
             for ((i = 0; i < ${#occ_cmd_data}; i+=2)); do
                 let byte=0x${occ_cmd_data:$i:2}
                 let csum=$csum+$byte
             done
+            while [ $csum -gt $((0xFFFF)) ]; do # handle any overflow (back down to 2 bytes)
+                let overflow=$(($csum>>16))
+                printf "...CSUM: 0x%06X w/overflow: 0x%04X\n" $csum $overflow
+                let csum=$((($csum&0xFFFF)+$overflow))
+                printf "...NEW CSUM: 0x%04X\n" $csum
+            done
+            #printf "FINAL CSUM: 0x%04X (%d bytes)\n" $csum $cmd_data_length
         fi
         cmdString=`printf "%s%s%04X${occ_cmd_data}%04X" $sequence $occ_cmd $cmd_data_length $csum`
         if [ $verbose -ne 0 ]; then
