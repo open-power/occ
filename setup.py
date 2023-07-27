@@ -99,7 +99,7 @@ class CustomOCCCommand(install):
         install.run(self)
 
 setup(
-    name            = "OCC",
+    name            = "occ-pel-parser",
     cmdclass        = {'install': CustomOCCCommand},
     version         = os.getenv('PELTOOL_VERSION', '0.1'),
     data_files      = custom_data_files,
