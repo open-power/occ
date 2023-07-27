@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2022                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2023                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -308,10 +308,10 @@ void chom_update_sensors()
     static uint32_t L_prev_ocsDirtyType0[CHOM_MAX_OCCS] = {0};
     static uint32_t L_prev_ocsDirtyType1[CHOM_MAX_OCCS] = {0};
 
-    static uint32_t L_memBWNumSamples[NUM_CHOM_MODES][MAX_NUM_MEM_CONTROLLERS] = {{0}};
+    static uint32_t L_memBWNumSamples[NUM_CHOM_MODES][MAX_NUM_MEMORY_SENSORS] = {{0}};
 
-    // Use FMAX as default
-    static uint32_t * L_curNumSamplePtr = L_memBWNumSamples[CHOM_MODE_FMAX];
+    // Number of samples included in each MC mem BW sensor. Use FMAX as default
+    static uint32_t * L_curMemBWNumSamplePtr = L_memBWNumSamples[CHOM_MODE_FMAX];
 
     if(TRUE == g_chom_reset)
     {
@@ -344,43 +344,43 @@ void chom_update_sensors()
         {
             case OCC_MODE_DISABLED:
                 g_chom_pwr_modes[CHOM_MODE_DISABLED] = 1;
-                L_curNumSamplePtr = L_memBWNumSamples[CHOM_MODE_DISABLED];
+                L_curMemBWNumSamplePtr = L_memBWNumSamples[CHOM_MODE_DISABLED];
                 break;
 
             case OCC_MODE_PWRSAVE:
                 g_chom_pwr_modes[CHOM_MODE_SPS] = 1;
-                L_curNumSamplePtr = L_memBWNumSamples[CHOM_MODE_SPS];
+                L_curMemBWNumSamplePtr = L_memBWNumSamples[CHOM_MODE_SPS];
                 break;
 
             case OCC_MODE_STATIC_FREQ_POINT:
                 g_chom_pwr_modes[CHOM_MODE_SFP] = 1;
-                L_curNumSamplePtr = L_memBWNumSamples[CHOM_MODE_SFP];
+                L_curMemBWNumSamplePtr = L_memBWNumSamples[CHOM_MODE_SFP];
                 break;
 
             case OCC_MODE_FFO:
                 g_chom_pwr_modes[CHOM_MODE_FFO] = 1;
-                L_curNumSamplePtr = L_memBWNumSamples[CHOM_MODE_FFO];
+                L_curMemBWNumSamplePtr = L_memBWNumSamples[CHOM_MODE_FFO];
                 break;
 
             case OCC_MODE_DYN_PERF:
                 g_chom_pwr_modes[CHOM_MODE_DYN_PERF] = 1;
-                L_curNumSamplePtr = L_memBWNumSamples[CHOM_MODE_DYN_PERF];
+                L_curMemBWNumSamplePtr = L_memBWNumSamples[CHOM_MODE_DYN_PERF];
                 break;
 
             case OCC_MODE_MAX_PERF:
                 g_chom_pwr_modes[CHOM_MODE_MAX_PERF] = 1;
-                L_curNumSamplePtr = L_memBWNumSamples[CHOM_MODE_MAX_PERF];
+                L_curMemBWNumSamplePtr = L_memBWNumSamples[CHOM_MODE_MAX_PERF];
                 break;
 
             case OCC_MODE_FMAX:
                 g_chom_pwr_modes[CHOM_MODE_FMAX] = 1;
-                L_curNumSamplePtr = L_memBWNumSamples[CHOM_MODE_FMAX];
+                L_curMemBWNumSamplePtr = L_memBWNumSamples[CHOM_MODE_FMAX];
                 break;
 
             default:
                 TRAC_INFO("chom_update_sensors: Cannot record chom data for mode 0x%02X",
                           g_chom->sensorData[0].pwrMode.mode);
-                L_curNumSamplePtr = L_memBWNumSamples[CHOM_MODE_FMAX];
+                L_curMemBWNumSamplePtr = L_memBWNumSamples[CHOM_MODE_FMAX];
                 break;
         }
     }
@@ -408,6 +408,7 @@ void chom_update_sensors()
     // update MIPS
     uint16_t l_mips_count = 0;
     uint16_t l_mem_idx = CHOMBWP0M0;
+    uint16_t l_mem_num_sample_idx = 0;
 
     // Loop through OCCs updating chom sensors
     for ( i = 0; i < CHOM_MAX_OCCS; i++ )
@@ -429,7 +430,7 @@ void chom_update_sensors()
             if(l_mem_rw != 0)
             {
                 g_chom->sensorData[0].sensor[l_mem_idx].sample = l_mem_rw;
-                L_curNumSamplePtr[j]++;
+                L_curMemBWNumSamplePtr[l_mem_num_sample_idx]++;
 
                 // Calculate the averages/min/max for the memory bandwidth sensors
                 l_sample = g_chom->sensorData[0].sensor[l_mem_idx].sample;
@@ -446,9 +447,10 @@ void chom_update_sensors()
                 g_chom->sensorData[0].sensor[l_mem_idx].accumulator += l_sample;
                 g_chom->sensorData[0].sensor[l_mem_idx].average =
                                  (g_chom->sensorData[0].sensor[l_mem_idx].accumulator /
-                                  L_curNumSamplePtr[j]);
+                                  L_curMemBWNumSamplePtr[l_mem_num_sample_idx]);
             }
             l_mem_idx++;
+            l_mem_num_sample_idx++;
         }
     }
 

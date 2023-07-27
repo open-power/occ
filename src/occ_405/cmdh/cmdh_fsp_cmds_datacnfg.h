@@ -443,7 +443,8 @@ typedef struct __attribute__ ((packed))
     uint8_t               version;
     uint16_t              thermal_credit_constant;
     uint32_t              max_dimm_pwr_ocmb_cW;  // max DIMM pwr per OCMB in cW
-    uint8_t               reserved[7];
+    uint32_t              total_dimm_pwr_cW;     // Total DIMM pre-heat power in cW
+    uint8_t               reserved[3];
     uint8_t               num_ocmbs;
 }cmdh_mem_pwr_data_header_t;
 

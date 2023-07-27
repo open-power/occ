@@ -1946,7 +1946,7 @@ void read_sensor_data( void )
                g_wof->ambient_condition = 0;
        }
        // If DIMM power credit is enabled determine adjustment to account for DIMM power
-       if(g_wof->mem_thermal_credit_constant && g_wof->max_dimm_pwr_ocmb_cW)
+       if(g_wof->mem_thermal_credit_constant && g_wof->max_dimm_pwr_total_cW)
        {
            // determine g_wof->ambient_adj_for_dimm
            calc_wof_dimm_adjustment();
@@ -2004,26 +2004,15 @@ void calc_wof_dimm_adjustment( void )
     static uint8_t L_trace_over_max_count = 2;
     static uint8_t L_trace_count = 2;
 
-    if(g_wof->max_dimm_pwr_total_cW == 0)
+    // verify present OCMBs from WOF pwr data and memory config match
+    if(g_wof->ocmbs_present != G_present_membufs)
     {
-        // first need to verify present OCMBs from WOF pwr data and memory config match
-        if(g_wof->ocmbs_present == G_present_membufs)
-        {
-           // data matches calculate total max dimm power
-           g_wof->max_dimm_pwr_total_cW = MAX_NUM_OCMBS * g_wof->max_dimm_pwr_ocmb_cW;
-           INTR_TRAC_INFO("calc_wof_dimm_adjustment: WOF DIMM credit enabled for OCMBs[0x%08X] max_dimm_pwr_total[%dcW]",
-                           g_wof->ocmbs_present, g_wof->max_dimm_pwr_total_cW);
-        }
-        else
-        {
-           // Mismatch in OCMB data disable WOF memory credit
-           INTR_TRAC_ERR("calc_wof_dimm_adjustment: Mismatch OCMB Present[0x%08X] and OCMB WOF Pwr data[0x%08X]",
-                          G_present_membufs, g_wof->ocmbs_present);
-           g_wof->mem_thermal_credit_constant = 0;
-        }
+       // Mismatch in OCMB data disable WOF memory credit
+       INTR_TRAC_ERR("calc_wof_dimm_adjustment: Mismatch OCMB Present[0x%08X] and OCMB WOF Pwr data[0x%08X]",
+                      G_present_membufs, g_wof->ocmbs_present);
+       g_wof->mem_thermal_credit_constant = 0;
     }
-
-    if(g_wof->mem_thermal_credit_constant)
+    else
     {
        for(l_ocmb_num = 0; l_ocmb_num < MAX_NUM_OCMBS; l_ocmb_num++)
        {
@@ -2097,7 +2086,7 @@ void calc_wof_dimm_adjustment( void )
            // disable WOF memory credit
            g_wof->mem_thermal_credit_constant = 0;
        }
-    }  // if enabled
+    }  // else present OCMBs from WOF pwr data and memory config match
 
     // make sure didn't hit an error during processing causing disable
     if(g_wof->mem_thermal_credit_constant)

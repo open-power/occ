@@ -2399,11 +2399,10 @@ errlHndl_t data_store_memory_pwr_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
     l_data_length = CMDH_DATALEN_FIELD_UINT16((&l_cmd_ptr->header));
 
+    // Verification that present OCMBs match OCMBs we receive pwr data for is done during WOF
     g_amec->wof.ocmbs_present = 0;
     // thermal constant of 0 disables WOF memory power credit, will be set if data checks out
     g_amec->wof.mem_thermal_credit_constant = 0;
-    // need to calculate total max power based on this data after verifying
-    // present OCMBs match OCMBs we receive pwr data for this is done during WOF
     g_amec->wof.max_dimm_pwr_total_cW = 0;
 
     // Check version
@@ -2503,6 +2502,21 @@ errlHndl_t data_store_memory_pwr_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
                 l_invalid_input = FALSE;
                 g_amec->wof.mem_thermal_credit_constant = l_cmd_ptr->header.thermal_credit_constant;
                 g_amec->wof.max_dimm_pwr_ocmb_cW = l_cmd_ptr->header.max_dimm_pwr_ocmb_cW;
+
+                if(l_cmd_ptr->header.total_dimm_pwr_cW)
+                {
+                    g_amec->wof.max_dimm_pwr_total_cW = l_cmd_ptr->header.total_dimm_pwr_cW;
+                    CMDH_TRAC_INFO("data_store_memory_pwr_data: Total max dimm pre-heat power[%dcW]",
+                                    g_amec->wof.max_dimm_pwr_total_cW);
+                }
+                else
+                {
+                    // didn't get a max, calculate from per ocmb power
+                    g_amec->wof.max_dimm_pwr_total_cW = MAX_NUM_OCMBS * g_amec->wof.max_dimm_pwr_ocmb_cW;
+                    CMDH_TRAC_INFO("data_store_memory_pwr_data: Calculated from per OCMB total max dimm pre-heat power[%dcW]",
+                                    g_amec->wof.max_dimm_pwr_total_cW);
+                }
+
                 CMDH_TRAC_INFO("data_store_memory_pwr_data: Received %d OCMBs present bit mask 0x%04X",
                                 l_cmd_ptr->header.num_ocmbs, g_amec->wof.ocmbs_present);
                 CMDH_TRAC_INFO("data_store_memory_pwr_data: Thermal constant 0x%04X max pwr per OCMB 0x%08X cW",

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2022                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2023                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -38,7 +38,7 @@
 // Max number of procs Call Home will get data for
 #define CHOM_MAX_OCCS                   8
 // Max number of memory bandwidth CHOM sensors
-#define  MAX_NUM_MEMORY_SENSORS         (CHOM_MAX_OCCS * 16)
+#define  MAX_NUM_MEMORY_SENSORS         (CHOM_MAX_OCCS * MAX_NUM_MEM_CONTROLLERS)
 // Max number of error history entries to add to call home log
 #define CHOM_MAX_ERRH_ENTRIES           4
 // List of call home sensors
