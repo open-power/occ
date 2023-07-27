@@ -244,7 +244,11 @@ void ocmb_init(void)
                  (uint32_t)G_dimm_enabled_sensors.dw[1]);
 
         // Setup the OCMB deadman timer
-        L_scomList[0].scom = OCMB_MBASTR0Q;
+        if(IS_OCM_DDR4_MEM_TYPE(G_sysConfigData.mem_type))
+            L_scomList[0].scom = OCMB_MBASTR0Q;
+        else
+            L_scomList[0].scom = OCMB_MBASTR0Q_DDR5;
+
         L_scomList[0].commandType = MEMBUF_SCOM_RMW_ALL;
 
         ocmb_mbastr0q_t l_mbascfg;
@@ -472,7 +476,7 @@ uint32_t membuf_configuration_create()
     do
     {
         G_gpe_membuf_config_args.membufConfiguration = &G_membufConfiguration;
-        G_gpe_membuf_config_args.mem_type = MEMTYPE_OCMB;
+        G_gpe_membuf_config_args.mem_type = MEMTYPE_OCMB_DDR4;
 
         // determine max number of dts there can be
         // this excludes the ubdts which all memory types may have 1 ubdts
@@ -486,8 +490,12 @@ uint32_t membuf_configuration_create()
             else if(IS_OCM_DDR5_MEM_TYPE(G_sysConfigData.mem_type))
             {
                 G_gpe_membuf_config_args.max_dts = NUM_DTS_PER_OCMB_DDR5;
+                G_gpe_membuf_config_args.mem_type = MEMTYPE_OCMB_DDR5;
             }
         }
+        else if(IS_OCM_DDR5_MEM_TYPE(G_sysConfigData.mem_type))
+            G_gpe_membuf_config_args.mem_type = MEMTYPE_OCMB_DDR5;
+
         rc = gpe_request_create(
                                 &l_request,                 // request
                                 &G_async_gpe_queue1,        // gpe queue

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2016,2020                        */
+/* Contributors Listed Below - COPYRIGHT 2016,2023                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -61,7 +61,11 @@ void ocmb_control_init( void )
     memset(G_memoryThrottleLimits, 0, sizeof(G_memoryThrottleLimits));
 
     // set upt the throttle scom regs. //slot 0, slot1 or per-port
-    G_memThrottle[NM_THROTTLE_MBA].scom = OCMB_MBA_FARB3Q;
+    if(IS_OCM_DDR4_MEM_TYPE(G_sysConfigData.mem_type))
+        G_memThrottle[NM_THROTTLE_MBA].scom = OCMB_MBA_FARB3Q;
+    else
+        G_memThrottle[NM_THROTTLE_MBA].scom = OCMB_MBA_FARB3Q_DDR5;
+
     l_mbafarbq.value = 0;
     l_mbafarbq.fields.cfg_nm_n_per_slot = -1;
     l_mbafarbq.fields.cfg_nm_n_per_port = -1;

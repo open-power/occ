@@ -47,7 +47,8 @@ void gpe_membuf_init(ipc_msg_t* i_cmd, void* i_arg)
     }
     else
     {
-        if(payload->mem_type == MEMTYPE_OCMB)
+        if( (payload->mem_type == MEMTYPE_OCMB_DDR4) ||
+            (payload->mem_type == MEMTYPE_OCMB_DDR5) )
         {
             PK_TRACE("Ocmb_configuration. MSR:%08x",mfmsr());
             rc = gpe_ocmb_configuration_create(G_membuf_config, payload->max_dts);

@@ -37,7 +37,8 @@
 #define OCCHW_N_MEMBUF           16
 #define OCCWH_MEMBUF_PER_CHANNEL (OCCHW_N_MEMBUF/OCCHW_N_MC_CHANNEL)
 
-#define MEMTYPE_OCMB             2
+#define MEMTYPE_OCMB_DDR4         4
+#define MEMTYPE_OCMB_DDR5         5
 
 /// Error return codes set/returned by gpe_*_configuration_create()
 

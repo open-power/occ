@@ -380,7 +380,6 @@ int gpe_ocmb_configuration_create(MemBufConfiguration_t* o_config, uint32_t i_ma
     barrier();   //Needed to prevent compiler optimizing out restore of l_config
 
     o_config->configRc = MEMBUF_NOT_CONFIGURED;
-    o_config->membuf_type = MEMTYPE_OCMB;
     o_config->config = l_config;
 
     do
@@ -866,6 +865,18 @@ int gpe_ocmb_init(MemBufConfiguration_t * i_config)
 {
     uint64_t data64 = 0;
     int instance = 0;
+
+    // defaults for DDR4
+    uint32_t l_mba_farb7q_addr = OCMB_MBA_FARB7Q;
+    uint32_t l_mba_farb8q_addr = OCMB_MBA_FARB8Q;
+
+    if(i_config->membuf_type == MEMTYPE_OCMB_DDR5)
+    {
+        l_mba_farb7q_addr = OCMB_MBA_FARB7Q_DDR5;
+        l_mba_farb8q_addr = OCMB_MBA_FARB8Q_DDR5;
+    }
+
+
     // Issue occ touch sync (resets deadman timer count)
     // Any errors will already be traced
     PK_TRACE("gpe_ocmb_init: Issue OCCO_TOUCH");
@@ -873,31 +884,31 @@ int gpe_ocmb_init(MemBufConfiguration_t * i_config)
 
     // Clear emergency trottle
     PK_TRACE("gpe_ocmb_init: Clear emergency throttle");
-    membuf_put_scom_all(i_config, OCMB_MBA_FARB7Q, 0);
+    membuf_put_scom_all(i_config, l_mba_farb7q_addr, 0);
 
     // Clear safe refresh mode
     PK_TRACE("gpe_ocmb_init: Clear safe refresh mode");
-    membuf_put_scom_all(i_config, OCMB_MBA_FARB8Q, 0);
+    membuf_put_scom_all(i_config, l_mba_farb8q_addr, 0);
 
     // verify clear and retry as needed.
     for(instance = 0; instance < OCCHW_N_MEMBUF; ++instance)
     {
         if(0 != ( CHIP_CONFIG_MEMBUF(instance) & (i_config->config)))
         {
-            membuf_get_scom(i_config, instance, OCMB_MBA_FARB7Q, &data64);
+            membuf_get_scom(i_config, instance, l_mba_farb7q_addr, &data64);
             if(0 != (data64 & 0x8000000000000000ull))
             {
                 PK_TRACE("gpe_ocmb_init: Retry clear emergency throttle");
                 data64 = 0;
-                membuf_put_scom(i_config, instance, OCMB_MBA_FARB7Q, data64);
+                membuf_put_scom(i_config, instance, l_mba_farb7q_addr, data64);
             }
 
-            membuf_get_scom(i_config, instance, OCMB_MBA_FARB8Q, &data64);
+            membuf_get_scom(i_config, instance, l_mba_farb8q_addr, &data64);
             if(0 != (data64 & 0x8000000000000000ull))
             {
                 PK_TRACE("gpe_ocmb_init: Retry clear safe refresh");
                 data64 = 0;
-                membuf_put_scom(i_config, instance, OCMB_MBA_FARB8Q, data64);
+                membuf_put_scom(i_config, instance, l_mba_farb8q_addr, data64);
             }
         }
     }
