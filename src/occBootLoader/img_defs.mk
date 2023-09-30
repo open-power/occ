@@ -147,6 +147,8 @@ TCPP    = $(PPETOOLS_OBJDIR)/ppetracepp $(GCC-TOOL-PREFIX)gcc
 THASH	= $(PPETRACEPP_DIR)/tracehash.pl
 CPP     = $(GCC-TOOL-PREFIX)cpp
 
+GCC_GTE_9 := $(shell echo `$CC -dumpversion | cut -f1-2 -d.` \>= 9.0 | bc )
+
 ifndef CTEPATH
 $(warning The CTEPATH variable is not defined; Defaulting to /afs/awd)
 CTEPATH = /afs/awd/projects/cte
@@ -227,8 +229,12 @@ PIPE-CFLAGS = -pipe -Wa,-m405
 GCC-CFLAGS += -g -Wall -fsigned-char -msoft-float  \
 	-m32 -mbig-endian -mcpu=405 -mmultiple -mstring \
 	-meabi -msdata=eabi -ffreestanding -fno-common \
-	-fno-inline-functions-called-once -fno-pic \
+	-fno-inline-functions-called-once \
 	-fno-asynchronous-unwind-tables -std=gnu89
+
+ifeq ($(GCC_GTE_9),1)
+  GCC-CFLAGS += -fno-pic
+endif
 
 CFLAGS      =  -c $(GCC-CFLAGS) $(PIPE-CFLAGS) $(GCC-O-LEVEL) $(INCLUDES)
 
