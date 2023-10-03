@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2022                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2023                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -618,7 +618,7 @@ void task_nest_dts( task_t * i_task )
                     if(l_nestDtsTemp < DTS_MAX_TEMP)
                         sensor_update(AMECSENSOR_PTR(TEMPNEST0), l_nestDtsTemp);
 
-                    // log mfg error for this DTS if haven't already
+                    // log error for this DTS if haven't already
                     else if(L_dts_error_logged[N0_DTS] == FALSE)
                     {
                        L_dts_error_logged[N0_DTS] = TRUE;
@@ -634,7 +634,7 @@ void task_nest_dts( task_t * i_task )
                     if(l_nestDtsTemp < DTS_MAX_TEMP)
                         sensor_update(AMECSENSOR_PTR(TEMPNEST1), l_nestDtsTemp);
 
-                    // log mfg error for this DTS if haven't already
+                    // log error for this DTS if haven't already
                     else if(L_dts_error_logged[N1_DTS] == FALSE)
                     {
                        L_dts_error_logged[N1_DTS] = TRUE;
@@ -652,7 +652,7 @@ void task_nest_dts( task_t * i_task )
                         l_io_temp_valid = TRUE;
                         sensor_update(AMECSENSOR_PTR(TEMPPROCIO00), l_pauDtsTemp);
                     }
-                    // log mfg error for this DTS if haven't already
+                    // log error for this DTS if haven't already
                     else if(L_dts_error_logged[SE_PAU_DTS] == FALSE)
                     {
                        L_dts_error_logged[SE_PAU_DTS] = TRUE;
@@ -670,7 +670,7 @@ void task_nest_dts( task_t * i_task )
                         l_io_temp_valid = TRUE;
                         sensor_update(AMECSENSOR_PTR(TEMPPROCIO01), l_pauDtsTemp);
                     }
-                    // log mfg error for this DTS if haven't already
+                    // log error for this DTS if haven't already
                     else if(L_dts_error_logged[NE_PAU_DTS] == FALSE)
                     {
                        L_dts_error_logged[NE_PAU_DTS] = TRUE;
@@ -688,7 +688,7 @@ void task_nest_dts( task_t * i_task )
                         l_io_temp_valid = TRUE;
                         sensor_update(AMECSENSOR_PTR(TEMPPROCIO10), l_pauDtsTemp);
                     }
-                    // log mfg error for this DTS if haven't already
+                    // log error for this DTS if haven't already
                     else if(L_dts_error_logged[SW_PAU_DTS] == FALSE)
                     {
                        L_dts_error_logged[SW_PAU_DTS] = TRUE;
@@ -706,7 +706,7 @@ void task_nest_dts( task_t * i_task )
                         l_io_temp_valid = TRUE;
                         sensor_update(AMECSENSOR_PTR(TEMPPROCIO11), l_pauDtsTemp);
                     }
-                    // log mfg error for this DTS if haven't already
+                    // log error for this DTS if haven't already
                     else if(L_dts_error_logged[NW_PAU_DTS] == FALSE)
                     {
                        L_dts_error_logged[NW_PAU_DTS] = TRUE;
@@ -746,15 +746,6 @@ void task_nest_dts( task_t * i_task )
                                        DEFAULT_TRACE_SIZE,           //Trace Size
                                        0,                            //userdata1
                                        0);                           //userdata2
-
-                    // set the mfg action flag (allows callout to be added to info error)
-                    setErrlActions(l_err, ERRL_ACTIONS_MANUFACTURING_ERROR);
-
-                    // add processor callout
-                    addCalloutToErrl(l_err,
-                                     ERRL_CALLOUT_TYPE_HUID,
-                                     G_sysConfigData.proc_huid,
-                                     ERRL_CALLOUT_PRIORITY_HIGH);
 
                     // Commit Error
                     commitErrl(&l_err);

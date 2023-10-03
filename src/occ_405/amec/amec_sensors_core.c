@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2022                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2023                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -355,7 +355,7 @@ void amec_calc_dts_sensors(CoreData * i_core_data_ptr, uint8_t i_core)
                 }
                 if(l_coreDts[k] >= DTS_MAX_TEMP)
                 {
-                    // log mfg error for this DTS if haven't already
+                    // log error for this DTS if haven't already
                     if(L_core_dts_error_logged[i_core][k] == FALSE)
                     {
                          L_core_dts_error_logged[i_core][k] = TRUE;
@@ -379,15 +379,6 @@ void amec_calc_dts_sensors(CoreData * i_core_data_ptr, uint8_t i_core)
                                              i_core,                       //userdata1
                                              l_coreDts[k]);                //userdata2
 
-                         // set the mfg action flag (allows callout to be added to info error)
-                         setErrlActions(l_errl, ERRL_ACTIONS_MANUFACTURING_ERROR);
-
-                         // add processor callout
-                         addCalloutToErrl(l_errl,
-                                          ERRL_CALLOUT_TYPE_HUID,
-                                          G_sysConfigData.proc_huid,
-                                          ERRL_CALLOUT_PRIORITY_HIGH);
-
                          // Commit Error
                          commitErrl(&l_errl);
                     }
@@ -410,7 +401,7 @@ void amec_calc_dts_sensors(CoreData * i_core_data_ptr, uint8_t i_core)
             // Don't use DTS if it reached max limit
             if(i_core_data_ptr->dts.cache.fields.reading >= DTS_MAX_TEMP)
             {
-                // log mfg error for this DTS if haven't already
+                // log error for this DTS if haven't already
                 if(L_L3_dts_error_logged[i_core] == FALSE)
                 {
                      L_L3_dts_error_logged[i_core] = TRUE;
@@ -434,15 +425,6 @@ void amec_calc_dts_sensors(CoreData * i_core_data_ptr, uint8_t i_core)
                                          i_core,                       //userdata1
                                          i_core_data_ptr->dts.cache.fields.reading);
 
-                     // set the mfg action flag (allows callout to be added to info error)
-                     setErrlActions(l_errl, ERRL_ACTIONS_MANUFACTURING_ERROR);
-
-                     // add processor callout
-                     addCalloutToErrl(l_errl,
-                                      ERRL_CALLOUT_TYPE_HUID,
-                                      G_sysConfigData.proc_huid,
-                                      ERRL_CALLOUT_PRIORITY_HIGH);
-
                      // Commit Error
                      commitErrl(&l_errl);
                 }
@@ -461,7 +443,7 @@ void amec_calc_dts_sensors(CoreData * i_core_data_ptr, uint8_t i_core)
             // Don't use DTS if it reached max limit
             if(i_core_data_ptr->dts.racetrack.fields.reading >= DTS_MAX_TEMP)
             {
-                // log mfg error for this DTS if haven't already
+                // log error for this DTS if haven't already
                 if(L_RT_dts_error_logged[i_core] == FALSE)
                 {
                      L_RT_dts_error_logged[i_core] = TRUE;
@@ -484,15 +466,6 @@ void amec_calc_dts_sensors(CoreData * i_core_data_ptr, uint8_t i_core)
                                          DEFAULT_TRACE_SIZE,           //Trace Size
                                          i_core,                       //userdata1
                                          i_core_data_ptr->dts.racetrack.fields.reading);
-
-                     // set the mfg action flag (allows callout to be added to info error)
-                     setErrlActions(l_errl, ERRL_ACTIONS_MANUFACTURING_ERROR);
-
-                     // add processor callout
-                     addCalloutToErrl(l_errl,
-                                      ERRL_CALLOUT_TYPE_HUID,
-                                      G_sysConfigData.proc_huid,
-                                      ERRL_CALLOUT_PRIORITY_HIGH);
 
                      // Commit Error
                      commitErrl(&l_errl);
