@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2022                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2023                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -118,6 +118,8 @@ errlHndl_t cmdh_tmgt_poll (const cmdh_fsp_cmd_t * i_cmd_ptr,
         // Build Error Response packet
         cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, l_rc, &l_errlHndl);
     }
+
+    G_rsp_status = l_rc;
 
     return l_errlHndl;
 }
@@ -1089,6 +1091,113 @@ errlHndl_t cmdh_clear_elog (const   cmdh_fsp_cmd_t * i_cmd_ptr,
         cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, ERRL_RC_INVALID_DATA, &l_err);
     }
 
+    return l_err;
+}
+
+// Function Specification
+//
+// Name:  cmdh_ocmb_recovery_status
+//
+// Description: Gives status of OCMB recovery that was requested via error log action bit
+//
+// End Function Specification
+errlHndl_t cmdh_ocmb_recovery_status(const   cmdh_fsp_cmd_t * i_cmd_ptr,
+                                     cmdh_fsp_rsp_t * o_rsp_ptr)
+{
+    cmdh_ocmb_recovery_status_t *l_cmd_ptr = (cmdh_ocmb_recovery_status_t *) i_cmd_ptr;
+    ERRL_RC                  l_rc = ERRL_RC_SUCCESS;
+    errlHndl_t               l_err = NULL;
+    uint16_t                 l_data_length = CMDH_DATALEN_FIELD_UINT16(l_cmd_ptr);
+    uint32_t                 l_ocmb_id = 0;
+    uint8_t                  l_ocmb_status = 0;
+    int                      l_membuf_huid_index = 0;
+    int                      l_ocmb_index = 0xFF;  // not found
+
+    o_rsp_ptr->data_length[0] = 0;
+    o_rsp_ptr->data_length[1] = 0;
+    do
+    {
+        if( (l_data_length == OCMB_RECOVERY_STATUS_CMD_LEN) &&
+            (l_cmd_ptr->version == 1) )
+        {
+            l_ocmb_id = (uint32_t)l_cmd_ptr->ocmb_id;
+            l_ocmb_status = l_cmd_ptr->status;
+        }
+        else
+        {
+            CMDH_TRAC_ERR("cmdh_ocmb_recovery_status: Invalid version 0x%02X or data length 0x%02X",
+                          l_cmd_ptr->version, l_data_length);
+            l_rc = ERRL_RC_INVALID_DATA;
+            break;
+        }
+
+        // Find the OCMB number for the given OCMB id
+        for(l_membuf_huid_index = 0; l_membuf_huid_index < MAX_NUM_OCMBS; ++l_membuf_huid_index)
+        {
+            if(l_ocmb_id == G_sysConfigData.membuf_huids[l_membuf_huid_index])
+            {
+               l_ocmb_index = l_membuf_huid_index;
+               break;
+            }
+        }
+        if(l_ocmb_index == 0xFF)
+        {
+            CMDH_TRAC_ERR("cmdh_ocmb_recovery_status: Invalid OCMB ID 0x%08X%08X",
+                          (uint32_t)(l_cmd_ptr->ocmb_id >> 32),
+                          (uint32_t)l_cmd_ptr->ocmb_id);
+            l_rc = ERRL_RC_INVALID_DATA;
+            break;
+        }
+        // id is valid, make sure the OCC requested recovery for this OCMB
+        if(g_amec->proc[0].memctl[l_ocmb_index].membuf.ocmb_recovery_state != OCMB_RECOVERY_STATE_REQUESTED)
+        {
+            CMDH_TRAC_ERR("cmdh_ocmb_recovery_status: OCMB %d didn't request recovery. recovery state 0x%02X",
+                           l_ocmb_index, g_amec->proc[0].memctl[l_ocmb_index].membuf.ocmb_recovery_state);
+            l_rc = ERRL_RC_INVALID_DATA;
+            break;
+        }
+
+        // process the status for the OCMB recovery
+        switch(l_ocmb_status)
+        {
+            case OCMB_RECOVERY_STATUS_SUCCESS:
+                // OCMB should be successfully recovered, clear the recovery state
+                g_amec->proc[0].memctl[l_ocmb_index].membuf.ocmb_recovery_state = OCMB_RECOVERY_STATE_NONE;
+                // Clear that this OCMB was called out so a new failure can be redetected
+                G_membuf_timeout_logged_bitmap &= ~(MEMBUF0_PRESENT_MASK >> l_ocmb_index);
+                G_dimm_timeout_logged_bitmap.bytes[l_ocmb_index] = 0;
+
+                CMDH_TRAC_INFO("cmdh_ocmb_recovery_status: OCMB %d recovery successful", l_ocmb_index);
+                break;
+
+            case OCMB_RECOVERY_STATUS_NO_SUPPORT:
+                // No support to try to recover the OCMB, set the state to no support so we don't ask again
+                g_amec->proc[0].memctl[l_ocmb_index].membuf.ocmb_recovery_state = OCMB_RECOVERY_STATE_NO_SUPPORT;
+                CMDH_TRAC_INFO("cmdh_ocmb_recovery_status: No support for OCMB %d recovery", l_ocmb_index);
+                break;
+
+            case OCMB_RECOVERY_STATUS_FAILED:
+                // OCMB recovery failed
+                g_amec->proc[0].memctl[l_ocmb_index].membuf.ocmb_recovery_state = OCMB_RECOVERY_STATE_FAILURE;
+                CMDH_TRAC_ERR("cmdh_ocmb_recovery_status: OCMB %d recovery try %d failed",
+                               l_ocmb_index, g_amec->proc[0].memctl[l_ocmb_index].membuf.ocmb_recovery_count);
+                break;
+
+            default: // invalid status
+                CMDH_TRAC_ERR("cmdh_ocmb_recovery_status: Invalid status 0x%02X", l_ocmb_status);
+                l_rc = ERRL_RC_INVALID_DATA;
+                break;
+        }
+
+    }while(0);
+
+    if(l_rc)
+    {
+        /// Build Error Response packet
+        cmdh_build_errl_rsp(i_cmd_ptr, o_rsp_ptr, l_rc, &l_err);
+    }
+
+    G_rsp_status = l_rc;
     return l_err;
 }
 

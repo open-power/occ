@@ -555,6 +555,8 @@ void ocmb_data( void )
 {
     errlHndl_t    l_err   = NULL;    // Error handler
     int           rc      = 0;       // Return code
+    uint8_t       l_failed_membuf = 0;
+    bool          l_request_recovery = FALSE;
     OcmbMemData  *    l_temp  = NULL;
     membuf_data_task_t * l_membuf_data_ptr = &G_membuf_data_task;
     MemBufGetMemDataParms_t  * l_parms =
@@ -699,6 +701,9 @@ void ocmb_data( void )
                                                  ERRL_CALLOUT_TYPE_HUID,
                                                  G_sysConfigData.membuf_huids[l_membuf_data_ptr->prev_membuf],
                                                  ERRL_CALLOUT_PRIORITY_HIGH);
+                                // see if OCMB can be recovered
+                                l_failed_membuf = l_membuf_data_ptr->prev_membuf;
+                                l_request_recovery = TRUE;
                             }
 
                             //callout the processor
@@ -716,6 +721,10 @@ void ocmb_data( void )
                                                  ERRL_CALLOUT_TYPE_HUID,
                                                  G_sysConfigData.membuf_huids[l_membuf_data_ptr->current_membuf],
                                                  ERRL_CALLOUT_PRIORITY_HIGH);
+
+                                // see if OCMB can be recovered
+                                l_failed_membuf = l_membuf_data_ptr->current_membuf;
+                                l_request_recovery = TRUE;
                             }
 
                             //callout the processor
@@ -731,6 +740,13 @@ void ocmb_data( void )
                                              ERRL_CALLOUT_TYPE_COMPONENT_ID,
                                              ERRL_COMPONENT_ID_FIRMWARE,
                                              ERRL_CALLOUT_PRIORITY_MED);
+                        }
+
+                        if(l_request_recovery)
+                        {
+                            // Don't pass in the error handle, only want to request recovery if hit temperature timeout error
+                            errlHndl_t l_recovery_err = NULL;
+                            ocmb_recovery_handler(&l_recovery_err, l_failed_membuf);
                         }
 
                         commitErrl(&l_err);
@@ -860,3 +876,62 @@ void ocmb_data( void )
 
     return;
 } // end ocmb_data()
+
+
+// Function Specification
+//
+// Name: ocmb_recovery_handler
+//
+// Description: Handle request for OCMB recovery
+//
+// End Function Specification
+void ocmb_recovery_handler(errlHndl_t *io_err, uint8_t i_mem_buf)
+{
+    uint8_t     l_max_dimm_per_membuf = 0; // Number "DIMM" readings per membuf
+    uint8_t     l_dimm = 0;
+    fru_temp_t* l_fru;
+
+    // Ask for recovery if there's none in progress or failed
+    if( (g_amec->proc[0].memctl[i_mem_buf].membuf.ocmb_recovery_state == OCMB_RECOVERY_STATE_NONE) ||
+        (g_amec->proc[0].memctl[i_mem_buf].membuf.ocmb_recovery_state == OCMB_RECOVERY_STATE_PENDING) )
+    {
+       if(g_amec->proc[0].memctl[i_mem_buf].membuf.ocmb_recovery_count < OCMB_MAX_RECOVERY_REQUESTS)
+       {
+          // If we have an error log then this is a hard failure, set action to request recovery
+          if(*io_err != NULL)
+          {
+             setErrlActions(*io_err, ERRL_ACTIONS_OCMB_RECOVERY_REQUEST);
+             // make severity informational since trying to recover
+             (*io_err)->iv_severity = ERRL_SEV_INFORMATIONAL;
+             g_amec->proc[0].memctl[i_mem_buf].membuf.ocmb_recovery_state = OCMB_RECOVERY_STATE_REQUESTED;
+             g_amec->proc[0].memctl[i_mem_buf].membuf.ocmb_recovery_count++;
+             // clear all sample ages for this OCMB so timeout can be redetcted again after the recovery
+             l_fru = &g_amec->proc[0].memctl[i_mem_buf].membuf.membuf_hottest;
+             l_fru->sample_age = 0;
+             // clear sample ages for all "DIMM" dts under this OCMB
+             if(IS_I2C_MEM_TYPE(G_sysConfigData.mem_type))
+                 l_max_dimm_per_membuf = MAX_NUM_I2C_DIMMS_PER_OCMB;
+             else if(IS_OCM_DDR4_MEM_TYPE(G_sysConfigData.mem_type))
+                 l_max_dimm_per_membuf = NUM_DTS_PER_OCMB_DDR4;
+             else // must be DDR5
+                 l_max_dimm_per_membuf = NUM_DTS_PER_OCMB_DDR5;
+             for(l_dimm = 0; l_dimm < l_max_dimm_per_membuf; l_dimm++)
+             {
+                 l_fru = &g_amec->proc[0].memctl[i_mem_buf].membuf.dimm_temps[l_dimm];
+                 l_fru->sample_age = 0;
+             }
+
+          }
+          else
+          {
+             // Detected an issue but still retrying, reset is pending hitting timeout error
+             g_amec->proc[0].memctl[i_mem_buf].membuf.ocmb_recovery_state = OCMB_RECOVERY_STATE_PENDING;
+          }
+       }
+       else // We have max'd out trying to recover this OCMB, don't request recovery
+       {
+          g_amec->proc[0].memctl[i_mem_buf].membuf.ocmb_recovery_state = OCMB_RECOVERY_STATE_MAX_REQUESTED;
+       }
+    }
+    return;
+} // end ocmb_recovery_handler()

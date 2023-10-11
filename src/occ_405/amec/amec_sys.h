@@ -198,6 +198,11 @@ typedef struct
   // Sensor ID for reporting temperature to BMC and FSP
   uint32_t  temp_sid;
 
+  // OCMB recovery state for this membuf
+  uint8_t   ocmb_recovery_state;
+  // Number of times we tried to recover this membuf
+  uint8_t   ocmb_recovery_count;
+
   // Utilization to power interpolation points for WOF memory credit
   uint8_t              num_interp_pts;
   amec_membuf_int_pt_t util_pwr_pt[MAX_NUM_MEM_INT_PTS];

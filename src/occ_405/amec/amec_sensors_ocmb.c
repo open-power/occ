@@ -80,8 +80,7 @@ void amec_perfcount_ocmb_getmc( OcmbMemData * i_sensor_cache, uint8_t i_membuf);
 //
 // Name: amec_update_ocmb_sensors
 //
-// Description: Updates sensors that have data grabbed by the fast core data
-// task.
+// Description: Updates sensors that have data grabbed by ocmb_data task
 //
 // Thread: RealTime Loop
 //
@@ -160,6 +159,9 @@ void amec_update_ocmb_dimm_dts_sensors(OcmbMemData * i_sensor_cache, uint8_t i_m
     uint8_t  l_max_dts_per_membuf = 0;
     int32_t  l_dimm_temp, l_prev_temp;
     static uint8_t L_ran_once[MAX_NUM_OCMBS] = {FALSE};
+    errlHndl_t l_err = NULL;
+    bool     l_enabled_dts = FALSE;
+    bool     l_valid_sensor_found = FALSE;
 
     // defaults for DDR4
     bool    l_memdts0_valid = i_sensor_cache->status.fields.memdts0_valid;
@@ -186,6 +188,7 @@ void amec_update_ocmb_dimm_dts_sensors(OcmbMemData * i_sensor_cache, uint8_t i_m
          l_memdts2_err = l_ddr5_sensor_cache->status.fields.memdts2_err;
          l_memdts3_valid = l_ddr5_sensor_cache->status.fields.memdts3_valid;
          l_memdts3_err = l_ddr5_sensor_cache->status.fields.memdts3_err;
+
     }
     else if(G_sysConfigData.mem_type == MEM_TYPE_OCM_DDR4)
          l_max_dts_per_membuf = NUM_DTS_PER_OCMB_DDR4;
@@ -199,6 +202,8 @@ void amec_update_ocmb_dimm_dts_sensors(OcmbMemData * i_sensor_cache, uint8_t i_m
         {
             continue;
         }
+        // there's at least one enabled DTS
+        l_enabled_dts = TRUE;
 
 #ifdef __INJECT_DIMM__
         if (l_membuf_ptr->dimm_temps[k].temp_sid) // DIMM has sensor ID
@@ -245,6 +250,8 @@ void amec_update_ocmb_dimm_dts_sensors(OcmbMemData * i_sensor_cache, uint8_t i_m
            (k == 2 && l_memdts2_valid && (!l_memdts2_err)) ||
            (k == 3 && l_memdts3_valid && (!l_memdts3_err)) )
         {
+            l_valid_sensor_found = TRUE;
+
             //make sure temperature is within a 'reasonable' range.
             if(l_dimm_temp < MIN_VALID_DIMM_TEMP ||
                l_dimm_temp > MAX_VALID_DIMM_TEMP)
@@ -330,7 +337,28 @@ void amec_update_ocmb_dimm_dts_sensors(OcmbMemData * i_sensor_cache, uint8_t i_m
         // overtemp will be checked in amec_update_ocmb_temp_sensors() based on dts FRU type
     }
 
-    // Update the temperatures for this membuf
+    // check for OCMB recovery if there's at least 1 enabled DTS
+    if(l_enabled_dts)
+    {
+       if((l_valid_sensor_found) &&
+          (g_amec->proc[0].memctl[i_membuf].membuf.ocmb_recovery_state == OCMB_RECOVERY_STATE_FAILURE))
+       {
+          // This OCMB failed recovery but has a valid DTS clear recovery status
+          // so we will ask for another recovery if it fails again
+          g_amec->proc[0].memctl[i_membuf].membuf.ocmb_recovery_state = OCMB_RECOVERY_STATE_NONE;
+          // Clear that this OCMB was called out so a new failure can be redetected
+          G_membuf_timeout_logged_bitmap &= ~(MEMBUF0_PRESENT_MASK >> i_membuf);
+          G_dimm_timeout_logged_bitmap.bytes[i_membuf] = 0;
+       }
+       else if(!l_valid_sensor_found)
+       {
+            // all enabled DTS are invalid, request OCMB recovery if we hit timeout error
+            // passing in null errlHndl_t will cause pending to be set
+            ocmb_recovery_handler(&l_err, i_membuf);
+       }
+    }
+
+     // Update the temperatures for this membuf
     for(k = 0; k < l_max_dts_per_membuf; k++)
     {
         l_membuf_ptr->dimm_temps[k].cur_temp =  l_dts[k];
@@ -356,6 +384,7 @@ void amec_update_ocmb_dts_sensors(OcmbMemData * i_sensor_cache, uint8_t i_membuf
     uint16_t l_dts;
     int32_t l_sens_temp;
     int32_t  l_prev_temp;
+    errlHndl_t l_err = NULL;
     static uint8_t L_ran_once[MAX_NUM_OCMBS] = {FALSE};
 
     // defaults for DDR4
@@ -440,6 +469,15 @@ void amec_update_ocmb_dts_sensors(OcmbMemData * i_sensor_cache, uint8_t i_membuf
                 //clear error flags
                 l_fru->flags &= FRU_TEMP_FAST_CHANGE;
             }
+            if((G_dimm_enabled_sensors.bytes[i_membuf] == 0) &&
+               (g_amec->proc[0].memctl[i_membuf].membuf.ocmb_recovery_state == OCMB_RECOVERY_STATE_FAILURE))
+            {
+              // This OCMB failed recovery but has a valid OCMB DTS clear recovery status
+              // so we will ask for another recovery if it fails again
+              g_amec->proc[0].memctl[i_membuf].membuf.ocmb_recovery_state = OCMB_RECOVERY_STATE_NONE;
+              // Clear that this OCMB was called out so a new failure can be redetected
+              G_membuf_timeout_logged_bitmap &= ~(MEMBUF0_PRESENT_MASK >> i_membuf);
+            }
         }
         else //status was INVALID
         {
@@ -457,6 +495,12 @@ void amec_update_ocmb_dts_sensors(OcmbMemData * i_sensor_cache, uint8_t i_membuf
 
             //use last temperature
             l_dts = l_prev_temp;
+            // handle OCMB recovery here if there are no enabled "DIMM" dts for this OCMB
+            if(G_dimm_enabled_sensors.bytes[i_membuf] == 0)
+            {
+                // passing in null errlHndl_t will cause pending to be set
+                ocmb_recovery_handler(&l_err, i_membuf);
+            }
         }
 
         L_ran_once[i_membuf] = TRUE;

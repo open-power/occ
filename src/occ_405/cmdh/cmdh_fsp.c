@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2023                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -919,6 +919,10 @@ errlHndl_t cmdh_processTmgtRequest (const cmdh_fsp_cmd_t * i_cmd_ptr,
 
         case CMDH_CLEARERRL:
             l_err = cmdh_clear_elog(i_cmd_ptr, i_rsp_ptr);
+            break;
+
+        case CMDH_OCMBRECOVERYSTATUS:
+            l_err = cmdh_ocmb_recovery_status(i_cmd_ptr, i_rsp_ptr);
             break;
 
         case CMDH_AME_PASS_THROUGH:

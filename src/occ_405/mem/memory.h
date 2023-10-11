@@ -62,6 +62,27 @@ typedef enum
     DIMM_READ_NOT_COMPLETE =        0xFF,
 } readStatus_e;
 
+// Status returned in OCMB Recovery status command returned from (H)TMGT
+typedef enum
+{
+    OCMB_RECOVERY_STATUS_SUCCESS =    0x00,
+    OCMB_RECOVERY_STATUS_NO_SUPPORT = 0x11,
+    OCMB_RECOVERY_STATUS_FAILED =     0xF0,
+} ocmbRecoveryStatus_e;
+
+// OCC internal state of recovery for OCMB
+typedef enum
+{
+    OCMB_RECOVERY_STATE_NONE =          0x00,
+    OCMB_RECOVERY_STATE_PENDING =       0x01,
+    OCMB_RECOVERY_STATE_REQUESTED =     0x02,
+    OCMB_RECOVERY_STATE_MAX_REQUESTED = 0xD0,
+    OCMB_RECOVERY_STATE_NO_SUPPORT =    0xE0,
+    OCMB_RECOVERY_STATE_FAILURE =       0xF0,
+} ocmbRecoveryState_e;
+
+#define OCMB_MAX_RECOVERY_REQUESTS 3
+
 // Enum for specifying each MemBuf
 enum eOccMemBuf
 {
@@ -176,5 +197,8 @@ void disable_all_dimms();
 
 //Collect membuf data for all membuf in specified range
 void ocmb_data( void );
+
+// Handle requesting ocmb recovery
+void ocmb_recovery_handler(errlHndl_t *io_err, uint8_t i_mem_buf);
 
 #endif // _MEMORY_H

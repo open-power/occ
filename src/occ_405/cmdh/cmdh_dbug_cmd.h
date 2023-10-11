@@ -71,7 +71,7 @@ typedef enum
     DBUG_DUMP_SOCKET_PCAP     = 0x0F,
 //  free = 0x10,
     DBUG_WRITE_SENSOR         = 0x11,
-//  free = 0x12,
+    DBUG_INJECT_OCMB_ERR      = 0x12,
     DBUG_INJECT_PGPE_ERRL     = 0x13,
     DBUG_INJECT_ERRL          = 0x14,
     DBUG_DIMM_INJECT          = 0x15,
@@ -379,6 +379,21 @@ typedef struct __attribute__ ((packed))
     char     name[MAX_SENSOR_NAME_SZ];
 }cmdh_dbug_write_sensor_resp_t;
 
+// DBUG_INJECT_OCMB_ERR command struct
+typedef struct __attribute__ ((packed))
+{
+    struct   cmdh_fsp_cmd_header;  // Standard command header
+    uint8_t  sub_cmd;              // Debug sub-command
+    uint8_t  ocmb_num;             // OCMB to inject error on
+    uint8_t  pending_state;        // 0 indicates hard failure elog created
+} cmdh_dbug_inject_ocmb_err_cmd_t;
+
+// DBUG_INJECT_OCMB_ERR response struct
+typedef struct __attribute__ ((packed))
+{
+    struct   cmdh_fsp_rsp_header;
+    uint8_t  ocmb_recovery_state;
+}cmdh_dbug_inject_ocmb_err_resp_t;
 
 //*************************************************************************
 // Globals

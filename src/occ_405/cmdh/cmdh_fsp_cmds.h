@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2021                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2023                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -44,6 +44,7 @@ typedef enum
 {
     CMDH_POLL                   = 0x00,
     CMDH_CLEARERRL              = 0x12,
+    CMDH_OCMBRECOVERYSTATUS     = 0x13,
     CMDH_SETMODESTATE           = 0x20,
     CMDH_SETCONFIGDATA          = 0x21,
     CMDH_SET_USER_PCAP          = 0x22,
@@ -312,6 +313,21 @@ typedef struct __attribute__ ((packed))
 }cmdh_clear_elog_version_t;
 
 //---------------------------------------------------------
+// OCMB Recovery Status Command
+//---------------------------------------------------------
+#define OCMB_RECOVERY_STATUS_CMD_LEN    12
+
+// Used by (H)TMGT to send status of OCMB recovery request
+typedef struct __attribute__ ((packed))
+{
+    struct    cmdh_fsp_cmd_header;
+    uint8_t   version;   // 1
+    uint64_t  ocmb_id;
+    uint8_t   status;
+    uint16_t  reserved;
+}cmdh_ocmb_recovery_status_t;
+
+//---------------------------------------------------------
 // Get Elog Command
 //---------------------------------------------------------
 
@@ -537,6 +553,9 @@ errlHndl_t cmdh_tmgt_poll (const cmdh_fsp_cmd_t * i_cmd_ptr,
 
 errlHndl_t cmdh_clear_elog (const cmdh_fsp_cmd_t * i_cmd_ptr,
                                   cmdh_fsp_rsp_t * i_rsp_ptr);
+
+errlHndl_t cmdh_ocmb_recovery_status(const cmdh_fsp_cmd_t * i_cmd_ptr,
+                                           cmdh_fsp_rsp_t * i_rsp_ptr);
 
 errlHndl_t cmdh_amec_pass_through(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                         cmdh_fsp_rsp_t * i_rsp_ptr);

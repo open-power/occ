@@ -1409,6 +1409,96 @@ void cmdh_dbug_write_sensor(const cmdh_fsp_cmd_t * i_cmd_ptr,
     G_rsp_status = l_rc;
 }
 
+// Function Specification
+//
+// Name: cmdh_dbug_inject_ocmb_err
+//
+// Description: Create an error log for given OCMB
+//
+// End Function Specification
+void cmdh_dbug_inject_ocmb_err( const cmdh_fsp_cmd_t * i_cmd_ptr,
+                                      cmdh_fsp_rsp_t * o_rsp_ptr)
+{
+    const cmdh_dbug_inject_ocmb_err_cmd_t * l_cmd_ptr = (cmdh_dbug_inject_ocmb_err_cmd_t*) i_cmd_ptr;
+    uint16_t l_data_length = CMDH_DATALEN_FIELD_UINT16(l_cmd_ptr);
+    uint16_t l_expected_data_length = sizeof(cmdh_dbug_inject_ocmb_err_cmd_t) - sizeof(cmdh_fsp_cmd_header_t);
+    cmdh_dbug_inject_ocmb_err_resp_t * l_rsp_ptr = (cmdh_dbug_inject_ocmb_err_resp_t*) o_rsp_ptr;
+    uint8_t  l_rc = ERRL_RC_SUCCESS;
+    uint16_t l_resp_data_length = 0;
+    uint8_t    l_membuf = 0;
+    errlHndl_t l_err = NULL;
+
+     // Do sanity check on the function inputs
+    if ((NULL == l_cmd_ptr) || (NULL == l_rsp_ptr))
+    {
+        l_rc = ERRL_RC_INTERNAL_FAIL;
+    }
+    else if(l_data_length != l_expected_data_length)
+    {
+        TRAC_ERR("cmdh_dbug_inject_ocmb_err: invalid length Expected: 0x%04X  Received: 0x%04X",
+                  l_expected_data_length, l_data_length);
+        l_rc = ERRL_RC_INVALID_CMD_LEN;
+    }
+    else
+    {
+        // Create an error log for given OCMB
+        l_membuf = l_cmd_ptr->ocmb_num;
+        if(l_membuf >= MAX_NUM_OCMBS)
+        {
+            TRAC_ERR("cmdh_dbug_inject_ocmb_err: Invalid OCMB num %d", l_membuf);
+            l_rc = ERRL_RC_INVALID_DATA;
+        }
+        else
+        {
+             if(l_cmd_ptr->pending_state)
+             {
+                 if((g_amec->proc[0].memctl[l_membuf].membuf.ocmb_recovery_state == OCMB_RECOVERY_STATE_NO_SUPPORT) ||
+                    (g_amec->proc[0].memctl[l_membuf].membuf.ocmb_recovery_state == OCMB_RECOVERY_STATE_MAX_REQUESTED))
+                 {
+                     // enable ocmb recovery for testing
+                     g_amec->proc[0].memctl[l_membuf].membuf.ocmb_recovery_state = OCMB_RECOVERY_STATE_NONE;
+                 }
+                 TRAC_ERR("cmdh_dbug_inject_ocmb_err: Recovery pending for OCMB %d current OCMB recovery state 0x%02X",
+                           l_membuf, g_amec->proc[0].memctl[l_membuf].membuf.ocmb_recovery_state);
+                 // don't create an error log yet, just set pending
+                 ocmb_recovery_handler(&l_err, l_membuf);
+             }
+             else  // create error log i.e. simulate hard failure
+             {
+                 // since this is a debug only command we won't check if OCMB is present or has a valid huid
+                 TRAC_ERR("cmdh_dbug_inject_ocmb_err: Creating error for OCMB %d current OCMB recovery state 0x%02X",
+                           l_membuf, g_amec->proc[0].memctl[l_membuf].membuf.ocmb_recovery_state);
+
+                 l_err = createErrl(CMDH_DBUG_MID,                     //modId
+                                    DEBUG_ERROR,                       //reasoncode
+                                    OCC_NO_EXTENDED_RC,                //Extended reason code
+                                    ERRL_SEV_PREDICTIVE,               //Severity
+                                    NULL,                              //Trace Buf
+                                    DEFAULT_TRACE_SIZE,                //Trace Size
+                                    l_membuf,                          //userdata1
+                                    0);                                //userdata2
+                 addCalloutToErrl(l_err,
+                                  ERRL_CALLOUT_TYPE_HUID,
+                                  G_sysConfigData.membuf_huids[l_membuf],
+                                  ERRL_CALLOUT_PRIORITY_HIGH);
+                 ocmb_recovery_handler(&l_err, l_membuf);
+                 commitErrl(&l_err);
+             }
+             // Fill in response data
+             l_rsp_ptr->ocmb_recovery_state = g_amec->proc[0].memctl[l_membuf].membuf.ocmb_recovery_state;
+             l_resp_data_length = sizeof(g_amec->proc[0].memctl[l_membuf].membuf.ocmb_recovery_state);
+        }
+    }
+
+    // fill in response data length
+    if( l_rsp_ptr != NULL )
+    {
+        l_rsp_ptr->data_length[0] = CONVERT_UINT16_UINT8_HIGH(l_resp_data_length);
+        l_rsp_ptr->data_length[1] = CONVERT_UINT16_UINT8_LOW(l_resp_data_length);
+    }
+    G_rsp_status = l_rc;
+    return;
+}
 
 // Function Specification
 //
@@ -1628,6 +1718,10 @@ void cmdh_dbug_cmd (const cmdh_fsp_cmd_t * i_cmd_ptr,
 
         case DBUG_WRITE_SENSOR:
             cmdh_dbug_write_sensor(i_cmd_ptr, o_rsp_ptr);
+            break;
+
+        case DBUG_INJECT_OCMB_ERR:
+            cmdh_dbug_inject_ocmb_err(i_cmd_ptr, o_rsp_ptr);
             break;
 
         case DBUG_INJECT_PGPE_ERRL:

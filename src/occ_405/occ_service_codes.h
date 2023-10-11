@@ -80,6 +80,10 @@ enum occReasonCode
     PCAP_THROTTLE_POWER_LIMIT       = 0x61,
     /// Frequency below the modes disabled point due to power or thermal
     PERFORMANCE_LOSS                = 0x62,
+
+    /// Debug - user generated error
+    DEBUG_ERROR                     = 0x99,
+
     /// Firmware Failure: equivalent to assertion failures
     INTERNAL_FW_FAILURE             = 0xA0,
 

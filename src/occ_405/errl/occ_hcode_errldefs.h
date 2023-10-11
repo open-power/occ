@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2020,2021                        */
+/* Contributors Listed Below - COPYRIGHT 2020,2023                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -65,6 +65,7 @@ typedef enum
 #ifndef __PPE__
 typedef enum
 {
+    ERRL_ACTIONS_OCMB_RECOVERY_REQUEST    = 0x04, //(h)tmgt to run OCMB recovery procedures to try to recover the OCMB
     ERRL_ACTIONS_MANUFACTURING_ERROR      = 0x08, //tmgt will set severity to predictive while in mfg mode
     ERRL_ACTIONS_FORCE_SEND               = 0x10, //htmgt will force error to be sent to BMC (for info errors to be seen)
     ERRL_ACTIONS_WOF_RESET_REQUIRED       = 0x20, //Soft reset without incrementing permanent safe mode count
@@ -246,12 +247,13 @@ struct ErrlEntry
     {
         struct
         {
-            uint8_t reset_required     : 1;  // Error is critical and requires OCC reset
-            uint8_t safe_mode_required : 1;  // immediate permanent safe mode (used for checkstops)
-            uint8_t wof_reset_required : 1;  // request soft reset (will not increment counts for safe mode)
-            uint8_t force_send         : 1;  // Force elog to be sent to the BMC
-            uint8_t mfg_error          : 1;  // Fan go to max,oversubscription,core above warning,Throttled.
-            uint8_t reserved1          : 3;
+            uint8_t reset_required        : 1;  // Error is critical and requires OCC reset
+            uint8_t safe_mode_required    : 1;  // immediate permanent safe mode (used for checkstops)
+            uint8_t wof_reset_required    : 1;  // request soft reset (will not increment counts for safe mode)
+            uint8_t force_send            : 1;  // Force elog to be sent to the BMC
+            uint8_t mfg_error             : 1;  // Forced elog to unrecoverable if in mfg mode
+            uint8_t ocmb_recovery_request : 1;  // Request OCMB recovery
+            uint8_t reserved1             : 2;
         };
         uint8_t word;
         uint8_t reserved2;                   // PPE: must be set 0 until actions are used

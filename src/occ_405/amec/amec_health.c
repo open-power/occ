@@ -323,8 +323,6 @@ void amec_health_check_dimm_timeout()
     fru_temp_t* l_fru;
     errlHndl_t  l_err = NULL;
     errlHndl_t  l_redundancy_lost_err = NULL;
-    uint32_t    l_callouts_count = 0;
-    uint32_t    l_redundancy_lost_callouts_count = 0;
     uint64_t    l_huid;
     uint8_t     l_max_dimm_per_membuf = 0; // Number "DIMM" readings per membuf
     uint8_t     l_ocm_dts_type_expired_bitmap = 0;
@@ -385,6 +383,11 @@ void amec_health_check_dimm_timeout()
                     G_dimm_temp_expired_bitmap.bytes[l_membuf] = 0;
                     TRAC_INFO("All DIMM sensors for membuf %d have been updated", l_membuf);
                 }
+                continue;
+            }
+            // skip this membuf if waiting for recovery status
+            if(g_amec->proc[0].memctl[l_membuf].membuf.ocmb_recovery_state == OCMB_RECOVERY_STATE_REQUESTED)
+            {
                 continue;
             }
 
@@ -465,8 +468,9 @@ void amec_health_check_dimm_timeout()
                              (l_membuf<<8)|l_dimm,
                              l_fru->temp_fru_type);
 
-                    // for non i2c memory check for redundancy
-                    if(!IS_I2C_MEM_TYPE(G_sysConfigData.mem_type))
+                    // for non i2c memory check for redundancy if we aren't going to try to recover the OCMB
+                    if((!IS_I2C_MEM_TYPE(G_sysConfigData.mem_type)) &&
+                       (g_amec->proc[0].memctl[l_membuf].membuf.ocmb_recovery_state != OCMB_RECOVERY_STATE_PENDING))
                     {
                         // mark that this sensor is lost
                         l_fru->flags |= FRU_SENSOR_STATUS_REDUNDANCY_LOST;
@@ -488,7 +492,7 @@ void amec_health_check_dimm_timeout()
                                }
                            }
                         }
-                    } // if not i2c type
+                    } // if check for redundancy (not i2c type and OCMB not being recovered)
                 }
                 //If we've already logged an error for this FRU go to the next one.
                 if(G_dimm_timeout_logged_bitmap.bytes[l_membuf] & (DIMM_SENSOR0 >> l_dimm))
@@ -516,34 +520,30 @@ void amec_health_check_dimm_timeout()
                                      &G_membuf_timeout_logged_bitmap,
                                      &G_dimm_timeout_logged_bitmap.bytes[l_membuf]);
 
-                // Create single elog for error and single for redundancy lost with up to MAX_CALLOUTS
-                if( (!l_redundancy_lost) && (l_callouts_count < ERRL_MAX_CALLOUTS) )
+                if(!l_redundancy_lost && !l_err)
                 {
-                    if(!l_err)
-                    {
-                        // make this info only in simics
-                        if(G_simics_environment)
-                            l_severity = ERRL_SEV_INFORMATIONAL;
+                    // make this info only in simics
+                    if(G_simics_environment)
+                        l_severity = ERRL_SEV_INFORMATIONAL;
 
-                        /* @
-                         * @errortype
-                         * @moduleid    AMEC_HEALTH_CHECK_DIMM_TIMEOUT
-                         * @reasoncode  FRU_TEMP_TIMEOUT
-                         * @userdata1   timeout value in seconds
-                         * @userdata2   0
-                         * @userdata4   ERC_AMEC_DIMM_TEMP_TIMEOUT
-                         * @devdesc     Failed to read a memory DIMM temperature
-                         *
-                         */
-                        l_err = createErrl(AMEC_HEALTH_CHECK_DIMM_TIMEOUT,    //modId
-                                           FRU_TEMP_TIMEOUT,                  //reasoncode
-                                           ERC_AMEC_DIMM_TEMP_TIMEOUT,        //Extended reason code
-                                           l_severity,                        //Severity
-                                           NULL,                              //Trace Buf
-                                           DEFAULT_TRACE_SIZE,                //Trace Size
-                                           l_temp_timeout,                    //userdata1
-                                           0);                                //userdata2
-                    }
+                    /* @
+                     * @errortype
+                     * @moduleid    AMEC_HEALTH_CHECK_DIMM_TIMEOUT
+                     * @reasoncode  FRU_TEMP_TIMEOUT
+                     * @userdata1   timeout value in seconds
+                     * @userdata2   0
+                     * @userdata4   ERC_AMEC_DIMM_TEMP_TIMEOUT
+                     * @devdesc     Failed to read a memory DIMM temperature
+                     *
+                     */
+                    l_err = createErrl(AMEC_HEALTH_CHECK_DIMM_TIMEOUT,    //modId
+                                       FRU_TEMP_TIMEOUT,                  //reasoncode
+                                       ERC_AMEC_DIMM_TEMP_TIMEOUT,        //Extended reason code
+                                       l_severity,                        //Severity
+                                       NULL,                              //Trace Buf
+                                       DEFAULT_TRACE_SIZE,                //Trace Size
+                                       l_temp_timeout,                    //userdata1
+                                       0);                                //userdata2
 
                     //Get the HUID for the DIMM and add callout
                     l_huid = amec_mem_get_huid(l_membuf, l_dimm);
@@ -552,34 +552,41 @@ void amec_health_check_dimm_timeout()
                                      l_huid,
                                      ERRL_CALLOUT_PRIORITY_MED);
 
-                    l_callouts_count++;
-                }
-                else if( l_redundancy_lost && (l_redundancy_lost_callouts_count < ERRL_MAX_CALLOUTS) )
-                {
-                    if(!l_redundancy_lost_err)
+                    // check if error recovery should be attempted
+                    if(g_amec->proc[0].memctl[l_membuf].membuf.ocmb_recovery_state == OCMB_RECOVERY_STATE_PENDING)
                     {
-                        /* @
-                         * @errortype
-                         * @moduleid    AMEC_HEALTH_CHECK_DIMM_TIMEOUT
-                         * @reasoncode  FRU_TEMP_REDUNDANCY_LOST
-                         * @userdata1   timeout value in seconds
-                         * @userdata2   0
-                         * @userdata4   ERC_AMEC_DIMM_TEMP_TIMEOUT
-                         * @devdesc     Failed to read a memory DIMM temperature
-                         *
-                         */
-                        l_redundancy_lost_err = createErrl(AMEC_HEALTH_CHECK_DIMM_TIMEOUT,    //modId
-                                                           FRU_TEMP_REDUNDANCY_LOST,          //reasoncode
-                                                           ERC_AMEC_DIMM_TEMP_TIMEOUT,        //Extended reason code
-                                                           ERRL_SEV_INFORMATIONAL,            //Severity
-                                                           NULL,                              //Trace Buf
-                                                           DEFAULT_TRACE_SIZE,                //Trace Size
-                                                           l_temp_timeout,                    //userdata1
-                                                           0);                                //userdata2
-
-                        // set the mfg action flag (allows callout to be added to info error)
-                        setErrlActions(l_redundancy_lost_err, ERRL_ACTIONS_MANUFACTURING_ERROR);
+                        // very likely this is OCMB issue, add OCMB as high priority callout
+                        addCalloutToErrl(l_err,
+                                         ERRL_CALLOUT_TYPE_HUID,
+                                         G_sysConfigData.membuf_huids[l_membuf],
+                                         ERRL_CALLOUT_PRIORITY_HIGH);
+                        ocmb_recovery_handler(&l_err, l_membuf);
                     }
+                    commitErrl(&l_err);
+                }
+                else if( l_redundancy_lost && !l_redundancy_lost_err )
+                {
+                    /* @
+                     * @errortype
+                     * @moduleid    AMEC_HEALTH_CHECK_DIMM_TIMEOUT
+                     * @reasoncode  FRU_TEMP_REDUNDANCY_LOST
+                     * @userdata1   timeout value in seconds
+                     * @userdata2   0
+                     * @userdata4   ERC_AMEC_DIMM_TEMP_TIMEOUT
+                     * @devdesc     Failed to read a memory DIMM temperature
+                     *
+                     */
+                    l_redundancy_lost_err = createErrl(AMEC_HEALTH_CHECK_DIMM_TIMEOUT,    //modId
+                                                       FRU_TEMP_REDUNDANCY_LOST,          //reasoncode
+                                                       ERC_AMEC_DIMM_TEMP_TIMEOUT,        //Extended reason code
+                                                       ERRL_SEV_INFORMATIONAL,            //Severity
+                                                       NULL,                              //Trace Buf
+                                                       DEFAULT_TRACE_SIZE,                //Trace Size
+                                                       l_temp_timeout,                    //userdata1
+                                                       0);                                //userdata2
+
+                    // set the mfg action flag (allows callout to be added to info error)
+                    setErrlActions(l_redundancy_lost_err, ERRL_ACTIONS_MANUFACTURING_ERROR);
 
                     //Get the HUID for the DIMM and add callout
                     l_huid = amec_mem_get_huid(l_membuf, l_dimm);
@@ -587,8 +594,17 @@ void amec_health_check_dimm_timeout()
                                      ERRL_CALLOUT_TYPE_HUID,
                                      l_huid,
                                      ERRL_CALLOUT_PRIORITY_MED);
-
-                    l_redundancy_lost_callouts_count++;
+                    // check if error recovery should be attempted
+                    if(g_amec->proc[0].memctl[l_membuf].membuf.ocmb_recovery_state == OCMB_RECOVERY_STATE_PENDING)
+                    {
+                        // very likely this is OCMB issue, add OCMB as high priority callout
+                        addCalloutToErrl(l_redundancy_lost_err,
+                                         ERRL_CALLOUT_TYPE_HUID,
+                                         G_sysConfigData.membuf_huids[l_membuf],
+                                         ERRL_CALLOUT_PRIORITY_HIGH);
+                        ocmb_recovery_handler(&l_redundancy_lost_err, l_membuf);
+                    }
+                    commitErrl(&l_redundancy_lost_err);
                 }
             } //iterate over all dimms
             if(G_log_gpe1_error)
@@ -650,7 +666,7 @@ void amec_health_check_dimm_timeout()
         }//iterate over all membufs
     }while(0);
 
-    // For OCM the "DIMM" dts are used for different types.  Need to determine what type the
+    // For OCMB the "DIMM" dts are used for different types.  Need to determine what type the
     // "DIMM" DTS readings are for so the control loop will handle timeout based on correct type
     if(G_dimm_temp_expired_bitmap.dw[0] || G_dimm_temp_expired_bitmap.dw[1])
     {
@@ -816,7 +832,6 @@ void amec_health_check_membuf_timeout()
     uint16_t l_membuf;
     fru_temp_t* l_fru;
     errlHndl_t  l_err = NULL;
-    uint32_t    l_callouts_count = 0;
     uint64_t    l_huid;
     static uint16_t L_trace_resume = 0;
     ERRL_SEVERITY l_severity = ERRL_SEV_PREDICTIVE;
@@ -861,6 +876,12 @@ void amec_health_check_membuf_timeout()
                     G_membuf_temp_expired_bitmap &= ~(MEMBUF0_PRESENT_MASK >> l_membuf);
                     TRAC_INFO("membuf %d temps have been updated", l_membuf);
                 }
+                continue;
+            }
+
+            // skip this membuf if waiting for recovery status
+            if(g_amec->proc[0].memctl[l_membuf].membuf.ocmb_recovery_state == OCMB_RECOVERY_STATE_REQUESTED)
+            {
                 continue;
             }
 
@@ -947,32 +968,30 @@ void amec_health_check_membuf_timeout()
                                    g_amec->thermalmembuf.temp_timeout,  //userdata1
                                    0);                                //userdata2
 
-                l_callouts_count = 0;
+               //Get the HUID for the membuf
+               l_huid = G_sysConfigData.membuf_huids[l_membuf];
+
+               // Callout membuf
+               addCalloutToErrl(l_err,
+                                ERRL_CALLOUT_TYPE_HUID,
+                                l_huid,
+                                ERRL_CALLOUT_PRIORITY_HIGH);
+
+               // check if error recovery should be attempted
+               if(g_amec->proc[0].memctl[l_membuf].membuf.ocmb_recovery_state == OCMB_RECOVERY_STATE_PENDING)
+               {
+                   ocmb_recovery_handler(&l_err, l_membuf);
+               }
+
+               commitErrl(&l_err);
+
+               //Mark membuf as logged so we don't log it more than once
+               // this will be cleared if recovery is successful
+               amec_mem_mark_logged(l_membuf,
+                                    0xff,
+                                    &G_membuf_timeout_logged_bitmap,
+                                    &G_dimm_timeout_logged_bitmap.bytes[l_membuf]);
             }
-
-            //Get the HUID for the membuf
-            l_huid = G_sysConfigData.membuf_huids[l_membuf];
-
-            // Callout membuf
-            addCalloutToErrl(l_err,
-                             ERRL_CALLOUT_TYPE_HUID,
-                             l_huid,
-                             ERRL_CALLOUT_PRIORITY_MED);
-
-            l_callouts_count++;
-
-            //If we've reached the max # of callouts for an error log
-            //commit the error log
-            if(l_callouts_count == ERRL_MAX_CALLOUTS)
-            {
-                commitErrl(&l_err);
-            }
-
-            //Mark membuf as logged so we don't log it more than once
-            amec_mem_mark_logged(l_membuf,
-                                 0xff,
-                                 &G_membuf_timeout_logged_bitmap,
-                                 &G_dimm_timeout_logged_bitmap.bytes[l_membuf]);
         } //iterate over all membufs
 
         if(l_err)
