@@ -28,7 +28,7 @@
 #include <string.h>
 #include "parser_common.h"
 
-#define WOF_DATA_SIZE 890
+#define WOF_DATA_SIZE 954
 // NOTE: This tool is to be used when WOF Dynamic data is dumped by the OCC, and currently
 //       only accepts input files in binary format.
 
@@ -307,6 +307,10 @@ int main(int argc, char** argv)
     printf("Total present DIMM preheat pwr: 0x%08XcW\n", get_uint32(wof_file));
     l_signed8 = (int8_t)fgetc(wof_file);
     printf("ambient_adj_for_dimm: %d\n", l_signed8);
+    for(i = 0; i < MAX_NUM_OCMBS; i++)
+        printf("Sensor MEMUTILM%d: %d (0.01%%)\n", i, get_uint16(wof_file));
+    for(i = 0; i < MAX_NUM_OCMBS; i++)
+        printf("Sensor MEMUTILP1M%d: %d (0.01%%)\n", i, get_uint16(wof_file));
 
     // Close the file
     if(wof_file != NULL)

@@ -2391,6 +2391,7 @@ errlHndl_t data_store_memory_pwr_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
     errlHndl_t                      l_err = NULL;
 
     cmdh_mem_pwr_data_t * l_cmd_ptr = (cmdh_mem_pwr_data_t *)i_cmd_ptr;
+    uint64_t                        l_temp64 = 0;
     uint16_t                        l_data_length = 0;
     uint16_t                        l_min_data_length = 0;
     uint16_t                        l_remaining_data = 0;
@@ -2478,6 +2479,10 @@ errlHndl_t data_store_memory_pwr_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
                     }
                     g_amec->proc[0].memctl[mem_buf].membuf.util_pwr_pt[j].util_cPercent = util;
                     g_amec->proc[0].memctl[mem_buf].membuf.util_pwr_pt[j].power_cW = power;
+                    // save for WOF debug command
+                    l_temp64 = (uint64_t)util;
+                    l_temp64 = l_temp64 << 32;
+                    g_amec->static_wof_data.ocmb_util_pwr_pts[mem_buf][j] = (l_temp64 | (uint64_t)power);
                 }
                 if(l_interp_error) // data failed stop processing all OCMBs
                     break;

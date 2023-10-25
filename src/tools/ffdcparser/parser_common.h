@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2018,2022                        */
+/* Contributors Listed Below - COPYRIGHT 2018,2023                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -25,6 +25,8 @@
 
 // Constants
 #define MAX_NUM_CORES 32
+#define MAX_NUM_OCMBS 16
+#define MAX_NUM_MEM_INT_PTS 12
 
 
 

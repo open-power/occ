@@ -408,7 +408,11 @@ typedef struct __attribute__ ((packed))
     uint32_t total_dimm_preheat_pwr_cW;
     // [889] Contains degrees C ambient is changed by to account for DIMM power
     int8_t ambient_adj_for_dimm;
-} amec_wof_t;  // 890 bytes total
+    // [890] The most recently read value in the sensor MEMUTILMx where x is OCMB num
+    uint16_t memutil[MAX_NUM_OCMBS];
+    // [922] The most recently read value in the sensor MEMUTILP1Mx (DDR5 only) where x is OCMB num
+    uint16_t memutilp1[MAX_NUM_OCMBS];
+} amec_wof_t;  // 954 bytes total
 
 // Structure used in g_amec to hold static WOF data
 typedef struct __attribute__ ((packed, aligned(128)))
@@ -443,6 +447,9 @@ typedef struct __attribute__ ((packed, aligned(128)))
     uint32_t altitude_reference_m;
     // Last ambient condition in WOF tables
     uint32_t last_ambient_condition;
+    // OCMB util to power interpolation points uuuuuuuupppppppp
+    // uuuuuuuu is util in cPercent and pppppppp is power in cW
+    uint64_t ocmb_util_pwr_pts[MAX_NUM_OCMBS][MAX_NUM_MEM_INT_PTS];  // 192 bytes (16x12)
 } amec_static_wof_t;
 
 // Structure for sensors used in g_amec for AMESTER for additional debug

@@ -1990,6 +1990,7 @@ void calc_wof_dimm_adjustment( void )
     uint8_t  l_num_interp_pts = 0;
     int8_t   l_signed = 1;
     uint16_t l_ocmb_util = 0;
+    uint16_t l_ocmb_util_p1 = 0;
     uint16_t l_util1 = 0;
     uint16_t l_util2 = 0;
     uint32_t l_ocmb_total_pwr_cW = 0;
@@ -2019,10 +2020,14 @@ void calc_wof_dimm_adjustment( void )
            if(MEMBUF_PRESENT(l_ocmb_num))
            {
               l_ocmb_util = getSensorByGsid((uint16_t)(MEMUTILM0 + l_ocmb_num))->sample;
+              // Save OCMB util used
+              g_wof->memutil[l_ocmb_num] = l_ocmb_util;
               if(IS_OCM_DDR5_MEM_TYPE(G_sysConfigData.mem_type))
               {
                   // add port 1 utilization
-                  l_ocmb_util += getSensorByGsid((uint16_t)(MEMUTILP1M0 + l_ocmb_num))->sample;
+                  l_ocmb_util_p1 = getSensorByGsid((uint16_t)(MEMUTILP1M0 + l_ocmb_num))->sample;
+                  l_ocmb_util += l_ocmb_util_p1;
+                  g_wof->memutilp1[l_ocmb_num] = l_ocmb_util_p1;
               }
 
               // find the interpolation points for l_ocmb_util
