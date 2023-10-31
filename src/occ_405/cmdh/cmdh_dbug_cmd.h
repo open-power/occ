@@ -402,7 +402,8 @@ typedef struct __attribute__ ((packed))
     struct   cmdh_fsp_cmd_header;  // Standard command header
     uint8_t  sub_cmd;              // Debug sub-command
     uint8_t  ocmb_num;             // OCMB to inject error on
-    uint8_t  pending_state;        // 0 indicates hard failure elog created
+    uint8_t  debug_actions;        // 0x01 == OCC internal pending state set. All other values will set
+                                   // hard failure elog created see cmdh_dbug_inject_ocmb_err() for values
 } cmdh_dbug_inject_ocmb_err_cmd_t;
 
 // DBUG_INJECT_OCMB_ERR response struct

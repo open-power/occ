@@ -1501,7 +1501,7 @@ void cmdh_dbug_inject_ocmb_err( const cmdh_fsp_cmd_t * i_cmd_ptr,
         }
         else
         {
-             if(l_cmd_ptr->pending_state)
+             if(l_cmd_ptr->debug_actions == 0x01)
              {
                  if((g_amec->proc[0].memctl[l_membuf].membuf.ocmb_recovery_state == OCMB_RECOVERY_STATE_NO_SUPPORT) ||
                     (g_amec->proc[0].memctl[l_membuf].membuf.ocmb_recovery_state == OCMB_RECOVERY_STATE_MAX_REQUESTED))
@@ -1528,10 +1528,54 @@ void cmdh_dbug_inject_ocmb_err( const cmdh_fsp_cmd_t * i_cmd_ptr,
                                     DEFAULT_TRACE_SIZE,                //Trace Size
                                     l_membuf,                          //userdata1
                                     0);                                //userdata2
+
+                 // check for adding callouts for (H)TMGT debug
+                 // multiple bits may be set to add up to 4 additional callouts
+                 // 0x20 -- add fw before OCMB callout
+                 // 0x40 -- add proc id before OCMB callout
+                 // 0x02 -- add fw after OCMB callout
+                 // 0x04 -- add proc id after OCMB callout
+
+                 if(l_cmd_ptr->debug_actions & 0x20)
+                 {
+                     // add FW callout
+                     addCalloutToErrl(l_err,
+                                      ERRL_CALLOUT_TYPE_COMPONENT_ID,
+                                      ERRL_COMPONENT_ID_FIRMWARE,
+                                      ERRL_CALLOUT_PRIORITY_LOW);
+                 }
+                 if(l_cmd_ptr->debug_actions & 0x40)
+                 {
+                     // add proc callout
+                     addCalloutToErrl(l_err,
+                                      ERRL_CALLOUT_TYPE_HUID,
+                                      G_sysConfigData.proc_huid,
+                                      ERRL_CALLOUT_PRIORITY_MED);
+                 }
+
+                 // always have OCMB callout
                  addCalloutToErrl(l_err,
                                   ERRL_CALLOUT_TYPE_HUID,
                                   G_sysConfigData.membuf_huids[l_membuf],
                                   ERRL_CALLOUT_PRIORITY_HIGH);
+
+                 if(l_cmd_ptr->debug_actions & 0x02)
+                 {
+                     // add FW callout
+                     addCalloutToErrl(l_err,
+                                      ERRL_CALLOUT_TYPE_COMPONENT_ID,
+                                      ERRL_COMPONENT_ID_FIRMWARE,
+                                      ERRL_CALLOUT_PRIORITY_LOW);
+                 }
+
+                 if(l_cmd_ptr->debug_actions & 0x04)
+                 {
+                     // add proc callout
+                     addCalloutToErrl(l_err,
+                                      ERRL_CALLOUT_TYPE_HUID,
+                                      G_sysConfigData.proc_huid,
+                                      ERRL_CALLOUT_PRIORITY_MED);
+                 }
                  ocmb_recovery_handler(&l_err, l_membuf);
                  commitErrl(&l_err);
              }
