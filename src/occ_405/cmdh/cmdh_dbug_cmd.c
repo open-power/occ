@@ -794,6 +794,57 @@ void cmdh_dbug_wof_eco_mode( const cmdh_fsp_cmd_t * i_cmd_ptr,
     G_rsp_status = l_rc;
     return;
 }
+
+// Function Specification
+//
+// Name: cmdh_dbug_wof_ov_uv_credit
+//
+// Description: Overwrite WOV credit knob that comes from the WOF tables header
+//
+// End Function Specification
+void cmdh_dbug_wof_ov_uv_credit( const cmdh_fsp_cmd_t * i_cmd_ptr,
+                                       cmdh_fsp_rsp_t * o_rsp_ptr)
+{
+    const cmdh_dbug_set_wof_ov_uv_credit_cmd_t * l_cmd_ptr = (cmdh_dbug_set_wof_ov_uv_credit_cmd_t*) i_cmd_ptr;
+    uint16_t l_data_length = CMDH_DATALEN_FIELD_UINT16(l_cmd_ptr);
+    uint16_t l_expected_data_length = sizeof(cmdh_dbug_set_wof_ov_uv_credit_cmd_t) - sizeof(cmdh_fsp_cmd_header_t);
+    cmdh_dbug_set_wof_ov_uv_credit_rsp_t * l_rsp_ptr = (cmdh_dbug_set_wof_ov_uv_credit_rsp_t*) o_rsp_ptr;
+    uint8_t  l_rc = ERRL_RC_SUCCESS;
+    uint16_t l_resp_data_length = 0;
+
+     // Do sanity check on the function inputs
+    if ((NULL == l_cmd_ptr) || (NULL == l_rsp_ptr))
+    {
+        l_rc = ERRL_RC_INTERNAL_FAIL;
+    }
+    else if(l_data_length != l_expected_data_length)
+    {
+        TRAC_ERR("cmdh_dbug_wof_ov_uv_credit: invalid length Expected: 0x%04X  Received: 0x%04X",
+                          l_expected_data_length, l_data_length);
+        l_rc = ERRL_RC_INVALID_CMD_LEN;
+    }
+    else
+    {
+        // Save the WOV credit
+        TRAC_INFO("DEBUG - WOV Credit knob changed from[%d] to[%d]",
+                   g_amec->wof.wov_credit_knob, l_cmd_ptr->wov_credit);
+        g_amec->wof.wov_credit_knob = l_cmd_ptr->wov_credit;
+
+        // Fill in response data
+        l_rsp_ptr->wov_credit = g_amec->wof.wov_credit_knob;
+        l_resp_data_length = sizeof(g_amec->wof.wov_credit_knob);
+    }
+
+    // fill in response data length
+    if( l_rsp_ptr != NULL )
+    {
+        l_rsp_ptr->data_length[0] = CONVERT_UINT16_UINT8_HIGH(l_resp_data_length);
+        l_rsp_ptr->data_length[1] = CONVERT_UINT16_UINT8_LOW(l_resp_data_length);
+    }
+    G_rsp_status = l_rc;
+    return;
+}
+
 // Function Specification
 //
 // Name: cmdh_dbug_allow_trace
@@ -1803,6 +1854,10 @@ void cmdh_dbug_cmd (const cmdh_fsp_cmd_t * i_cmd_ptr,
 
         case DBUG_WOF_SET_ECO_MODE:
             cmdh_dbug_wof_eco_mode(i_cmd_ptr, o_rsp_ptr);
+            break;
+
+        case DBUG_WOF_SET_OV_UV_CREDIT:
+            cmdh_dbug_wof_ov_uv_credit(i_cmd_ptr, o_rsp_ptr);
             break;
 
         case DBUG_DUMP_OPPB:

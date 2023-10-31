@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2019,2021                        */
+/* Contributors Listed Below - COPYRIGHT 2019,2023                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -341,7 +341,10 @@ typedef struct
         char     text[4];
     } magic_number;
 
-    uint8_t  reserved0[3];
+    uint8_t  major_dd_level;
+    uint8_t  minor_dd_level;
+    // Knob to adjust WOF ceff credit for under/over volting
+    uint8_t  wov_credit_knob;
 
     /// Layouut version of this structure
     uint8_t  header_version;

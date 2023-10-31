@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2023                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -119,7 +119,7 @@ uint32_t dcom_build_slv_inbox(void)
         memcpy( G_dcom_slv_inbox_tx[l_slv_idx].gpio,
                 G_apss_pwr_meas.gpio,
                 sizeof( G_dcom_slv_inbox_tx[l_slv_idx].gpio));
-
+/*
         // Trace APSS GPIOs if any changed and trace enabled
         if( (G_allow_trace_flags & ALLOW_APSS_GPIO_TRACE) &&
             (IS_OCC_STATE_OBSERVATION() || IS_OCC_STATE_ACTIVE() || IS_OCC_STATE_CHARACTERIZATION()) &&
@@ -129,9 +129,10 @@ uint32_t dcom_build_slv_inbox(void)
             TRAC_IMP("APSS GPIOs Port0[0x%X] Port1[0x%X]",
                       G_apss_pwr_meas.gpio[0],
                       G_apss_pwr_meas.gpio[1]);
-            L_last_gpio0 = G_apss_pwr_meas.gpio[0];
-            L_last_gpio1 = G_apss_pwr_meas.gpio[1];
         }
+*/
+        L_last_gpio0 = G_apss_pwr_meas.gpio[0];
+        L_last_gpio1 = G_apss_pwr_meas.gpio[1];
 
         memcpy( G_dcom_slv_inbox_tx[l_slv_idx].tod,
                 &G_apss_pwr_meas.tod,

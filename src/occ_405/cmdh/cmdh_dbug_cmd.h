@@ -95,7 +95,8 @@ typedef enum
     DBUG_CLEAR_AME_SENSOR     = 0x27,
     DBUG_WOF_CONTROL          = 0x28,
     DBUG_WOF_OCS              = 0x29,
-    DBUG_WOF_SET_ECO_MODE     = 0x2A
+    DBUG_WOF_SET_ECO_MODE     = 0x2A,
+    DBUG_WOF_SET_OV_UV_CREDIT = 0x2B
 } DBUG_CMD;
 
 //*************************************************************************/
@@ -291,6 +292,22 @@ typedef struct __attribute__ ((packed))
     uint16_t    freq_degrade_mhz;
     uint8_t     checksum[CMDH_FSP_CHECKSUM_SIZE];
 } cmdh_dbug_set_wof_eco_mode_rsp_t;
+
+// DBUG_WOF_SET_OV_UV_CREDIT command struct
+typedef struct __attribute__ ((packed))
+{
+    struct      cmdh_fsp_cmd_header;    // Standard command header
+    uint8_t     sub_cmd;                // Debug sub-command
+    uint8_t     wov_credit;             // Overwrite WOV credit knob that comes from WOF table header
+} cmdh_dbug_set_wof_ov_uv_credit_cmd_t;
+
+// DBUG_WOF_SET_OV_UV_CREDIT response struct
+typedef struct __attribute__ ((packed))
+{
+    struct      cmdh_fsp_rsp_header;
+    uint8_t     wov_credit;
+    uint8_t     checksum[CMDH_FSP_CHECKSUM_SIZE];
+} cmdh_dbug_set_wof_ov_uv_credit_rsp_t;
 
 // DBUG_ALLOW_TRACE command struct
 typedef struct __attribute__ ((packed))

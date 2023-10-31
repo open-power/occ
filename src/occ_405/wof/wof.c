@@ -939,6 +939,8 @@ void copy_vrt_to_sram( uint32_t i_vrt_main_mem_addr )
 void read_pgpe_produced_wof_values( void )
 {
     uint8_t  l_update_pwr_sensors = 0;
+    uint16_t l_uv_avg_0p1pct = 0;
+    uint16_t l_ov_avg_0p1pct = 0;
     static bool L_traced_no_readings       = FALSE;
     static bool L_traced_received_readings = FALSE;
 
@@ -1081,9 +1083,13 @@ void read_pgpe_produced_wof_values( void )
     // clip Pstate is the last value read from VRT and used for debug only
     g_wof->f_clip_ps = l_PgpeWofValues.dw0.fields.wof_clip_pstate;
 
-    // save over/under volting percentages into sensors for debug
-    sensor_update(AMECSENSOR_PTR(UV_AVG), (uint16_t)l_PgpeWofValues.dw3.fields.uv_avg_0p1pct);
-    sensor_update(AMECSENSOR_PTR(OV_AVG), (uint16_t)l_PgpeWofValues.dw3.fields.ov_avg_0p1pct);
+    // save over/under volting percentages into sensors
+    l_uv_avg_0p1pct = (uint16_t)l_PgpeWofValues.dw3.fields.uv_avg_0p1pct;
+    l_ov_avg_0p1pct = (uint16_t)l_PgpeWofValues.dw3.fields.ov_avg_0p1pct;
+    sensor_update(AMECSENSOR_PTR(UV_AVG), l_uv_avg_0p1pct);
+    sensor_update(AMECSENSOR_PTR(OV_AVG), l_ov_avg_0p1pct);
+    // Save the Over volting difference to adjust ceff later
+    g_wof->ov_uv_diff_0p01pct = 10*(l_ov_avg_0p1pct - l_uv_avg_0p1pct);
 
     // save the full PGPE WOF values for debug
     g_wof->pgpe_wof_values_dw0 = l_PgpeWofValues.dw0.value;
@@ -1426,6 +1432,42 @@ uint32_t calculate_exp_1p3(uint32_t i_x)
 }
 
 /**
+ * calculate_wov_fudge_factor
+ *
+ * Description: Function to calculate WOF ceff fudge factor for over/under volting credit
+ *
+ * Param[in]: i_uv_0p01pct - this is the value of (1 - UVcreditKnob*UVpct) in 0.01% unit
+ *                           fudge factor = i_uv_0p01pct^1.3
+ *
+ * NOTE the best fit equation is assuming value passed in is in 0.01% unit
+ *      and was calculated for a range of 0.909 - 0.997 (i.e. UV% range with knob 9.1% - 0.3%)
+ *
+ * Return: ceff fudge factor in 0.001 unit
+ */
+uint32_t calculate_wov_fudge_factor(uint32_t i_uv_0p01pct)
+{
+    uint64_t l_fudge_factor_0p001 = 0;
+    uint64_t l_uvpct_to1p3 = 0;
+
+    // Compute i_uv_0p01pct^1.3 using best-fit equation
+    // y = 20.306*x - 44615
+    //   = (20306*x - 44615000) / 1000
+    //   = (20793*x - 45685760) / 1024
+    l_uvpct_to1p3 = 20793 * i_uv_0p01pct;
+    if(l_uvpct_to1p3 >= 45685760)
+    {
+        l_uvpct_to1p3 = (l_uvpct_to1p3 - 45685760) >> 10;
+        //  Convert fudge factor to 0.001 unit
+        //   (i_uv_0p01pct/10000)^1.3 * 1000
+        // = (i_uv_0p01pct^1.3/10000^1.3) * 1000
+        // = (i_uv_0p01pct^1.3 * 1000)/10000^1.3
+        // = (i_uv_0p01pct^1.3 * 1000)/158489
+        l_fudge_factor_0p001 = (uint32_t)((l_uvpct_to1p3 * 1000)/158489);
+    }
+    return l_fudge_factor_0p001;
+}
+
+/**
  * calculate_ceff_ratio_vcs
  *
  * Description: Function to calculate the effective capacitance ratio
@@ -1560,9 +1602,12 @@ void calculate_ceff_ratio_vdd( void )
     uint32_t l_temp32 = 0;
     uint32_t l_scratch_reg3 = 0;
     uint32_t l_throttle_index_percent = 0;
+    uint32_t l_temp_ceff = 0;
+    uint32_t l_fudge = 0;
+    int32_t  l_signed_temp32 = 0;
     uint64_t l_temp64 = 0;
-
     static bool L_trace_error = TRUE;
+    static uint8_t L_trace_count = 2;
 
     do
     {
@@ -1719,9 +1764,48 @@ void calculate_ceff_ratio_vdd( void )
 
             // the final ceff is the higher of the 2 adjusted
             if(l_ceff_ratio_oc_adjusted > g_wof->vdd_ceff_ratio_throt_adj)
-                g_wof->ceff_ratio_vdd = l_ceff_ratio_oc_adjusted;
+                l_temp_ceff = l_ceff_ratio_oc_adjusted;
             else
-                g_wof->ceff_ratio_vdd = g_wof->vdd_ceff_ratio_throt_adj;
+                l_temp_ceff = g_wof->vdd_ceff_ratio_throt_adj;
+
+            // Now adjust ceff to account for over/under volting
+            if(g_wof->wov_credit_knob)
+            {
+                // apply the credit knob to the over/under volt difference
+                l_signed_temp32 = (int32_t)((int32_t)g_wof->wov_credit_knob * (int32_t)g_wof->ov_uv_diff_0p01pct);
+                l_signed_temp32 = (int32_t)(l_signed_temp32/100); // knob is factor of 100
+                if(l_signed_temp32 > -10000)
+                {
+                    l_temp32 = (uint32_t)(10000 + l_signed_temp32);
+                    l_fudge = calculate_wov_fudge_factor(l_temp32);
+                }
+                // don't mutltiply by 0
+                if(l_fudge)
+                {
+                    l_temp64 = (uint64_t)l_temp_ceff * (uint64_t)l_fudge;
+                    // fudge factor is returned in 0.001 unit
+                    l_temp_ceff = (uint32_t)(l_temp64/1000);
+                }
+                if( (G_allow_trace_flags & ALLOW_WOF_OV_TRACE) && (L_trace_count) )
+                {
+                    L_trace_count--;
+                    INTR_TRAC_INFO("WOV Debug: credit knob[%d] * ov_uv_diff[%d] = %d",
+                                   g_wof->wov_credit_knob, g_wof->ov_uv_diff_0p01pct, l_signed_temp32);
+
+                    INTR_TRAC_INFO("WOV Debug: (%d/10000)^1.3 = fudge factor[%d]",
+                                    l_temp32, l_fudge);
+
+                    INTR_TRAC_INFO("WOV Debug: ceff * fudge = %d final WOV adjusted ceff[%d]", l_temp64, l_temp_ceff);
+                }
+                else if(!(G_allow_trace_flags & ALLOW_WOF_OV_TRACE))
+                {
+                    // reset trace count to allow ALLOW_WOF_OV_TRACE to be re-set
+                    L_trace_count = 2;
+                }
+            }
+
+            g_wof->ov_uv_fudge = l_fudge;
+            g_wof->ceff_ratio_vdd = l_temp_ceff;
 
             //  if eco mode addr is set adjust ceff some more
             if(g_wof->eco_mode_ceff_add > 0)

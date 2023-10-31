@@ -407,12 +407,18 @@ typedef struct __attribute__ ((packed))
     // [885] Total DDIMM preheat power in cW
     uint32_t total_dimm_preheat_pwr_cW;
     // [889] Contains degrees C ambient is changed by to account for DIMM power
-    int8_t ambient_adj_for_dimm;
-    // [890] The most recently read value in the sensor MEMUTILMx where x is OCMB num
+    int8_t   ambient_adj_for_dimm;
+    // [890] Ceff credit to account for under and over volting comes from WOF table header
+    uint8_t  wov_credit_knob;
+    // [891] signed difference between over and under volting (OV-UV) in 0.01% unit
+    int16_t  ov_uv_diff_0p01pct;
+    // [893] Fudge factor in 0.001 unit Ceff is multiplied by to account for over/under volting
+    uint32_t ov_uv_fudge;
+    // [897] The most recently read value in the sensor MEMUTILMx where x is OCMB num
     uint16_t memutil[MAX_NUM_OCMBS];
-    // [922] The most recently read value in the sensor MEMUTILP1Mx (DDR5 only) where x is OCMB num
+    // [929] The most recently read value in the sensor MEMUTILP1Mx (DDR5 only) where x is OCMB num
     uint16_t memutilp1[MAX_NUM_OCMBS];
-} amec_wof_t;  // 954 bytes total
+} amec_wof_t;  // 961 bytes total
 
 // Structure used in g_amec to hold static WOF data
 typedef struct __attribute__ ((packed, aligned(128)))

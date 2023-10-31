@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2021                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2023                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -42,7 +42,7 @@
 #define ALLOW_PBAX_TRACE           0x0800
 #define ALLOW_AMEC_PSTATE_TRACE    0x1000
 #define ALLOW_CEFF_RATIO_VCS_TRACE 0x2000
-#define ALLOW_APSS_GPIO_TRACE      0x4000
+#define ALLOW_WOF_OV_TRACE         0x4000
 #define ALLOW_WOF_SCALE_TRACE      0x8000
 
 // Start of SRAM memory

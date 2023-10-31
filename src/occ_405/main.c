@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2022                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2023                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -511,6 +511,9 @@ void read_wof_header(void)
 
                 // Initialize wof init state to zero
                 g_amec->wof.wof_init_state  = WOF_DISABLED;
+
+                // Initialize WOF over/under volting credit knob
+                g_amec->wof.wov_credit_knob = g_amec->static_wof_data.wof_header.wov_credit_knob;
 
                 // Initialize OCS increase/decrease amounts to one step
                 g_amec->wof.ocs_increase_ceff = g_amec->static_wof_data.wof_header.vdd_step;
