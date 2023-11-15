@@ -95,11 +95,11 @@ int main(int argc, char** argv)
         printf("%c", fgetc(wof_file));
     printf("\n");
     l_num_bytes += 4;
-    printf("     Reserved: 0x%02X\n", fgetc(wof_file));
+    printf("     Major DD Level: 0x%02X\n", fgetc(wof_file));
     l_num_bytes += 1;
-    printf("     Reserved: 0x%02X\n", fgetc(wof_file));
+    printf("     Minor DD Level: 0x%02X\n", fgetc(wof_file));
     l_num_bytes += 1;
-    printf("     Reserved: 0x%02X\n", fgetc(wof_file));
+    printf("     WOV Credit Knob: 0x%02X\n", fgetc(wof_file));
     l_num_bytes += 1;
     printf("     Version: 0x%02X\n", fgetc(wof_file));
     l_num_bytes += 1;
@@ -109,7 +109,7 @@ int main(int argc, char** argv)
     l_num_bytes += 2;
     printf("     VRT Data Size: %d\n", get_uint16(wof_file));
     l_num_bytes += 2;
-    printf("     OCS Mode: 0x%02X\n", fgetc(wof_file));
+    printf("     Flags: 0x%02X\n", fgetc(wof_file));
     l_num_bytes += 1;
     printf("     Core Count: %d\n", fgetc(wof_file));
     l_num_bytes += 1;
@@ -169,8 +169,10 @@ int main(int argc, char** argv)
     l_num_bytes += 2;
     printf("     Table Timestamp: 0x%08X\n", get_uint32(wof_file));
     l_num_bytes += 4;
-    printf("     Reserved2: 0x%08X\n", get_uint32(wof_file));
-    l_num_bytes += 4;
+    printf("     Override Freq: %dMHz\n", get_uint16(wof_file));
+    l_num_bytes += 2;
+    printf("     Override Power: %dW\n", get_uint16(wof_file));
+    l_num_bytes += 2;
     printf("     Table Version: ");
     for(i = 0; i < 16; i++)
         printf("%c", fgetc(wof_file));
@@ -181,6 +183,28 @@ int main(int argc, char** argv)
         printf("%c", fgetc(wof_file));
     printf("\n");
     l_num_bytes += 16;
+    printf("     Sort Power Save Freq: %dMHz\n", get_uint16(wof_file));
+    l_num_bytes += 2;
+    printf("     Sort Fixed Freq: %dMHz\n", get_uint16(wof_file));
+    l_num_bytes += 2;
+    printf("     Bal Perf Ceff Adj: %d%%\n", fgetc(wof_file));
+    l_num_bytes += 1;
+    printf("     Favor Perf Ceff Adj: %d%%\n", fgetc(wof_file));
+    l_num_bytes += 1;
+    printf("     Favor Power Ceff Adj: %d%%\n", fgetc(wof_file));
+    l_num_bytes += 1;
+    printf("     Non Det Ceff Adj: %d%%\n", fgetc(wof_file));
+    l_num_bytes += 1;
+    printf("     Bal Perf Freq Limit: %dMHz\n", get_uint16(wof_file));
+    l_num_bytes += 2;
+    printf("     Favor Perf Freq Limit: %dMHz\n", get_uint16(wof_file));
+    l_num_bytes += 2;
+    printf("     Favor Power Save Freq Limit: %dMHz\n", get_uint16(wof_file));
+    l_num_bytes += 2;
+    printf("     Non Det Freq Limit: %dMHz\n", get_uint16(wof_file));
+    l_num_bytes += 2;
+    printf("     Max Power at Min Freq: %dW\n", get_uint16(wof_file));
+    l_num_bytes += 2;
 
     l_extra_bytes = 0;
     if(l_num_bytes < WOF_TABLE_HEADER_SIZE)

@@ -455,7 +455,7 @@ typedef struct __attribute__ ((packed, aligned(128)))
     uint32_t last_ambient_condition;
     // OCMB util to power interpolation points uuuuuuuupppppppp
     // uuuuuuuu is util in cPercent and pppppppp is power in cW
-    uint64_t ocmb_util_pwr_pts[MAX_NUM_OCMBS][MAX_NUM_MEM_INT_PTS];  // 192 bytes (16x12)
+    uint64_t ocmb_util_pwr_pts[MAX_NUM_OCMBS][MAX_NUM_MEM_INT_PTS];  // 1,536 bytes (16x12x8)
 } amec_static_wof_t;
 
 // Structure for sensors used in g_amec for AMESTER for additional debug

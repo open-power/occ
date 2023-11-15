@@ -669,6 +669,8 @@ void amec_perfcount_ocmb_getmc( OcmbMemData * i_sensor_cache,
     /*------------------------------------------------------------------------*/
     /*  Local Variables                                                       */
     /*------------------------------------------------------------------------*/
+    uint8_t                     l_addr_to_data_conv_p0 = 0;
+    uint8_t                     l_addr_to_data_conv_p1 = 0;
     uint16_t                    l_memutil = 0;
     uint16_t                    l_p1_memutil = 0;
     uint32_t                    l_cache_read_total  = 0;
@@ -728,6 +730,8 @@ void amec_perfcount_ocmb_getmc( OcmbMemData * i_sensor_cache,
 
     if(IS_OCM_DDR4_MEM_TYPE(G_sysConfigData.mem_type))
     {
+       // burst length /2 to get span of address clock cycles
+       l_addr_to_data_conv_p0 = g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].burst_length >> 1;
        l_cache_p0_write = l_sensor_cache->mba_wr;
        l_cache_p1_write = 0; // no port 1
        l_prev_p0_write = g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].perf.wr_cnt_accum;
@@ -750,6 +754,10 @@ void amec_perfcount_ocmb_getmc( OcmbMemData * i_sensor_cache,
     }
     else // DDR5
     {
+       // burst length /2 to get span of address clock cycles
+       l_addr_to_data_conv_p0 = g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].burst_length >> 1;
+       l_addr_to_data_conv_p1 = g_amec->proc[0].memctl[i_membuf].membuf.portpair[1].burst_length >> 1;
+
        l_cache_p0_write = l_ddr5_sensor_cache->side0_wr;
        l_cache_p1_write = l_ddr5_sensor_cache->side1_wr;
        l_prev_p0_write = g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].perf.wr_cnt_accum;
@@ -839,30 +847,30 @@ void amec_perfcount_ocmb_getmc( OcmbMemData * i_sensor_cache,
 
     // ---------------------------------------------------------------------------
     //  MEMUTILMx / MEMUTILP1Mx sensors (memory utilization 0.01% for ports 0 and 1) =
-    //    [ ((diff in read accumulator) + (diff in write accumulator)) ] / (sample time in ns / ocmb clock ns) * burst_length
+    //    [ ((diff in read accumulator) + (diff in write accumulator)) ] / (sample time in ns / ocmb clock ns) * (burst_length/2)
     //    ocmb clock ns = [1 / (ocmb_freq_Mbps / 2) * 1000]
     //    for better precision sample time and ocmb clock are in 0.001ns unit
     // ---------------------------------------------------------------------------
     // MEMUTIL sensors are only supported if we received memory freq and burst length which both must be non-zero
     if( (g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].addr_clock_p001ns == 0) ||
-        (g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].burst_length == 0) ||
+        (l_addr_to_data_conv_p0 == 0) ||
         ( IS_OCM_DDR5_MEM_TYPE(G_sysConfigData.mem_type) &&
           ( (g_amec->proc[0].memctl[i_membuf].membuf.portpair[1].addr_clock_p001ns == 0) ||
-            (g_amec->proc[0].memctl[i_membuf].membuf.portpair[1].burst_length == 0)) ) )
+            (l_addr_to_data_conv_p1 == 0)) ) )
     {
        l_memutil = 0;
        l_p1_memutil = 0;
        if(L_traced_no_util_support == FALSE)
        {
            L_traced_no_util_support = TRUE; // only trace once
-           TRAC_INFO("amec_perfcount_ocmb_getmc: Missing data.  No support for OCMB[%d] utilization. data_rate_Mbps[%d] burst length[%d]",
+           TRAC_INFO("amec_perfcount_ocmb_getmc: Missing data.  No support for OCMB[%d] utilization. data_rate_Mbps[%d] addr_to_data_conv[%d]",
                        i_membuf, g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].data_rate_Mbps,
-                       g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].burst_length);
+                       l_addr_to_data_conv_p0);
            if(IS_OCM_DDR5_MEM_TYPE(G_sysConfigData.mem_type))
            {
-              TRAC_INFO("amec_perfcount_ocmb_getmc: OCMB port1 data_rate_Mbps[%d] port1 burst length[%d]",
+              TRAC_INFO("amec_perfcount_ocmb_getmc: OCMB port1 data_rate_Mbps[%d] port1 addr_to_data_conv[%d]",
                           g_amec->proc[0].memctl[i_membuf].membuf.portpair[1].data_rate_Mbps,
-                          g_amec->proc[0].memctl[i_membuf].membuf.portpair[1].burst_length);
+                          l_addr_to_data_conv_p1);
            }
        }
     }
@@ -872,7 +880,7 @@ void amec_perfcount_ocmb_getmc( OcmbMemData * i_sensor_cache,
        l_time_over_freq = l_sample_time_p001ns / g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].addr_clock_p001ns;
        l_read_diff = amec_diff_adjust_for_overflow(l_cache_p0_read, l_prev_p0_read);
        l_write_diff = amec_diff_adjust_for_overflow(l_cache_p0_write, l_prev_p0_write);
-       temp64 = (l_read_diff + l_write_diff) * g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].burst_length;
+       temp64 = (l_read_diff + l_write_diff) * l_addr_to_data_conv_p0;
        temp64 *= 10000; // times 10000 to convert to 0.01% unit
        l_memutil = (uint16_t)(temp64 / l_time_over_freq);
 
@@ -896,7 +904,7 @@ void amec_perfcount_ocmb_getmc( OcmbMemData * i_sensor_cache,
           l_time_over_freq = l_sample_time_p001ns / g_amec->proc[0].memctl[i_membuf].membuf.portpair[1].addr_clock_p001ns;
           l_read_diff = amec_diff_adjust_for_overflow(l_cache_p1_read, l_prev_p1_read);
           l_write_diff = amec_diff_adjust_for_overflow(l_cache_p1_write, l_prev_p1_write);
-          temp64 = (l_read_diff + l_write_diff) * g_amec->proc[0].memctl[i_membuf].membuf.portpair[1].burst_length;
+          temp64 = (l_read_diff + l_write_diff) * l_addr_to_data_conv_p1;
           temp64 *= 10000; // times 10000 to convert to 0.01% unit
           l_p1_memutil = (uint16_t)(temp64 / l_time_over_freq);
 
