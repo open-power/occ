@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2019,2021                        */
+/* Contributors Listed Below - COPYRIGHT 2019,2024                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -217,8 +217,18 @@ typedef struct
     // I/O Throttle Temperature from #V
     uint32_t io_throttle_temp_0p5C;
 
+    // Efficiency mode controls
+    uint8_t             bal_perf_ceff_pct;   // 0: sign; 1:7 percent (1% units)
+    uint8_t             fav_perf_ceff_pct;   // 0: sign; 1:7 percent (1% units)
+    uint8_t             fav_pow_ceff_pct;    // 0: sign; 1:7 percent (1% units)
+    uint8_t             non_det_ceff_pct;    // 0: sign; 1:7 percent (1% units)
+    uint16_t            bal_perf_freq_limit_mhz;
+    uint16_t            fav_perf_freq_limit_mhz;
+    uint16_t            fav_pow_freq_limit_mhz;
+    uint16_t            non_det_freq_limit_mhz;
+
     // Pad to make the structure an even 1KB
-    uint8_t             pad_b[16];
+    uint8_t             pad_b[4];
 
 } __attribute__((aligned(128))) OCCPstateParmBlock_t ;
 

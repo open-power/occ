@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2022                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2024                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -224,11 +224,7 @@ typedef struct __attribute__ ((packed))
     uint16_t ips4msp0;                                           // [448]
     uint16_t nutil3sp0cy[MAX_CORES];                             // [450]
 
-    // Fwish (i.e., desired frequency that this OCC slave wants based on DPS
-    // algorithms)
-    uint16_t fwish;                                              // [514]
-    // Factual (i.e., actual frequency requested by this OCC slave)
-    uint16_t factual;                                            // [516]
+    uint32_t reserved4Bytes;                                     // [514]
 
     // Error history counts
     error_history_count_t errhCount[DCOM_MAX_ERRH_ENTRIES];      // [518] - 16 bytes

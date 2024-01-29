@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2023                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2024                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -385,7 +385,6 @@ void populate_sys_mode_freq_table(void)
 
     // set frequency for all other power management modes
     G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_PWR_SAVE] = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MIN_FREQ];
-    G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_DYN_PERF] = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_VPD_UT];
     G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_MAX_PERF] = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_VPD_UT];
     G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_FMAX] = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MAX_FREQ];
 

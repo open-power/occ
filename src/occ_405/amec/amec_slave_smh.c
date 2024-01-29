@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2022                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2024                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -670,11 +670,6 @@ void amec_slv_state_5(void)
       else
           L_membuf_addr = 8;
   }
-
-  //-------------------------------------------------------
-  // Update partition sensors for DPS algorithms (for this tick)
-  //-------------------------------------------------------
-  amec_dps_main();
 
 }
 

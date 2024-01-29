@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2023                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2024                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -91,11 +91,14 @@ param_table_entry_t G_parameter_table[] =
   /* ID                 Value_ID              Flags                                     Data  Description  */
     {PARAM_ID_MODE,     PARAM_VALUE_ID_NONE, (PARAM_FLAG_REPORT | PARAM_FLAG_MASTER),     0,  "Power and Performance Mode\0"},
     {PARAM_ID_MODE,     OCC_MODE_DISABLED, (PARAM_FLAG_MASTER),                           0,  "Static\0"},
+    {PARAM_ID_MODE,     OCC_MODE_NON_DETERMINISTIC, (PARAM_FLAG_MASTER),                  0,  "Non Deterministic lab only\0"},
     {PARAM_ID_MODE,     OCC_MODE_STATIC_FREQ_POINT, (PARAM_FLAG_MASTER),                  0,  "SFP lab only\0"},
     {PARAM_ID_MODE,     OCC_MODE_SAFE, (PARAM_FLAG_MASTER),                               0,  "Safe\0"},
     {PARAM_ID_MODE,     OCC_MODE_PWRSAVE, (PARAM_FLAG_MASTER),                            0,  "Power Saving\0"},
+    {PARAM_ID_MODE,     OCC_MODE_EFFICIENCY_POWER, (PARAM_FLAG_MASTER),                   0,  "Efficiency Favor Power\0"},
+    {PARAM_ID_MODE,     OCC_MODE_EFFICIENCY_PERF, (PARAM_FLAG_MASTER),                    0,  "Efficiency Favor Perform\0"},
     {PARAM_ID_MODE,     OCC_MODE_FMAX, (PARAM_FLAG_MASTER),                               0,  "Fmax\0"},
-    {PARAM_ID_MODE,     OCC_MODE_DYN_PERF, (PARAM_FLAG_MASTER),                           0,  "Balanced Performance\0"},
+    {PARAM_ID_MODE,     OCC_MODE_BALANCED, (PARAM_FLAG_MASTER),                           0,  "Balanced Performance\0"},
     {PARAM_ID_MODE,     OCC_MODE_FFO, (PARAM_FLAG_MASTER),                                0,  "Fixed Frequency Override\0"},
     {PARAM_ID_MODE,     OCC_MODE_MAX_PERF, (PARAM_FLAG_MASTER),                           0,  "Maximum Performance\0"},
     {PARAM_ID_IPS,      PARAM_VALUE_ID_NONE, (PARAM_FLAG_REPORT | PARAM_FLAG_MASTER),     0,  "Idle Power Saver Status\0"},

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2023                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2024                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -625,13 +625,9 @@ enum e_gsid
     TEMPGPU2MEM,
 
     // ------------------------------------------------------
-    // Partition Sensors
-    // ------------------------------------------------------
-    UTILSLCG000,
-
-    // ------------------------------------------------------
     // WOF Sensors
     // ------------------------------------------------------
+    RESERVED_WOF,
     CEFFVDDRATIO,
     CEFFVCSRATIO,
     VRATIO_VDD,

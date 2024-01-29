@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2023                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2024                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -353,6 +353,8 @@ void chom_update_sensors()
                 break;
 
             case OCC_MODE_STATIC_FREQ_POINT:
+            case OCC_MODE_NON_DETERMINISTIC:
+                // use SFP for all lab only modes
                 g_chom_pwr_modes[CHOM_MODE_SFP] = 1;
                 L_curMemBWNumSamplePtr = L_memBWNumSamples[CHOM_MODE_SFP];
                 break;
@@ -362,9 +364,9 @@ void chom_update_sensors()
                 L_curMemBWNumSamplePtr = L_memBWNumSamples[CHOM_MODE_FFO];
                 break;
 
-            case OCC_MODE_DYN_PERF:
-                g_chom_pwr_modes[CHOM_MODE_DYN_PERF] = 1;
-                L_curMemBWNumSamplePtr = L_memBWNumSamples[CHOM_MODE_DYN_PERF];
+            case OCC_MODE_BALANCED:
+                g_chom_pwr_modes[CHOM_MODE_BALANCED] = 1;
+                L_curMemBWNumSamplePtr = L_memBWNumSamples[CHOM_MODE_BALANCED];
                 break;
 
             case OCC_MODE_MAX_PERF:
@@ -377,10 +379,22 @@ void chom_update_sensors()
                 L_curMemBWNumSamplePtr = L_memBWNumSamples[CHOM_MODE_FMAX];
                 break;
 
+            case OCC_MODE_EFFICIENCY_POWER:
+                g_chom_pwr_modes[CHOM_MODE_EFF_PWR] = 1;
+                L_curMemBWNumSamplePtr = L_memBWNumSamples[CHOM_MODE_EFF_PWR];
+                break;
+
+            case OCC_MODE_EFFICIENCY_PERF:
+                g_chom_pwr_modes[CHOM_MODE_EFF_PERF] = 1;
+                L_curMemBWNumSamplePtr = L_memBWNumSamples[CHOM_MODE_EFF_PERF];
+                break;
+
             default:
+                // use lab only SFP for anything unsupported
                 TRAC_INFO("chom_update_sensors: Cannot record chom data for mode 0x%02X",
                           g_chom->sensorData[0].pwrMode.mode);
-                L_curMemBWNumSamplePtr = L_memBWNumSamples[CHOM_MODE_FMAX];
+                g_chom_pwr_modes[CHOM_MODE_SFP] = 1;
+                L_curMemBWNumSamplePtr = L_memBWNumSamples[CHOM_MODE_SFP];
                 break;
         }
     }

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2023                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2024                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -749,6 +749,9 @@ void cmdh_dbug_wof_eco_mode( const cmdh_fsp_cmd_t * i_cmd_ptr,
     cmdh_dbug_set_wof_eco_mode_rsp_t * l_rsp_ptr = (cmdh_dbug_set_wof_eco_mode_rsp_t*) o_rsp_ptr;
     uint8_t  l_rc = ERRL_RC_SUCCESS;
     uint16_t l_resp_data_length = 0;
+    uint16_t l_temp_max = 0;
+    uint16_t l_freq_min = 0;
+    uint16_t l_freq_max = 0;
 
      // Do sanity check on the function inputs
     if ((NULL == l_cmd_ptr) || (NULL == l_rsp_ptr))
@@ -763,11 +766,38 @@ void cmdh_dbug_wof_eco_mode( const cmdh_fsp_cmd_t * i_cmd_ptr,
     }
     else
     {
-        // Save the ceff addr and freq degrade
+        // Save the ceff addr
         g_amec->wof.eco_mode_ceff_add = l_cmd_ptr->eco_ceff_add;
-        if(g_amec->wof.eco_mode_freq_degrade_mhz != l_cmd_ptr->freq_degrade_mhz)
+
+        // calculate and save the max freq
+        l_freq_max = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_VPD_UT];
+        l_freq_min = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MIN_FREQ];
+        if(l_freq_max > l_cmd_ptr->freq_degrade_mhz)
         {
-           g_amec->wof.eco_mode_freq_degrade_mhz = l_cmd_ptr->freq_degrade_mhz;
+            l_temp_max = l_freq_max - l_cmd_ptr->freq_degrade_mhz;
+            // make sure max didn't fall below min
+            if(l_temp_max < l_freq_min)
+            {
+                TRAC_ERR("cmdh_dbug_wof_eco_mode: max freq[%dMHz] - eco freq degrade[%dMHz] < min freq[%dMHz] ",
+                           l_freq_max, l_cmd_ptr->freq_degrade_mhz, l_freq_min);
+                l_freq_max = l_freq_min;
+            }
+            else
+            {
+                TRAC_INFO("cmdh_dbug_wof_eco_mode: Eco mode freq degrade[%dMHz] taken from Fmax[%dMHz] new Fmax[%dMHz]",
+                           l_cmd_ptr->freq_degrade_mhz, l_freq_max, l_temp_max);
+                l_freq_max = l_temp_max;
+            }
+        }
+        else
+        {
+            TRAC_ERR("cmdh_dbug_wof_eco_mode: NOT applying eco freq degrade[%dMHz] > max freq[%dMHz]",
+                      l_cmd_ptr->freq_degrade_mhz, l_freq_max);
+        }
+
+        if(g_amec->wof.eco_mode_freq_mhz != l_freq_max)
+        {
+           g_amec->wof.eco_mode_freq_mhz = l_freq_max;
 
            // if WOF isn't disabled set the new freq clip range else it will be
            // applied when wof is enabled
@@ -775,14 +805,14 @@ void cmdh_dbug_wof_eco_mode( const cmdh_fsp_cmd_t * i_cmd_ptr,
               amec_set_freq_range(CURRENT_MODE());
         }
 
-        TRAC_INFO("DEBUG - ECO mode ceff addr set[%d] Freq degrade[%dMHz]",
-                   g_amec->wof.eco_mode_ceff_add, g_amec->wof.eco_mode_freq_degrade_mhz);
+        TRAC_INFO("DEBUG - ECO mode ceff addr set[%d] Freq clip[%dMHz]",
+                   g_amec->wof.eco_mode_ceff_add, g_amec->wof.eco_mode_freq_mhz);
 
         // Fill in response data
         l_rsp_ptr->eco_ceff_add = g_amec->wof.eco_mode_ceff_add;
         l_resp_data_length = sizeof(g_amec->wof.eco_mode_ceff_add);
-        l_rsp_ptr->freq_degrade_mhz = g_amec->wof.eco_mode_freq_degrade_mhz;
-        l_resp_data_length += sizeof(g_amec->wof.eco_mode_freq_degrade_mhz);
+        l_rsp_ptr->freq_degrade_mhz = g_amec->wof.eco_mode_freq_mhz;
+        l_resp_data_length += sizeof(g_amec->wof.eco_mode_freq_mhz);
     }
 
     // fill in response data length

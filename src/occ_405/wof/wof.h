@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2016,2023                        */
+/* Contributors Listed Below - COPYRIGHT 2016,2024                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -392,10 +392,10 @@ typedef struct __attribute__ ((packed))
     uint32_t throt_idx_percent;
     // [863] throttle index offset read from OCC scratch reg 3
     uint32_t throt_idx_offset;
-    // [867] signed amount in 0.01% unit to add (or subtract) to ceff.  Set by Eco mode
+    // [867] signed amount in 0.01% unit to add (or subtract) to ceff.  Set by Efficiency mode
     int16_t eco_mode_ceff_add;
-    // [869] MHz to reduce maximum frequency by.  Set by Eco mode
-    uint16_t eco_mode_freq_degrade_mhz;
+    // [869] Efficiency mode max frequency in MHz
+    uint16_t eco_mode_freq_mhz;
     // [871] Thermal credit constant for memory
     uint16_t mem_thermal_credit_constant;
     // [873] Worst case dimm power per OCMB in cW

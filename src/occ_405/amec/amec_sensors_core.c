@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2023                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2024                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -42,7 +42,6 @@
 #include "sensor_enum.h"
 #include "amec_service_codes.h"
 #include <amec_sensors_core.h>
-#include "amec_perfcount.h"
 #include "proc_shared.h"
 #include "common.h"
 
@@ -114,11 +113,6 @@ void amec_update_proc_core_sensors(uint8_t i_core)
         // just used the previous readings, make sure next update is with new previous readings
         L_prev_updated[i_core] = FALSE;
 
-        //-------------------------------------------------------
-        // Performance counter - This function should be called
-        // after amec_calc_freq_and_util_sensors().
-        //-------------------------------------------------------
-        amec_calc_dps_util_counters(i_core);
     }
     else if(CORE_EMPATH_ERROR(i_core) || CORE_OFFLINE(i_core))
     {

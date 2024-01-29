@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2024                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -42,11 +42,14 @@ typedef enum
 {
     OCC_MODE_NOCHANGE          = 0x00,
     OCC_MODE_DISABLED          = 0x01,  // previously known as "nominal".  ASM/HMC always called this "disabled" and never "nominal" 
-    OCC_MODE_STATIC_FREQ_POINT = 0x03,
+    OCC_MODE_NON_DETERMINISTIC = 0x02,  // lab only
+    OCC_MODE_STATIC_FREQ_POINT = 0x03,  // lab only
     OCC_MODE_SAFE              = 0x04,  // not user settable
     OCC_MODE_PWRSAVE           = 0x05,
+    OCC_MODE_EFFICIENCY_POWER  = 0x06,
+    OCC_MODE_EFFICIENCY_PERF   = 0x07,
     OCC_MODE_FMAX              = 0x09,
-    OCC_MODE_DYN_PERF          = 0x0A,
+    OCC_MODE_BALANCED          = 0x0A,
     OCC_MODE_FFO               = 0x0B,
     OCC_MODE_MAX_PERF          = 0x0C,
 
@@ -105,7 +108,7 @@ typedef enum
     OCC_FREQ_PT_MIN_FREQ    = 0x0B,
     OCC_FREQ_PT_MODE_DISABLED = 0x0C,
     OCC_FREQ_PT_MODE_PWR_SAVE = 0x0D,
-    OCC_FREQ_PT_MODE_DYN_PERF = 0x0E,
+    OCC_FREQ_PT_MODE_RESERVED = 0x0E,
     OCC_FREQ_PT_MODE_MAX_PERF = 0x0F,
     OCC_FREQ_PT_MODE_FMAX = 0x10,
     OCC_FREQ_PT_MODE_USER = 0x11,   // used for FFO and static freq pt modes
@@ -128,12 +131,28 @@ typedef struct
 // These are the only modes that TMGT/HTMGT can send
 #define OCC_MODE_IS_VALID(mode) ((mode == OCC_MODE_NOCHANGE) || \
                                  (mode == OCC_MODE_DISABLED) || \
+                                 (mode == OCC_MODE_NON_DETERMINISTIC) || \
                                  (mode == OCC_MODE_STATIC_FREQ_POINT) || \
                                  (mode == OCC_MODE_PWRSAVE) || \
+                                 (mode == OCC_MODE_EFFICIENCY_POWER) || \
+                                 (mode == OCC_MODE_EFFICIENCY_PERF) || \
                                  (mode == OCC_MODE_FMAX) || \
-                                 (mode == OCC_MODE_DYN_PERF) || \
+                                 (mode == OCC_MODE_BALANCED) || \
                                  (mode == OCC_MODE_MAX_PERF) || \
                                  (mode == OCC_MODE_FFO))
+
+// These are modes that WOF is enabled
+#define OCC_MODE_WOF_ENABLED(mode) ((mode == OCC_MODE_NON_DETERMINISTIC) || \
+                                    (mode == OCC_MODE_EFFICIENCY_POWER) || \
+                                    (mode == OCC_MODE_EFFICIENCY_PERF) || \
+                                    (mode == OCC_MODE_MAX_PERF) || \
+                                    (mode == OCC_MODE_BALANCED))
+
+// These are WOF "efficiency" modes that have a max freq clip and ceff adjustment from WOF table
+#define OCC_MODE_IS_EFFICIENT(mode) ((mode == OCC_MODE_NON_DETERMINISTIC) || \
+                                     (mode == OCC_MODE_EFFICIENCY_POWER) || \
+                                     (mode == OCC_MODE_EFFICIENCY_PERF) || \
+                                     (mode == OCC_MODE_BALANCED))
 
 extern OCC_MODE           G_occ_internal_mode;
 extern OCC_MODE           G_occ_internal_req_mode;

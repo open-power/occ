@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2023                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2024                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -73,6 +73,7 @@ typedef enum
 #define EXTN_NAME_FMAX    0x464D4158 // "FMAX"
 #define EXTN_NAME_CLIP    0x434C4950 // "CLIP"
 #define EXTN_NAME_WOFC    0x574F4643 // "WOFC"
+#define EXTN_NAME_MODE    0x4D4F4445 // "MODE"
 #define EXTN_NAME_ERRHIST 0x45525248 // "ERRH"
 
 #define MAX_EXTN_SENSORS 32

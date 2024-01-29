@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2023                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2024                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -423,14 +423,9 @@ const sensor_ptr_t G_amec_sensor_list[] =
   SENSOR_PTR(TEMPGPU2MEM,           &g_amec_sys.gpu[2].tempgpumem),
 
   // ------------------------------------------------------
-  // Partition Sensors -- no PLPM support only 1 core group sensor
-  // additional sensors must be added if AMEC_PART_MAX_PART is ever changed to be more than 1
-  // ------------------------------------------------------
-  SENSOR_PTR( UTILSLCG000,          &g_amec_sys.part_config.part_list[0].util2msslack),
-
-  // ------------------------------------------------------
   // WOF Sensors
   // ------------------------------------------------------
+  SENSOR_PTR( RESERVED_WOF,         &g_amec_sys.wof_sensors.ceff_ratio_vdd_sensor),
   SENSOR_PTR( CEFFVDDRATIO,         &g_amec_sys.wof_sensors.ceff_ratio_vdd_sensor),
   SENSOR_PTR( CEFFVCSRATIO,         &g_amec_sys.wof_sensors.ceff_ratio_vcs_sensor),
   SENSOR_PTR( VRATIO_VDD,           &g_amec_sys.wof_sensors.v_ratio_sensor),
@@ -602,13 +597,9 @@ const minisensor_ptr_t G_amec_mini_sensor_list[] INIT_SECTION =
   MINI_SENSOR_PTR( TEMPGPU2MEM,  NULL),
 
   // ------------------------------------------------------
-  // Partition Sensors
-  // ------------------------------------------------------
-  MINI_SENSOR_PTR( UTILSLCG000,  NULL),
-
-  // ------------------------------------------------------
   // WOF Sensors
   // ------------------------------------------------------
+  MINI_SENSOR_PTR( RESERVED_WOF,  NULL),
   MINI_SENSOR_PTR( CEFFVDDRATIO,   &G_dcom_slv_outbox_tx.ceffRatioVdd),
   MINI_SENSOR_PTR( CEFFVCSRATIO,   NULL),
   MINI_SENSOR_PTR( VRATIO_VDD,     NULL),

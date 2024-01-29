@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2022                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2024                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -493,8 +493,6 @@ void amec_init_vector_sensors(void)
 // End Function Specification
 void amec_init_gamec_struct(void)
 {
-  uint16_t l_idx = 0;
-
   // Default the frequency range to something safe
   g_amec->sys.fmin_max_throttled = 2000;
   g_amec->sys.fmax = 2000;
@@ -552,15 +550,6 @@ void amec_init_gamec_struct(void)
   // final controller vote as pstate and freq
   g_amec->oc_wof_off.pstate_request = 0; // default max freq (no clip)
   g_amec->oc_wof_off.freq_request = 0xFFFF;
-
-  // Initialize partition information
-  amec_part_init();
-
-  // Initialize performace counter
-  for (l_idx=0; l_idx<MAX_NUM_CORES; l_idx++)
-  {
-    amec_core_perf_counter_ctor(&g_amec->proc[0].core[l_idx].core_perf, 0, l_idx);
-  }
 
   //Initialize processor power votes
   g_amec->proc[0].pwr_votes.apss_pmax_clip_freq = 0xFFFF;

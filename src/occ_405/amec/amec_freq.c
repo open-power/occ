@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2023                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2024                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -120,9 +120,7 @@ errlHndl_t amec_set_freq_range(const OCC_MODE i_mode)
     uint16_t                    l_freq_min  = 0;
     uint32_t                    l_freq_min_at_max_throttle  = 0;
     uint16_t                    l_freq_max  = 0;
-    uint16_t                    l_temp_max = 0;
     uint32_t                    l_steps = 0;
-    bool                        l_check_for_eco_mode = FALSE;
 
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
@@ -159,7 +157,6 @@ errlHndl_t amec_set_freq_range(const OCC_MODE i_mode)
         else // WOF is enabled
         {
             l_freq_max = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_VPD_UT];
-            l_check_for_eco_mode = TRUE;
         }
     }
     else  // Set max based on specific mode
@@ -181,13 +178,25 @@ errlHndl_t amec_set_freq_range(const OCC_MODE i_mode)
               l_freq_max = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_PWR_SAVE];
               break;
 
-          case OCC_MODE_DYN_PERF:
-              l_freq_max = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_DYN_PERF];
+          case OCC_MODE_NON_DETERMINISTIC:
+          case OCC_MODE_EFFICIENCY_POWER:
+          case OCC_MODE_EFFICIENCY_PERF:
+          case OCC_MODE_BALANCED:
+              // frequency was set by WOF table and verified when mode was set
+              l_freq_max = g_amec->wof.eco_mode_freq_mhz;
               break;
 
           case OCC_MODE_MAX_PERF:
-              l_freq_max = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_MAX_PERF];
-              l_check_for_eco_mode = TRUE;
+              // this isn't an "efficiency" mode but we support setting a freq clip
+              // via debug command
+              if(g_amec->wof.eco_mode_freq_mhz)
+              {
+                  TRAC_INFO("amec_set_freq_range: DEBUG CMD Max Performance efficiency freq clip[%d]",
+                             g_amec->wof.eco_mode_freq_mhz);
+                  l_freq_max = g_amec->wof.eco_mode_freq_mhz;
+              }
+              else
+                  l_freq_max = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_MAX_PERF];
               break;
 
           case OCC_MODE_FMAX:
@@ -199,41 +208,13 @@ errlHndl_t amec_set_freq_range(const OCC_MODE i_mode)
               break;
       } // switch i_mode
 
-      // Verify that WOF is running for performance modes
-      if( ( (i_mode == OCC_MODE_DYN_PERF) || (i_mode == OCC_MODE_MAX_PERF) ) &&
+      // Verify that WOF is running for WOF supported modes
+      if( OCC_MODE_WOF_ENABLED(i_mode) &&
           ( g_amec->wof.wof_disabled || (g_amec->wof.wof_init_state != WOF_ENABLED) ) )
       {
           // clip to WOF base since WOF is disabled
           l_freq_max = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_WOF_BASE];
-          l_check_for_eco_mode = FALSE;
       }
-    }
-
-    if((l_check_for_eco_mode) && (g_amec->wof.eco_mode_freq_degrade_mhz))
-    {
-        // eco mode is set, drop max freq
-        if(l_freq_max > g_amec->wof.eco_mode_freq_degrade_mhz)
-        {
-            l_temp_max = l_freq_max - g_amec->wof.eco_mode_freq_degrade_mhz;
-            // make sure max didn't fall below min
-            if(l_temp_max < l_freq_min)
-            {
-                TRAC_ERR("amec_set_freq_range: max freq[%dMHz] - eco freq degrade[%dMHz] < min freq[%dMHz] ",
-                           l_freq_max, g_amec->wof.eco_mode_freq_degrade_mhz, l_freq_min);
-                l_freq_max = l_freq_min;
-            }
-            else
-            {
-                TRAC_INFO("amec_set_freq_range: Eco mode freq degrade[%dMHz] taken from Fmax[%dMHz] new Fmax[%dMHz]",
-                           g_amec->wof.eco_mode_freq_degrade_mhz, l_freq_max, l_temp_max);
-                l_freq_max = l_temp_max;
-            }
-        }
-        else
-        {
-            TRAC_ERR("amec_set_freq_range: NOT applying eco freq degrade[%dMHz] > max freq[%dMHz]",
-                      g_amec->wof.eco_mode_freq_degrade_mhz, l_freq_max);
-        }
     }
 
     if( (l_freq_min == 0) || (l_freq_max == 0) || (l_freq_min_at_max_throttle == 0))
@@ -517,17 +498,6 @@ void amec_slv_proc_voting_box(void)
             l_core_freq = l_chip_fmax;
             l_core_reason = l_chip_reason;
 
-            // Disable Dynamic performance in KVM, skip if mfg auto slew is enabled
-            if( (!G_sysConfigData.system_type.kvm) && (!g_amec->poverride_enable) )
-            {
-                // Check frequency request generated by DPS algorithms
-                if(g_amec->proc[0].core[k].core_perf.dps_freq_request < l_core_freq)
-                {
-                    l_core_freq = g_amec->proc[0].core[k].core_perf.dps_freq_request;
-                    l_core_reason = AMEC_VOTING_REASON_UTIL;
-                }
-            }
-
             // Override frequency via Amester parameter interface
             // allow this to overwrite mfg autoslew
             if (g_amec->proc[0].parm_f_override_enable &&
@@ -553,11 +523,10 @@ void amec_slv_proc_voting_box(void)
 
             //CURRENT_MODE() may be OCC_MODE_NOCHANGE because STATE change is processed
             //before MODE change
-            if ((CURRENT_MODE() != OCC_MODE_DYN_PERF)   &&
-                (CURRENT_MODE() != OCC_MODE_MAX_PERF)   &&
-                (CURRENT_MODE() != OCC_MODE_FFO)               &&
-                (CURRENT_MODE() != OCC_MODE_NOCHANGE)          &&
-                (l_core_reason & NON_DPS_POWER_LIMITED))
+            if( (!OCC_MODE_WOF_ENABLED(CURRENT_MODE())) &&
+                (CURRENT_MODE() != OCC_MODE_FFO)        &&
+                (CURRENT_MODE() != OCC_MODE_NOCHANGE)   &&
+                (l_core_reason & NON_DPS_POWER_LIMITED) )
             {
                 G_non_dps_power_limited = TRUE;
             }

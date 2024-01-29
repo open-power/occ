@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2023                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2024                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -737,6 +737,29 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
     l_extnSensorList[l_sensorHeader.count].data[5] = CONVERT_UINT32_UINT8_LOWER_LOW(g_amec->proc[0].chip_f_reason_history);
     l_sensorHeader.count++;
 
+    // add mode data if current mode has extra data
+    if( (CURRENT_MODE() == OCC_MODE_STATIC_FREQ_POINT) ||
+        (CURRENT_MODE() == OCC_MODE_FFO) )
+    {
+        l_extnSensorList[l_sensorHeader.count].name = EXTN_NAME_MODE;
+        freq = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_USER];
+        l_extnSensorList[l_sensorHeader.count].data[0] = CONVERT_UINT16_UINT8_HIGH(freq);
+        l_extnSensorList[l_sensorHeader.count].data[1] = CONVERT_UINT16_UINT8_LOW(freq);
+        l_sensorHeader.count++;
+    }
+    else if( OCC_MODE_WOF_ENABLED(CURRENT_MODE()) )
+    {
+        l_extnSensorList[l_sensorHeader.count].name = EXTN_NAME_MODE;
+        l_extnSensorList[l_sensorHeader.count].data[0] = CONVERT_UINT16_UINT8_HIGH(g_amec->wof.eco_mode_freq_mhz);
+        l_extnSensorList[l_sensorHeader.count].data[1] = CONVERT_UINT16_UINT8_LOW(g_amec->wof.eco_mode_freq_mhz);
+        l_extnSensorList[l_sensorHeader.count].data[2] = CONVERT_UINT16_UINT8_HIGH(g_amec->wof.eco_mode_ceff_add);
+        l_extnSensorList[l_sensorHeader.count].data[3] = CONVERT_UINT16_UINT8_LOW(g_amec->wof.eco_mode_ceff_add);
+        uint16_t raw_ceff = getSensorByGsid(CEFFVDDRATIO)->sample;
+        l_extnSensorList[l_sensorHeader.count].data[4] = CONVERT_UINT16_UINT8_HIGH(raw_ceff);
+        l_extnSensorList[l_sensorHeader.count].data[5] = CONVERT_UINT16_UINT8_LOW(raw_ceff);
+        l_sensorHeader.count++;
+    }
+
     // WOF clip info from PGPE
     l_extnSensorList[l_sensorHeader.count].name = EXTN_NAME_WOFC;
     if(g_amec->wof.wof_disabled)
@@ -751,13 +774,13 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
     }
     else
     {
-        // WOF is enabled return WOF information from PGPE
-        // These are read from PGPE shared SRAM every WOF cycle
-        l_extnSensorList[l_sensorHeader.count].data[0] = g_amec->wof.f_clip_ps;
-        l_extnSensorList[l_sensorHeader.count].data[1] = 0;
-        l_extnSensorList[l_sensorHeader.count].data[2] = 0;
+        // WOF is enabled return WOF information
+        l_extnSensorList[l_sensorHeader.count].data[0] = g_amec->wof.f_clip_ps; // read from PGPE every WOF cycle
+        l_extnSensorList[l_sensorHeader.count].data[1] = CONVERT_UINT16_UINT8_HIGH(g_amec->wof.ceff_ratio_vdd);
+        l_extnSensorList[l_sensorHeader.count].data[2] = CONVERT_UINT16_UINT8_LOW(g_amec->wof.ceff_ratio_vdd);
         l_extnSensorList[l_sensorHeader.count].data[3] = CONVERT_UINT16_UINT8_HIGH(g_amec->wof.v_ratio_vdd);
         l_extnSensorList[l_sensorHeader.count].data[4] = CONVERT_UINT16_UINT8_LOW(g_amec->wof.v_ratio_vdd);
+        l_extnSensorList[l_sensorHeader.count].data[5] = 0;
     }
     l_sensorHeader.count++;
 

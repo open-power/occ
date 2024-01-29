@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2023                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2024                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -31,7 +31,6 @@
 #include "state.h"
 #include "occ_service_codes.h"
 #include "amec_freq.h"
-#include "amec_part.h"
 #include "amec_data.h"
 #include "amec_sys.h"
 #include <pstates_occ.H>
@@ -41,10 +40,14 @@ errlHndl_t SMGR_mode_transition_to_powersave();
 errlHndl_t SMGR_mode_transition_to_static_freq_point();
 errlHndl_t SMGR_mode_transition_to_ffo();
 errlHndl_t SMGR_mode_transition_to_fmax();
-errlHndl_t SMGR_mode_transition_to_dyn_perf();
+errlHndl_t SMGR_mode_transition_to_non_deterministic();
+errlHndl_t SMGR_mode_transition_to_efficiency_power();
+errlHndl_t SMGR_mode_transition_to_efficiency_perf();
+errlHndl_t SMGR_mode_transition_to_balanced();
 errlHndl_t SMGR_mode_transition_to_max_perf();
 
 extern uint32_t G_present_cores;
+extern OCCPstateParmBlock_t G_oppb;   // OCC Pstate Parameters Block Structure
 
 // Mode that OCC is currently in
 OCC_MODE           G_occ_internal_mode      = OCC_MODE_NOCHANGE;
@@ -78,11 +81,14 @@ const smgr_state_trans_t G_smgr_mode_trans[] =
 {
     /* Current Mode         New Mode                    Transition Function */
     {OCC_MODE_ALL,          OCC_MODE_DISABLED,          &SMGR_mode_transition_to_disabled},
-    {OCC_MODE_ALL,          OCC_MODE_PWRSAVE,           &SMGR_mode_transition_to_powersave},
+    {OCC_MODE_ALL,          OCC_MODE_NON_DETERMINISTIC, &SMGR_mode_transition_to_non_deterministic},
     {OCC_MODE_ALL,          OCC_MODE_STATIC_FREQ_POINT, &SMGR_mode_transition_to_static_freq_point},
-    {OCC_MODE_ALL,          OCC_MODE_FFO,               &SMGR_mode_transition_to_ffo},
+    {OCC_MODE_ALL,          OCC_MODE_PWRSAVE,           &SMGR_mode_transition_to_powersave},
+    {OCC_MODE_ALL,          OCC_MODE_EFFICIENCY_POWER,  &SMGR_mode_transition_to_efficiency_power},
+    {OCC_MODE_ALL,          OCC_MODE_EFFICIENCY_PERF,   &SMGR_mode_transition_to_efficiency_perf},
     {OCC_MODE_ALL,          OCC_MODE_FMAX,              &SMGR_mode_transition_to_fmax},
-    {OCC_MODE_ALL,          OCC_MODE_DYN_PERF,          &SMGR_mode_transition_to_dyn_perf},
+    {OCC_MODE_ALL,          OCC_MODE_BALANCED,          &SMGR_mode_transition_to_balanced},
+    {OCC_MODE_ALL,          OCC_MODE_FFO,               &SMGR_mode_transition_to_ffo},
     {OCC_MODE_ALL,          OCC_MODE_MAX_PERF,          &SMGR_mode_transition_to_max_perf},
 };
 const uint8_t G_smgr_mode_trans_count = sizeof(G_smgr_mode_trans)/sizeof(smgr_state_trans_t);
@@ -260,29 +266,6 @@ errlHndl_t SMGR_set_mode( const OCC_MODE i_mode )
                  break;
              }
 
-             // reset variables for Dynamic Performance mode
-             if(CURRENT_MODE() == OCC_MODE_DYN_PERF)
-             {
-                 // reset the internal performance settings of the cores
-                 for (jj=0; jj<MAX_NUM_CORES; jj++)
-                 {
-                   memset(&g_amec->proc[0].core[jj].core_perf.ptr_util_slack_avg_buffer, 0, 2*MAX_UTIL_SLACK_AVG_LEN);
-                   memset(&g_amec->proc[0].core[jj].core_perf.ptr_util_active_avg_buffer, 0, 2*MAX_UTIL_SLACK_AVG_LEN);
-                   g_amec->proc[0].core[jj].core_perf.util_active_core_counter = 0;
-                   g_amec->proc[0].core[jj].core_perf.util_slack_core_counter = 0;
-                   g_amec->proc[0].core[jj].core_perf.util_slack_accumulator = 0;
-                   g_amec->proc[0].core[jj].core_perf.util_active_accumulator = 0;
-                   g_amec->proc[0].core[jj].core_perf.ptr_putUtilslack = 0;
-                 }
-             }
-             else
-             {
-                 // reset the DPS frequency request
-                 for (jj=0; jj<MAX_NUM_CORES; jj++)
-                 {
-                     g_amec->proc[0].core[jj].core_perf.dps_freq_request = 0xFFFF;
-                 }
-             }
          }
          while(0);
 
@@ -303,6 +286,76 @@ errlHndl_t SMGR_set_mode( const OCC_MODE i_mode )
      return l_errlHndl;
 }
 
+// Function Specification
+//
+// Name: set_efficiency_mode_parms
+//
+// Description: Set the max frequency clip and ceff addr from the WOF table for given mode
+//
+// End Function Specification
+void set_efficiency_mode_parms( const OCC_MODE i_mode )
+{
+    uint16_t                l_freq_mhz = 0;
+    int16_t                 l_temp_ceff_add = 0;
+    uint8_t                 l_table_ceff_add = 0;
+
+    switch(i_mode)
+    {
+        case OCC_MODE_NON_DETERMINISTIC:
+            l_freq_mhz = G_oppb.non_det_freq_limit_mhz;
+            l_table_ceff_add = G_oppb.non_det_ceff_pct;
+            break;
+
+        case OCC_MODE_EFFICIENCY_POWER:
+            l_freq_mhz = G_oppb.fav_pow_freq_limit_mhz;
+            l_table_ceff_add = G_oppb.fav_pow_ceff_pct;
+            break;
+
+        case OCC_MODE_EFFICIENCY_PERF:
+            l_freq_mhz = G_oppb.fav_perf_freq_limit_mhz;
+            l_table_ceff_add = G_oppb.fav_perf_ceff_pct;
+            break;
+
+        case OCC_MODE_BALANCED:
+            l_freq_mhz = G_oppb.bal_perf_freq_limit_mhz;
+            l_table_ceff_add = G_oppb.bal_perf_ceff_pct;
+            break;
+
+        default:
+            TRAC_ERR("set_efficiency_mode_parms: Unsupported mode 0x%02X", i_mode);
+            break;
+    }
+
+    // verify the frequency
+    if( (l_freq_mhz >= G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MIN_FREQ]) &&
+        (l_freq_mhz <= G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_VPD_UT]) )
+    {
+        g_amec->wof.eco_mode_freq_mhz = l_freq_mhz;
+    }
+    else
+    {
+        TRAC_ERR("set_efficiency_mode_parms: WOF table Frequency[%dMHz] out of range[%dMHz - %dMHz] for mode 0x%02X",
+                 l_freq_mhz,
+                 G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MIN_FREQ],
+                 G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_VPD_UT],
+                 i_mode);
+        g_amec->wof.eco_mode_freq_mhz = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_VPD_UT];
+    }
+
+    // Shouldn't be getting mode with OPAL but don't set ceff if we did
+    if(!G_sysConfigData.system_type.kvm)
+    {
+       // msb is sign bit remaining bits in 1% unit convert to 0.01%
+       l_temp_ceff_add = (l_table_ceff_add & 0x7F) * 100;
+
+       if(l_table_ceff_add & 0x80)
+           l_temp_ceff_add = -l_temp_ceff_add;
+
+       g_amec->wof.eco_mode_ceff_add = l_temp_ceff_add;
+    }
+
+    return;
+}
 
 // Function Specification
 //
@@ -366,6 +419,43 @@ errlHndl_t SMGR_mode_transition_to_powersave()
     }
 
     TRAC_IMP("SMGR: Mode to PowerSave Transition Completed");
+
+    return l_errlHndl;
+}
+
+// Function Specification
+//
+// Name: SMGR_mode_transition_to_non_deterministic
+//
+// Description: Transition to non deterministic mode
+//
+// End Function Specification
+errlHndl_t SMGR_mode_transition_to_non_deterministic()
+{
+    errlHndl_t              l_errlHndl = NULL;
+
+    TRAC_IMP("SMGR: Mode to Non-Deterministic Transition Started");
+
+    // set freq limit and ceff add
+    set_efficiency_mode_parms(OCC_MODE_NON_DETERMINISTIC);
+
+    // Set Freq Mode for AMEC to use
+    l_errlHndl = amec_set_freq_range(OCC_MODE_NON_DETERMINISTIC);
+
+    CURRENT_MODE() = OCC_MODE_NON_DETERMINISTIC;
+
+    // Shouldn't be getting mode with OPAL but ignore changes to
+    // WOF_RC_MODE_NO_SUPPORT_MASK since it is controlled by inband WOF command
+    if(!G_sysConfigData.system_type.kvm)
+    {
+       // WOF is enabled in balanced mode, clear the mode bit
+       set_clear_wof_disabled( CLEAR,
+                               WOF_RC_MODE_NO_SUPPORT_MASK,
+                               ERC_WOF_MODE_NO_SUPPORT_MASK );
+    }
+
+    TRAC_IMP("SMGR: Mode to non-determinitic Transition Completed ceff add[%d] Freq limit[%dMhz]", g_amec->wof.eco_mode_ceff_add,
+              g_amec->wof.eco_mode_freq_mhz);
 
     return l_errlHndl;
 }
@@ -595,6 +685,80 @@ errlHndl_t SMGR_mode_transition_to_ffo()
 
 // Function Specification
 //
+// Name: SMGR_mode_transition_to_efficiency_power
+//
+// Description: Transition to efficiency favor power mode
+//
+// End Function Specification
+errlHndl_t SMGR_mode_transition_to_efficiency_power()
+{
+    errlHndl_t              l_errlHndl = NULL;
+
+    TRAC_IMP("SMGR: Mode to Efficiency Power Transition Started");
+
+    // set freq limit and ceff add
+    set_efficiency_mode_parms(OCC_MODE_EFFICIENCY_POWER);
+
+    // Set Freq Mode for AMEC to use
+    l_errlHndl = amec_set_freq_range(OCC_MODE_EFFICIENCY_POWER);
+
+    CURRENT_MODE() = OCC_MODE_EFFICIENCY_POWER;
+
+    // Shouldn't be getting mode with OPAL but ignore changes to
+    // WOF_RC_MODE_NO_SUPPORT_MASK since it is controlled by inband WOF command
+    if(!G_sysConfigData.system_type.kvm)
+    {
+       // WOF is enabled in balanced mode, clear the mode bit
+       set_clear_wof_disabled( CLEAR,
+                               WOF_RC_MODE_NO_SUPPORT_MASK,
+                               ERC_WOF_MODE_NO_SUPPORT_MASK );
+    }
+
+    TRAC_IMP("SMGR: Mode to Efficiency Power Transition Completed ceff add[%d] Freq limit[%dMhz]", g_amec->wof.eco_mode_ceff_add,
+              g_amec->wof.eco_mode_freq_mhz);
+
+    return l_errlHndl;
+}
+
+// Function Specification
+//
+// Name: SMGR_mode_transition_to_efficiency_perf
+//
+// Description: Transition to efficiency favor performance mode
+//
+// End Function Specification
+errlHndl_t SMGR_mode_transition_to_efficiency_perf()
+{
+    errlHndl_t              l_errlHndl = NULL;
+
+    TRAC_IMP("SMGR: Mode to Efficiency Performance Transition Started");
+
+    // set freq limit and ceff add
+    set_efficiency_mode_parms(OCC_MODE_EFFICIENCY_PERF);
+
+    // Set Freq Mode for AMEC to use
+    l_errlHndl = amec_set_freq_range(OCC_MODE_EFFICIENCY_PERF);
+
+    CURRENT_MODE() = OCC_MODE_EFFICIENCY_PERF;
+
+    // Shouldn't be getting mode with OPAL but ignore changes to
+    // WOF_RC_MODE_NO_SUPPORT_MASK since it is controlled by inband WOF command
+    if(!G_sysConfigData.system_type.kvm)
+    {
+       // WOF is enabled in balanced mode, clear the mode bit
+       set_clear_wof_disabled( CLEAR,
+                               WOF_RC_MODE_NO_SUPPORT_MASK,
+                               ERC_WOF_MODE_NO_SUPPORT_MASK );
+    }
+
+    TRAC_IMP("SMGR: Mode to Efficiency Performance Transition Completed ceff add[%d] Freq limit[%dMhz]", g_amec->wof.eco_mode_ceff_add,
+              g_amec->wof.eco_mode_freq_mhz);
+
+    return l_errlHndl;
+}
+
+// Function Specification
+//
 // Name: SMGR_mode_transition_to_fmax
 //
 // Description: Transition to Maximum Frequency mode
@@ -628,32 +792,37 @@ errlHndl_t SMGR_mode_transition_to_fmax()
 
 // Function Specification
 //
-// Name: SMGR_mode_transition_to_dyn_perf
+// Name: SMGR_mode_transition_to_balanced
 //
-// Description: Transition to dynamic performance mode
+// Description: Transition to balanced mode
 //
 // End Function Specification
-errlHndl_t SMGR_mode_transition_to_dyn_perf()
+errlHndl_t SMGR_mode_transition_to_balanced()
 {
     errlHndl_t              l_errlHndl = NULL;
 
-    TRAC_IMP("SMGR: Mode to Dynamic Performance Transition Started");
+    TRAC_IMP("SMGR: Mode to Balanced Transition Started");
+
+    // set freq limit and ceff add
+    set_efficiency_mode_parms(OCC_MODE_BALANCED);
 
     // Set Freq Mode for AMEC to use
-    l_errlHndl = amec_set_freq_range(OCC_MODE_DYN_PERF);
+    l_errlHndl = amec_set_freq_range(OCC_MODE_BALANCED);
 
-    CURRENT_MODE() = OCC_MODE_DYN_PERF;
+    CURRENT_MODE() = OCC_MODE_BALANCED;
+
     // Shouldn't be getting mode with OPAL but ignore changes to
     // WOF_RC_MODE_NO_SUPPORT_MASK since it is controlled by inband WOF command
     if(!G_sysConfigData.system_type.kvm)
     {
-       // WOF is enabled in dynamic performance mode, clear the mode bit
+       // WOF is enabled in balanced mode, clear the mode bit
        set_clear_wof_disabled( CLEAR,
                                WOF_RC_MODE_NO_SUPPORT_MASK,
                                ERC_WOF_MODE_NO_SUPPORT_MASK );
     }
 
-    TRAC_IMP("SMGR: Mode to Dynamic Performance Transition Completed");
+    TRAC_IMP("SMGR: Mode to Balanced Transition Completed ceff add[%d] Freq limit[%dMhz]", g_amec->wof.eco_mode_ceff_add,
+              g_amec->wof.eco_mode_freq_mhz);
 
     return l_errlHndl;
 }
@@ -671,6 +840,12 @@ errlHndl_t SMGR_mode_transition_to_max_perf()
 
     TRAC_IMP("SMGR: Mode to Maximum Performance Transition Started");
 
+    // max perf isn't an "efficiency" mode, clear the efficiency parms
+    // Note the debug command may be used AFTER setting max perf mode to
+    // set an efficency mode addr and freq limit
+    g_amec->wof.eco_mode_ceff_add = 0;
+    g_amec->wof.eco_mode_freq_mhz = 0;
+
     // Set Freq Mode for AMEC to use
     l_errlHndl = amec_set_freq_range(OCC_MODE_MAX_PERF);
 
@@ -684,6 +859,7 @@ errlHndl_t SMGR_mode_transition_to_max_perf()
                                WOF_RC_MODE_NO_SUPPORT_MASK,
                                ERC_WOF_MODE_NO_SUPPORT_MASK );
     }
+
     TRAC_IMP("SMGR: Mode to Maximum Performance Transition Completed");
 
     return l_errlHndl;

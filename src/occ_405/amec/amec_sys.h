@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2023                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2024                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -32,8 +32,6 @@
 #include <occ_common.h>
 #include <sensor.h>
 #include <occ_sys_config.h>
-#include <amec_part.h>
-#include <amec_perfcount.h>
 #include <mode.h>
 #include <amec_controller.h>
 #include <amec_oversub.h>
@@ -234,7 +232,6 @@ typedef struct
 typedef struct
 {
   // Sub-structures under Core
-  amec_core_perf_counter_t     core_perf;
   amec_core_thread_t thread[MAX_THREADS_PER_CORE];
 
   //-----------------------------------
@@ -613,9 +610,6 @@ typedef struct
 
   // Sensors on master for calculations across multiple OCCs
   //amec_master_t mstr;
-
-  // Partition Information
-  amec_part_config_t    part_config;
 
   //---------------------------------------------------------
   //

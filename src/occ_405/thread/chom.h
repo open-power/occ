@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2023                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2024                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -358,9 +358,11 @@ enum chom_supported_modes
     CHOM_MODE_SPS,   // Static Power Save
     CHOM_MODE_SFP,   // Static Frequency Point
     CHOM_MODE_FFO,
-    CHOM_MODE_DYN_PERF,
+    CHOM_MODE_BALANCED,
     CHOM_MODE_MAX_PERF,
     CHOM_MODE_FMAX,
+    CHOM_MODE_EFF_PWR,
+    CHOM_MODE_EFF_PERF,
     // number of modes required to run Call home
     NUM_CHOM_MODES
 };

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2023                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2024                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -328,10 +328,8 @@ const sensor_info_t G_sensor_info[]   =
   SENSOR_INFO_T_ENTRY(   TEMPGPU1MEM, "C\0",   AMEC_SENSOR_TYPE_TEMP,  AMEC_SENSOR_LOC_GPU, AMEC_SENSOR_NONUM,  AMEEFP_1S_IN_HZ, AMEFP(  1, 0)  ),
   SENSOR_INFO_T_ENTRY(   TEMPGPU2MEM, "C\0",   AMEC_SENSOR_TYPE_TEMP,  AMEC_SENSOR_LOC_GPU, AMEC_SENSOR_NONUM,  AMEEFP_1S_IN_HZ, AMEFP(  1, 0)  ),
 
-  /* ==PartSummarySensors== NameString Units                   Type              Location             Number                Freq          ScaleFactor   */
-  SENSOR_INFO_T_ENTRY(   UTILSLCG000,  "%\0", AMEC_SENSOR_TYPE_UTIL,  AMEC_SENSOR_LOC_LPAR, AMEC_SENSOR_NONUM,  AMEEFP_EVERY_8TH_TICK_HZ, AMEFP_SCALE_0_16384),
-
   /* ==WOF Sensors==     NameString        Units            Type              Location             Number                Freq          ScaleFactor   */
+  SENSOR_INFO_T_ENTRY(   RESERVED_WOF,  "%\0",   AMEC_SENSOR_TYPE_WOF,  AMEC_SENSOR_LOC_PROC, AMEC_SENSOR_NONUM, AMEEFP_EVERY_TICK_HZ, AMEFP(  1,-2)  ),
   SENSOR_INFO_T_ENTRY(   CEFFVDDRATIO,  "%\0",   AMEC_SENSOR_TYPE_WOF,  AMEC_SENSOR_LOC_PROC, AMEC_SENSOR_NONUM, AMEEFP_EVERY_TICK_HZ, AMEFP(  1,-2)  ),
   SENSOR_INFO_T_ENTRY(   CEFFVCSRATIO,  "%\0",   AMEC_SENSOR_TYPE_WOF,  AMEC_SENSOR_LOC_PROC, AMEC_SENSOR_NONUM, AMEEFP_EVERY_TICK_HZ, AMEFP(  1,-2)  ),
   SENSOR_INFO_T_ENTRY(   VRATIO_VDD,    " \0",   AMEC_SENSOR_TYPE_WOF,  AMEC_SENSOR_LOC_PROC, AMEC_SENSOR_NONUM, AMEEFP_EVERY_TICK_HZ, AMEFP(  1, 0)  ),
