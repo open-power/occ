@@ -6,7 +6,7 @@
 #
 # OpenPOWER OnChipController Project
 #
-# Contributors Listed Below - COPYRIGHT 2023
+# Contributors Listed Below - COPYRIGHT 2023,2024
 # [+] International Business Machines Corp.
 #
 #
@@ -39,7 +39,7 @@ if [ ${TERM:0:5} == "xterm" ]; then
         normal="\033[0m";
 fi
 
-TOOL_VERSION="15-Jun-2023"
+TOOL_VERSION="28-Jan-2024"
 
 let occ=0
 patchSrc="/home/service/patch-occ"
@@ -69,12 +69,14 @@ function usage
     echo "       throttle - show processor throttle properties (for all OCCs)"
     echo "       introspect <pcap|mode|ips|ambient|altitude|defaults|entity|throttle> <instance>"
     echo "                - show specified dbus object - default instance: $occ)"
+    echo "       i          <objpath> - find service and introspect from object path"
     echo "       dbusfind <interface> - find dbus object for specified interface"
     echo "       dbusfindbyobj <objpath> - find dbus object for specified object path"
+    echo "       getall <objpath> <interface> - GetAll properties"
     echo ""
     echo "       driver - show the BMC / PNOR driver info"./
     echo "       patches - list all patches on system: ${patchDir}"
-    echo "       overlay - move patches and install overlay for /usr/"
+    echo "       overlay <dir> - move patches and install overlay (default dir: /usr)"
     echo "       install - install patches from $patchSrc/ (use install! to ignore overlay warning)"
     echo "       uninstall - uninstall patches (restore .orig files from $patchSrc/)"
     echo ""
@@ -86,6 +88,7 @@ function usage
     echo "       reset <occ> - inject OCC error triggering a PM Complex reset (default=OCC 0)"
     echo "       safe <occ> - inject OCC errors until system ends up in safe mode (default=OCC 0)"
     echo "       callhome - force OCC telemetry / call-home log"
+    echo "       service <service> - display service status (or list all active services if not specified)"
     echo "       restart <service> - restart service ([occ], settings, entity, etc)"
     echo "       disablerecovery - disable recovery including watchdog"
     echo "       update - start code update using image from /tmp/images"
@@ -93,10 +96,12 @@ function usage
     echo ""
     echo "    journal/dmsg traces:"
     echo "       control - display occ-control journal traces"
-    echo "       jwatch - watch all occ-control traces from journalctl (ctrl-c to stop)"
     echo "       journal - display any OCC related traces from journalctl"
+    echo "       j <app | string> - display app's journal traces or search for string (default app is occ-control)"
+    echo "       jwatch <app> - watch all app traces from journalctl (ctrl-c to stop) (default app is occ-control)"
     echo "       dmesg - display any OCC traces from dmesg"
     echo "       bmcweb - display systems.hpp traces for bmcweb from journalctl"
+    echo "       trace <occ> - dump OCC traces in hex (default occ is 0)"
     echo ""
     echo "       debug - enable kernel debug traces"
     echo "       jdebug - enable journal debug traces"
@@ -274,8 +279,6 @@ function power_on
         mv $curFileS $lastFileS
     done
 
-    #wait_for_state ACTIVE
-
     if [ "$1" == "ACTIVE" ]; then
         echo ""
         #wait_for_state ACTIVE 1 # Ignore safe mode???
@@ -343,6 +346,71 @@ function power_off
     trap - INT TERM
 }
 
+function installPatch
+{
+    let installed=0
+    targetFile="$1"
+    targetService="$2"
+    targetPath="${targetFile%/*}"
+    patchFile="${patchSrc}/${targetFile##*/}"
+    if [ -e "${patchFile}" ]; then
+        # Make sure backup (.orig) exists
+        backupFile $targetFile skip
+        diff -b $targetFile ${patchFile} > /dev/null
+        if [ $? -ne 0 ]; then
+            cp -v ${patchFile} $targetPath
+            let installed=1
+        fi
+    fi
+    if [ -n "$targetService" ] && [ $installed -ne 0 ]; then
+        echo "==> systemctl restart $targetService"
+        systemctl restart $targetService
+    fi
+    return $installed
+}
+
+function removePatch
+{
+    let removed=0
+    targetFile="$1"
+    targetService="$2"
+    targetPath="${targetFile%/*}"
+    origFile="${patchSrc}/${targetFile##*/}.orig"
+    if [ -e "${origFile}" ]; then
+        diff -b $targetFile ${origFile} > /dev/null
+        if [ $? -ne 0 ]; then
+            cp -v ${origFile} $targetPath/${targetFile##*/}
+            let removed=1
+        fi
+    fi
+    if [ -n "$targetService" ] && [ $removed -ne 0 ]; then
+        echo "==> systemctl restart xyz.openbmc_project.Settings"
+        systemctl restart xyz.openbmc_project.Settings
+    fi
+    return $removed
+}
+
+function backupFile
+{
+    targetFile="$1"
+    skipCompare="$2"
+    patchFile="${patchSrc}/${targetFile##*/}"
+    if [ -e "${patchFile}" ]; then
+        if [ -e "${patchFile}.orig" ]; then
+            if [ -z "$skipCompare" ]; then
+                if [ $overlayFound -eq 0 ] || [ $newDriver -eq 1 ]; then
+                    diff -b $targetFile ${patchFile}.orig > /dev/null
+                    if [ $? -ne 0 ]; then
+                        cp -iv $targetFile ${patchFile}.orig
+                    fi
+                fi
+            fi
+        else
+            cp -v $targetFile ${patchFile}.orig
+        fi
+    fi
+}
+
 function backup_for_patches
 {
     if [ -d ${patchSrc} ]; then
@@ -353,7 +421,7 @@ function backup_for_patches
             let overlayFound=1
         fi
 
-        echo "Checking for backups (in $patchSrc/)"
+        echo -e "\nChecking for backups (in $patchSrc/)"
         let newDriver=0
         strings /etc/os-release > ${patchSrc}/driver.new
         if [ -e ${patchSrc}/driver.orig ]; then
@@ -364,84 +432,14 @@ function backup_for_patches
                 let newDriver=1
             fi
         fi
-        file="openpower-occ-control"
-        if [ -e "${patchSrc}/${file}" ]; then
-            if [ -e "${patchSrc}/${file}.orig" ]; then
-                if [ $overlayFound -eq 0 ] || [ $newDriver -eq 1 ]; then
-                    diff -b /usr/bin/${file} ${patchSrc}/${file}.orig > /dev/null
-                    if [ $? -ne 0 ]; then
-                        cp -iv /usr/bin/${file} ${patchSrc}/${file}.orig
-                    fi
-                fi
-            else
-                cp -v /usr/bin/${file} ${patchSrc}/${file}.orig
-            fi
-        fi
-        file="phosphor-settings-manager"
-        if [ -e "${patchSrc}/${file}" ]; then
-            if [ -e "${patchSrc}/${file}.orig" ]; then
-                if [ $overlayFound -eq 0 ] || [ $newDriver -eq 1 ]; then
-                    diff -b /usr/bin/${file} ${patchSrc}/${file}.orig > /dev/null
-                    if [ $? -ne 0 ]; then
-                        cp -iv /usr/bin/${file} ${patchSrc}/${file}.orig
-                    fi
-                fi
-            else
-                cp -v /usr/bin/${file} ${patchSrc}/${file}.orig
-            fi
-        fi
-        file="bmcweb"
-        if [ -e "${patchSrc}/${file}" ]; then
-            if [ -e "${patchSrc}/${file}.orig" ]; then
-                if [ $overlayFound -eq 0 ] || [ $newDriver -eq 1 ]; then
-                    diff -b /usr/bin/${file} ${patchSrc}/${file}.orig > /dev/null
-                    if [ $? -ne 0 ]; then
-                        cp -iv /usr/bin/${file} ${patchSrc}/${file}.orig
-                    fi
-                fi
-            else
-                cp -v /usr/bin/${file} ${patchSrc}/${file}.orig
-            fi
-        fi
-        file="entity-manager"
-        if [ -e "${patchSrc}/${file}" ]; then
-            if [ -e "${patchSrc}/${file}.orig" ]; then
-                if [ $overlayFound -eq 0 ] || [ $newDriver -eq 1 ]; then
-                    diff -b /usr/bin/${file} ${patchSrc}/${file}.orig > /dev/null
-                    if [ $? -ne 0 ]; then
-                        cp -iv /usr/bin/${file} ${patchSrc}/${file}.orig
-                    fi
-                fi
-            else
-                cp -v /usr/bin/${file} ${patchSrc}/${file}.orig
-            fi
-        fi
-        file="libphosphor_dbus.so.1.0.0"
-        if [ -e "${patchSrc}/${file}" ]; then
-            if [ -e "${patchSrc}/${file}.orig" ]; then
-                if [ $overlayFound -eq 0 ] || [ $newDriver -eq 1 ]; then
-                    diff -b /usr/lib/${file} ${patchSrc}/${file}.orig > /dev/null
-                    if [ $? -ne 0 ]; then
-                        cp -iv /usr/lib/${file} ${patchSrc}/${file}.orig
-                    fi
-                fi
-            else
-                cp -v /usr/lib/${file} ${patchSrc}/${file}.orig
-            fi
-        fi
-        file="ipmid"
-        if [ -e "${patchSrc}/${file}" ]; then
-            if [ -e "${patchSrc}/${file}.orig" ]; then
-                if [ $overlayFound -eq 0 ] || [ $newDriver -eq 1 ]; then
-                    diff -b /usr/bin/${file} ${patchSrc}/${file}.orig > /dev/null
-                    if [ $? -ne 0 ]; then
-                        cp -iv /usr/bin/${file} ${patchSrc}/${file}.orig
-                    fi
-                fi
-            else
-                cp -v /usr/bin/${file} ${patchSrc}/${file}.orig
-            fi
-        fi
+        backupFile "/usr/bin/openpower-occ-control"
+        backupFile "/usr/bin/phosphor-settings-manager"
+        backupFile "/usr/bin/bmcweb"
+        backupFile "/usr/bin/entity-manager"
+        backupFile "/usr/lib/libphosphor_dbus.so.1.0.0"
+        backupFile "/usr/bin/ipmid"
+        backupFile "/usr/sbin/pgood_wait"
+        backupFile "/usr/sbin/power_control.exe"
         file="b2600.py" # HTMGT elog parser
         if [ -e "${patchSrc}/${file}" ]; then
             if [ -e "${patchSrc}/${file}.orig" ]; then
@@ -1194,6 +1192,31 @@ function getService
     fi
 }
 
+function findServiceByObjPath
+{
+    objPath="$1"
+    output="/tmp/.occ.out"
+    if [ $G_verbose -gt 0 ]; then
+        echo "==> dbus-send --system --print-reply --dest=xyz.openbmc_project.ObjectMapper /xyz/openbmc_project/object_mapper xyz.openbmc_project.ObjectMapper.GetObject string:\"$objPath\" array:string:"
+    fi
+    dbus-send --system --print-reply --dest=xyz.openbmc_project.ObjectMapper /xyz/openbmc_project/object_mapper xyz.openbmc_project.ObjectMapper.GetObject string:"$objPath" array:string: > $output
+    if [ $? -eq 0 ]; then
+        if [ -s "$output" ] && [ $G_verbose -gt 0 ]; then
+            cat $output
+            rm $output
+        fi
+        if [ $G_verbose -gt 0 ]; then
+            echo "==> dbus-send --system --print-reply --dest=xyz.openbmc_project.ObjectMapper /xyz/openbmc_project/object_mapper xyz.openbmc_project.ObjectMapper.GetObject string:\"$objPath\" array:string: | grep 'string' | head -n 1 | awk '{print \$2}' | sed 's/\"//g'"
+        fi
+        service=`dbus-send --system --print-reply --dest=xyz.openbmc_project.ObjectMapper /xyz/openbmc_project/object_mapper xyz.openbmc_project.ObjectMapper.GetObject string:"$objPath" array:string: | grep 'string' | head -n 1 | awk '{print $2}' | sed 's/"//g'`
+        if [ -n "$service" ]; then
+            G_service="$service"
+        fi
+    else
+        echo "ERROR: dbus-send cmd failed"
+    fi
+}
+
 function getSubTree
 {
     # ==> busctl call xyz.openbmc_project.ObjectMapper /xyz/openbmc_project/object_mapper xyz.openbmc_project.ObjectMapper GetSubTree sias / 0 1 "xyz.openbmc_project.PLDM.PDR"
@@ -1320,6 +1343,65 @@ function printOccPels
     echo "To display detailed log: peltool -i <PLID>"
 }
 
+function doIntrospect
+{
+    objPath="$1"
+    findServiceByObjPath $objPath
+    if [ -n "$G_service" ]; then
+        echo "==> busctl -l introspect $G_service $objPath"
+        busctl -l introspect $G_service $objPath
+    else
+        echo "ERROR: Unable to determine service for object path: $objPath"
+    fi
+}
+
+function doOverlay
+{
+    overlaySrc="$1"
+    let result=1 # FAILED
+
+    if [ ! -d "/tmp${overlaySrc}-work" ]; then
+        echo -e "${bold}Creating overlay for $overlaySrc${normal}"
+        mkdir -v  /tmp${overlaySrc}
+        mkdir -v  /tmp${overlaySrc}-work
+        if [ "$overlaySrc" == "/usr" ]; then
+            if [ "$(ls -A ${patchDir})" ]; then
+                # Found patch files, save them to install after overlay
+                echo -e "${bold}Found patch files:${normal}"
+                ls -l ${patchDir}/
+                read -p "Copy patches to overlay? y/[n] " answer
+                if [ "$answer" == "y" ] || [ "$answer" == "Y" ]; then
+                    mkdir -v /tmp/usr-work/pnor-patches
+                    cp -v ${patchDir}/* /tmp/usr-work/pnor-patches/
+                fi
+            fi
+        fi
+        echo "==> mount -t overlay -o lowerdir=${overlaySrc},upperdir=/tmp${overlaySrc},workdir=/tmp${overlaySrc}-work overlay ${overlaySrc}"
+        let rc=$?
+        mount -t overlay -o lowerdir=${overlaySrc},upperdir=/tmp${overlaySrc},workdir=/tmp${overlaySrc}-work overlay ${overlaySrc}
+        if [ "$overlaySrc" == "/usr" ]; then
+            mkdir -pv ${patchDir}
+            if [ -d "/tmp/usr-work/pnor-patches" ]; then
+                cp -v /tmp/usr-work/pnor-patches/* ${patchDir}/
+            fi
+        fi
+        if [ $rc -eq 0 ]; then
+            echo "==> Overlay of ${overlaySrc}/ has been completed (reboot BMC to clear)"
+            let result=0 # SUCCESS
+        else
+            echo "ERROR: Overlay failed?  rc=$rc"
+        fi
+    else
+        # overlay already exists
+        let result=0 # SUCCESS
+    fi
+    return $result
+}
+
+
+##############
+### main() ###
+##############
 getOccDevices
 if [ -z "$1" ]; then
     occStatus
@@ -1398,6 +1480,62 @@ else
                 else
                     echo "ERROR: OCC instance required!"
                     exit -1
+                fi
+                ;;
+
+            "trace" )
+                let occ=0
+                if [ -n "$2" ]; then
+                    let occ=$2
+                    shift
+                fi
+                if [ $occ -ge $occ_obj_count ]; then
+                    echo "ERROR: OCC$occ object not found!"
+                    exit -1
+                else
+                    for ((i = 0; i < 3; i+=1)); do
+                        if [ $i -eq 0 ]; then
+                            cmdString="4003000045525200" # ERR trace
+                            type="ERR"
+                        elif [ $i -eq 1 ]; then
+                            cmdString="40030000494D5000" # IMP trace
+                            type="IMP"
+                        else
+                            cmdString="40030000494E4600" # INF trace
+                            type="INF"
+                        fi
+                        let cmd=0x${cmdString:0:2}
+                        let cmdLen=$((${#cmdString}/2 + 2)) # add 2 byte data length
+                        let dataLen=$((${#cmdString}/2 - 1)) # remove 1 byte command
+                        let index=2
+                        cmdData=""
+                        while [ $index -lt ${#cmdString} ]; do
+                            let value=0x${cmdString:$index:2}
+                            #echo "INDEX $index - $value"
+                            cmdData="$cmdData $value"
+                            let index=$index+2
+                        done
+                        if [ $dataLen -gt 255 ]; then
+                            let dataLenHi=$(($dataLen>>8))
+                            let dataLen=$((dataLen&0xFF))
+                        else
+                            let dataLenHi=0
+                        fi
+                        printf "Sending OCC%d DEBUG[GetTrace] command (%s):\n" $occ $type
+                        if [ $G_verbose -gt 0 ]; then
+                            echo "==> busctl call org.open_power.OCC.Control /org/open_power/control/occ${occ} org.open_power.OCC.PassThrough Send ai $cmdLen $cmd  $dataLenHi $dataLen $cmdData"
+                        fi
+                        rsp=`busctl call org.open_power.OCC.Control /org/open_power/control/occ${occ} org.open_power.OCC.PassThrough Send ai $cmdLen $cmd  $dataLenHi $dataLen $cmdData`
+                        if [ $cmd -eq 0 ]; then
+                            hex_dump_to_bin /tmp/occ_poll_rsp.bin "$rsp"
+                            if [ -e /tmp/occ_poll_rsp.bin ]; then
+                                parse_rsp_poll /tmp/occ_poll_rsp.bin
+                                rm /tmp/occ_poll_rsp.bin
+                            fi
+                        else
+                            hex_dump "$rsp"
+                        fi
+                    done
                 fi
                 ;;
 
@@ -1520,9 +1658,36 @@ else
                 journalctl | grep -i occ
                 ;;
 
+            "j" )
+                app="openpower-occ-control"
+                if [ -n "$2" ]; then
+                    app="$2"
+                    shift
+                fi
+                appPath=`which $app`
+                if [ -n "$appPath" ]; then
+                    echo "==> journalctl _EXE=$appPath"
+                    journalctl _EXE=$appPath
+                else
+                    #echo "Unable to find $app app"
+                    echo "==> journalctl | grep \"$app\""
+                    journalctl | grep "$app"
+                fi
+                ;;
+
             "jwatch" )
-                echo "==> journalctl _EXE=/usr/bin/openpower-occ-control -f"
-                journalctl _EXE=/usr/bin/openpower-occ-control -f
+                app="openpower-occ-control"
+                if [ -n "$2" ]; then
+                    app="$2"
+                    shift
+                fi
+                appPath=`which $app`
+                if [ -n "$appPath" ]; then
+                    echo "==> journalctl _EXE=$appPath -f"
+                    journalctl _EXE=$appPath -f
+                else
+                    echo "ERROR: Unable to find $app app"
+                fi
                 ;;
 
             "journaltrim" )
@@ -1592,15 +1757,22 @@ else
                     echo -e "${red}Found Persistent Patch: ${normal}${bold}/etc/systemd/system/org.open_power.OCC.Control.service${normal}"
                     echo ""
                 fi
-                mount | grep 'overlay on /usr' > /dev/null
+                mount | grep 'overlay on ' > /dev/null
                 if [ $? -eq 0 ]; then
-                    echo -e "${bold}/usr overlay was found:${normal}"
-                    mount | grep 'overlay on /usr'
-                    echo -en "${bold}"
-                    find /tmp/usr -type f
-                    echo -en "${normal}"
+                    mount | grep 'overlay on /usr' > /dev/null
+                    if [ $? -eq 0 ]; then
+                        echo -e "${bold}/usr overlay was found:${normal}"
+                        mount | grep 'overlay on'
+                        echo -en "${bold}"
+                        find /tmp/usr -type f
+                        echo -en "${normal}"
+                    else
+                        echo -e "${bold}No /usr overlay was found${normal}"
+                        echo "Current overlays:"
+                        mount | grep 'overlay on'
+                    fi
                 else
-                    echo -e "${bold}No /usr overlay was found${normal}"
+                    echo -e "${bold}No overlay was found${normal}"
                 fi
                 echo ""
                 echo -e "${bold}Potential patches: (${patchSrc}/)${normal}"
@@ -1619,35 +1791,26 @@ else
                 ;;
 
             "overlay" )
-                if [ ! -d "/tmp/usr-work" ]; then
-                    mkdir -v  /tmp/usr
-                    mkdir -v  /tmp/usr-work
-                    if [ "$(ls -A ${patchDir})" ]; then
-                        # Found patch files, save them to install after overlay
-                        echo -e "${bold}Found patch files:${normal}"
-                        ls -l ${patchDir}/
-                        read -p "Copy patches to overlay? y/[n] " answer
-                        if [ "$answer" == "y" ] || [ "$answer" == "Y" ]; then
-                            mkdir -v /tmp/usr-work/pnor-patches
-                            cp -v ${patchDir}/* /tmp/usr-work/pnor-patches/
-                        fi
-                    fi
-                    echo "==> mount -t overlay -o lowerdir=/usr,upperdir=/tmp/usr,workdir=/tmp/usr-work overlay /usr"
-                    let rc=$?
-                    mount -t overlay -o lowerdir=/usr,upperdir=/tmp/usr,workdir=/tmp/usr-work overlay /usr
-                    mkdir -pv ${patchDir}
-                    if [ -d "/tmp/usr-work/pnor-patches" ]; then
-                        cp -v /tmp/usr-work/pnor-patches/* ${patchDir}/
-                    fi
-                    if [ $rc -eq 0 ]; then
-                        echo "==> Overlay of /usr/ has been completed (reboot BMC to clear)"
+                overlaySrc="/usr"
+                if [ -n "$2" ]; then
+                    if [ -d "$2" ]; then
+                        overlaySrc="$2"
                     else
-                        echo "ERROR: Overlay failed?  rc=$rc"
+                        echo -e "${red}ERROR: $2 is not a directory (unable to create overlay)${normal}"
+                        exit 9;
                     fi
+                    shift
+                fi
+                if [ -d "/tmp${overlaySrc}-work" ]; then
+                    echo "ERROR: /tmp${overlaySrc}-work already exists.  Is overlay already installed?"
                 else
-                    echo "ERROR: /tmp/usr-work already exists.  Is overlay already installed?"
+                    doOverlay $overlaySrc
+                    if [ $? -ne 0 ]; then
+                        echo -e "${red}ERROR: failed to create $overlaySrc overlay${normal}"
+                    fi
                 fi
 
+                # Create patch directory
                 if [ ! -d "$patchSrc" ]; then
                     mkdir $patchSrc
                     chmod 777 $patchSrc
@@ -1666,92 +1829,38 @@ else
                     chmod -R ug+w       /tmp/images
                 fi
 
-                # Make sure backups are made before patches installed
+                # Make sure backups are made (before patches installed)
                 backup_for_patches
-
                 ;;
 
             "install" )
                 if [ ! -d "/tmp/usr-work" ]; then
-                    let overlayFound=0
-                    mount | grep 'overlay on /usr' > /dev/null
-                    if [ $? -eq 0 ]; then
-                        let overlayFound=1
-                    else
-                        mount | grep 'overlay on /usr/bin' > /dev/null
-                        if [ $? -eq 0 ]; then
-                            mount | grep 'overlay on /usr/lib' > /dev/null
-                            if [ $? -eq 0 ]; then
-                                let overlayFound=1
-                            fi
+                    read -p "Overlay for /usr not found.  Create overlay [y]/n? " answer
+                    if [ "$answer" != "n" ] && [ "$answer" != "N" ]; then
+                        doOverlay "/usr"
+                        if [ $? -ne 0 ]; then
+                            echo -e "${red}ERROR: Overlay not found${normal}"
+                            exit 1;
                         fi
-                    fi
-                    if [ $overlayFound -eq 0 ]; then
-                        echo "ERROR: Overlay not found"
-                        exit 1;
                     else
-                        echo "Overlay found"
-                        mount | grep 'overlay on /usr'
+                        echo -e "${red}ERROR: Overlay not created${normal}"
+                        exit 1;
                     fi
                 fi
+
                 # Make sure backups are made before patches installed
                 backup_for_patches
-                file="libphosphor_dbus.so.1.0.0"
-                if [ -e "${patchSrc}/${file}" ]; then
-                    diff -b /usr/lib/${file} ${patchSrc}/${file} > /dev/null
-                    if [ $? -ne 0 ]; then
-                        cp -v ${patchSrc}/${file} /usr/lib/
-                    fi
-                fi
-                file="openpower-occ-control"
-                if [ -e "${patchSrc}/${file}" ]; then
-                    diff -b /usr/bin/${file} ${patchSrc}/${file} > /dev/null
-                    if [ $? -ne 0 ]; then
-                        cp -v ${patchSrc}/${file} /usr/bin/
-                        file="org.open_power.OCC.Control.service"
-                        echo "==> systemctl restart $file"
-                        systemctl restart $file
-                    fi
-                fi
-                file="phosphor-settings-manager"
-                if [ -e "${patchSrc}/${file}" ]; then
-                    diff -b /usr/bin/${file} ${patchSrc}/${file} > /dev/null
-                    if [ $? -ne 0 ]; then
-                        cp -v ${patchSrc}/${file} /usr/bin/
-                        file="xyz.openbmc_project.Settings"
-                        echo "==> systemctl restart $file"
-                        systemctl restart $file
-                    fi
-                fi
-                file="bmcweb"
-                if [ -e "${patchSrc}/${file}" ]; then
-                    diff -b /usr/bin/${file} ${patchSrc}/${file} > /dev/null
-                    if [ $? -ne 0 ]; then
-                        cp -v ${patchSrc}/${file} /usr/bin/
-                        echo "==> systemctl restart $file"
-                        systemctl restart $file
-                    fi
-                fi
-                file="entity-manager"
-                if [ -e "${patchSrc}/${file}" ]; then
-                    diff -b /usr/bin/${file} ${patchSrc}/${file} > /dev/null
-                    if [ $? -ne 0 ]; then
-                        cp -v ${patchSrc}/${file} /usr/bin/
-                        file="xyz.openbmc_project.EntityManager.service"
-                        echo "==> systemctl restart $file"
-                        systemctl restart $file
-                    fi
-                fi
-                file="ipmid"
-                if [ -e "${patchSrc}/${file}" ]; then
-                    diff -b /usr/bin/${file} ${patchSrc}/${file} > /dev/null
-                    if [ $? -ne 0 ]; then
-                        cp -v ${patchSrc}/${file} /usr/bin/
-                        file="phosphor-ipmi-host.service"
-                        echo "==> systemctl restart $file"
-                        systemctl restart $file
-                    fi
-                fi
+
+                echo -e "\n${bold}Installing patches:${normal}"
+                installPatch /usr/bin/openpower-occ-control org.open_power.OCC.Control.service
+                installPatch /usr/lib/libphosphor_dbus.so.1.0.0
+                installPatch /usr/bin/phosphor-settings-manager xyz.openbmc_project.Settings
+                installPatch /usr/bin/bmcweb bmcweb
+                installPatch /usr/bin/entity-manager xyz.openbmc_project.EntityManager.service
+                installPatch /usr/bin/ipmid phosphor-ipmi-host.service
+                installPatch /usr/bin/swampd phosphor-pid-control
+                installPatch /usr/sbin/pgood_wait
+                installPatch /usr/sbin/power_control.exe
                 file="b2600.py" # HTMGT elog parser
                 if [ -e "${patchSrc}/${file}" ]; then
                     diff -b /usr/lib/python3.9/site-packages/udparsers/b2600/${file} ${patchSrc}/${file} > /dev/null
@@ -1769,7 +1878,8 @@ else
                         cp -v ${patchSrc}/${file} /usr/lib/python3.9/site-packages/udparsers/b2a00/
                     fi
                 fi
-                ;&
+                ;;
+
             "install!" )
                 # Lids
                 ls ${patchSrc}/8???????.lid > /dev/null 2>&1
@@ -1805,34 +1915,12 @@ else
                 ;;
 
             "uninstall" )
-                file="libphosphor_dbus.so.1.0.0"
-                if [ -e "${patchSrc}/${file}.orig" ]; then
-                    cp -v ${patchSrc}/${file}.orig /usr/lib/${file}
-                fi
-                file="openpower-occ-control"
-                if [ -e "${patchSrc}/${file}.orig" ]; then
-                    cp -v ${patchSrc}/${file}.orig /usr/bin/${file}
-                    echo "==> systemctl restart org.open_power.OCC.Control.service"
-                    systemctl restart org.open_power.OCC.Control.service
-                fi
-                file="phosphor-settings-manager"
-                if [ -e "${patchSrc}/${file}.orig" ]; then
-                    cp -v ${patchSrc}/${file}.orig /usr/bin/${file}
-                    echo "==> systemctl restart xyz.openbmc_project.Settings"
-                    systemctl restart xyz.openbmc_project.Settings
-                fi
-                file="bmcweb"
-                if [ -e "${patchSrc}/${file}.orig" ]; then
-                    cp -v ${patchSrc}/${file}.orig /usr/bin/${file}
-                    echo "==> systemctl restart $file"
-                    systemctl restart $file
-                fi
-                file="entity-manager"
-                if [ -e "${patchSrc}/${file}.orig" ]; then
-                    cp -v ${patchSrc}/${file}.orig /usr/bin/${file}
-                    echo "==> systemctl restart xyz.openbmc_project.EntityManager.service"
-                    systemctl restart xyz.openbmc_project.EntityManager.service
-                fi
+                removePatch /usr/bin/openpower-occ-control org.open_power.OCC.Control.service
+                removePatch /usr/lib/libphosphor_dbus.so.1.0.0
+                removePatch /usr/bin/phosphor-settings-manager xyz.openbmc_project.Settings
+                removePatch /usr/bin/bmcweb bmcweb
+                removePatch /usr/bin/entity-manager xyz.openbmc_project.EntityManager.service
+                removePatch /usr/sbin/pgood_wait
                 file="b2600.py" # HTMGT elog parser
                 if [ -e "${patchSrc}/${file}.orig" ]; then
                     cp -v ${patchSrc}/${file}.orig /usr/lib/python3.9/site-packages/udparsers/b2600/${file}
@@ -1898,7 +1986,52 @@ else
                 fi
                 ;;
 
-            "introspect" )
+            "dbusfind" )
+                getSubTree $2 $3
+                shift
+                if [ -n "$3" ]; then
+                    shift
+                fi
+                ;;
+
+            "dbusfindbyobj" )
+                echo "==> dbus-send --system --print-reply --dest=xyz.openbmc_project.ObjectMapper /xyz/openbmc_project/object_mapper xyz.openbmc_project.ObjectMapper.GetObject string:\"$2\" array:string:"
+                dbus-send --system --print-reply --dest=xyz.openbmc_project.ObjectMapper /xyz/openbmc_project/object_mapper xyz.openbmc_project.ObjectMapper.GetObject string:"$2" array:string:
+                if [ $? -eq 0 ]; then
+                    service=`dbus-send --system --print-reply --dest=xyz.openbmc_project.ObjectMapper /xyz/openbmc_project/object_mapper xyz.openbmc_project.ObjectMapper.GetObject string:"$2" array:string: | grep 'string' | head -n 1 | awk '{print $2}' | sed 's/"//g'`
+                    if [ -n "$service" ]; then
+                        echo "==> busctl introspect $service $2"
+                        busctl introspect $service $2
+                    fi
+                fi
+                shift
+                ;;
+
+            "getall" )
+                if [ -n "$2" ] && [ -n "$3" ]; then
+                    objPath="$2"
+                    interface="$3"
+                    findServiceByObjPath $2
+                    if [ -n "$G_service" ]; then
+                        echo "==> busctl call $G_service $objPath org.freedesktop.DBus.Properties GetAll s $interface"
+                        busctl call $G_service $objPath org.freedesktop.DBus.Properties GetAll s $interface
+                    fi
+                    shift
+                    shift
+                else
+                    if [ -n "$2" ]; then
+                        shift
+                    fi
+                    echo "Must supply object path and interface"
+                fi
+                ;;
+
+            "i" )
+                doIntrospect $2
+                shift
+                ;;
+
+            "introspect" | "i" )
                 type=""
                 let occ=0
                 if [ -n "$2" ]; then
@@ -1978,25 +2111,27 @@ else
                 fi
                 ;;
 
-            "dbusfind" )
-                getSubTree $2 $3
-                shift
-                if [ -n "$3" ]; then
+            "service" )
+                service=""
+                if [ -n "$2" ]; then
+                    service="$2"
                     shift
-                fi
-                ;;
-
-            "dbusfindbyobj" )
-                echo "==> dbus-send --system --print-reply --dest=xyz.openbmc_project.ObjectMapper /xyz/openbmc_project/object_mapper xyz.openbmc_project.ObjectMapper.GetObject string:\"$2\" array:string:"
-                dbus-send --system --print-reply --dest=xyz.openbmc_project.ObjectMapper /xyz/openbmc_project/object_mapper xyz.openbmc_project.ObjectMapper.GetObject string:"$2" array:string:
-                if [ $? -eq 0 ]; then
-                    service=`dbus-send --system --print-reply --dest=xyz.openbmc_project.ObjectMapper /xyz/openbmc_project/object_mapper xyz.openbmc_project.ObjectMapper.GetObject string:"$2" array:string: | grep 'string' | head -n 1 | awk '{print $2}' | sed 's/"//g'`
-                    if [ -n "$service" ]; then
-                        echo "==> busctl introspect $service $2"
-                        busctl introspect $service $2
+                    if [ "$service" == "occ" ]; then
+                        service="org.open_power.OCC.Control"
                     fi
+                    echo "==> systemctl status $service"
+                    systemctl status $service
+                    if [ $? -ne 0 ]; then
+                        echo -e "ERROR: check service name\n"
+                        if [ -n "$service" ]; then
+                            echo "==> systemctl --type=service --state=running | grep -i \"$service\""
+                            systemctl --type=service --state=running | grep -i -e UNIT -e "$service"
+                        fi
+                    fi
+                else
+                    echo "==> systemctl --type=service --state=running"
+                    systemctl --type=service --state=running
                 fi
-                shift
                 ;;
 
             "pcap" )
