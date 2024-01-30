@@ -2731,8 +2731,14 @@ void disable_wof( void )
                             user_data_rc,
                             0);
 
-                    // commit the error log
-                    commitErrl( &l_errl );
+                    //Callout firmware
+                    addCalloutToErrl(l_errl,
+                                     ERRL_CALLOUT_TYPE_COMPONENT_ID,
+                                     ERRL_COMPONENT_ID_FIRMWARE,
+                                     ERRL_CALLOUT_PRIORITY_HIGH);
+
+                    // Request reset to try to recover
+                    REQUEST_WOF_RESET(l_errl);
                 }
             }
         }
@@ -2831,11 +2837,24 @@ bool enable_wof( void )
                     rc,
                     0);
 
-            result = false;
-            set_clear_wof_disabled( SET, bit_to_set, erc );
+            //Callout firmware
+            addCalloutToErrl(l_errl,
+                             ERRL_CALLOUT_TYPE_COMPONENT_ID,
+                             ERRL_COMPONENT_ID_FIRMWARE,
+                             ERRL_CALLOUT_PRIORITY_HIGH);
 
-            // Commit the error
-            commitErrl( &l_errl );
+            result = false;
+
+            // don't call set_clear_wof_disabled() as that will result in another pgpe command which is failing
+            // just set a couple vars directly and ask for a reset
+            // Set the vrt state back to standby
+            g_wof->vrt_state = STANDBY;
+
+            // Set the wof disable bit
+            g_wof->wof_disabled |= bit_to_set;
+
+            // Request reset to try to recover
+            REQUEST_WOF_RESET(l_errl);
         }
     }
     return result;
