@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2023                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2024                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -85,8 +85,10 @@ uint32_t dcom_build_slv_inbox(void)
 
     static uint8_t      L_seq = 0xFF;
     static uint32_t     L_last_fail_pbax_rc = 0;
+    /*
     static uint16_t     L_last_gpio0 = 0x1234;
     static uint16_t     L_last_gpio1 = 0x1234;
+    */
 
     L_seq++;
 
@@ -130,9 +132,9 @@ uint32_t dcom_build_slv_inbox(void)
                       G_apss_pwr_meas.gpio[0],
                       G_apss_pwr_meas.gpio[1]);
         }
-*/
         L_last_gpio0 = G_apss_pwr_meas.gpio[0];
         L_last_gpio1 = G_apss_pwr_meas.gpio[1];
+*/
 
         memcpy( G_dcom_slv_inbox_tx[l_slv_idx].tod,
                 &G_apss_pwr_meas.tod,

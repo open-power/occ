@@ -5,7 +5,7 @@
 #
 # OpenPOWER OnChipController Project
 #
-# Contributors Listed Below - COPYRIGHT 2015,2019
+# Contributors Listed Below - COPYRIGHT 2015,2024
 # [+] International Business Machines Corp.
 # [+] Timothy Pearson
 #
@@ -253,7 +253,7 @@ INCLUDES += $(IMG_INCLUDES) $(GLOBAL_INCLUDES) $(APP_INCLUDES) \
 PIPE-CFLAGS = -pipe -Wa,-m405
 
 GCC-CFLAGS += -g -Wall -fsigned-char -msoft-float  \
-	-m32 -mbig-endian -mcpu=405 -mmultiple -mstring \
+	-m32 -mbig-endian -mcpu=405 -mmultiple \
 	-meabi -msdata=eabi -ffreestanding -fno-common \
 	-fno-inline-functions-called-once \
 	-fno-asynchronous-unwind-tables -std=gnu89
