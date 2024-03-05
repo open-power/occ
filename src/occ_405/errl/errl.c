@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2023                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2024                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -36,6 +36,7 @@
 #include <amec_sys.h>
 #include <pgpe_shared.h>
 #include <wof.h>
+#include <memory.h>
 
 uint32_t    G_occErrSlotBits = 0x000000000;
 uint8_t     G_occErrIdCounter= 0x00;
@@ -395,7 +396,16 @@ errlHndl_t createErrl(
         l_rc->iv_userDetails.iv_timeStamp = l_time;
 
         // if its a call home error then set the sev to informational
-        l_rc->iv_severity = (i_sev == ERRL_SEV_CALLHOME_DATA ? (uint8_t)ERRL_SEV_INFORMATIONAL : i_sev);
+        if(i_sev == ERRL_SEV_CALLHOME_DATA)
+        {
+          l_rc->iv_severity = (uint8_t)ERRL_SEV_INFORMATIONAL;
+          // clear OCMB reset counts on same frequency as call home log
+          clear_ocmb_resets();
+        }
+        else
+        {
+          l_rc->iv_severity = i_sev;
+        }
 
         l_rc->iv_extendedRC = i_extReasonCode;
 

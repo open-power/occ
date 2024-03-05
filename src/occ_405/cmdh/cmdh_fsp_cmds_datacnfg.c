@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2023                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2024                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -1879,8 +1879,7 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
                        if(l_dimm_info2 != DATA_FRU_NOT_USED)
                        {
                            G_present_membufs |= MEMBUF0_PRESENT_MASK >> l_membuf_num;
-                           // $temp disable OCMB recovery until full FSP/BMC function is complete
-                           g_amec->proc[0].memctl[l_membuf_num].membuf.ocmb_recovery_state = OCMB_RECOVERY_STATE_NO_SUPPORT;
+                           g_amec->proc[0].memctl[l_membuf_num].membuf.ocmb_recovery_state = OCMB_RECOVERY_STATE_NONE;
                        }
 
                        if(l_dts_num == 0xFF) // sensors are for the Memory Buffer itself

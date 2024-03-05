@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2014,2023                        */
+/* Contributors Listed Below - COPYRIGHT 2014,2024                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -34,6 +34,6 @@ volatile const char G_occ_buildname[16] __attribute__((section(".buildname"))) =
 
 #else
 
-volatile const char G_occ_buildname[16] __attribute__((section(".buildname"))) = /*<BuildName>*/  "op_1060_240202a\0"  /*</BuildName>*/ ;
+volatile const char G_occ_buildname[16] __attribute__((section(".buildname"))) = /*<BuildName>*/  "op_1060_240308a\0"  /*</BuildName>*/ ;
 
 #endif
