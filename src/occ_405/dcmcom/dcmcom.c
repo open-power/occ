@@ -1,3 +1,27 @@
+/* IBM_PROLOG_BEGIN_TAG                                                   */
+/* This is an automatically generated prolog.                             */
+/*                                                                        */
+/* $Source: src/occ_405/dcmcom/dcmcom.c $                                 */
+/*                                                                        */
+/* OpenPOWER OnChipController Project                                     */
+/*                                                                        */
+/* Contributors Listed Below - COPYRIGHT 2021,2024                        */
+/* [+] International Business Machines Corp.                              */
+/*                                                                        */
+/*                                                                        */
+/* Licensed under the Apache License, Version 2.0 (the "License");        */
+/* you may not use this file except in compliance with the License.       */
+/* You may obtain a copy of the License at                                */
+/*                                                                        */
+/*     http://www.apache.org/licenses/LICENSE-2.0                         */
+/*                                                                        */
+/* Unless required by applicable law or agreed to in writing, software    */
+/* distributed under the License is distributed on an "AS IS" BASIS,      */
+/* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or        */
+/* implied. See the License for the specific language governing           */
+/* permissions and limitations under the License.                         */
+/*                                                                        */
+/* IBM_PROLOG_END_TAG                                                     */
 #include <errl.h>
 #include <trac.h>
 #include "dcmcom.h"
@@ -6,6 +30,8 @@
 #include <occ_sys_config.h>
 #include <sensor.h>
 #include "wof.h"
+
+// #define DCM_DEBUG
 
 extern amec_wof_t * g_wof;
 
@@ -60,7 +86,6 @@ void dcmicc_update()
             if(status1.fields.interchip_ecc_ue)
             {
                 // Currently ECC checking is not enabled.
-
                 TRAC_ERR("task_dcm_icc: ECC uncorrectable error encountered");
                 // disble interface.
                 out32(OCB_WOFICCTRL,0);
@@ -70,7 +95,9 @@ void dcmicc_update()
             {
                 if(g_icc_not_changing < ICC_SEQ_UNCHANGED_MAX_COUNT)
                 {
+#ifdef DCM_DEBUG
                     TRAC_INFO("task_dcm_icc: Message sequence didn't change");
+#endif
                     ++g_icc_not_changing;
                 }
             }

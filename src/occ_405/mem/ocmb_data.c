@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2016,2023                        */
+/* Contributors Listed Below - COPYRIGHT 2016,2024                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -935,3 +935,30 @@ void ocmb_recovery_handler(errlHndl_t *io_err, uint8_t i_mem_buf)
     }
     return;
 } // end ocmb_recovery_handler()
+
+// Function Specification
+//
+// Name: clear_ocmb_resets
+//
+// Description: Clear OCMB reset counts
+//
+// End Function Specification
+void clear_ocmb_resets( void )
+{
+    int membuf_idx = 0;
+
+    for(membuf_idx=0; membuf_idx<MAX_NUM_OCMBS; ++membuf_idx)
+    {
+        // only clear if reset requests aren't maxed out
+        if( g_amec->proc[0].memctl[membuf_idx].membuf.ocmb_recovery_state != OCMB_RECOVERY_STATE_MAX_REQUESTED)
+        {
+            if(g_amec->proc[0].memctl[membuf_idx].membuf.ocmb_recovery_count != 0)
+            {
+                TRAC_INFO("clear_ocmb_resets: Clearing OCMB %d hreset recovery count %d", membuf_idx,
+                           g_amec->proc[0].memctl[membuf_idx].membuf.ocmb_recovery_count);
+                g_amec->proc[0].memctl[membuf_idx].membuf.ocmb_recovery_count = 0;
+            }
+        }
+    }
+    return;
+} // end clear_ocmb_resets()

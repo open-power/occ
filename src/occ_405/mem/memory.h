@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2014,2023                        */
+/* Contributors Listed Below - COPYRIGHT 2014,2024                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -200,5 +200,8 @@ void ocmb_data( void );
 
 // Handle requesting ocmb recovery
 void ocmb_recovery_handler(errlHndl_t *io_err, uint8_t i_mem_buf);
+
+// Clear OCMB reset counts
+void clear_ocmb_resets( void );
 
 #endif // _MEMORY_H
