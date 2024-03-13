@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2023                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2024                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -522,10 +522,6 @@ void amec_health_check_dimm_timeout()
 
                 if(!l_redundancy_lost && !l_err)
                 {
-                    // make this info only in simics
-                    if(G_simics_environment)
-                        l_severity = ERRL_SEV_INFORMATIONAL;
-
                     /* @
                      * @errortype
                      * @moduleid    AMEC_HEALTH_CHECK_DIMM_TIMEOUT
@@ -562,6 +558,11 @@ void amec_health_check_dimm_timeout()
                                          ERRL_CALLOUT_PRIORITY_HIGH);
                         ocmb_recovery_handler(&l_err, l_membuf);
                     }
+
+                    // make this info only in simics
+                    if(G_simics_environment)
+                         l_err->iv_severity = ERRL_SEV_INFORMATIONAL;
+
                     commitErrl(&l_err);
                 }
                 else if( l_redundancy_lost && !l_redundancy_lost_err )
@@ -944,10 +945,6 @@ void amec_health_check_membuf_timeout()
 
             if(!l_err)
             {
-                // make this info only in simics
-                if(G_simics_environment)
-                     l_severity = ERRL_SEV_INFORMATIONAL;
-
                 /* @
                  * @errortype
                  * @moduleid    AMEC_HEALTH_CHECK_MEMBUF_TIMEOUT
@@ -982,6 +979,10 @@ void amec_health_check_membuf_timeout()
                {
                    ocmb_recovery_handler(&l_err, l_membuf);
                }
+
+               // make this info only in simics
+               if(G_simics_environment)
+                     l_err->iv_severity = ERRL_SEV_INFORMATIONAL;
 
                commitErrl(&l_err);
 
