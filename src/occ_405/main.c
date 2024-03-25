@@ -484,8 +484,10 @@ void read_wof_header(void)
                        sizeof(WofTablesHeader_t));
 
                 // verify the validity of the magic number
+                // OCC will accept all versions <= WOF_TABLES_VERSION currently version differences
+                // do not impact OCC and no version checking is needed once a valid version is verified
                 if( (WOF_TABLES_MAGIC_NUMBER != g_amec->static_wof_data.wof_header.magic_number.value) ||
-                    (WOF_TABLES_VERSION != g_amec->static_wof_data.wof_header.header_version) )
+                    (WOF_TABLES_VERSION < g_amec->static_wof_data.wof_header.header_version) )
                 {
                     MAIN_TRAC_ERR("read_wof_header: Invalid WOF Magic number[0x%08X] or version[0x%02X]. Address[0x%08X]. WOF disabled",
                                   g_amec->static_wof_data.wof_header.magic_number.value,

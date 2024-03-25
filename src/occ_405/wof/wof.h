@@ -139,7 +139,7 @@ enum wof_disabled_actions
 };
 
 #define WOF_TABLES_MAGIC_NUMBER            0x57465448   // "WFTH"
-#define WOF_TABLES_VERSION 1
+#define WOF_TABLES_VERSION 2  // all versions <= to this will be accepted
 
 // Structure used in g_amec to hold WOF data that changes
 typedef struct __attribute__ ((packed))
