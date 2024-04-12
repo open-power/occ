@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2023                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2024                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -50,6 +50,8 @@
 #include "memory_data.h"
 #include "gpu.h"
 #include "pstates_occ.H"
+#include "i2c.h"
+#include "common.h"
 
 extern dimm_sensor_flags_t G_dimm_temp_expired_bitmap;
 extern uint32_t G_first_proc_gpu_config;
@@ -57,6 +59,7 @@ extern uint32_t G_first_sys_gpu_config;
 extern bool G_vrm_vdd_temp_expired;
 extern bool G_proc_io_temp_expired;
 extern bool G_reset_prep;
+extern uint8_t G_dimm_state;
 extern uint16_t G_amester_max_data_length;
 extern uint8_t G_occ_interrupt_type;
 extern OCCPstateParmBlock_t G_oppb;
@@ -840,6 +843,8 @@ errlHndl_t cmdh_reset_prep (const cmdh_fsp_cmd_t * i_cmd_ptr,
     cmdh_reset_prep_t *         l_cmd_ptr = (cmdh_reset_prep_t *) i_cmd_ptr;
     ERRL_RC                     l_rc = ERRL_RC_SUCCESS;
     bool                        l_ffdc = FALSE;
+    SsxInterval                 l_timeout      = SSX_SECONDS(15);
+    SsxTimebase                 l_start        = ssx_timebase_get();
 
     G_rsp_status = ERRL_RC_SUCCESS;
     o_rsp_ptr->data_length[0] = 0;
@@ -865,6 +870,55 @@ errlHndl_t cmdh_reset_prep (const cmdh_fsp_cmd_t * i_cmd_ptr,
                  l_cmd_ptr->reason);
 
         G_reset_prep = true;
+
+        // If we have I2C DIMMs need to wait for I2C reads to stop
+        if(IS_I2C_MEM_TYPE(G_sysConfigData.mem_type))
+        {
+           TRAC_IMP("cmdh_reset_prep: I2C G_dimm_state=%d", G_dimm_state);
+           do
+           {
+               bool l_ownsLock = false;
+               ocb_occflg_t l_occflags = {0};
+               l_occflags.value = in32(OCB_OCCFLG0);
+
+               if (PIB_I2C_ENGINE_E == G_sysConfigData.dimm_i2c_engine)
+               {
+                   l_ownsLock = l_occflags.fields.i2c_engine3_lock_occ;
+               }
+               else if (PIB_I2C_ENGINE_D == G_sysConfigData.dimm_i2c_engine)
+               {
+                   l_ownsLock = l_occflags.fields.i2c_engine2_lock_occ;
+               }
+               else if (PIB_I2C_ENGINE_C == G_sysConfigData.dimm_i2c_engine)
+               {
+                   l_ownsLock = l_occflags.fields.i2c_engine1_lock_occ;
+               }
+
+
+               // If OCC doesn't own the lock it isn't doing an i2c read
+               if(l_ownsLock == FALSE)
+               {
+                   CMDH_TRAC_INFO("cmdh_reset_prep: DIMM I2C reads successfully stopped");
+                   break;
+               }
+               else
+               {
+                   // check time and break out if we reached limit
+                   if ( ((ssx_timebase_get() - l_start) > l_timeout))
+                   {
+                       CMDH_TRAC_ERR("cmdh_reset_prep: timed out waiting for DIMM I2C to finish");
+                       // We are already going to be reset anyway so no additional error
+                       // besides the reset prep log
+                       l_ffdc = TRUE;
+                       break;
+                   }
+                   else
+                   {
+                       ssx_sleep(SSX_MILLISECONDS(100));
+                   }
+               }
+           }while( 1 );
+        } // if i2c memory
 
         // Command Handling
         switch( l_cmd_ptr->reason )
