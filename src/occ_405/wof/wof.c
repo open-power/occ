@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2016,2023                        */
+/* Contributors Listed Below - COPYRIGHT 2016,2024                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -2022,15 +2022,23 @@ void read_sensor_data( void )
        // add on adjustment to account for altitude
        if(g_wof->ambient_adj_for_altitude >= 0)
            g_wof->ambient_condition = l_ambient + g_wof->ambient_adj_for_altitude;
-       else  // negative adjust prevent overflow
+       else  // negative adjust
        {
-           if(l_ambient >= (-g_wof->ambient_adj_for_altitude))
+           // Don't lower ambient condition (raises freq) in efficiency modes
+           if( (CURRENT_MODE() == OCC_MODE_EFFICIENCY_POWER) ||
+               (CURRENT_MODE() == OCC_MODE_EFFICIENCY_PERF) )
+               g_wof->ambient_condition = l_ambient;
+           else if(l_ambient >= (-g_wof->ambient_adj_for_altitude)) // prevent overflow
                g_wof->ambient_condition = l_ambient + g_wof->ambient_adj_for_altitude;
            else
                g_wof->ambient_condition = 0;
        }
+
        // If DIMM power credit is enabled determine adjustment to account for DIMM power
-       if(g_wof->mem_thermal_credit_constant && g_wof->max_dimm_pwr_total_cW)
+       // This is disabled in efficiency modes
+       if(g_wof->mem_thermal_credit_constant && g_wof->max_dimm_pwr_total_cW &&
+          (CURRENT_MODE() != OCC_MODE_EFFICIENCY_POWER) &&
+          (CURRENT_MODE() != OCC_MODE_EFFICIENCY_PERF) )
        {
            // determine g_wof->ambient_adj_for_dimm
            calc_wof_dimm_adjustment();
