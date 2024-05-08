@@ -2517,10 +2517,9 @@ errlHndl_t data_store_memory_pwr_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
                 }
                 else
                 {
-                    // didn't get a max, calculate from per ocmb power
-                    g_amec->wof.max_dimm_pwr_total_cW = MAX_NUM_OCMBS * g_amec->wof.max_dimm_pwr_ocmb_cW;
-                    CMDH_TRAC_INFO("data_store_memory_pwr_data: Calculated from per OCMB total max dimm pre-heat power[%dcW]",
-                                    g_amec->wof.max_dimm_pwr_total_cW);
+                    // No max pre-heat
+                    g_amec->wof.max_dimm_pwr_total_cW = 0;
+                    CMDH_TRAC_INFO("data_store_memory_pwr_data: Total max dimm pre-heat is 0. WOF DIMM credit disabled");
                 }
 
                 CMDH_TRAC_INFO("data_store_memory_pwr_data: Received %d OCMBs present bit mask 0x%04X",
