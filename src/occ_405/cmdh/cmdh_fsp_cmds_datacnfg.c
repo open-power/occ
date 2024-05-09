@@ -2389,17 +2389,22 @@ errlHndl_t data_store_memory_pwr_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
 {
     errlHndl_t                      l_err = NULL;
 
-    cmdh_mem_pwr_data_t * l_cmd_ptr = (cmdh_mem_pwr_data_t *)i_cmd_ptr;
+    cmdh_mem_pwr_data_v1_t *        l_cmd_v1_ptr = (cmdh_mem_pwr_data_v1_t *)i_cmd_ptr;
+    cmdh_mem_pwr_data_v2_t *        l_cmd_v2_ptr = (cmdh_mem_pwr_data_v2_t *)i_cmd_ptr;
     uint64_t                        l_temp64 = 0;
+    uint32_t                        l_temp32 = 0;
     uint16_t                        l_data_length = 0;
     uint16_t                        l_min_data_length = 0;
     uint16_t                        l_remaining_data = 0;
     uint16_t                        l_data_offset = 0;
+    uint8_t                         l_version = 0;
     uint8_t                         i, j;
     bool                            l_interp_error = FALSE; // Assume interpolation points are ascending util
     bool                            l_invalid_input = TRUE; //Assume bad input
 
-    l_data_length = CMDH_DATALEN_FIELD_UINT16((&l_cmd_ptr->header));
+    // header info is same for all versions
+    l_data_length = CMDH_DATALEN_FIELD_UINT16((&l_cmd_v1_ptr->header));
+    l_version = l_cmd_v1_ptr->header.version;
 
     // Verification that present OCMBs match OCMBs we receive pwr data for is done during WOF
     g_amec->wof.ocmbs_present = 0;
@@ -2408,29 +2413,54 @@ errlHndl_t data_store_memory_pwr_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
     g_amec->wof.max_dimm_pwr_total_cW = 0;
 
     // Check version
-    if(l_cmd_ptr->header.version == 1)
+    if( (l_version == 1) || (l_version == 2) )
     {
         // each OCMB must have at least 2 interpolation points
-        l_min_data_length = sizeof(cmdh_mem_pwr_data_header_t) - sizeof(cmdh_fsp_cmd_header_t) +
-                           (l_cmd_ptr->header.num_ocmbs * sizeof(cmdh_mem_pwr_data_set_t)) +
-                           (l_cmd_ptr->header.num_ocmbs * sizeof(cmdh_mem_pwr_interp_pt_t));
+        if(l_version == 1)
+        {
+           l_min_data_length = sizeof(cmdh_mem_pwr_data_header_t) - sizeof(cmdh_fsp_cmd_header_t) +
+                              (l_cmd_v1_ptr->header.num_ocmbs * sizeof(cmdh_mem_pwr_data_set_t)) +
+                              (l_cmd_v1_ptr->header.num_ocmbs * sizeof(cmdh_mem_pwr_interp_pt_t));
+        }
+        else // version 2
+        {
+           l_min_data_length = sizeof(cmdh_mem_pwr_data_header_t) - sizeof(cmdh_fsp_cmd_header_t) +
+                              (l_cmd_v2_ptr->header.num_ocmbs * sizeof(cmdh_mem_pwr_data_set_v2_t)) +
+                              (l_cmd_v2_ptr->header.num_ocmbs * sizeof(cmdh_mem_pwr_interp_pt_v2_t));
+        }
+
         // keep track of data processed
         l_remaining_data = l_data_length - sizeof(cmdh_mem_pwr_data_header_t) + sizeof(cmdh_fsp_cmd_header_t);
 
         if(l_data_length >= l_min_data_length)
         {
             // Process each OCMB
-            for(i=0; i<l_cmd_ptr->header.num_ocmbs; i++)
+            for(i=0; i<l_cmd_v1_ptr->header.num_ocmbs; i++)
             {
                 uint8_t mem_buf = 0xFF;
                 uint8_t num_interp_pts = 0xFF;
                 uint16_t data_size = 0xFF;
+                l_temp32 = (uint32_t)(&l_cmd_v1_ptr->data_set[0]) + l_data_offset;
+                cmdh_mem_pwr_data_set_t* l_data_set = (cmdh_mem_pwr_data_set_t*)l_temp32;
+                l_temp32 = (uint32_t)(&l_cmd_v2_ptr->data_set[0]) + l_data_offset;
+                cmdh_mem_pwr_data_set_v2_t* l_data_set_v2 = (cmdh_mem_pwr_data_set_v2_t*)l_temp32;
 
-                uint32_t l_temp = (uint32_t)(&l_cmd_ptr->data_set[0]) + l_data_offset;
-                cmdh_mem_pwr_data_set_t* l_data_set;
-                l_data_set = (cmdh_mem_pwr_data_set_t*)l_temp;
-                mem_buf = l_data_set->ocmb_num;
-                num_interp_pts = l_data_set->num_interp_points;
+                if(l_version == 1)
+                {
+                   mem_buf = l_data_set->ocmb_num;
+                   num_interp_pts = l_data_set->num_interp_points;
+                   // calculate size of data for this OCMB
+                   data_size = sizeof(cmdh_mem_pwr_data_set_t) +
+                            ( (num_interp_pts-1) * sizeof(cmdh_mem_pwr_interp_pt_t));
+                }
+                else // version 2
+                {
+                   mem_buf = l_data_set_v2->ocmb_num;
+                   num_interp_pts = l_data_set_v2->num_interp_points;
+                   // calculate size of data for this OCMB
+                   data_size = sizeof(cmdh_mem_pwr_data_set_v2_t) +
+                            ( (num_interp_pts-1) * sizeof(cmdh_mem_pwr_interp_pt_v2_t));
+                }
 
                 // Validate parameters
                 if( (mem_buf >= MAX_NUM_OCMBS) ||
@@ -2440,10 +2470,6 @@ errlHndl_t data_store_memory_pwr_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                   i, mem_buf, num_interp_pts);
                     break;
                 }
-
-                // calculate size of data for this OCMB
-                data_size = sizeof(cmdh_mem_pwr_data_set_t) +
-                            ( (num_interp_pts-1) * sizeof(cmdh_mem_pwr_interp_pt_t));
 
                 // Make sure have enough data
                 if(data_size > l_remaining_data)
@@ -2459,9 +2485,26 @@ errlHndl_t data_store_memory_pwr_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
                 for(j=0; j<num_interp_pts; j++)
                 {
                     cmdh_mem_pwr_interp_pt_t* l_point;
-                    l_point = &l_data_set->interp_points[j];
-                    uint16_t util = l_point->util_cPercent;
-                    uint32_t power = l_point->power_cW;
+                    cmdh_mem_pwr_interp_pt_v2_t* l_v2_point;
+                    uint16_t util = 0;
+                    uint32_t power = 0;
+                    uint32_t full_power = 0;
+
+                    if(l_version == 1)
+                    {
+                       l_point = &l_data_set->interp_points[j];
+                       util = l_point->util_cPercent;
+                       power = l_point->pre_heat_power_cW;
+                       full_power = 0; // not sent in v1
+                    }
+                    else // version 2
+                    {
+                       l_v2_point = &l_data_set_v2->interp_points[j];
+                       util = l_v2_point->util_cPercent;
+                       power = l_v2_point->pre_heat_power_cW;
+                       full_power = l_v2_point->full_power_cW;
+                    }
+
                     if((j!=0) && (util <= g_amec->proc[0].memctl[mem_buf].membuf.util_pwr_pt[j-1].util_cPercent))
                     {
                         l_interp_error = TRUE;
@@ -2469,16 +2512,25 @@ errlHndl_t data_store_memory_pwr_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                       mem_buf, j, util, g_amec->proc[0].memctl[mem_buf].membuf.util_pwr_pt[j-1].util_cPercent);
                         break;
                     }
-                    if((j!=0) && (power < g_amec->proc[0].memctl[mem_buf].membuf.util_pwr_pt[j-1].power_cW))
+                    if((j!=0) && (power < g_amec->proc[0].memctl[mem_buf].membuf.util_pwr_pt[j-1].pre_heat_power_cW))
                     {
                         l_interp_error = TRUE;
-                        CMDH_TRAC_ERR("data_store_memory_pwr_data: OCMB %d power[%d] %d not ascending previous power %d",
-                                      mem_buf, j, power, g_amec->proc[0].memctl[mem_buf].membuf.util_pwr_pt[j-1].power_cW);
+                        CMDH_TRAC_ERR("data_store_memory_pwr_data: OCMB %d pre-heat power[%d] %d not ascending previous power %d",
+                                      mem_buf, j, power, g_amec->proc[0].memctl[mem_buf].membuf.util_pwr_pt[j-1].pre_heat_power_cW);
                         break;
                     }
+                    if((l_version == 2) && (j!=0) && (full_power < g_amec->proc[0].memctl[mem_buf].membuf.util_pwr_pt[j-1].full_power_cW))
+                    {
+                        l_interp_error = TRUE;
+                        CMDH_TRAC_ERR("data_store_memory_pwr_data: OCMB %d full power[%d] %d not ascending previous power %d",
+                                      mem_buf, j, full_power, g_amec->proc[0].memctl[mem_buf].membuf.util_pwr_pt[j-1].full_power_cW);
+                        break;
+                    }
+
                     g_amec->proc[0].memctl[mem_buf].membuf.util_pwr_pt[j].util_cPercent = util;
-                    g_amec->proc[0].memctl[mem_buf].membuf.util_pwr_pt[j].power_cW = power;
-                    // save for WOF debug command
+                    g_amec->proc[0].memctl[mem_buf].membuf.util_pwr_pt[j].pre_heat_power_cW = power;
+                    g_amec->proc[0].memctl[mem_buf].membuf.util_pwr_pt[j].full_power_cW = full_power;
+                    // save pre-heat power for WOF debug command
                     l_temp64 = (uint64_t)util;
                     l_temp64 = l_temp64 << 32;
                     g_amec->static_wof_data.ocmb_util_pwr_pts[mem_buf][j] = (l_temp64 | (uint64_t)power);
@@ -2491,11 +2543,14 @@ errlHndl_t data_store_memory_pwr_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
                 CMDH_TRAC_INFO("data_store_memory_pwr_data: OCMB %d has %d points",
                                 mem_buf, g_amec->proc[0].memctl[mem_buf].membuf.num_interp_pts);
-                CMDH_TRAC_INFO("[%d util][0x%08X cW] to [%d util][0x%08X cW]",
+                CMDH_TRAC_INFO("  [%d util][0x%08X cW preheat][0x%08X cW full]",
                                 g_amec->proc[0].memctl[mem_buf].membuf.util_pwr_pt[0].util_cPercent,
-                                g_amec->proc[0].memctl[mem_buf].membuf.util_pwr_pt[0].power_cW,
+                                g_amec->proc[0].memctl[mem_buf].membuf.util_pwr_pt[0].pre_heat_power_cW,
+                                g_amec->proc[0].memctl[mem_buf].membuf.util_pwr_pt[0].full_power_cW);
+                CMDH_TRAC_INFO("  to [%d util][0x%08X cW preheat][0x%08X cW full]",
                                 g_amec->proc[0].memctl[mem_buf].membuf.util_pwr_pt[num_interp_pts-1].util_cPercent,
-                                g_amec->proc[0].memctl[mem_buf].membuf.util_pwr_pt[num_interp_pts-1].power_cW);
+                                g_amec->proc[0].memctl[mem_buf].membuf.util_pwr_pt[num_interp_pts-1].pre_heat_power_cW,
+                                g_amec->proc[0].memctl[mem_buf].membuf.util_pwr_pt[num_interp_pts-1].full_power_cW);
             }  // for each OCMB
 
             if(l_remaining_data)
@@ -2506,12 +2561,12 @@ errlHndl_t data_store_memory_pwr_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
             else if(!l_interp_error) // data is good
             {
                 l_invalid_input = FALSE;
-                g_amec->wof.mem_thermal_credit_constant = l_cmd_ptr->header.thermal_credit_constant;
-                g_amec->wof.max_dimm_pwr_ocmb_cW = l_cmd_ptr->header.max_dimm_pwr_ocmb_cW;
+                g_amec->wof.mem_thermal_credit_constant = l_cmd_v1_ptr->header.thermal_credit_constant;
+                g_amec->wof.max_dimm_pwr_ocmb_cW = l_cmd_v1_ptr->header.max_dimm_pwr_ocmb_cW;
 
-                if(l_cmd_ptr->header.total_dimm_pwr_cW)
+                if(l_cmd_v1_ptr->header.total_dimm_pwr_cW)
                 {
-                    g_amec->wof.max_dimm_pwr_total_cW = l_cmd_ptr->header.total_dimm_pwr_cW;
+                    g_amec->wof.max_dimm_pwr_total_cW = l_cmd_v1_ptr->header.total_dimm_pwr_cW;
                     CMDH_TRAC_INFO("data_store_memory_pwr_data: Total max dimm pre-heat power[%dcW]",
                                     g_amec->wof.max_dimm_pwr_total_cW);
                 }
@@ -2523,7 +2578,7 @@ errlHndl_t data_store_memory_pwr_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
                 }
 
                 CMDH_TRAC_INFO("data_store_memory_pwr_data: Received %d OCMBs present bit mask 0x%04X",
-                                l_cmd_ptr->header.num_ocmbs, g_amec->wof.ocmbs_present);
+                                l_cmd_v1_ptr->header.num_ocmbs, g_amec->wof.ocmbs_present);
                 CMDH_TRAC_INFO("data_store_memory_pwr_data: Thermal constant 0x%04X max pwr per OCMB 0x%08X cW",
                                 g_amec->wof.mem_thermal_credit_constant, g_amec->wof.max_dimm_pwr_ocmb_cW);
             }
@@ -2531,12 +2586,12 @@ errlHndl_t data_store_memory_pwr_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
         else // not enough data
         {
            CMDH_TRAC_ERR("data_store_memory_pwr_data: Length %d needs to be at least %d for %d OCMBs",
-                          l_data_length, l_min_data_length, l_cmd_ptr->header.num_ocmbs);
+                          l_data_length, l_min_data_length, l_cmd_v1_ptr->header.num_ocmbs);
         }
-    }  // if version 1
+    }  // if version 1 or 2
     else // invalid version
     {
-        CMDH_TRAC_ERR("data_store_memory_pwr_data: Invalid Version[0x%02X]", l_cmd_ptr->header.version);
+        CMDH_TRAC_ERR("data_store_memory_pwr_data: Invalid Version[0x%02X]", l_version);
     }
 
     if(l_invalid_input)
@@ -2559,7 +2614,7 @@ errlHndl_t data_store_memory_pwr_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
                            NULL,
                            DEFAULT_TRACE_SIZE,
                            l_data_length,
-                           (uint32_t)l_cmd_ptr->header.version);
+                           (uint32_t)l_version);
 
         // Callout firmware
         addCalloutToErrl(l_err,
@@ -2756,6 +2811,104 @@ errlHndl_t data_store_socket_pwr_config(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
 } // end data_store_socket_pwr_config()
 
+// Function Specification
+//
+// Name:  data_store_eff_mode_parms
+//
+// Description: Store Efficiency mode parameters from TMGT
+//
+// End Function Specification
+errlHndl_t data_store_eff_mode_parms(const cmdh_fsp_cmd_t * i_cmd_ptr,
+                                       cmdh_fsp_rsp_t * o_rsp_ptr)
+{
+    errlHndl_t            l_err = NULL;
+    bool                  l_log_error = FALSE;
+    cmdh_eff_mode_parms_t *l_cmd_ptr = (cmdh_eff_mode_parms_t *)i_cmd_ptr;
+    uint16_t              l_data_length = CMDH_DATALEN_FIELD_UINT16(l_cmd_ptr);
+    uint32_t              l_data_sz = sizeof(cmdh_eff_mode_parms_t) - sizeof(cmdh_fsp_cmd_header_t);
+
+    // default idle chip disabled
+    g_amec->eff_mode_parms.enable = 0;
+
+    // Check length and version
+    if((l_cmd_ptr->version != 0) ||
+       ( l_data_sz != l_data_length) )
+    {
+        if(l_cmd_ptr->version != 0)
+           CMDH_TRAC_ERR("data_store_eff_mode_parms: Version %d != 0", l_cmd_ptr->version);
+        else
+           CMDH_TRAC_ERR("data_store_eff_mode_parms: data length %d != expected %d",
+                          l_data_length, l_data_sz);
+        l_log_error = TRUE;
+    }
+    else if(l_cmd_ptr->idle_chip_enter_utilization >= l_cmd_ptr->idle_chip_exit_utilization)
+    {
+        CMDH_TRAC_ERR("data_store_eff_mode_parms: Idle Chip Enter Util[%d] cannot be >= Exit Util[%d]",
+                       l_cmd_ptr->idle_chip_enter_utilization, l_cmd_ptr->idle_chip_exit_utilization);
+        l_log_error = TRUE;
+    }
+    else // data is valid
+    {
+        g_amec->eff_mode_parms.memory_pwr_control = l_cmd_ptr->mem_pwr_ctl;
+        g_amec->eff_mode_parms.entry_delay = l_cmd_ptr->idle_chip_enter_delay_time;
+        g_amec->eff_mode_parms.entry_threshold = l_cmd_ptr->idle_chip_enter_utilization;
+        g_amec->eff_mode_parms.exit_delay = l_cmd_ptr->idle_chip_exit_delay_time;
+        g_amec->eff_mode_parms.exit_threshold = l_cmd_ptr->idle_chip_exit_utilization;
+
+        // 0 enter time means idle chip frequency is disabled
+        if(g_amec->eff_mode_parms.entry_delay == 0)
+        {
+           CMDH_TRAC_IMP("data_store_eff_mode_parms: Efficiency mode Idle Chip Freq is disabled due to 0 entry delay time");
+        }
+        else // Idle chip freq is enabled in efficiency modes
+        {
+           CMDH_TRAC_IMP("data_store_eff_mode_parms: Idle Chip Freq will be enabled in efficiency modes");
+           g_amec->eff_mode_parms.enable = 1;
+           // default frequency vote to max
+           g_amec->eff_mode_parms.idle_chip_freq_request = 0xFFFF;
+        }
+
+        // Change Data Request Mask to indicate we got this data
+        G_data_cnfg->data_mask |= DATA_MASK_EFF_MODE_PARMS;
+
+        CMDH_TRAC_IMP("data_store_eff_mode_parms: mem Pwr Control[0x%02X] Enter Idle Chip Freq Time[%dms] Util[%d] Exit Time[%dms] Util[%d]",
+                      g_amec->eff_mode_parms.memory_pwr_control,
+                      g_amec->eff_mode_parms.entry_delay * 32, // times are in terms of 32ms ticks
+                      g_amec->eff_mode_parms.entry_threshold,
+                      g_amec->eff_mode_parms.exit_delay * 32,
+                      g_amec->eff_mode_parms.exit_threshold);
+    }
+
+    if(l_log_error)
+    {
+        /* @
+         * @errortype
+         * @moduleid    DATA_STORE_EFF_MODE_PARMS
+         * @reasoncode  INVALID_INPUT_DATA
+         * @userdata1   data size
+         * @userdata2   packet version
+         * @userdata4   OCC_NO_EXTENDED_RC
+         * @devdesc     OCC recieved an invalid eff mode data packet from the FSP
+         */
+        l_err = createErrl(DATA_STORE_EFF_MODE_PARMS,
+                           INVALID_INPUT_DATA,
+                           OCC_NO_EXTENDED_RC,
+                           ERRL_SEV_UNRECOVERABLE,
+                           NULL,
+                           DEFAULT_TRACE_SIZE,
+                           l_data_length,
+                           (uint32_t)l_cmd_ptr->version);
+
+        // Callout firmware
+        addCalloutToErrl(l_err,
+                         ERRL_CALLOUT_TYPE_COMPONENT_ID,
+                         ERRL_COMPONENT_ID_FIRMWARE,
+                         ERRL_CALLOUT_PRIORITY_HIGH);
+    }
+
+    return l_err;
+}
+
 
 // Function Specification
 //
@@ -2904,6 +3057,17 @@ errlHndl_t DATA_store_cnfgdata (const cmdh_fsp_cmd_t * i_cmd_ptr,
             {
                 // Set this in case AMEC needs to know about this
                 l_new_data = DATA_MASK_SOCKET_PCAP;
+            }
+            break;
+
+        case DATA_FORMAT_EFF_MODE_PARMS:
+            // Store the efficiency mode parameters
+            l_errlHndl = data_store_eff_mode_parms(i_cmd_ptr, o_rsp_ptr);
+
+            if(NULL == l_errlHndl)
+            {
+                // Set this in case AMEC needs to know about this
+                l_new_data = DATA_MASK_EFF_MODE_PARMS;
             }
             break;
 

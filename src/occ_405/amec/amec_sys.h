@@ -170,8 +170,11 @@ typedef struct
   // Utilization in c%
   uint16_t util_cPercent;
 
-  // Power in cW
-  uint32_t  power_cW;
+  // Pre-Heat Power in cW
+  uint32_t  pre_heat_power_cW;
+
+  // full Power including pre-heat in cW
+  uint32_t  full_power_cW;
 } amec_membuf_int_pt_t;
 
 typedef struct
@@ -562,6 +565,26 @@ typedef struct amec_ips
     uint32_t            exit_delay;
 }amec_ips_t;
 
+//-------------------------------------------------------------
+// Parameters for Efficiency modes
+//-------------------------------------------------------------
+typedef struct amec_eff_mode
+{
+    // Memory power control setting when in efficiency mode
+    uint8_t             memory_pwr_control;
+    // Enable/Disable Idle Chip Frequency when in eff mode (=0:disable; =1:enable)
+    uint8_t             enable;
+    // Idle Chip frequency request for voting box
+    uint16_t            idle_chip_freq_request;
+    // Utilization threshold to enter idle chip condition (in hundreth of a percent)
+    uint16_t            entry_threshold;
+    // Utilization threshold to exit idle chip condition (in hundreth of a percent)
+    uint16_t            exit_threshold;
+    // Delay time to enter idle chip condition (in number of 32ms ticks)
+    uint16_t            entry_delay;
+    // Delay time to exit idle chip condition (in number of 32ms ticks)
+    uint16_t            exit_delay;
+}amec_eff_mode_t;
 
 //-------------------------------------------------------------
 //
@@ -645,6 +668,9 @@ typedef struct
   // Parameters for Idle Power Save (IPS) mode
   amec_ips_t            mst_ips_parms;
 
+  // Parameters for Efficiency mode
+  amec_eff_mode_t       eff_mode_parms;
+
   // PowerCap Data
   amec_pcap_t           pcap;
 
@@ -663,6 +689,8 @@ typedef struct
 
   // WOF sensors
   amec_wof_sensors_t    wof_sensors;
+
+
 
   // 32 bit counter of 250usec ticks
   uint32_t      r_cnt;

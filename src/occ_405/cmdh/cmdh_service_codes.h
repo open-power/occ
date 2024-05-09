@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2023                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2024                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -44,5 +44,6 @@ enum occCmdhModuleId
     CMDH_OCC_INTERRUPT_TYPE             =  CMDH_COMP_ID | 0x0C,
     DATA_STORE_VRM_FAULT                =  CMDH_COMP_ID | 0x0D,
     DATA_STORE_MEM_PWR_DATA             =  CMDH_COMP_ID | 0x0E,
+    DATA_STORE_EFF_MODE_PARMS           =  CMDH_COMP_ID | 0x0F,
 };
 #endif

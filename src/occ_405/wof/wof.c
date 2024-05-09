@@ -2163,8 +2163,8 @@ void calc_wof_dimm_adjustment( void )
               // interpolate power for l_ocmb_util
               l_util1 = g_amec->proc[0].memctl[l_ocmb_num].membuf.util_pwr_pt[l_index1].util_cPercent;
               l_util2 = g_amec->proc[0].memctl[l_ocmb_num].membuf.util_pwr_pt[l_index2].util_cPercent;
-              l_pwr1_cW = g_amec->proc[0].memctl[l_ocmb_num].membuf.util_pwr_pt[l_index1].power_cW;
-              l_pwr2_cW = g_amec->proc[0].memctl[l_ocmb_num].membuf.util_pwr_pt[l_index2].power_cW;
+              l_pwr1_cW = g_amec->proc[0].memctl[l_ocmb_num].membuf.util_pwr_pt[l_index1].pre_heat_power_cW;
+              l_pwr2_cW = g_amec->proc[0].memctl[l_ocmb_num].membuf.util_pwr_pt[l_index2].pre_heat_power_cW;
               l_ocmb_total_pwr_cW += interpolate_linear(l_ocmb_util,
                                                         l_util1,
                                                         l_util2,

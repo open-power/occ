@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2023                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2024                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -54,6 +54,7 @@ typedef enum
    DATA_FORMAT_GPU                   = 0x15,
    DATA_FORMAT_MEM_POWER             = 0x16,
    DATA_FORMAT_SOCKET_PCAP           = 0x17,
+   DATA_FORMAT_EFF_MODE_PARMS        = 0x18,
 } eConfigDataFormatVersion;
 
 // Enum of the various Cnfg Data Masks that are used
@@ -72,6 +73,7 @@ typedef enum
    DATA_MASK_GPU                   = 0x00000800,
    DATA_MASK_SOCKET_PCAP           = 0x00001000,
    DATA_MASK_MEM_PWR               = 0x00002000,
+   DATA_MASK_EFF_MODE_PARMS        = 0x00004000,
 } eConfigDataPriorityMask;
 
 typedef enum
@@ -452,8 +454,16 @@ typedef struct __attribute__ ((packed))
 {
     uint16_t                     util_cPercent;
     uint16_t                     int_pt_reserved;
-    uint32_t                     power_cW;
-}cmdh_mem_pwr_interp_pt_t;
+    uint32_t                     pre_heat_power_cW;   // pre-heat only power
+}cmdh_mem_pwr_interp_pt_t; // version 1
+
+typedef struct __attribute__ ((packed))
+{
+    uint16_t                     util_cPercent;
+    uint16_t                     int_pt_reserved;
+    uint32_t                     pre_heat_power_cW;   // pre-heat only power
+    uint32_t                     full_power_cW;       // full power
+}cmdh_mem_pwr_interp_pt_v2_t; // version 2
 
 typedef struct __attribute__ ((packed))
 {
@@ -461,7 +471,15 @@ typedef struct __attribute__ ((packed))
     uint8_t                     reserved[6];
     uint8_t                     num_interp_points;
     cmdh_mem_pwr_interp_pt_t    interp_points[1];
-}cmdh_mem_pwr_data_set_t;
+}cmdh_mem_pwr_data_set_t;  // version 1
+
+typedef struct __attribute__ ((packed))
+{
+    uint8_t                     ocmb_num;
+    uint8_t                     reserved[6];
+    uint8_t                     num_interp_points;
+    cmdh_mem_pwr_interp_pt_v2_t interp_points[1];
+}cmdh_mem_pwr_data_set_v2_t;  // version 2
 
 // Config packet definition used by TMGT to
 // send memory power data
@@ -469,7 +487,33 @@ typedef struct __attribute__ ((packed))
 {
     cmdh_mem_pwr_data_header_t  header;
     cmdh_mem_pwr_data_set_t     data_set[1];
+}cmdh_mem_pwr_data_v1_t;
+
+typedef struct __attribute__ ((packed))
+{
+    cmdh_mem_pwr_data_header_t  header;
+    cmdh_mem_pwr_data_set_v2_t  data_set[1];
+}cmdh_mem_pwr_data_v2_t;
+
+typedef struct __attribute__ ((packed))
+{
+    cmdh_mem_pwr_data_header_t  header;
+    cmdh_mem_pwr_data_set_t     data_set[1];
 } cmdh_mem_pwr_data_t;
+
+// Used by TMGT to send Efficiency mode parameters
+typedef struct __attribute__ ((packed))
+{
+    struct     cmdh_fsp_cmd_header;
+    uint8_t    format;
+    uint8_t    version;
+    uint8_t    mem_pwr_ctl;
+    uint8_t    reserved[5];
+    uint16_t   idle_chip_enter_delay_time;  // Delay Time in 32ms to enter Idle Chip freq
+    uint16_t   idle_chip_enter_utilization; // Utilization threshold in 0.01% to enter Idle Chip freq
+    uint16_t   idle_chip_exit_delay_time;   // Delay Time in 32ms to exit Idle Chip freq
+    uint16_t   idle_chip_exit_utilization;  // Utilization threshold in 0.01% to exit Idle Chip freq
+}cmdh_eff_mode_parms_t;
 
 // Used to mark present the config data TMGT has sent us.
 typedef struct data_cnfg
