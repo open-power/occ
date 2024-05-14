@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2022                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2024                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -73,6 +73,7 @@ typedef enum
     AMEC_VOTING_REASON_IPS              = 0x00040000, // Idle Power Save
     AMEC_VOTING_REASON_APSS_PMAX        = 0x00080000, // APSS failures
     AMEC_VOTING_REASON_VDD_THRM         = 0x00100000, // Vdd VRM OT
+    AMEC_VOTING_REASON_IDLE_CHIP        = 0x00200000, // Efficiency mode idle chip
 }amec_freq_voting_reason_t;
 
 

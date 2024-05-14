@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2024                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -131,5 +131,13 @@ void amec_controller_dimm_thermal();
  */
 uint16_t amec_controller_speed2freq (const uint16_t i_speed, const uint16_t i_fmax);
 
+/**
+ *  Controller for idle chip frequency
+ *
+ *  This function determines frequency vote for idle chip control
+ *  g_amec->eff_mode_parms.idle_chip_freq_request
+ *
+ */
+void amec_idle_chip_freq_control();
 
 #endif //_AMEC_CONTROLLER_H

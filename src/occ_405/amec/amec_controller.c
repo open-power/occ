@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2022                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2024                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -30,6 +30,7 @@
 #include <sensor.h>
 #include <amec_sys.h>
 #include <memory.h>
+#include <proc_data.h>
 
 //*************************************************************************
 // Externs
@@ -561,6 +562,92 @@ uint16_t amec_controller_speed2freq (const uint16_t i_speed, const uint16_t i_fm
         l_freq = (uint16_t)l_temp32; /* freq will always fit in 16 bits */
     }
     return l_freq;
+}
+
+// Function Specification
+//
+// Name: amec_idle_chip_freq_control
+//
+// Description: This function determines the frequency vote for idle chip control
+//              Frequency vote is g_amec->eff_mode_parms.idle_chip_freq_request
+//
+// End Function Specification
+void amec_idle_chip_freq_control()
+{
+    uint16_t    l_core_util = 0;
+    bool        l_all_cores_below_enter_util = TRUE;
+    bool        l_core_above_exit_util = FALSE;
+    uint8_t     l_core_num = 0;
+    static uint16_t L_32ms_ticks_below_enter_util = 0;
+    static uint16_t L_32ms_ticks_above_exit_util = 0;
+
+    // Check if Idle Chip Frequency control is enabled and we are in an efficiency mode
+    if( (g_amec->eff_mode_parms.enable) &&
+        ((CURRENT_MODE() == OCC_MODE_EFFICIENCY_POWER) || (CURRENT_MODE() == OCC_MODE_EFFICIENCY_PERF)) )
+    {
+        // check all core's utilization for all below enter or at least one above exit
+        for(l_core_num = 0; l_core_num < MAX_NUM_CORES; l_core_num++)
+        {
+           if(CORE_PRESENT(l_core_num))
+           {
+              l_core_util = G_amec_sensor_list[UTILC0 + l_core_num]->sample;
+              if(l_core_util >= g_amec->eff_mode_parms.entry_threshold)
+              {
+                 // found a core above entry threshold
+                 l_all_cores_below_enter_util = FALSE;
+                 // check if this is also above exit threshold
+                 if(l_core_util > g_amec->eff_mode_parms.exit_threshold)
+                 {
+                     l_core_above_exit_util = TRUE;
+                 }
+              }
+           }
+        } // for all cores
+
+        // Update timers
+        if(l_all_cores_below_enter_util)
+        {
+           if(L_32ms_ticks_below_enter_util != 0xFFFF) // prevent wrapping
+              L_32ms_ticks_below_enter_util++;
+           L_32ms_ticks_above_exit_util = 0;
+        }
+        else if(l_core_above_exit_util)
+        {
+           L_32ms_ticks_below_enter_util = 0;
+           if(L_32ms_ticks_above_exit_util != 0xFFFF) // prevent wrapping
+              L_32ms_ticks_above_exit_util++;
+        }
+        else // in hystresis window
+        {
+           L_32ms_ticks_below_enter_util = 0;
+           L_32ms_ticks_above_exit_util = 0;
+        }
+
+        // check if met enter or exit criteria
+        if(L_32ms_ticks_below_enter_util >= g_amec->eff_mode_parms.entry_delay)
+        {
+           if(g_amec->eff_mode_parms.idle_chip_freq_request != G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MIN_FREQ])
+           {
+              // Chip met idle frequency entry criteria drop to min freq
+              g_amec->eff_mode_parms.idle_chip_freq_request = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MIN_FREQ];
+           }
+        }
+        else if(L_32ms_ticks_above_exit_util >= g_amec->eff_mode_parms.exit_delay)
+        {
+           if(g_amec->eff_mode_parms.idle_chip_freq_request != 0xFFFF)
+           {
+              // Chip met idle frequency exit criteria set frequency to unrestricted
+              g_amec->eff_mode_parms.idle_chip_freq_request = 0xFFFF;
+           }
+        }
+
+    } // if idle chip freq control enabled
+    else if(g_amec->eff_mode_parms.idle_chip_freq_request != 0xFFFF)
+    {
+        TRAC_INFO("amec_idle_chip_freq_control disabled previous freq vote %d",
+                   g_amec->eff_mode_parms.idle_chip_freq_request);
+        g_amec->eff_mode_parms.idle_chip_freq_request = 0xFFFF;
+    }
 }
 
 /*----------------------------------------------------------------------------*/

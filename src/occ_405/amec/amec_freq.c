@@ -463,6 +463,13 @@ void amec_slv_proc_voting_box(void)
         l_chip_reason = AMEC_VOTING_REASON_IPS;
     }
 
+    // Check for Idle Chip Frequency control
+    if( (g_amec->eff_mode_parms.enable) && (g_amec->eff_mode_parms.idle_chip_freq_request < l_chip_fmax) )
+    {
+        l_chip_fmax = g_amec->eff_mode_parms.idle_chip_freq_request;
+        l_chip_reason = AMEC_VOTING_REASON_IDLE_CHIP;
+    }
+
     // Override frequency with request from Master OCC from mfg auto slew
     if(g_amec->poverride_enable)
     {

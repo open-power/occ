@@ -1188,6 +1188,9 @@ void amec_slv_substate_5_1(void)
     // Update Proc Core sensors (for this substate)
     //-------------------------------------------------------
     amec_update_proc_core_group(6);
+
+    // Call processor chip idle frequency controller
+    amec_idle_chip_freq_control();
 }
 
 
