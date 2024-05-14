@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2023                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2024                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -71,7 +71,8 @@
 // 0-15: Bit Rate Divisor - 0x00AE gives approx 400kHz (and allows margin for clock variation)
 // 16-21: Port Number (0-5)
 // 22-26: reserved (0s)
-#define I2C_MODE_REG_DIVISOR    0x00AE000000000000
+// 28: fgat mode. Must be set to allow stop only with secure boot enabled
+#define I2C_MODE_REG_DIVISOR    0x00AE000800000000
 
 typedef enum
 {

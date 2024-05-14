@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2023                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2024                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -52,6 +52,7 @@ extern data_cnfg_t * G_data_cnfg;
 
 extern uint64_t G_inject_dimm;
 extern uint32_t G_inject_dimm_trace[MAX_NUM_OCMBS][MAX_NUM_DTS_PER_OCMB];
+extern bool G_reset_prep;
 
 uint8_t G_dimm_state = DIMM_STATE_INIT;     // Curret state of DIMM state machine
 // G_maxDimmPort is the maximum I2C port number
@@ -721,9 +722,18 @@ void task_dimm_sm(struct task *i_self)
                 {
                     // Reset has completed successfully
                     TRAC_INFO("task_dimm_sm: I2C reset completed");
-                    G_dimm_i2c_reset_required = false;
-                    // Check if host needs I2C lock
-                    L_occ_owns_lock = check_and_update_i2c_lock(engine);
+
+                    if(G_reset_prep)
+                    {
+                        // Going to be reset don't start anything new
+                        disable_all_dimms();
+                    }
+                    else
+                    {
+                       G_dimm_i2c_reset_required = false;
+                       // Check if host needs I2C lock
+                       L_occ_owns_lock = check_and_update_i2c_lock(engine);
+                    }
                 }
                 else
                 {
@@ -739,12 +749,20 @@ void task_dimm_sm(struct task *i_self)
                 ((DIMM_TICK == FIRST_I2C_DIMM_TICK) ||
                  (DIMM_TICK == (FIRST_I2C_DIMM_TICK + 8))) )
             {
-                // Check if host gave up the I2C lock
-                L_occ_owns_lock = check_and_update_i2c_lock(engine);
-                if (L_occ_owns_lock)
+                if(G_reset_prep)
                 {
-                    // Start over at the INIT state after receiving the lock
-                    G_dimm_state = DIMM_STATE_INIT;
+                    // Going to be reset don't start anything new
+                    disable_all_dimms();
+                }
+                else
+                {
+                   // Check if host gave up the I2C lock
+                   L_occ_owns_lock = check_and_update_i2c_lock(engine);
+                   if (L_occ_owns_lock)
+                   {
+                       // Start over at the INIT state after receiving the lock
+                       G_dimm_state = DIMM_STATE_INIT;
+                   }
                 }
             }
             if (L_occ_owns_lock)
@@ -760,13 +778,21 @@ void task_dimm_sm(struct task *i_self)
 
                 if (G_dimm_state == DIMM_STATE_INIT)
                 {
-                    // Setup I2C Interrupt Mask Register
-                    DIMM_DBG("DIMM_STATE_INIT: (I2C Engine 0x%02X, Memory Type 0x%02X)",
-                             engine, G_sysConfigData.mem_type);
-                    L_new_dimm_args.i2cEngine = engine;
-                    if (schedule_dimm_req(DIMM_STATE_INIT, L_new_dimm_args))
+                    if(G_reset_prep)
                     {
-                        nextState = DIMM_STATE_WRITE_MODE;
+                        // Going to be reset don't start anything new
+                        disable_all_dimms();
+                    }
+                    else
+                    {
+                       // Setup I2C Interrupt Mask Register
+                       DIMM_DBG("DIMM_STATE_INIT: (I2C Engine 0x%02X, Memory Type 0x%02X)",
+                                engine, G_sysConfigData.mem_type);
+                       L_new_dimm_args.i2cEngine = engine;
+                       if (schedule_dimm_req(DIMM_STATE_INIT, L_new_dimm_args))
+                       {
+                           nextState = DIMM_STATE_WRITE_MODE;
+                       }
                     }
                 }
                 else
@@ -852,14 +878,21 @@ void task_dimm_sm(struct task *i_self)
                                                     G_inject_dimm_trace[L_ocmb][L_dimmIndex] = 1;
                                                 }
                                             }
+                                            if(G_reset_prep)
+                                            {
+                                                // Going to be reset don't start anything new
+                                                disable_all_dimms();
+                                            }
+                                            else
+                                            {
+                                               // Move on to next DIMM
+                                               use_next_dimm(&L_ocmb, &L_dimmIndex);
+                                               L_readIssued = false;
 
-                                            // Move on to next DIMM
-                                            use_next_dimm(&L_ocmb, &L_dimmIndex);
-                                            L_readIssued = false;
-
-                                            // Check if host needs the I2C lock
-                                            L_occ_owns_lock = check_and_update_i2c_lock(engine);
-                                        }
+                                               // Check if host needs the I2C lock
+                                               L_occ_owns_lock = check_and_update_i2c_lock(engine);
+                                            }
+                                        }  // if L_readIssued
                                         break;
 
                                     default:
@@ -867,7 +900,7 @@ void task_dimm_sm(struct task *i_self)
                                             break;
                                 }
                             }
-                            else
+                            else if(G_reset_prep == FALSE)
                             {
                                 // last request did not return success
                                 switch (G_dimm_sm_args.state)
@@ -910,6 +943,11 @@ void task_dimm_sm(struct task *i_self)
                                         // Nothing to do
                                         break;
                                 }
+                            } // failure and G_reset_prep FALSE
+                            else
+                            {
+                                // last read failed but occ is going to be reset so don't retry
+                                disable_all_dimms();
                             }
                         }
                     }
@@ -922,30 +960,38 @@ void task_dimm_sm(struct task *i_self)
                             switch (G_dimm_state)
                             {
                                 case DIMM_STATE_WRITE_MODE:
-                                    // Only start a DIMM read every 8th tick
-                                    if ((DIMM_TICK == FIRST_I2C_DIMM_TICK) ||
-                                        (DIMM_TICK == (FIRST_I2C_DIMM_TICK + 8)) )
+                                    // Don't start anything new if OCC is going to be reset
+                                    if(G_reset_prep)
                                     {
-                                        // If DIMM is not disabled start temp collection
-                                        if(DIMM_SENSOR_ENABLED(L_ocmb, L_dimmIndex))
-                                        {
-                                            L_new_dimm_args.i2cPort = g_amec->proc[0].memctl[L_ocmb].membuf.dimm_temps[L_dimmIndex].i2c_port;
-                                            L_new_dimm_args.i2cAddr = g_amec->proc[0].memctl[L_ocmb].membuf.dimm_temps[L_dimmIndex].i2c_address;
-                                            L_new_dimm_args.ocmb = L_ocmb;
-                                            L_new_dimm_args.dimm = L_dimmIndex;
-                                            if (schedule_dimm_req(DIMM_STATE_WRITE_MODE, L_new_dimm_args))
-                                            {
-                                                DIMM_DBG("task_dimm_sm: Collection started for DIMM%04X at tick %d",
-                                                         OCMB_AND_DIMM, DIMM_TICK);
-                                                nextState = DIMM_STATE_WRITE_ADDR;
-                                            }
-                                        }
-                                        else
-                                        {
-                                            // Skip current DIMM and move on to next one
-                                            use_next_dimm(&L_ocmb, &L_dimmIndex);
-                                        }
+                                       disable_all_dimms();
                                     }
+                                    else
+                                    {
+                                       // Only start a DIMM read every 8th tick
+                                       if ((DIMM_TICK == FIRST_I2C_DIMM_TICK) ||
+                                           (DIMM_TICK == (FIRST_I2C_DIMM_TICK + 8)) )
+                                       {
+                                           // If DIMM is not disabled start temp collection
+                                           if(DIMM_SENSOR_ENABLED(L_ocmb, L_dimmIndex))
+                                           {
+                                               L_new_dimm_args.i2cPort = g_amec->proc[0].memctl[L_ocmb].membuf.dimm_temps[L_dimmIndex].i2c_port;
+                                               L_new_dimm_args.i2cAddr = g_amec->proc[0].memctl[L_ocmb].membuf.dimm_temps[L_dimmIndex].i2c_address;
+                                               L_new_dimm_args.ocmb = L_ocmb;
+                                               L_new_dimm_args.dimm = L_dimmIndex;
+                                               if (schedule_dimm_req(DIMM_STATE_WRITE_MODE, L_new_dimm_args))
+                                               {
+                                                   DIMM_DBG("task_dimm_sm: Collection started for DIMM%04X at tick %d",
+                                                            OCMB_AND_DIMM, DIMM_TICK);
+                                                   nextState = DIMM_STATE_WRITE_ADDR;
+                                               }
+                                           }
+                                           else
+                                           {
+                                               // Skip current DIMM and move on to next one
+                                               use_next_dimm(&L_ocmb, &L_dimmIndex);
+                                           }
+                                       }
+                                    }  // else G_reset_prep FALSE
                                     break;
 
                                 case DIMM_STATE_WRITE_ADDR:
@@ -993,8 +1039,13 @@ void task_dimm_sm(struct task *i_self)
                         }
                         else
                         {
-                            // Previous op triggered reset
-                            nextState = dimm_reset_sm();
+                            // Previous op triggered DIMM reset but if the OCC is going to be reset just bail
+                            if(G_reset_prep)
+                            {
+                               disable_all_dimms();
+                            }
+                            else
+                               nextState = dimm_reset_sm();
                         }
                     }
                     else

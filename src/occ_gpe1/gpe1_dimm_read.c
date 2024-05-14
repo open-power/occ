@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2023                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2024                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -247,9 +247,10 @@ void dimm_write_mode(ipc_msg_t* cmd, void* arg)
 
     // MODE_REGISTER
     scomAddr = I2C_MODE_REG | SCOM_ENGINE_OFFSET(args->i2cEngine);
-    // 0-15: Bit Rate Divisor - 0x0049 gives approx 391kHz (and allows margin for clock variation)
+    // 0-15: Bit Rate Divisor - 0x00AE gives approx 400kHz (and allows margin for clock variation)
     // 16-21: Port Number (0-15)
     // 22-26: reserved (0s)
+    // 28: fgat mode. Must be set to allow stop only with secure boot enabled
     regValue = I2C_MODE_REG_DIVISOR;
     if ((args->i2cPort > 0) && (args->i2cPort < 16))
     {
