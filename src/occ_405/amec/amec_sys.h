@@ -219,7 +219,7 @@ typedef struct
   sensor_t mrd;
   sensor_t mwr;
   sensor_t memutil;
-  sensor_t memutilp1;
+  sensor_t mem_reserved;  // reserved for a new memory sensor
 
 } amec_memctl_t;
 

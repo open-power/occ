@@ -416,8 +416,8 @@ typedef struct __attribute__ ((packed))
     uint32_t ov_uv_fudge;
     // [897] The most recently read value in the sensor MEMUTILMx where x is OCMB num
     uint16_t memutil[MAX_NUM_OCMBS];
-    // [929] The most recently read value in the sensor MEMUTILP1Mx (DDR5 only) where x is OCMB num
-    uint16_t memutilp1[MAX_NUM_OCMBS];
+    // [929] The most recently calculated pre-heat power for the OCMB
+    uint16_t mem_curr_preheat_pwr[MAX_NUM_OCMBS];
 } amec_wof_t;  // 961 bytes total
 
 // Structure used in g_amec to hold static WOF data

@@ -2082,10 +2082,10 @@ void calc_wof_dimm_adjustment( void )
     uint8_t  l_num_interp_pts = 0;
     int8_t   l_signed = 1;
     uint16_t l_ocmb_util = 0;
-    uint16_t l_ocmb_util_p1 = 0;
     uint16_t l_util1 = 0;
     uint16_t l_util2 = 0;
     uint32_t l_ocmb_total_pwr_cW = 0;
+    uint32_t l_ocmb_pwr_cW = 0;
     uint32_t l_pwr1_cW = 0;
     uint32_t l_pwr2_cW = 0;
     uint32_t l_processed_ocmbs = 0;
@@ -2114,13 +2114,6 @@ void calc_wof_dimm_adjustment( void )
               l_ocmb_util = getSensorByGsid((uint16_t)(MEMUTILM0 + l_ocmb_num))->sample;
               // Save OCMB util used
               g_wof->memutil[l_ocmb_num] = l_ocmb_util;
-              if(IS_OCM_DDR5_MEM_TYPE(G_sysConfigData.mem_type))
-              {
-                  // add port 1 utilization
-                  l_ocmb_util_p1 = getSensorByGsid((uint16_t)(MEMUTILP1M0 + l_ocmb_num))->sample;
-                  l_ocmb_util += l_ocmb_util_p1;
-                  g_wof->memutilp1[l_ocmb_num] = l_ocmb_util_p1;
-              }
 
               // find the interpolation points for l_ocmb_util
               l_index1 = 0;
@@ -2165,12 +2158,14 @@ void calc_wof_dimm_adjustment( void )
               l_util2 = g_amec->proc[0].memctl[l_ocmb_num].membuf.util_pwr_pt[l_index2].util_cPercent;
               l_pwr1_cW = g_amec->proc[0].memctl[l_ocmb_num].membuf.util_pwr_pt[l_index1].pre_heat_power_cW;
               l_pwr2_cW = g_amec->proc[0].memctl[l_ocmb_num].membuf.util_pwr_pt[l_index2].pre_heat_power_cW;
-              l_ocmb_total_pwr_cW += interpolate_linear(l_ocmb_util,
-                                                        l_util1,
-                                                        l_util2,
-                                                        l_pwr1_cW,
-                                                        l_pwr2_cW,
-                                                        TRUE);  // round up
+              l_ocmb_pwr_cW = interpolate_linear(l_ocmb_util,
+                                                 l_util1,
+                                                 l_util2,
+                                                 l_pwr1_cW,
+                                                 l_pwr2_cW,
+                                                 TRUE);  // round up
+              g_wof->mem_curr_preheat_pwr[l_ocmb_num] = l_ocmb_pwr_cW;
+              l_ocmb_total_pwr_cW += l_ocmb_pwr_cW;
               l_processed_ocmbs |= (MEMBUF0_PRESENT_MASK >> l_ocmb_num);
            } // if OCMB present
        }  // for each OCMB

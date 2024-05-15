@@ -552,7 +552,7 @@ enum e_gsid
     MWRM14,
     MWRM15,
 
-    MEMUTILM0,        // Memory utilization for OCMB port 0
+    MEMUTILM0,        // Memory utilization for OCMB (DDR5 total ports 0 and 1)
     MEMUTILM1,
     MEMUTILM2,
     MEMUTILM3,
@@ -569,22 +569,22 @@ enum e_gsid
     MEMUTILM14,
     MEMUTILM15,
 
-    MEMUTILP1M0,    // Memory utilization for OCMB port 1
-    MEMUTILP1M1,
-    MEMUTILP1M2,
-    MEMUTILP1M3,
-    MEMUTILP1M4,
-    MEMUTILP1M5,
-    MEMUTILP1M6,
-    MEMUTILP1M7,
-    MEMUTILP1M8,
-    MEMUTILP1M9,
-    MEMUTILP1M10,
-    MEMUTILP1M11,
-    MEMUTILP1M12,
-    MEMUTILP1M13,
-    MEMUTILP1M14,
-    MEMUTILP1M15,
+    MEM_RSV0,    // Reserved memory sensor
+    MEM_RSV1,
+    MEM_RSV2,
+    MEM_RSV3,
+    MEM_RSV4,
+    MEM_RSV5,
+    MEM_RSV6,
+    MEM_RSV7,
+    MEM_RSV8,
+    MEM_RSV9,
+    MEM_RSV10,
+    MEM_RSV11,
+    MEM_RSV12,
+    MEM_RSV13,
+    MEM_RSV14,
+    MEM_RSV15,
 
     TEMPMEMBUF0,    // Individual Memory Buffer temperatures
     TEMPMEMBUF1,
