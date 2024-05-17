@@ -819,11 +819,22 @@ void ocmb_data( void )
         {
             // Setup the 'get membuf data' parms
             // ->config controls which membuf we are reading from
-            if( MEMBUF_PRESENT(l_membuf_data_ptr->prev_membuf) ){
+            if( MEMBUF_PRESENT(l_membuf_data_ptr->prev_membuf) )
+            {
               // If prev membuf is present, do the read of the sensor cache
               l_parms->collect = l_membuf_data_ptr->prev_membuf;
+
+              // calculate the time from last read
+              if(g_amec->proc[0].memctl[l_parms->collect].membuf.start_time_prev)
+                  g_amec->proc[0].memctl[l_parms->collect].membuf.read_time_us = DURATION_IN_US_UNTIL_NOW_FROM(g_amec->proc[0].memctl[l_parms->collect].membuf.start_time_prev);
+              else
+                  g_amec->proc[0].memctl[l_parms->collect].membuf.read_time_us = 0;
+
+              // Save off this start time so next read can determine time between reads
+              g_amec->proc[0].memctl[l_parms->collect].membuf.start_time_prev = ssx_timebase_get();
             }
-            else{
+            else
+            {
               // If prev membuf is not present, don't do the read of the sensor cache.
               l_parms->collect = -1;
             }
@@ -867,7 +878,6 @@ void ocmb_data( void )
                 REQUEST_RESET(l_err);     //this will add firmware callout
                 break;
             }
-
             L_gpe_scheduled = TRUE;
         }
 

@@ -114,7 +114,8 @@ cmdh_ips_config_data_t G_ips_config_data = {0};
 bool G_mem_monitoring_allowed = FALSE;
 
 uint8_t G_read_ocmb_num_8ms_ticks = 1;
-uint32_t G_num_ocmb_reads_per_1000s = 3906;  // default assuming 200us update time (256ms reads)
+uint32_t G_ocmb_read_time_ms = 256;  // default assuming 200us update time (256ms reads)
+uint32_t G_num_ocmb_reads_per_1000s = 3906; // default assuming 200us update time (256ms reads)
 
 // Will get set when receiving APSS config data
 PWR_READING_TYPE G_pwr_reading_type = PWR_READING_TYPE_NONE;
@@ -2131,12 +2132,15 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
             if(G_read_ocmb_num_8ms_ticks > l_max_dead_8ms_ticks)
                 G_read_ocmb_num_8ms_ticks = l_max_dead_8ms_ticks;
 
+            // calculate time that the same OCMB is read
+            G_ocmb_read_time_ms = (uint32_t)(G_read_ocmb_num_8ms_ticks * 8 * MAX_NUM_OCMBS);
+
             // determine number of reads done in 1000s
             // using 1000 for better precision to calculate memory bandwidth sensors
-            G_num_ocmb_reads_per_1000s = 1000000 / (G_read_ocmb_num_8ms_ticks * 8 * MAX_NUM_OCMBS);
+            G_num_ocmb_reads_per_1000s = (uint32_t)(1000000 / G_ocmb_read_time_ms);
             CMDH_TRAC_IMP("1 OCMB will be read every %dms Each OCMB read every %dms (%d reads/1000s)",
                           G_read_ocmb_num_8ms_ticks * 8,
-                          G_read_ocmb_num_8ms_ticks * 8 * MAX_NUM_OCMBS,
+                          G_ocmb_read_time_ms,
                           G_num_ocmb_reads_per_1000s);
 
             // This notifies other code that we need to request the mem throttle packet

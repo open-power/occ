@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2022                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2024                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -46,7 +46,7 @@ uint32_t get_core_data(uint32_t i_core,
     uint32_t coreSelect = quadSelect + CORE_REGION(i_core);
     uint32_t data32 = 0;
     uint64_t empath_scom_data = 0;
-    static uint32_t L_trace = 20;
+    static uint32_t L_trace = 5;
 
     uint32_t i;
 
@@ -294,14 +294,6 @@ uint32_t get_core_data(uint32_t i_core,
                 if((empath_scom_data & PC_STAT_TIMEOUT) == 0)
                 {
                     o_data->empathValid = EMPATH_VALID;
-                }
-                else if(L_trace)
-                {
-                    L_trace--;
-                    PK_TRACE("get_core_data: core[0x%08x] empath not valid", i_core);
-                    PK_TRACE("get_core_data: EMPATH timeout PC_STATUS_REG[0x%08x%08x]",
-                             (uint32_t)(empath_scom_data>>32),
-                             (uint32_t)empath_scom_data);
                 }
             }
             else

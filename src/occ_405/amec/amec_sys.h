@@ -208,6 +208,10 @@ typedef struct
   uint8_t              num_interp_pts;
   amec_membuf_int_pt_t util_pwr_pt[MAX_NUM_MEM_INT_PTS];
 
+  // OCMB read timing, used for utilization calculation, DDR5 doesn't have frame count
+  uint64_t start_time_prev; // time previous read was started to determine time between reads
+  uint64_t read_time_us;    // time between current read and previous
+
 } amec_membuf_t;
 
 typedef struct
