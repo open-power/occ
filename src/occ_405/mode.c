@@ -375,6 +375,8 @@ errlHndl_t SMGR_mode_transition_to_disabled()
 
     CURRENT_MODE() = OCC_MODE_DISABLED;
 
+    // not efficiency mode
+    g_amec->eff_mode_parms.enable.fields.mode_support = 0;
     // Shouldn't be getting mode with OPAL but ignore changes to
     // WOF_RC_MODE_NO_SUPPORT_MASK since it is controlled by inband WOF command
     if(!G_sysConfigData.system_type.kvm)
@@ -407,6 +409,8 @@ errlHndl_t SMGR_mode_transition_to_powersave()
     l_errlHndl = amec_set_freq_range(OCC_MODE_PWRSAVE);
 
     CURRENT_MODE() = OCC_MODE_PWRSAVE;
+    // not efficiency mode
+    g_amec->eff_mode_parms.enable.fields.mode_support = 0;
 
     // Shouldn't be getting mode with OPAL but ignore changes to
     // WOF_RC_MODE_NO_SUPPORT_MASK since it is controlled by inband WOF command
@@ -443,6 +447,8 @@ errlHndl_t SMGR_mode_transition_to_non_deterministic()
     l_errlHndl = amec_set_freq_range(OCC_MODE_NON_DETERMINISTIC);
 
     CURRENT_MODE() = OCC_MODE_NON_DETERMINISTIC;
+    // not efficiency mode
+    g_amec->eff_mode_parms.enable.fields.mode_support = 0;
 
     // Shouldn't be getting mode with OPAL but ignore changes to
     // WOF_RC_MODE_NO_SUPPORT_MASK since it is controlled by inband WOF command
@@ -591,6 +597,8 @@ errlHndl_t SMGR_mode_transition_to_static_freq_point()
         l_errlHndl = amec_set_freq_range(OCC_MODE_STATIC_FREQ_POINT);
 
         CURRENT_MODE() = OCC_MODE_STATIC_FREQ_POINT;
+        // not efficiency mode
+        g_amec->eff_mode_parms.enable.fields.mode_support = 0;
 
         // Shouldn't be getting mode with OPAL but ignore changes to
         // WOF_RC_MODE_NO_SUPPORT_MASK since it is controlled by inband WOF command
@@ -638,6 +646,8 @@ errlHndl_t SMGR_mode_transition_to_ffo()
         l_errlHndl = amec_set_freq_range(OCC_MODE_FFO);
 
         CURRENT_MODE() = OCC_MODE_FFO;
+        // not efficiency mode
+        g_amec->eff_mode_parms.enable.fields.mode_support = 0;
 
         // Shouldn't be getting mode with OPAL but ignore changes to
         // WOF_RC_MODE_NO_SUPPORT_MASK since it is controlled by inband WOF command
@@ -703,6 +713,8 @@ errlHndl_t SMGR_mode_transition_to_efficiency_power()
     l_errlHndl = amec_set_freq_range(OCC_MODE_EFFICIENCY_POWER);
 
     CURRENT_MODE() = OCC_MODE_EFFICIENCY_POWER;
+    // set efficiency mode
+    g_amec->eff_mode_parms.enable.fields.mode_support = 1;
 
     // Shouldn't be getting mode with OPAL but ignore changes to
     // WOF_RC_MODE_NO_SUPPORT_MASK since it is controlled by inband WOF command
@@ -740,6 +752,8 @@ errlHndl_t SMGR_mode_transition_to_efficiency_perf()
     l_errlHndl = amec_set_freq_range(OCC_MODE_EFFICIENCY_PERF);
 
     CURRENT_MODE() = OCC_MODE_EFFICIENCY_PERF;
+    // set efficiency mode
+    g_amec->eff_mode_parms.enable.fields.mode_support = 1;
 
     // Shouldn't be getting mode with OPAL but ignore changes to
     // WOF_RC_MODE_NO_SUPPORT_MASK since it is controlled by inband WOF command
@@ -774,6 +788,8 @@ errlHndl_t SMGR_mode_transition_to_fmax()
     l_errlHndl = amec_set_freq_range(OCC_MODE_FMAX);
 
     CURRENT_MODE() = OCC_MODE_FMAX;
+    // not efficiency mode
+    g_amec->eff_mode_parms.enable.fields.mode_support = 0;
 
     // Shouldn't be getting mode with OPAL but ignore changes to
     // WOF_RC_MODE_NO_SUPPORT_MASK since it is controlled by inband WOF command
@@ -810,6 +826,8 @@ errlHndl_t SMGR_mode_transition_to_balanced()
     l_errlHndl = amec_set_freq_range(OCC_MODE_BALANCED);
 
     CURRENT_MODE() = OCC_MODE_BALANCED;
+    // not efficiency mode
+    g_amec->eff_mode_parms.enable.fields.mode_support = 0;
 
     // Shouldn't be getting mode with OPAL but ignore changes to
     // WOF_RC_MODE_NO_SUPPORT_MASK since it is controlled by inband WOF command
@@ -850,6 +868,9 @@ errlHndl_t SMGR_mode_transition_to_max_perf()
     l_errlHndl = amec_set_freq_range(OCC_MODE_MAX_PERF);
 
     CURRENT_MODE() = OCC_MODE_MAX_PERF;
+    // not efficiency mode
+    g_amec->eff_mode_parms.enable.fields.mode_support = 0;
+
     // Shouldn't be getting mode with OPAL but ignore changes to
     // WOF_RC_MODE_NO_SUPPORT_MASK since it is controlled by inband WOF command
     if(!G_sysConfigData.system_type.kvm)

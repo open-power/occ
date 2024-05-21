@@ -575,6 +575,8 @@ uint16_t amec_controller_speed2freq (const uint16_t i_speed, const uint16_t i_fm
 void amec_idle_chip_freq_control()
 {
     uint16_t    l_core_util = 0;
+    uint16_t    l_core_util_min = 0xffff;
+    uint16_t    l_core_util_max = 0;
     bool        l_all_cores_below_enter_util = TRUE;
     bool        l_core_above_exit_util = FALSE;
     uint8_t     l_core_num = 0;
@@ -582,8 +584,8 @@ void amec_idle_chip_freq_control()
     static uint16_t L_32ms_ticks_above_exit_util = 0;
 
     // Check if Idle Chip Frequency control is enabled and we are in an efficiency mode
-    if( (g_amec->eff_mode_parms.enable) &&
-        ((CURRENT_MODE() == OCC_MODE_EFFICIENCY_POWER) || (CURRENT_MODE() == OCC_MODE_EFFICIENCY_PERF)) )
+    if( (g_amec->eff_mode_parms.enable.fields.utilization_enable) &&
+        (g_amec->eff_mode_parms.enable.fields.mode_support) )
     {
         // check all core's utilization for all below enter or at least one above exit
         for(l_core_num = 0; l_core_num < MAX_NUM_CORES; l_core_num++)
@@ -591,6 +593,11 @@ void amec_idle_chip_freq_control()
            if(CORE_PRESENT(l_core_num))
            {
               l_core_util = G_amec_sensor_list[UTILC0 + l_core_num]->sample;
+              if(l_core_util > l_core_util_max)
+                  l_core_util_max = l_core_util;
+              if(l_core_util < l_core_util_min)
+                  l_core_util_min = l_core_util;
+
               if(l_core_util >= g_amec->eff_mode_parms.entry_threshold)
               {
                  // found a core above entry threshold
@@ -604,6 +611,9 @@ void amec_idle_chip_freq_control()
            }
         } // for all cores
 
+        // Update min/max util for debug
+        g_amec->eff_mode_parms.core_util_min = l_core_util_min;
+        g_amec->eff_mode_parms.core_util_max = l_core_util_max;
         // Update timers
         if(l_all_cores_below_enter_util)
         {

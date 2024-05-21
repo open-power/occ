@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2022                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2024                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -431,7 +431,9 @@ void amec_mst_ips_main(void)
     do
     {
         // If IPS is disabled, no need to execute the algorithm
-        if (g_amec->mst_ips_parms.enable == 0)
+        // Don't execute IPS in efficiency modes
+        if( (g_amec->mst_ips_parms.enable == 0) ||
+            (g_amec->eff_mode_parms.enable.fields.mode_support) )
         {
             // Reset the following parameters
             g_amec->mst_ips_parms.active = 0;

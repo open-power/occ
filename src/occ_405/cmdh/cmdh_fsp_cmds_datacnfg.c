@@ -2831,56 +2831,106 @@ errlHndl_t data_store_eff_mode_parms(const cmdh_fsp_cmd_t * i_cmd_ptr,
     uint16_t              l_data_length = CMDH_DATALEN_FIELD_UINT16(l_cmd_ptr);
     uint32_t              l_data_sz = sizeof(cmdh_eff_mode_parms_t) - sizeof(cmdh_fsp_cmd_header_t);
 
-    // default idle chip disabled
-    g_amec->eff_mode_parms.enable = 0;
-
     // Check length and version
-    if((l_cmd_ptr->version != 0) ||
-       ( l_data_sz != l_data_length) )
+    if( ((l_cmd_ptr->version != 0) && (l_cmd_ptr->version != 1)) ||
+         (l_data_sz != l_data_length) )
     {
         if(l_cmd_ptr->version != 0)
-           CMDH_TRAC_ERR("data_store_eff_mode_parms: Version %d != 0", l_cmd_ptr->version);
+           CMDH_TRAC_ERR("data_store_eff_mode_parms: Version %d != 0 or 1", l_cmd_ptr->version);
         else
            CMDH_TRAC_ERR("data_store_eff_mode_parms: data length %d != expected %d",
                           l_data_length, l_data_sz);
         l_log_error = TRUE;
     }
-    else if(l_cmd_ptr->idle_chip_enter_utilization >= l_cmd_ptr->idle_chip_exit_utilization)
+    else if(l_cmd_ptr->idle_chip_enter_threshold >= l_cmd_ptr->idle_chip_exit_threshold)
     {
-        CMDH_TRAC_ERR("data_store_eff_mode_parms: Idle Chip Enter Util[%d] cannot be >= Exit Util[%d]",
-                       l_cmd_ptr->idle_chip_enter_utilization, l_cmd_ptr->idle_chip_exit_utilization);
+        CMDH_TRAC_ERR("data_store_eff_mode_parms: Idle Chip Enter Threshold[%d] cannot be >= Exit[%d]",
+                       l_cmd_ptr->idle_chip_enter_threshold, l_cmd_ptr->idle_chip_exit_threshold);
         l_log_error = TRUE;
     }
     else // data is valid
     {
-        g_amec->eff_mode_parms.memory_pwr_control = l_cmd_ptr->mem_pwr_ctl;
-        g_amec->eff_mode_parms.entry_delay = l_cmd_ptr->idle_chip_enter_delay_time;
-        g_amec->eff_mode_parms.entry_threshold = l_cmd_ptr->idle_chip_enter_utilization;
-        g_amec->eff_mode_parms.exit_delay = l_cmd_ptr->idle_chip_exit_delay_time;
-        g_amec->eff_mode_parms.exit_threshold = l_cmd_ptr->idle_chip_exit_utilization;
-
-        // 0 enter time means idle chip frequency is disabled
-        if(g_amec->eff_mode_parms.entry_delay == 0)
+        if(l_cmd_ptr->version == 0) // utilization based
         {
-           CMDH_TRAC_IMP("data_store_eff_mode_parms: Efficiency mode Idle Chip Freq is disabled due to 0 entry delay time");
-        }
-        else // Idle chip freq is enabled in efficiency modes
-        {
-           CMDH_TRAC_IMP("data_store_eff_mode_parms: Idle Chip Freq will be enabled in efficiency modes");
-           g_amec->eff_mode_parms.enable = 1;
            // default frequency vote to max
            g_amec->eff_mode_parms.idle_chip_freq_request = 0xFFFF;
+
+           g_amec->eff_mode_parms.memory_pwr_control = l_cmd_ptr->mem_pwr_ctl;
+           g_amec->eff_mode_parms.entry_delay = l_cmd_ptr->idle_chip_enter_delay_time;
+           g_amec->eff_mode_parms.entry_threshold = l_cmd_ptr->idle_chip_enter_threshold;
+           g_amec->eff_mode_parms.exit_delay = l_cmd_ptr->idle_chip_exit_delay_time;
+           g_amec->eff_mode_parms.exit_threshold = l_cmd_ptr->idle_chip_exit_threshold;
+
+           // 0 enter time means idle chip frequency is disabled
+           if(g_amec->eff_mode_parms.entry_delay == 0)
+           {
+              g_amec->eff_mode_parms.enable.fields.utilization_enable = 0;
+              CMDH_TRAC_IMP("data_store_eff_mode_parms: Eff mode Idle Chip Freq for util is disabled due to 0 entry delay time");
+           }
+           else // Idle chip freq is enabled in efficiency modes
+           {
+              CMDH_TRAC_IMP("data_store_eff_mode_parms: Idle Chip Freq for util will be enabled in efficiency modes");
+              g_amec->eff_mode_parms.enable.fields.utilization_enable = 1;
+           }
+           CMDH_TRAC_IMP("data_store_eff_mode_parms: mem Pwr Control[0x%02X] Enter Idle Chip Freq Time[%dms] Util[%d] Exit Time[%dms] Util[%d]",
+                         g_amec->eff_mode_parms.memory_pwr_control,
+                         g_amec->eff_mode_parms.entry_delay * 32, // times are in terms of 32ms ticks
+                         g_amec->eff_mode_parms.entry_threshold,
+                         g_amec->eff_mode_parms.exit_delay * 32,
+                         g_amec->eff_mode_parms.exit_threshold);
+        }
+        else // version 1 ceff based
+        {
+           // default frequency vote to max
+           g_amec->eff_mode_parms.idle_chip_freq_request_ceff = 0xFFFF;
+
+           g_amec->eff_mode_parms.memory_pwr_control = l_cmd_ptr->mem_pwr_ctl;
+           g_amec->eff_mode_parms.entry_threshold_ceff = l_cmd_ptr->idle_chip_enter_threshold;
+           g_amec->eff_mode_parms.exit_threshold_ceff = l_cmd_ptr->idle_chip_exit_threshold;
+
+           // convert times from ms to 500us WOF ticks. avoid overflow
+           if(l_cmd_ptr->idle_chip_enter_delay_time > 0x7FFF)
+           {
+              CMDH_TRAC_ERR("data_store_eff_mode_parms: Idle Chip ceff entry time 0x%04X > max 0x7FFF",
+                             l_cmd_ptr->idle_chip_enter_delay_time);
+              g_amec->eff_mode_parms.entry_delay_ceff = 0xFFFF;
+           }
+           else
+           {
+              g_amec->eff_mode_parms.entry_delay_ceff = (l_cmd_ptr->idle_chip_enter_delay_time << 1);
+           }
+           if(l_cmd_ptr->idle_chip_exit_delay_time > 0x7FFF)
+           {
+              CMDH_TRAC_ERR("data_store_eff_mode_parms: Idle Chip ceff exit time 0x%04X > max 0x7FFF",
+                             l_cmd_ptr->idle_chip_exit_delay_time);
+              g_amec->eff_mode_parms.exit_delay_ceff = 0xFFFF;
+           }
+           else
+           {
+              g_amec->eff_mode_parms.exit_delay_ceff = (l_cmd_ptr->idle_chip_exit_delay_time << 1);
+           }
+
+           // 0 enter time means idle chip frequency is disabled
+           if(g_amec->eff_mode_parms.entry_delay_ceff == 0)
+           {
+              g_amec->eff_mode_parms.enable.fields.ceff_enable = 0;
+              CMDH_TRAC_IMP("data_store_eff_mode_parms: Eff mode Idle Chip Freq for ceff is disabled due to 0 entry delay time");
+           }
+           else // Idle chip freq is enabled in efficiency modes
+           {
+              CMDH_TRAC_IMP("data_store_eff_mode_parms: Idle Chip Freq for ceff will be enabled in efficiency modes");
+              g_amec->eff_mode_parms.enable.fields.ceff_enable = 1;
+           }
+           CMDH_TRAC_IMP("data_store_eff_mode_parms: mem Pwr Control[0x%02X] Enter Idle Chip Freq Time[%dms] Ceff[%d] Exit Time[%dms] Ceff[%d]",
+                         g_amec->eff_mode_parms.memory_pwr_control,
+                         g_amec->eff_mode_parms.entry_delay_ceff >> 1, // times are in terms of 500us WOF ticks
+                         g_amec->eff_mode_parms.entry_threshold_ceff,
+                         g_amec->eff_mode_parms.exit_delay_ceff >> 1,
+                         g_amec->eff_mode_parms.exit_threshold_ceff);
         }
 
         // Change Data Request Mask to indicate we got this data
         G_data_cnfg->data_mask |= DATA_MASK_EFF_MODE_PARMS;
-
-        CMDH_TRAC_IMP("data_store_eff_mode_parms: mem Pwr Control[0x%02X] Enter Idle Chip Freq Time[%dms] Util[%d] Exit Time[%dms] Util[%d]",
-                      g_amec->eff_mode_parms.memory_pwr_control,
-                      g_amec->eff_mode_parms.entry_delay * 32, // times are in terms of 32ms ticks
-                      g_amec->eff_mode_parms.entry_threshold,
-                      g_amec->eff_mode_parms.exit_delay * 32,
-                      g_amec->eff_mode_parms.exit_threshold);
     }
 
     if(l_log_error)

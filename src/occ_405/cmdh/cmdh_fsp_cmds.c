@@ -210,8 +210,12 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
     l_poll_rsp->mode            = CURRENT_MODE();
     // Byte 7
     l_poll_rsp->ips_status.word = 0;
-    l_poll_rsp->ips_status.ips_enabled = G_ips_config_data.iv_ipsEnabled;
-    l_poll_rsp->ips_status.ips_active = AMEC_mst_get_ips_active_status();
+    // IPS doesn't run in efficiency modes
+    if(g_amec->eff_mode_parms.enable.fields.mode_support == 0)
+    {
+        l_poll_rsp->ips_status.ips_enabled = G_ips_config_data.iv_ipsEnabled;
+        l_poll_rsp->ips_status.ips_active = AMEC_mst_get_ips_active_status();
+    }
     // Error Log:
     bool check_405_elogs = true;
     // if (405 has no elogs) OR (have not hit max consecutive hcode elogs)

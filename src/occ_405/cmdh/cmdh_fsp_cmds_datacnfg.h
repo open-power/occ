@@ -506,13 +506,13 @@ typedef struct __attribute__ ((packed))
 {
     struct     cmdh_fsp_cmd_header;
     uint8_t    format;
-    uint8_t    version;
+    uint8_t    version;  //  version 0 parameters are based on utilization or version 1 based on Vdd Ceff
     uint8_t    mem_pwr_ctl;
     uint8_t    reserved[5];
-    uint16_t   idle_chip_enter_delay_time;  // Delay Time in 32ms to enter Idle Chip freq
-    uint16_t   idle_chip_enter_utilization; // Utilization threshold in 0.01% to enter Idle Chip freq
-    uint16_t   idle_chip_exit_delay_time;   // Delay Time in 32ms to exit Idle Chip freq
-    uint16_t   idle_chip_exit_utilization;  // Utilization threshold in 0.01% to exit Idle Chip freq
+    uint16_t   idle_chip_enter_delay_time; // Delay Time in 32ms (version 0) or 1ms (version 1) to enter Idle Chip freq
+    uint16_t   idle_chip_enter_threshold;  // Utilization (version 0) or Ceff (version 1) threshold in 0.01% to enter Idle Chip freq
+    uint16_t   idle_chip_exit_delay_time;  // Delay Time in 32ms (version 0) or 1ms (version 1) to exit Idle Chip freq
+    uint16_t   idle_chip_exit_threshold;   // Utilization (version 0) or Ceff (version 1) threshold in 0.01% to exit Idle Chip freq
 }cmdh_eff_mode_parms_t;
 
 // Used to mark present the config data TMGT has sent us.

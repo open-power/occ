@@ -589,4 +589,6 @@ void schedule_vrt_request( void );
 void interpolate_ambient_vrt(uint8_t * i_ping_pong_buffer_address,
                              uint8_t * i_vrt_address);
 
+void idle_chip_ceff_control(uint32_t i_ceff_ratio);
+
 #endif

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2023                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2024                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -77,7 +77,7 @@ typedef enum
     DBUG_DIMM_INJECT          = 0x15,
     DBUG_WOFIC_DATA           = 0x16,
     DBUG_SET_SENSOR_GROUP     = 0x17,
-//  free  = 0x18,
+    DBUG_DUMP_EFF_MODE_PARMS  = 0x18,
 //  free  = 0x19,
 //  free  = 0x1A,
 //  free  = 0x1B,

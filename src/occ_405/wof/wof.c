@@ -1725,6 +1725,9 @@ void calculate_ceff_ratio_vdd( void )
             // Save raw ceff ratio vdd to a sensor, this sensor is NOT to be used by the WOF alg
             sensor_update(AMECSENSOR_PTR(CEFFVDDRATIO), (uint16_t)l_raw_ceff_ratio);
 
+            // Use raw ceff for idle chip control
+            idle_chip_ceff_control(l_raw_ceff_ratio);
+
             // Now check the raw ceff ratio to prevent Over current by clipping to max of 100%
             l_ceff_ratio_oc_adjusted = prevent_over_current(l_raw_ceff_ratio);
 
@@ -2025,8 +2028,7 @@ void read_sensor_data( void )
        else  // negative adjust
        {
            // Don't lower ambient condition (raises freq) in efficiency modes
-           if( (CURRENT_MODE() == OCC_MODE_EFFICIENCY_POWER) ||
-               (CURRENT_MODE() == OCC_MODE_EFFICIENCY_PERF) )
+           if(g_amec->eff_mode_parms.enable.fields.mode_support)
                g_wof->ambient_condition = l_ambient;
            else if(l_ambient >= (-g_wof->ambient_adj_for_altitude)) // prevent overflow
                g_wof->ambient_condition = l_ambient + g_wof->ambient_adj_for_altitude;
@@ -2037,8 +2039,7 @@ void read_sensor_data( void )
        // If DIMM power credit is enabled determine adjustment to account for DIMM power
        // This is disabled in efficiency modes
        if(g_wof->mem_thermal_credit_constant && g_wof->max_dimm_pwr_total_cW &&
-          (CURRENT_MODE() != OCC_MODE_EFFICIENCY_POWER) &&
-          (CURRENT_MODE() != OCC_MODE_EFFICIENCY_PERF) )
+          (g_amec->eff_mode_parms.enable.fields.mode_support == 0) )
        {
            // determine g_wof->ambient_adj_for_dimm
            calc_wof_dimm_adjustment();
@@ -2668,6 +2669,9 @@ void disable_wof( void )
 
     // Disable wof on 405
     g_wof->wof_init_state = WOF_DISABLED;
+    // remove ceff idle chip frequency clip
+    g_amec->eff_mode_parms.idle_chip_freq_request_ceff = 0xFFFF;
+
 
     INTR_TRAC_ERR("WOF is being disabled. Reasoncode: 0x%08x",
                   g_wof->wof_disabled );
@@ -3224,6 +3228,72 @@ void print_oppb( void )
                     G_oppb.frequency_ceiling_khz / 1000,
                     G_oppb.ultraturbo_freq_mhz,
                     G_oppb.fmax_freq_mhz);
+}
+
+/**
+ * idle_chip_ceff_control
+ *
+ * Description: Determine the frequency vote for idle chip control for ceff
+ *              Frequency vote saved in g_amec->eff_mode_parms.idle_chip_freq_request_ceff
+ *
+ * Param: Calculated ceff_ratio before any clipping
+ *
+ */
+void idle_chip_ceff_control(uint32_t i_ceff_ratio)
+{
+    static uint16_t L_ticks_below_enter_ceff = 0;
+    static uint16_t L_ticks_above_exit_ceff = 0;
+
+    // save ceff for debug even if this is disabled
+    g_amec->eff_mode_parms.chip_ceff = i_ceff_ratio;
+
+    // Check if Idle Chip Frequency control for ceff is enabled and we are in an efficiency mode
+    if( (g_amec->eff_mode_parms.enable.fields.ceff_enable) &&
+        (g_amec->eff_mode_parms.enable.fields.mode_support) )
+    {
+        // Update timers based on ceff
+        if((uint16_t)i_ceff_ratio < g_amec->eff_mode_parms.entry_threshold_ceff)
+        {
+           if(L_ticks_below_enter_ceff != 0xFFFF) // prevent wrapping
+              L_ticks_below_enter_ceff++;
+           L_ticks_above_exit_ceff = 0;
+        }
+        else if((uint16_t)i_ceff_ratio > g_amec->eff_mode_parms.exit_threshold_ceff)
+        {
+           L_ticks_below_enter_ceff = 0;
+           if(L_ticks_above_exit_ceff != 0xFFFF) // prevent wrapping
+              L_ticks_above_exit_ceff++;
+        }
+        else // in hystresis window
+        {
+           L_ticks_below_enter_ceff = 0;
+           L_ticks_above_exit_ceff = 0;
+        }
+
+        // check if met enter or exit criteria
+        if(L_ticks_below_enter_ceff >= g_amec->eff_mode_parms.entry_delay_ceff)
+        {
+           if(g_amec->eff_mode_parms.idle_chip_freq_request_ceff != G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MIN_FREQ])
+           {
+              // Chip met idle frequency entry criteria drop to min freq
+              g_amec->eff_mode_parms.idle_chip_freq_request_ceff = G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MIN_FREQ];
+           }
+        }
+        else if(L_ticks_above_exit_ceff >= g_amec->eff_mode_parms.exit_delay_ceff)
+        {
+           if(g_amec->eff_mode_parms.idle_chip_freq_request_ceff != 0xFFFF)
+           {
+              // Chip met idle frequency exit criteria set frequency to unrestricted
+              g_amec->eff_mode_parms.idle_chip_freq_request_ceff = 0xFFFF;
+           }
+        }
+    } // if idle chip freq control enabled
+    else if(g_amec->eff_mode_parms.idle_chip_freq_request_ceff != 0xFFFF)
+    {
+        TRAC_INFO("idle_chip_ceff_control disabled previous freq vote %d",
+                   g_amec->eff_mode_parms.idle_chip_freq_request_ceff);
+        g_amec->eff_mode_parms.idle_chip_freq_request_ceff = 0xFFFF;
+    }
 }
 
 /**

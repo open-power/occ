@@ -463,11 +463,22 @@ void amec_slv_proc_voting_box(void)
         l_chip_reason = AMEC_VOTING_REASON_IPS;
     }
 
-    // Check for Idle Chip Frequency control
-    if( (g_amec->eff_mode_parms.enable) && (g_amec->eff_mode_parms.idle_chip_freq_request < l_chip_fmax) )
+    // Check for Idle Chip Frequency control based on utilization
+    if( (g_amec->eff_mode_parms.enable.fields.utilization_enable) &&
+        (g_amec->eff_mode_parms.enable.fields.mode_support) &&
+        (g_amec->eff_mode_parms.idle_chip_freq_request < l_chip_fmax) )
     {
         l_chip_fmax = g_amec->eff_mode_parms.idle_chip_freq_request;
-        l_chip_reason = AMEC_VOTING_REASON_IDLE_CHIP;
+        l_chip_reason = AMEC_VOTING_REASON_IDLE_CHIP_UTIL;
+    }
+
+    // Check for Idle Chip Frequency control based on Ceff
+    if( (g_amec->eff_mode_parms.enable.fields.ceff_enable) &&
+        (g_amec->eff_mode_parms.enable.fields.mode_support) &&
+        (g_amec->eff_mode_parms.idle_chip_freq_request_ceff < l_chip_fmax) )
+    {
+        l_chip_fmax = g_amec->eff_mode_parms.idle_chip_freq_request_ceff;
+        l_chip_reason = AMEC_VOTING_REASON_IDLE_CHIP_CEFF;
     }
 
     // Override frequency with request from Master OCC from mfg auto slew

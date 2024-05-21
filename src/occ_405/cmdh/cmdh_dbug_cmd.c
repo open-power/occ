@@ -1747,6 +1747,30 @@ void cmdh_dbug_set_sensor_group(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
 // Function Specification
 //
+// Name: cmdh_dbug_dump_eff_mode_parms
+//
+// Description: Dumps out the contents of g_amec->eff_mode_parms
+//
+// End Function Specification
+void cmdh_dbug_dump_eff_mode_parms( const cmdh_fsp_cmd_t * i_cmd_ptr,
+                                    cmdh_fsp_rsp_t * o_rsp_ptr)
+{
+    uint16_t l_datalen = sizeof(amec_eff_mode_t);
+
+    // Fill in response data
+    memcpy((void*)&(o_rsp_ptr->data[0]),
+           (void*)&(g_amec->eff_mode_parms),
+           l_datalen);
+
+    // Fill in response data length
+    o_rsp_ptr->data_length[0] = CONVERT_UINT16_UINT8_HIGH(l_datalen);
+    o_rsp_ptr->data_length[1] = CONVERT_UINT16_UINT8_LOW(l_datalen);
+    G_rsp_status = ERRL_RC_SUCCESS;
+    return;
+}
+
+// Function Specification
+//
 // Name:  dbug_parse_cmd
 //
 // Description: Process debug commands
@@ -1884,6 +1908,10 @@ void cmdh_dbug_cmd (const cmdh_fsp_cmd_t * i_cmd_ptr,
 
         case DBUG_SET_SENSOR_GROUP:
             cmdh_dbug_set_sensor_group( i_cmd_ptr, o_rsp_ptr );
+            break;
+
+        case DBUG_DUMP_EFF_MODE_PARMS:
+            cmdh_dbug_dump_eff_mode_parms(i_cmd_ptr, o_rsp_ptr);
             break;
 
         case DBUG_INTERNAL_FLAGS:

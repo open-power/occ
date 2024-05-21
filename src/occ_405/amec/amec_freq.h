@@ -73,7 +73,8 @@ typedef enum
     AMEC_VOTING_REASON_IPS              = 0x00040000, // Idle Power Save
     AMEC_VOTING_REASON_APSS_PMAX        = 0x00080000, // APSS failures
     AMEC_VOTING_REASON_VDD_THRM         = 0x00100000, // Vdd VRM OT
-    AMEC_VOTING_REASON_IDLE_CHIP        = 0x00200000, // Efficiency mode idle chip
+    AMEC_VOTING_REASON_IDLE_CHIP_UTIL   = 0x00200000, // Efficiency mode idle chip based on utilization
+    AMEC_VOTING_REASON_IDLE_CHIP_CEFF   = 0x00400000, // Efficiency mode idle chip based on Ceff
 }amec_freq_voting_reason_t;
 
 

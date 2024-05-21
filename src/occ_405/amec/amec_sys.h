@@ -572,13 +572,32 @@ typedef struct amec_ips
 //-------------------------------------------------------------
 // Parameters for Efficiency modes
 //-------------------------------------------------------------
-typedef struct amec_eff_mode
+typedef struct __attribute__ ((packed))
 {
     // Memory power control setting when in efficiency mode
     uint8_t             memory_pwr_control;
-    // Enable/Disable Idle Chip Frequency when in eff mode (=0:disable; =1:enable)
-    uint8_t             enable;
-    // Idle Chip frequency request for voting box
+
+    // Bit defined Enable/Disable for Idle Chip Frequency in eff mode
+    union
+    {
+        uint8_t value;
+        struct
+        {
+            uint8_t utilization_enable : 1;
+            uint8_t ceff_enable        : 1;
+            uint8_t mode_support       : 1;  // '1' means current mode supports idle chip to run
+            uint8_t reserved           : 5;
+        } fields;
+    } enable;
+    // msb
+
+    // Current raw ceff in 0.01%
+    uint16_t            chip_ceff;
+    // Current minimum core utilization in 0.01%
+    uint16_t            core_util_min;
+    // Current maximum core utilization in 0.01%
+    uint16_t            core_util_max;
+    // Idle Chip frequency request based on utilization for voting box
     uint16_t            idle_chip_freq_request;
     // Utilization threshold to enter idle chip condition (in hundreth of a percent)
     uint16_t            entry_threshold;
@@ -588,6 +607,16 @@ typedef struct amec_eff_mode
     uint16_t            entry_delay;
     // Delay time to exit idle chip condition (in number of 32ms ticks)
     uint16_t            exit_delay;
+    // Idle Chip frequency request based on Ceff for voting box
+    uint16_t            idle_chip_freq_request_ceff;
+    // Ceff threshold to enter idle chip condition (in hundreth of a percent)
+    uint16_t            entry_threshold_ceff;
+    // Ceff threshold to exit idle chip condition (in hundreth of a percent)
+    uint16_t            exit_threshold_ceff;
+    // Delay time to enter idle chip condition (in number of 500us WOF ticks)
+    uint16_t            entry_delay_ceff;
+    // Delay time to exit idle chip condition (in number of 500us WOF ticks)
+    uint16_t            exit_delay_ceff;
 }amec_eff_mode_t;
 
 //-------------------------------------------------------------
