@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2023                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2024                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -162,6 +162,7 @@ void amec_update_ocmb_dimm_dts_sensors(OcmbMemData * i_sensor_cache, uint8_t i_m
     errlHndl_t l_err = NULL;
     bool     l_enabled_dts = FALSE;
     bool     l_valid_sensor_found = FALSE;
+    static uint8_t L_trace = 10;
 
     // defaults for DDR4
     bool    l_memdts0_valid = i_sensor_cache->status.fields.memdts0_valid;
@@ -315,7 +316,7 @@ void amec_update_ocmb_dimm_dts_sensors(OcmbMemData * i_sensor_cache, uint8_t i_m
             if(L_ran_once[i_membuf])
             {
                 //Trace the error if we haven't traced it already for this sensor
-                if((l_status_flag != FRU_SENSOR_STATUS_VALID_OLD) &&
+                if( (l_status_flag != FRU_SENSOR_STATUS_VALID_OLD) &&
                    !(l_status_flag & l_fru->flags))
                 {
                     TRAC_ERR("Membuf %d dimm sensor%d reported an error.", i_membuf, k);
@@ -340,21 +341,49 @@ void amec_update_ocmb_dimm_dts_sensors(OcmbMemData * i_sensor_cache, uint8_t i_m
     // check for OCMB recovery if there's at least 1 enabled DTS
     if(l_enabled_dts)
     {
-       if((l_valid_sensor_found) &&
-          (g_amec->proc[0].memctl[i_membuf].membuf.ocmb_recovery_state == OCMB_RECOVERY_STATE_FAILURE))
+       if(l_valid_sensor_found)
        {
-          // This OCMB failed recovery but has a valid DTS clear recovery status
-          // so we will ask for another recovery if it fails again
-          g_amec->proc[0].memctl[i_membuf].membuf.ocmb_recovery_state = OCMB_RECOVERY_STATE_NONE;
-          // Clear that this OCMB was called out so a new failure can be redetected
-          G_membuf_timeout_logged_bitmap &= ~(MEMBUF0_PRESENT_MASK >> i_membuf);
-          G_dimm_timeout_logged_bitmap.bytes[i_membuf] = 0;
-       }
-       else if(!l_valid_sensor_found)
+          if( (g_amec->proc[0].memctl[i_membuf].membuf.ocmb_recovery_state == OCMB_RECOVERY_STATE_FAILURE) ||
+              (g_amec->proc[0].memctl[i_membuf].membuf.ocmb_recovery_state == OCMB_RECOVERY_STATE_PENDING) )
+          {
+             // This OCMB had all DTS bad (either failed recovery or pending reset for timeout)
+             // now it has a valid DTS so cancel pending reset and allow failure to be redetected
+             if(g_amec->proc[0].memctl[i_membuf].membuf.ocmb_recovery_state == OCMB_RECOVERY_STATE_FAILURE)
+             {
+                 // This OCMB failed recovery but has a valid DTS clear recovery status
+                 // so we will ask for another recovery if it fails again
+                 // Clear that this OCMB was called out so a new failure can be redetected
+                 G_membuf_timeout_logged_bitmap &= ~(MEMBUF0_PRESENT_MASK >> i_membuf);
+                 G_dimm_timeout_logged_bitmap.bytes[i_membuf] = 0;
+             }
+
+             if(L_trace)
+             {
+                L_trace--;
+                TRAC_INFO("amec_update_ocmb_dimm_dts_sensors: Membuf[%d] now has at least 1 good DTS setting recovery state from %d to 0 (NONE)",
+                           i_membuf, g_amec->proc[0].memctl[i_membuf].membuf.ocmb_recovery_state);
+                TRAC_INFO("memdts0_valid[%d] memdts0_err[%d] memdts1_valid[%d] memdts1_err[%d]",
+                           l_memdts0_valid, l_memdts0_err, l_memdts1_valid, l_memdts1_err);
+                if(IS_OCM_DDR5_MEM_TYPE(G_sysConfigData.mem_type))
+                {
+                   TRAC_INFO("DDR5 memdts2_valid[%d] memdts2_err[%d] memdts3_valid[%d] memdts3_err[%d]",
+                              l_memdts2_valid, l_memdts2_err, l_memdts3_valid, l_memdts3_err);
+                }
+             }
+             // set state to none to allow new reset request if all DTS go bad again
+             g_amec->proc[0].memctl[i_membuf].membuf.ocmb_recovery_state = OCMB_RECOVERY_STATE_NONE;
+          }
+       } // if valid sensor found
+       else
        {
-            // all enabled DTS are invalid, request OCMB recovery if we hit timeout error
-            // passing in null errlHndl_t will cause pending to be set
-            ocmb_recovery_handler(&l_err, i_membuf);
+          if( (g_amec->proc[0].memctl[i_membuf].membuf.ocmb_recovery_state != OCMB_RECOVERY_STATE_REQUESTED) &&
+              (g_amec->proc[0].memctl[i_membuf].membuf.ocmb_recovery_state != OCMB_RECOVERY_STATE_PENDING) )
+          {
+             // all enabled DTS are invalid, request OCMB recovery if we hit timeout error
+             // passing in null errlHndl_t will cause pending to be set
+             ocmb_recovery_handler(&l_err, i_membuf);
+             INCREMENT_ERR_HISTORY(ERRH_NO_VALID_OCMB_DTS);
+          }
        }
     }
 
@@ -498,6 +527,7 @@ void amec_update_ocmb_dts_sensors(OcmbMemData * i_sensor_cache, uint8_t i_membuf
             // handle OCMB recovery here if there are no enabled "DIMM" dts for this OCMB
             if(G_dimm_enabled_sensors.bytes[i_membuf] == 0)
             {
+                TRAC_ERR("amec_update_ocmb_dts_sensors: Membuf %d ubdts failed and no enabled DIMM DTS", i_membuf);
                 // passing in null errlHndl_t will cause pending to be set
                 ocmb_recovery_handler(&l_err, i_membuf);
             }

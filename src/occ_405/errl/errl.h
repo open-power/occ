@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2022                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2024                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -79,7 +79,7 @@ extern hcode_elog_entry_t *G_hcode_elog_table;
 extern uint32_t            G_hcode_elog_table_slots;
 
 typedef enum {
-    // unused -  0x01,
+    ERRH_NO_VALID_OCMB_DTS           =  0x01,
     // unused -  0x02,
     // unused -  0x03,
     // unused -  0x04,

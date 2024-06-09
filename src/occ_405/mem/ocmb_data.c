@@ -744,6 +744,9 @@ void ocmb_data( void )
 
                         if(l_request_recovery)
                         {
+                            TRAC_ERR("ocmb_data: gpe_get_mem_data failed OCMB[%d] rc=0x%08x",
+                                      l_failed_membuf,
+                                      l_parms->error.rc);
                             // Don't pass in the error handle, only want to request recovery if hit temperature timeout error
                             errlHndl_t l_recovery_err = NULL;
                             ocmb_recovery_handler(&l_recovery_err, l_failed_membuf);
@@ -905,6 +908,9 @@ void ocmb_recovery_handler(errlHndl_t *io_err, uint8_t i_mem_buf)
              (*io_err)->iv_severity = ERRL_SEV_INFORMATIONAL;
              g_amec->proc[0].memctl[i_mem_buf].membuf.ocmb_recovery_state = OCMB_RECOVERY_STATE_REQUESTED;
              g_amec->proc[0].memctl[i_mem_buf].membuf.ocmb_recovery_count++;
+             TRAC_ERR("ocmb_recovery_handler: Requesting reset %d for OCMB[%d]",
+                       g_amec->proc[0].memctl[i_mem_buf].membuf.ocmb_recovery_count, i_mem_buf);
+
              // clear all sample ages for this OCMB so timeout can be redetcted again after the recovery
              l_fru = &g_amec->proc[0].memctl[i_mem_buf].membuf.membuf_hottest;
              l_fru->sample_age = 0;
@@ -931,6 +937,7 @@ void ocmb_recovery_handler(errlHndl_t *io_err, uint8_t i_mem_buf)
        else // We have max'd out trying to recover this OCMB, don't request recovery
        {
           g_amec->proc[0].memctl[i_mem_buf].membuf.ocmb_recovery_state = OCMB_RECOVERY_STATE_MAX_REQUESTED;
+          TRAC_ERR("ocmb_recovery_handler: OCMB[%d] reached max resets", i_mem_buf);
        }
     }
     return;

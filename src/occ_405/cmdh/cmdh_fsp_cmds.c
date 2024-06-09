@@ -1221,12 +1221,17 @@ errlHndl_t cmdh_ocmb_recovery_status(const   cmdh_fsp_cmd_t * i_cmd_ptr,
                 G_membuf_timeout_logged_bitmap &= ~(MEMBUF0_PRESENT_MASK >> l_ocmb_index);
                 G_dimm_timeout_logged_bitmap.bytes[l_ocmb_index] = 0;
 
-                CMDH_TRAC_INFO("cmdh_ocmb_recovery_status: OCMB %d recovery successful", l_ocmb_index);
+                CMDH_TRAC_INFO("cmdh_ocmb_recovery_status: OCMB %d recovery try %d successful", l_ocmb_index,
+                                g_amec->proc[0].memctl[l_ocmb_index].membuf.ocmb_recovery_count);
                 break;
 
             case OCMB_RECOVERY_STATUS_NO_SUPPORT:
                 // No support to try to recover the OCMB, set the state to no support so we don't ask again
                 g_amec->proc[0].memctl[l_ocmb_index].membuf.ocmb_recovery_state = OCMB_RECOVERY_STATE_NO_SUPPORT;
+                // Nothing was done, clear that this OCMB was called out so error is redetected and logged
+                G_membuf_timeout_logged_bitmap &= ~(MEMBUF0_PRESENT_MASK >> l_ocmb_index);
+                G_dimm_timeout_logged_bitmap.bytes[l_ocmb_index] = 0;
+
                 CMDH_TRAC_INFO("cmdh_ocmb_recovery_status: No support for OCMB %d recovery", l_ocmb_index);
                 break;
 

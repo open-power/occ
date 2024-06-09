@@ -327,6 +327,7 @@ void amec_health_check_dimm_timeout()
     uint8_t     l_max_dimm_per_membuf = 0; // Number "DIMM" readings per membuf
     uint8_t     l_ocm_dts_type_expired_bitmap = 0;
     bool        l_redundancy_lost = FALSE;
+    uint8_t     l_enabled = 0;
     ERRL_SEVERITY l_severity = ERRL_SEV_PREDICTIVE;
 
     do
@@ -461,44 +462,50 @@ void amec_health_check_dimm_timeout()
                 }
 
                 //temperature has expired.  Notify control algorithms which DIMM and type
-                if(!(G_dimm_temp_expired_bitmap.bytes[l_membuf] & (DIMM_SENSOR0 >> l_dimm)))
-                {
-                    G_dimm_temp_expired_bitmap.bytes[l_membuf] |= (DIMM_SENSOR0 >> l_dimm);
-                    TRAC_ERR("Timed out reading DIMM%04X temperature sensor type[0x%02X]",
-                             (l_membuf<<8)|l_dimm,
-                             l_fru->temp_fru_type);
-
-                    // for non i2c memory check for redundancy if we aren't going to try to recover the OCMB
-                    if((!IS_I2C_MEM_TYPE(G_sysConfigData.mem_type)) &&
-                       (g_amec->proc[0].memctl[l_membuf].membuf.ocmb_recovery_state != OCMB_RECOVERY_STATE_PENDING))
-                    {
-                        // mark that this sensor is lost
-                        l_fru->flags |= FRU_SENSOR_STATUS_REDUNDANCY_LOST;
-
-                        // if there is a good "DIMM" sensor then this is loss of redundancy only
-                        for(l_other_dimm = 0; l_other_dimm < l_max_dimm_per_membuf; l_other_dimm++)
-                        {
-                           // make sure the other sensor is being used
-                           if( (l_other_dimm != l_dimm) &&
-                               (MEMBUF_SENSOR_ENABLED(l_membuf, l_other_dimm)) )
-                           {
-                               if( !(g_amec->proc[0].memctl[l_membuf].membuf.dimm_temps[l_other_dimm].flags &
-                                 FRU_SENSOR_STATUS_REDUNDANCY_LOST) )
-                               {
-                                   l_redundancy_lost = TRUE;
-                                   // since there is another sensor mark that this DIMM sensor is no longer enabled
-                                   G_dimm_enabled_sensors.bytes[l_membuf] &= ( ~(DIMM_SENSOR0 >> l_dimm) );
-                                   G_dimm_temp_expired_bitmap.bytes[l_membuf] &= ( ~(DIMM_SENSOR0 >> l_dimm) );
-                               }
-                           }
-                        }
-                    } // if check for redundancy (not i2c type and OCMB not being recovered)
-                }
                 //If we've already logged an error for this FRU go to the next one.
                 if(G_dimm_timeout_logged_bitmap.bytes[l_membuf] & (DIMM_SENSOR0 >> l_dimm))
                 {
                     continue;
                 }
+
+                G_dimm_temp_expired_bitmap.bytes[l_membuf] |= (DIMM_SENSOR0 >> l_dimm);
+                TRAC_ERR("Timed out reading DIMM%04X temperature sensor type[0x%02X]",
+                         (l_membuf<<8)|l_dimm,
+                         l_fru->temp_fru_type);
+
+                TRAC_ERR("amec_health_check_dimm_timeout: OCMB[%d] recovery state[%d] count[%d]",
+                          l_membuf, g_amec->proc[0].memctl[l_membuf].membuf.ocmb_recovery_state,
+                          g_amec->proc[0].memctl[l_membuf].membuf.ocmb_recovery_count);
+
+                // for non i2c memory check for redundancy if we aren't going to try to recover the OCMB
+                if((!IS_I2C_MEM_TYPE(G_sysConfigData.mem_type)) &&
+                   (g_amec->proc[0].memctl[l_membuf].membuf.ocmb_recovery_state != OCMB_RECOVERY_STATE_PENDING))
+                {
+                    // mark that this sensor is lost
+                    l_fru->flags |= FRU_SENSOR_STATUS_REDUNDANCY_LOST;
+
+                    // if there is a good "DIMM" sensor then this is loss of redundancy only
+                    for(l_other_dimm = 0; l_other_dimm < l_max_dimm_per_membuf; l_other_dimm++)
+                    {
+                       l_enabled = MEMBUF_SENSOR_ENABLED(l_membuf, l_other_dimm);
+                       TRAC_ERR("amec_health_check_dimm_timeout: Redundancy check dts[%d] enabled[%d] flags[0x%02X]",
+                         l_other_dimm, l_enabled,
+                         g_amec->proc[0].memctl[l_membuf].membuf.dimm_temps[l_other_dimm].flags);
+
+                       // make sure the other sensor is being used
+                       if( (l_other_dimm != l_dimm) && l_enabled )
+                       {
+                           if( !(g_amec->proc[0].memctl[l_membuf].membuf.dimm_temps[l_other_dimm].flags &
+                             FRU_SENSOR_STATUS_REDUNDANCY_LOST) )
+                           {
+                               l_redundancy_lost = TRUE;
+                               // since there is another sensor mark that this DIMM sensor is no longer enabled
+                               G_dimm_enabled_sensors.bytes[l_membuf] &= ( ~(DIMM_SENSOR0 >> l_dimm) );
+                               G_dimm_temp_expired_bitmap.bytes[l_membuf] &= ( ~(DIMM_SENSOR0 >> l_dimm) );
+                           }
+                       }
+                    }
+                } // if check for redundancy (not i2c type and OCMB not being recovered)
 
                 // To prevent DIMMs from incorrectly being called out, don't log errors if there have
                 // been timeouts with GPE1 tasks not finishing
@@ -511,7 +518,7 @@ void amec_health_check_dimm_timeout()
                     break;
                 }
 
-                TRAC_ERR("Timed out reading DIMM%04X temperature (cur_temp[%d] flags[0x%02X] redundancy[%d])",
+                TRAC_ERR("Timed out reading DIMM%04X temperature (cur_temp[%d] flags[0x%02X] redundancy_lost[%d])",
                          (l_membuf<<8)|l_dimm, l_fru->cur_temp, l_fru->flags, l_redundancy_lost);
 
                 //Mark DIMM as logged so we don't log it more than once
@@ -595,16 +602,6 @@ void amec_health_check_dimm_timeout()
                                      ERRL_CALLOUT_TYPE_HUID,
                                      l_huid,
                                      ERRL_CALLOUT_PRIORITY_MED);
-                    // check if error recovery should be attempted
-                    if(g_amec->proc[0].memctl[l_membuf].membuf.ocmb_recovery_state == OCMB_RECOVERY_STATE_PENDING)
-                    {
-                        // very likely this is OCMB issue, add OCMB as high priority callout
-                        addCalloutToErrl(l_redundancy_lost_err,
-                                         ERRL_CALLOUT_TYPE_HUID,
-                                         G_sysConfigData.membuf_huids[l_membuf],
-                                         ERRL_CALLOUT_PRIORITY_HIGH);
-                        ocmb_recovery_handler(&l_redundancy_lost_err, l_membuf);
-                    }
                     commitErrl(&l_redundancy_lost_err);
                 }
             } //iterate over all dimms

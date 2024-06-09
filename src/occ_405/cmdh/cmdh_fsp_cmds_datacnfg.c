@@ -1724,6 +1724,8 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
     uint32_t                        l_hw_sensor_id = 0;
     uint32_t                        l_temp_sensor_id = 0;
     int                             i;
+    int                             memctl_idx;
+    int                             dimm;
     bool                            l_i2c_memory = FALSE;
     unsigned int                    l_membuf_num = 0;
 
@@ -1733,14 +1735,14 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
         // Clear all sensor IDs (hw and temperature)
         memset(G_sysConfigData.dimm_huids, 0, sizeof(G_sysConfigData.dimm_huids));
-        int memctl, dimm;
-        for(memctl=0; memctl < MAX_NUM_MEM_CONTROLLERS; ++memctl)
+        for(memctl_idx=0; memctl_idx < MAX_NUM_MEM_CONTROLLERS; ++memctl_idx)
         {
-            g_amec->proc[0].memctl[memctl].membuf.temp_sid = 0;
+            g_amec->proc[0].memctl[memctl_idx].membuf.temp_sid = 0;
+            g_amec->proc[0].memctl[memctl_idx].membuf.ocmb_recovery_state = OCMB_RECOVERY_STATE_NONE;
 
             for(dimm=0; dimm < MAX_NUM_DTS_PER_OCMB; ++dimm)
             {
-                g_amec->proc[0].memctl[memctl].membuf.dimm_temps[dimm].temp_sid = 0;
+                g_amec->proc[0].memctl[memctl_idx].membuf.dimm_temps[dimm].temp_sid = 0;
             }
         }
 
@@ -1903,7 +1905,7 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                else
                                {
                                   CMDH_TRAC_ERR("data_store_mem_cfg: Port0 mem buf[%d] data_rate[%dMbps]/2 is 0!",
-                                                  l_membuf_num, l_addl_data1);
+                                                 l_membuf_num, l_addl_data1);
                                   g_amec->proc[0].memctl[l_membuf_num].membuf.portpair[0].addr_clock_p001ns = 0;
                                }
 
@@ -1913,8 +1915,11 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                   g_amec->proc[0].memctl[l_membuf_num].membuf.portpair[1].addr_clock_p001ns = 1000000 / (l_addl_data2 >> 1);
                                else
                                {
-                                  CMDH_TRAC_ERR("data_store_mem_cfg: Port1 mem buf[%d] data_rate[%dMbps]/2 is 0!",
-                                                 l_membuf_num, l_addl_data2);
+                                  if(IS_OCM_DDR5_MEM_TYPE(G_sysConfigData.mem_type))
+                                  {
+                                     CMDH_TRAC_ERR("data_store_mem_cfg: Port1 mem buf[%d] data_rate[%dMbps]/2 is 0!",
+                                                    l_membuf_num, l_addl_data2);
+                                  }
                                   g_amec->proc[0].memctl[l_membuf_num].membuf.portpair[1].addr_clock_p001ns = 0;
                                }
 
@@ -2109,6 +2114,16 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
         }
         else
         {
+            if(IS_OCM_DDR4_MEM_TYPE(G_sysConfigData.mem_type))
+            {
+                // No support for OCMB resets on DDR4
+                CMDH_TRAC_IMP("data_store_mem_cfg: No support for OCMB resets on DDR4");
+                for(memctl_idx=0; memctl_idx < MAX_NUM_MEM_CONTROLLERS; ++memctl_idx)
+                {
+                   g_amec->proc[0].memctl[memctl_idx].membuf.ocmb_recovery_state = OCMB_RECOVERY_STATE_NO_SUPPORT;
+                }
+            }
+
             // calculate how often memory will be read based on how often OCMB is updating
             // the cache line.  OCC shouldn't be reading faster than OCMB update time, but faster
             // than the deadman timer.
