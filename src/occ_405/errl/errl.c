@@ -831,7 +831,8 @@ void reportErrorLog( errlHndl_t i_err, uint16_t i_entrySize )
     // report the log
     // will need to give them the address and size to read
 
-    TRAC_INFO("Reporting error @ %p with size %d",i_err, i_entrySize );
+    TRAC_INFO("Reporting error @ %p Severity[0x%02X] Actions[0x%02X] size %d",
+              i_err, i_err->iv_severity, i_err->iv_actions.word, i_entrySize);
     TRAC_INFO("ModID: 0x%08X, RC: 0x%08X, UserData1: 0x%08X, UserData2: 0x%08X",
               i_err->iv_userDetails.iv_modId, i_err->iv_reasonCode,
               i_err->iv_userDetails.iv_userData1, i_err->iv_userDetails.iv_userData2);
