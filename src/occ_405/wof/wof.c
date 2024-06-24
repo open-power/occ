@@ -1596,6 +1596,7 @@ void calculate_ceff_ratio_vcs( void )
 */
 void calculate_ceff_ratio_vdd( void )
 {
+    uint8_t  l_new_wof_adjust_reason = 0;
     uint32_t l_raw_ceff_ratio = 0;
     uint32_t l_ceff_ratio_oc_adjusted = 0;
     uint32_t l_avg_pstate = 0;
@@ -1609,6 +1610,8 @@ void calculate_ceff_ratio_vdd( void )
     static bool L_trace_error = TRUE;
     static uint8_t L_trace_count = 2;
 
+    // default no ceff adjustements
+    l_new_wof_adjust_reason = g_wof->wof_adjust_reasons & ~WOF_ADJUST_CEFF_REASONS_MASK;
     do
     {
         // track Ceff ratio with currrent average frequency from PGPE
@@ -1767,9 +1770,17 @@ void calculate_ceff_ratio_vdd( void )
 
             // the final ceff is the higher of the 2 adjusted
             if(l_ceff_ratio_oc_adjusted > g_wof->vdd_ceff_ratio_throt_adj)
+            {
                 l_temp_ceff = l_ceff_ratio_oc_adjusted;
+                if(l_temp_ceff != l_raw_ceff_ratio)
+                    l_new_wof_adjust_reason |= WOF_CEFF_ADJUST_OVERCURRENT;
+            }
             else
+            {
                 l_temp_ceff = g_wof->vdd_ceff_ratio_throt_adj;
+                if(l_temp_ceff != l_raw_ceff_ratio)
+                    l_new_wof_adjust_reason |= WOF_CEFF_ADJUST_THROTTLE;
+            }
 
             // Now adjust ceff to account for over/under volting
             if(g_wof->wov_credit_knob)
@@ -1788,6 +1799,7 @@ void calculate_ceff_ratio_vdd( void )
                     l_temp64 = (uint64_t)l_temp_ceff * (uint64_t)l_fudge;
                     // fudge factor is returned in 0.001 unit
                     l_temp_ceff = (uint32_t)(l_temp64/1000);
+                    l_new_wof_adjust_reason |= WOF_CEFF_ADJUST_OVERVOLT;
                 }
                 if( (G_allow_trace_flags & ALLOW_WOF_OV_TRACE) && (L_trace_count) )
                 {
@@ -1815,12 +1827,14 @@ void calculate_ceff_ratio_vdd( void )
             {
                // positive addr is added on top of any previous adjustments
                g_wof->ceff_ratio_vdd += g_wof->eco_mode_ceff_add;
+               l_new_wof_adjust_reason |= WOF_CEFF_ADJUST_EFFICIENCY_MODE;
             }
             else if(g_wof->eco_mode_ceff_add < 0)
             {
                // negative addr is only applied if there were no previous adjustments
                if(l_raw_ceff_ratio == g_wof->ceff_ratio_vdd)
                {
+                  l_new_wof_adjust_reason |= WOF_CEFF_ADJUST_EFFICIENCY_MODE;
                   // prevent overflow
                   if(g_wof->ceff_ratio_vdd > -g_wof->eco_mode_ceff_add)
                      g_wof->ceff_ratio_vdd += g_wof->eco_mode_ceff_add;
@@ -1833,6 +1847,8 @@ void calculate_ceff_ratio_vdd( void )
         }
 
     }while( 0 );
+
+    g_wof->wof_adjust_reasons = l_new_wof_adjust_reason;
 }
 
 /** multiply_v_ratio
@@ -2010,30 +2026,43 @@ void get_poundV_points( uint32_t i_freq_mhz,
 void read_sensor_data( void )
 {
     uint8_t l_ambient = 0;
+    uint8_t l_new_wof_adjust_reason = 0;
 
     // Read out necessary Sensor data for WOF calculation
 
     l_ambient = (uint8_t)getSensorByGsid(TEMPAMBIENT)->sample;
+    // default no ambient adjustements
+    l_new_wof_adjust_reason = g_wof->wof_adjust_reasons & ~WOF_ADJUST_AMBIENT_REASONS_MASK;
+
     if(l_ambient == 0)
     {
        // have not received ambient temperature
        // set condition to ff so highest ambient table is used
        g_wof->ambient_condition = 0xFF;
+       l_new_wof_adjust_reason |= WOF_AMBIENT_ADJUST_NO_AMBIENT;
     }
     else
     {
        // add on adjustment to account for altitude
        if(g_wof->ambient_adj_for_altitude >= 0)
+       {
            g_wof->ambient_condition = l_ambient + g_wof->ambient_adj_for_altitude;
+           l_new_wof_adjust_reason |= WOF_AMBIENT_ADJUST_ALTITUDE;
+       }
        else  // negative adjust
        {
            // Don't lower ambient condition (raises freq) in efficiency modes
            if(g_amec->eff_mode_parms.enable.fields.mode_support)
                g_wof->ambient_condition = l_ambient;
-           else if(l_ambient >= (-g_wof->ambient_adj_for_altitude)) // prevent overflow
-               g_wof->ambient_condition = l_ambient + g_wof->ambient_adj_for_altitude;
            else
-               g_wof->ambient_condition = 0;
+           {
+               l_new_wof_adjust_reason |= WOF_AMBIENT_ADJUST_ALTITUDE;
+
+               if(l_ambient >= (-g_wof->ambient_adj_for_altitude)) // prevent overflow
+                   g_wof->ambient_condition = l_ambient + g_wof->ambient_adj_for_altitude;
+               else
+                   g_wof->ambient_condition = 0;
+           }
        }
 
        // If DIMM power credit is enabled determine adjustment to account for DIMM power
@@ -2042,16 +2071,22 @@ void read_sensor_data( void )
           (g_amec->eff_mode_parms.enable.fields.mode_support == 0) )
        {
            // determine g_wof->ambient_adj_for_dimm
-           calc_wof_dimm_adjustment();
+           calc_wof_dimm_adjustment(l_ambient);
 
-           if(g_wof->ambient_condition >= (-g_wof->ambient_adj_for_dimm))
-               g_wof->ambient_condition += g_wof->ambient_adj_for_dimm;
-           else
-               g_wof->ambient_condition = 0;
+           if(g_wof->ambient_adj_for_dimm != 0)
+           {
+               l_new_wof_adjust_reason |= WOF_AMBIENT_ADJUST_DIMM;
+               if(g_wof->ambient_condition >= (-g_wof->ambient_adj_for_dimm))
+                   g_wof->ambient_condition += g_wof->ambient_adj_for_dimm;
+               else
+                   g_wof->ambient_condition = 0;
+           }
        }
        else
            g_wof->ambient_adj_for_dimm = 0;
     }
+
+    g_wof->wof_adjust_reasons = l_new_wof_adjust_reason;
 
     g_wof->curvdd_sensor  = getSensorByGsid(CURVDD)->sample;
     g_wof->curvcs_sensor  = getSensorByGsid(CURVCS)->sample;
@@ -2076,12 +2111,14 @@ void read_sensor_data( void )
  *
  * Description: Calculate adjustment to ambient condition to account for DIMMs
  */
-void calc_wof_dimm_adjustment( void )
+void calc_wof_dimm_adjustment(uint8_t i_ambient)
 {
     uint8_t  l_index1 = 0;
     uint8_t  l_index2 = 0;
     uint8_t  l_num_interp_pts = 0;
+    uint8_t  l_new_ambient = 0;
     int8_t   l_signed = 1;
+    int8_t   l_ambient_adj_for_dimm = 0;
     uint16_t l_ocmb_util = 0;
     uint16_t l_util1 = 0;
     uint16_t l_util2 = 0;
@@ -2094,7 +2131,9 @@ void calc_wof_dimm_adjustment( void )
     uint64_t l_temp64 = 0;
     uint64_t l_adjustment = 0;
     int l_ocmb_num, i;
+    errlHndl_t l_errl = NULL;
     static bool L_traced_over_max = FALSE;
+    static bool L_bounds_error_logged = FALSE;
     static uint8_t L_trace_over_max_count = 2;
     static uint8_t L_trace_count = 2;
 
@@ -2235,7 +2274,59 @@ void calc_wof_dimm_adjustment( void )
                l_temp64++;
        }
 
-       g_wof->ambient_adj_for_dimm = (int8_t)(l_temp64 * l_signed);
+       l_ambient_adj_for_dimm = (int8_t)(l_temp64 * l_signed);
+
+       // sanity check dimm adjustment shouldn't cause ambient to be more than
+       // 3 degrees from first/last ambient condition in WOF table
+       l_new_ambient = i_ambient + l_ambient_adj_for_dimm;
+
+       if( (l_new_ambient < (g_amec_sys.static_wof_data.wof_header.amb_cond_start - 3)) ||
+           (l_new_ambient > (g_amec_sys.static_wof_data.last_ambient_condition + 3)) )
+       {
+           // adjust is out of WOF table bounds don't apply adjustment and log an error
+           g_wof->ambient_adj_for_dimm = 0;
+
+           if(L_bounds_error_logged == FALSE)
+           {
+               INTR_TRAC_ERR("calc_wof_dimm_adjustment: dimm adjust[%d] puts ambient %d >3 degrees outside WOF table[%d to %d]",
+                               l_ambient_adj_for_dimm,
+                               i_ambient,
+                               g_amec_sys.static_wof_data.wof_header.amb_cond_start,
+                               g_amec_sys.static_wof_data.last_ambient_condition);
+                /** @
+                 *  @errortype
+                 *  @moduleid   CALC_WOF_DIMM_ADJUST
+                 *  @reasoncode INVALID_WOF_DIMM_CREDIT
+                 *  @userdata1  calculated adjust
+                 *  @userdata2  current ambient
+                 *  @userdata4  OCC_NO_EXTENDED_RC
+                 *  @devdesc    Invalid WOF DIMM Credit
+                 */
+                l_errl = createErrl(CALC_WOF_DIMM_ADJUST,
+                                    INVALID_WOF_DIMM_CREDIT,
+                                    OCC_NO_EXTENDED_RC,
+                                    ERRL_SEV_INFORMATIONAL,
+                                    NULL,
+                                    DEFAULT_TRACE_SIZE,
+                                    l_ambient_adj_for_dimm,
+                                    i_ambient );
+
+                // set the mfg action flag (allows callout to be added to info error)
+                setErrlActions(l_errl, ERRL_ACTIONS_MANUFACTURING_ERROR);
+
+                // Callout Firmware
+                addCalloutToErrl(l_errl,
+                                 ERRL_CALLOUT_TYPE_COMPONENT_ID,
+                                 ERRL_COMPONENT_ID_FIRMWARE,
+                                 ERRL_CALLOUT_PRIORITY_HIGH);
+
+                // commit the error log
+                commitErrl(&l_errl);
+                L_bounds_error_logged = TRUE;
+           }
+       }
+       else
+           g_wof->ambient_adj_for_dimm = l_ambient_adj_for_dimm;
 
 
        if(G_allow_trace_flags & ALLOW_MEM_TRACE)

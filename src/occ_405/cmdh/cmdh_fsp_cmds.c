@@ -787,7 +787,7 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
         l_extnSensorList[l_sensorHeader.count].data[2] = CONVERT_UINT16_UINT8_LOW(g_amec->wof.ceff_ratio_vdd);
         l_extnSensorList[l_sensorHeader.count].data[3] = CONVERT_UINT16_UINT8_HIGH(g_amec->wof.v_ratio_vdd);
         l_extnSensorList[l_sensorHeader.count].data[4] = CONVERT_UINT16_UINT8_LOW(g_amec->wof.v_ratio_vdd);
-        l_extnSensorList[l_sensorHeader.count].data[5] = 0;
+        l_extnSensorList[l_sensorHeader.count].data[5] = g_amec->wof.wof_adjust_reasons;
     }
     l_sensorHeader.count++;
 

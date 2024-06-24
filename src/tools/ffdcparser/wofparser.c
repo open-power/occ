@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2016,2023                        */
+/* Contributors Listed Below - COPYRIGHT 2016,2024                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -28,7 +28,7 @@
 #include <string.h>
 #include "parser_common.h"
 
-#define WOF_DATA_SIZE 961
+#define WOF_DATA_SIZE 962
 // NOTE: This tool is to be used when WOF Dynamic data is dumped by the OCC, and currently
 //       only accepts input files in binary format.
 
@@ -314,7 +314,8 @@ int main(int argc, char** argv)
     for(i = 0; i < MAX_NUM_OCMBS; i++)
         printf("Sensor MEMUTILM%d: %d (0.01%%)\n", i, get_uint16(wof_file));
     for(i = 0; i < MAX_NUM_OCMBS; i++)
-        printf("Sensor MEMUTILP1M%d: %d (0.01%%)\n", i, get_uint16(wof_file));
+        printf("OCMB%d Current Preheat power %dcW\n", i, get_uint16(wof_file));
+    printf("WOF Adjustment Reasons: 0x%02X\n", fgetc(wof_file));
 
     // Close the file
     if(wof_file != NULL)

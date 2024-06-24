@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2023                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2024                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -133,6 +133,7 @@ enum occReasonCode
     WOF_DISABLED_RC                 = 0xDA,
     INVALID_PSTATE                  = 0xDB,
     INVALID_MAGIC_NUMBER            = 0xDC,
+    INVALID_WOF_DIMM_CREDIT         = 0xDD,
     INVALID_FREQUENCY               = 0xDE,
     WOF_RE_ENABLED                  = 0xDF,
 

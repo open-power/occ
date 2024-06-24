@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2017                             */
+/* Contributors Listed Below - COPYRIGHT 2017,2024                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -32,6 +32,7 @@ enum wofModuleId
     DISABLE_WOF                         =  WOF_COMP_ID | 0x01,
     ENABLE_WOF                          =  WOF_COMP_ID | 0x02,
     SET_CLEAR_WOF_DISABLED              =  WOF_COMP_ID | 0x03,
+    CALC_WOF_DIMM_ADJUST                =  WOF_COMP_ID | 0x04,
 };
 
 

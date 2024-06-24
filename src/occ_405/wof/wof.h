@@ -87,6 +87,21 @@ extern uint32_t G_max_ceff_ratio;
 #define WOF_RC_INVALID_IDDQ_SAMPLE_DEPTH           0x08000000
 #define WOF_RC_NEGATIVE_MMA_LEAKAGE                0x20000000
 
+//******************************************************************************
+// WOF Adjust Reason Masks
+//******************************************************************************
+#define WOF_ADJUST_CEFF_REASONS_MASK               0x1F
+#define WOF_CEFF_ADJUST_OVERCURRENT                0x01
+#define WOF_CEFF_ADJUST_THROTTLE                   0x02
+#define WOF_CEFF_ADJUST_OVERVOLT                   0x04
+#define WOF_CEFF_ADJUST_EFFICIENCY_MODE            0x08
+#define WOF_CEFF_ADJUST_RESERVE                    0x10
+
+#define WOF_ADJUST_AMBIENT_REASONS_MASK            0xE0
+#define WOF_AMBIENT_ADJUST_NO_AMBIENT              0x20
+#define WOF_AMBIENT_ADJUST_ALTITUDE                0x40
+#define WOF_AMBIENT_ADJUST_DIMM                    0x80
+
 //***************************************************************************
 // Temp space used to save hard coded addresses
 //***************************************************************************
@@ -418,7 +433,9 @@ typedef struct __attribute__ ((packed))
     uint16_t memutil[MAX_NUM_OCMBS];
     // [929] The most recently calculated pre-heat power for the OCMB
     uint16_t mem_curr_preheat_pwr[MAX_NUM_OCMBS];
-} amec_wof_t;  // 961 bytes total
+    // [961] Bit vector where each bit signifies a different WOF adjustment reason
+    uint8_t  wof_adjust_reasons;
+} amec_wof_t;  // 962 bytes total
 
 // Structure used in g_amec to hold static WOF data
 typedef struct __attribute__ ((packed, aligned(128)))
@@ -543,7 +560,7 @@ uint32_t calculate_exp_1p3(uint32_t i_x);
 
 void read_sensor_data( void );
 
-void calc_wof_dimm_adjustment( void );
+void calc_wof_dimm_adjustment( uint8_t i_ambient );
 
 void setup_vdd( void );
 
