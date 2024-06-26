@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2021                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2024                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -213,8 +213,19 @@ void sensor_vectorize( sensor_t * io_sensor_ptr,
 // End Function Specification
 void sensor_update_minmax(sensor_t * io_sensor_ptr, uint16_t i_sensor_value)
 {
+    bool l_force_min = FALSE;
+
+    // temperature of 0 means not available force update of min if current min is 0 and
+    // new value is non-zero
+    // covers case where temp not available after reset of sensors but then comes available
+    if( (i_sensor_value != 0) && (io_sensor_ptr->sample_min == 0) &&
+        (G_sensor_info[io_sensor_ptr->gsid].sensor.type == AMEC_SENSOR_TYPE_TEMP) )
+    {
+        l_force_min = TRUE;
+    }
+
     // Update sample min/max fields if needed
-    if (i_sensor_value < io_sensor_ptr->sample_min)
+    if((i_sensor_value < io_sensor_ptr->sample_min) || l_force_min)
     {
         io_sensor_ptr->sample_min = i_sensor_value;
     }
@@ -224,7 +235,7 @@ void sensor_update_minmax(sensor_t * io_sensor_ptr, uint16_t i_sensor_value)
     }
 
     // Update CSM sample min/max fields if needed
-    if (i_sensor_value < io_sensor_ptr->csm_sample_min)
+    if((i_sensor_value < io_sensor_ptr->csm_sample_min) || l_force_min)
     {
         io_sensor_ptr->csm_sample_min = i_sensor_value;
     }
@@ -234,7 +245,7 @@ void sensor_update_minmax(sensor_t * io_sensor_ptr, uint16_t i_sensor_value)
     }
 
     // Update profiler sample min/max fields if needed
-    if (i_sensor_value < io_sensor_ptr->profiler_sample_min)
+    if((i_sensor_value < io_sensor_ptr->profiler_sample_min) || l_force_min)
     {
         io_sensor_ptr->profiler_sample_min = i_sensor_value;
     }
@@ -244,7 +255,7 @@ void sensor_update_minmax(sensor_t * io_sensor_ptr, uint16_t i_sensor_value)
     }
 
     // Update job scheduler sample min/max fields if needed
-    if (i_sensor_value < io_sensor_ptr->job_s_sample_min)
+    if((i_sensor_value < io_sensor_ptr->job_s_sample_min) || l_force_min)
     {
         io_sensor_ptr->job_s_sample_min = i_sensor_value;
     }
