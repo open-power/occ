@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2016,2023                        */
+/* Contributors Listed Below - COPYRIGHT 2016,2024                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -359,6 +359,8 @@ int gpe_ocmb_configuration_create(MemBufConfiguration_t* o_config, uint32_t i_ma
 {
     int rc = 0;
     int i = 0;
+    int j = 0;
+    int l_ocmb = 0;
     int dts_num = 0;
     int designated_sync = -1;
     mcfgpr_t mcfgpr;
@@ -421,23 +423,21 @@ int gpe_ocmb_configuration_create(MemBufConfiguration_t* o_config, uint32_t i_ma
 
             if( rc )
             {
-                rc = 0; // Can't be scommed then ignore this MEMBUF
+                PK_TRACE("gpe_ocmb_configuration_create: Channel[%d] MI_MCFGPR SCOM failed rc %08x", i, rc);
+                rc = 0; // Can't be scommed, ignore channel and MEMBUFs for channel
                 continue;
             }
 
             if(!mcfgpr.fields.mmio_valid)
             {
-                continue;  // MEMBUF MMIOBAR not configured, ignore MEMBUFs
+                PK_TRACE("gpe_ocmb_configuration_create: mmio_valid bit not set for Channel %d", i);
+                continue;  // MEMBUF MMIOBAR not configured, ignore channel and MEMBUFs for channel
             }
 
-            if(check_channel_fail(i*OCCWH_MEMBUF_PER_CHANNEL) != 0)
-            {
-                continue; // Channel is in fail state - ignore
-            }
 
             l_mmio_bar =
                 (uint32_t)(mcfgpr.fields.mmio_group_base_addr) << 1;
-            PK_TRACE("Ocmb[%d] MMIO Bar: %08x", i, l_mmio_bar);
+            PK_TRACE("Channel[%d] MMIO Bar: %08x", i, l_mmio_bar);
 
             l_pba_addr = (uint64_t)(l_mmio_bar) << 32;
 
@@ -448,9 +448,26 @@ int gpe_ocmb_configuration_create(MemBufConfiguration_t* o_config, uint32_t i_ma
             o_config->baseAddress[2*i] = l_pba_addr;
             o_config->baseAddress[(2*i)+1] = l_pba_addr | OCMB_IB_BAR_B_BIT;
 
-            // Add this MC channel to the configuration
-            o_config->config |= CHIP_CONFIG_MCS(i);
-        }
+            // Must check all OCMBs for channel since each OCMB is connected to it's
+            // own sub-channel. Input for check_channel_fail() is OCMB not channel
+            for (j = 0; j < OCCHW_MEMBUF_PER_CHANNEL; ++j)
+            {
+               l_ocmb = (i*OCCHW_MEMBUF_PER_CHANNEL) + j;
+               if(check_channel_fail(l_ocmb) != 0)
+               {
+                   // Remove this OCMB from the config
+                   // must set baseAddress to 0 so OCC knows this OCMB has been removed
+                   PK_TRACE("gpe_ocmb_configuration_create: Channel fail for OCMB %d", l_ocmb);
+                   o_config->config &= ~(CHIP_CONFIG_MEMBUF(l_ocmb));
+                   o_config->baseAddress[l_ocmb] = 0;
+               }
+               else
+               {
+                  // Add this MC channel to the configuration
+                  o_config->config |= CHIP_CONFIG_MCS(i);
+               }
+            }
+        } // for each channel
 
         // Find the designated sync.
         // Find the register that HWPs used to sync the throttle n/m values
@@ -560,6 +577,13 @@ int gpe_ocmb_configuration_create(MemBufConfiguration_t* o_config, uint32_t i_ma
                 }
                 rc = 0; // error not terminal. The 405 will notice any missing sensors.
             } // if valid base address
+            else if(CHIP_CONFIG_MEMBUF(i) & o_config->config)
+            {
+                // This OCMB doesn't have a base address. Remove it from config
+                PK_TRACE("gpe_ocmb_configuration_create: 0 Base Address for OCMB %d", i);
+                o_config->config &= ~(CHIP_CONFIG_MEMBUF(i));
+            }
+
         } // for each OCMB
 
         PK_TRACE("OCMB dts_config: %08x%08x",

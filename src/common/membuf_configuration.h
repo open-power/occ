@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2016,2023                        */
+/* Contributors Listed Below - COPYRIGHT 2016,2024                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -35,7 +35,7 @@
 #define OCCHW_N_MC_PORT           4
 #define OCCHW_N_MC_CHANNEL        8
 #define OCCHW_N_MEMBUF           16
-#define OCCWH_MEMBUF_PER_CHANNEL (OCCHW_N_MEMBUF/OCCHW_N_MC_CHANNEL)
+#define OCCHW_MEMBUF_PER_CHANNEL (OCCHW_N_MEMBUF/OCCHW_N_MC_CHANNEL)
 
 #define MEMTYPE_OCMB_DDR4         4
 #define MEMTYPE_OCMB_DDR5         5

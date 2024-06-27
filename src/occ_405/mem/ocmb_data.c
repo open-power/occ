@@ -159,14 +159,16 @@ void ocmb_init(void)
     int membuf_idx = 0;
     int dts_num = 0;
     int l_reset_on_error = 1;
+    bool l_gpe_config_mismatch = FALSE;
     uint32_t missing_membuf_bitmap = 0;
+    uint32_t l_gpe_present_membufs = 0;
     GpeRequest l_gpe_request;
     static scomList_t L_scomList[1] SECTION_ATTRIBUTE(".noncacheable");
     static MemBufScomParms_t L_ocmb_reg_parms SECTION_ATTRIBUTE(".noncacheable");
 
     do
     {
-        TRAC_INFO("ocmb_init: Initializing Memory Data Controller");
+        TRAC_IMP("ocmb_init: Initializing Memory Data Controller TMGT present membufs = 0x%08x", G_present_membufs);
         // Create configuration data use G_membufConfiguration
         G_membufConfiguration.config = 0;
 
@@ -226,8 +228,7 @@ void ocmb_init(void)
             }
             else if (MEMBUF_PRESENT(membuf_idx)) //Only true if 1+ related TMGT configured dts
             {
-                TRAC_ERR("ocmb_init: OCMB[%d] There are dts configured by TMGT, but"
-                         "not configured in hardware. Ignoring dts.",
+                TRAC_ERR("ocmb_init: OCMB[%d] No valid Inband BAR found. Removing OCMB from config.",
                          membuf_idx);
 
                 missing_membuf_bitmap |= MEMBUF_BY_MASK(membuf_idx);
@@ -235,13 +236,25 @@ void ocmb_init(void)
             }
         }
 
-        TRAC_IMP("ocmb_init: G_present_membufs = 0x%08x", G_present_membufs);
+        TRAC_IMP("ocmb_init: G_present_membufs enabled = 0x%08x", G_present_membufs);
 
         TRAC_IMP("bitmap of enabled dimm temperature sensors: 0x%08X%08X %08X%08X",
                  (uint32_t)(G_dimm_enabled_sensors.dw[0]>>32),
                  (uint32_t)G_dimm_enabled_sensors.dw[0],
                  (uint32_t)(G_dimm_enabled_sensors.dw[1]>>32),
                  (uint32_t)G_dimm_enabled_sensors.dw[1]);
+
+        // Make sure what OCC thinks is enabled matches the GPE.  scom all
+        // operations i.e. setting the deadman will run on what the GPE has.
+        // mask off channel config
+        l_gpe_present_membufs = (G_membufConfiguration.config & 0x0000FFFF);
+        if(G_present_membufs != l_gpe_present_membufs)
+        {
+           TRAC_ERR("ocmb_init: G_present_membufs enabled[0x%08x] != GPE[0x%08x]",
+                     G_present_membufs, l_gpe_present_membufs);
+           l_gpe_config_mismatch = TRUE;
+           break;
+        }
 
         // Setup the OCMB deadman timer
         if(IS_OCM_DDR4_MEM_TYPE(G_sysConfigData.mem_type))
@@ -381,6 +394,12 @@ void ocmb_init(void)
                 rc = RC_DIMM_DTS_NOT_CONFIGURED;
                 l_reset_on_error = 0;
             }
+        }
+        if(l_gpe_config_mismatch)
+        {
+            // already traced
+            rc = RC_GPE_OCMB_CONFIG_MISMATCH | l_gpe_present_membufs;
+            l_reset_on_error = 1;
         }
     }
 

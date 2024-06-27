@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2014,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2014,2024                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -29,8 +29,9 @@
 #include "memory.h"
 #include "membuf_structs.h"
 
-#define RC_OCMB_DTS_NOT_CONFIGURED (0xE0000000)
-#define RC_DIMM_DTS_NOT_CONFIGURED (0xD0000000)
+#define RC_DIMM_DTS_NOT_CONFIGURED  (0xD0000000)
+#define RC_OCMB_DTS_NOT_CONFIGURED  (0xE0000000)
+#define RC_GPE_OCMB_CONFIG_MISMATCH (0xF0000000)
 
 extern MemBufConfiguration_t G_membufConfiguration;
 
