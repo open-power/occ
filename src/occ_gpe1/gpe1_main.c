@@ -118,7 +118,7 @@ int main(int argc, char **argv)
 
     G_membufConfiguration.config = 0xf000ff00;
 
-    rc = gpe_ocmb_configuration_create(&G_membufConfiguration, 2);
+    rc = gpe_ocmb_configuration_create(&G_membufConfiguration, 2,MEMTYPE_OCMB_DDR4);
 
     PK_TRACE("gpe_ocmb_configuration_create rc = %d",rc);
 

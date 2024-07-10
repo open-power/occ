@@ -109,6 +109,23 @@ typedef union ocmb_therm
     } fields;
 } ocmb_therm_t;
 
+typedef union ocmb_mbarpc0q
+{
+    uint64_t value;
+    struct ocmb_firmware_registers
+    {
+        uint32_t high_order;
+        uint32_t low_order;
+    } words;
+
+    struct
+    {
+        uint64_t dont_care0:                23;
+        uint64_t min_domain_reduction_time: 10;
+        uint64_t dont_care1:                31;
+    } fields;
+} ocmb_mbarpc0q_t;
+
 typedef union ocmb_mbastr0q
 {
     uint64_t value;
@@ -120,11 +137,77 @@ typedef union ocmb_mbastr0q
 
     struct
     {
-        uint64_t dont_care0:        57;
+        uint64_t str_enable:         1;
+        uint64_t dont_care2:         1;
+        uint64_t enter_str_time:    10;
+        uint64_t dont_care0:        45;
         uint64_t deadman_timer_sel:  4;
         uint64_t deadman_tb_sel:     1;
         uint64_t dont_care1:         2;
     } fields;
 }ocmb_mbastr0q_t;
+
+#define MBASTR0Q_STR_OFF (0)
+#define MBASTR0Q_STR_ON  (1)
+
+typedef union ocmb_wa0
+{
+    uint64_t value;
+    struct
+    {
+        uint64_t dont_care0:    1;
+        uint64_t octs_present:  1;
+        uint64_t octs_valid:    1;
+        uint64_t octs_error:    1;
+        uint64_t octs_reading: 16;
+        uint64_t dont_care1:    1;
+        uint64_t dts0_present:  1;
+        uint64_t dts0_valid:    1;
+        uint64_t dts0_error:    1;
+        uint64_t dts0_reading: 16;
+        uint64_t dont_care2:    1;
+        uint64_t dts1_present:  1;
+        uint64_t dts1_valid:    1;
+        uint64_t dts1_error:    1;
+        uint64_t dts1_reading: 16;
+        uint64_t dont_care3:    3;
+        uint64_t event:         1;
+    } fields;
+} ocmb_wa0_t;
+
+typedef union ocmb_wa1
+{
+    uint64_t value;
+    struct
+    {
+        uint64_t dont_care0:    1;
+        uint64_t dts2_present:  1;
+        uint64_t dts2_valid:    1;
+        uint64_t dts2_error:    1;
+        uint64_t dts2_reading: 16;
+        uint64_t dont_care1:    1;
+        uint64_t dts3_present:  1;
+        uint64_t dts3_valid:    1;
+        uint64_t dts3_error:    1;
+        uint64_t dts3_reading: 16;
+        uint64_t sr_cnt_side0:  8;
+        uint64_t sr_cnt_side1:  8;
+        uint64_t dont_care2:    8;
+    } fields;
+} ocmb_wa1_t;
+
+typedef union ocmb_wa2
+{
+    uint64_t value;
+    struct
+    {
+        uint32_t reads_side0_1;
+        uint32_t writes_side0_1;
+    };
+} ocmb_wa2_t;
+
+
+
+
 
 #endif

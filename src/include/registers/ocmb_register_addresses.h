@@ -42,9 +42,20 @@
 #define OCMB_MBA_FARB7Q_DDR5 0x0801101d
 #define OCMB_MBA_FARB8Q      0x08011420
 #define OCMB_MBA_FARB8Q_DDR5 0x08011020
-// Deadman timer setup
+// STR CTRL and Deadman timer setup
+#define OCMB_MBARPC0Q_DDR5   0x08011036
 #define OCMB_MBASTR0Q        0x08011437
 #define OCMB_MBASTR0Q_DDR5   0x08011037
+
+// Work-around DTS regs for ody DDR5
+#define OCMB_WA0_DDR5        0x08011026
+#define OCMB_WA1_DDR5        0x08011027
+#define OCMB_WA2_DDR5        0x08011028
+
+// Untouched values from from Gary Van Huben
+#define OCMB_WA0_UNTOUCHED   (0x004000FF004100FFull)
+#define OCMB_WA1_UNTOUCHED   (0x008000FF008100FFull)
+#define OCMB_WA2_UNTOUCHED   (0x00C000FF00C100FFull)
 
 #define OCMB_IB_SENSOR_CACHE_ADDR (0x40084200 >> 3)
 #define OCMB_IB_BAR_B_BIT (0x0000000080000000ull)

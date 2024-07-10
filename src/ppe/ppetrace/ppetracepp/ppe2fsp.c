@@ -27,6 +27,7 @@
 #include "trac_interface.h"
 #include <arpa/inet.h>
 #include <string.h>
+#include <stdio.h>
 #include <stdint.h>
 
 #define     TRACE_BUF_VERSION   0x01     /*!< Trace buffer version            */
@@ -79,7 +80,7 @@ uint64_t ppe2fsp_time(uint64_t ppe_time, uint32_t hz)
 }
 
 //Writes an fsp trace entry to the fsp trace buffer
-fsp_put_entry(trace_buf_head_t* tb, largest_fsp_entry_t* fte, size_t entry_size, uint32_t bytes_left)
+void fsp_put_entry(trace_buf_head_t* tb, largest_fsp_entry_t* fte, size_t entry_size, uint32_t bytes_left)
 {
     char*       buffer = ((char*)tb) + sizeof(trace_buf_head_t);
     char*       tb_start;

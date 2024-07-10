@@ -66,24 +66,24 @@ const uint32_t MI_DSTLFIR[OCCHW_N_MC_CHANNEL] =
     MI_3_DSTLFIR1
 };
 
-int inband_scom_setup(MemBufConfiguration_t* i_config,
-                            uint32_t i_membuf_instance,
-                            uint32_t i_scom_address,
-                            uint32_t *o_oci_addr);
+int inband_scom_setup(MemBufConfiguration_t *i_config,
+                      uint32_t i_membuf_instance,
+                      uint32_t i_scom_address,
+                      uint32_t *o_oci_addr);
 
-int membuf_get_scom(MemBufConfiguration_t* i_config,
-                     int i_membuf_instance,
-                     uint32_t i_scom_address,
-                     uint64_t* o_data);
+int membuf_get_scom(MemBufConfiguration_t *i_config,
+                    int i_membuf_instance,
+                    uint32_t i_scom_address,
+                    uint64_t *o_data);
 
-int membuf_put_scom(MemBufConfiguration_t* i_config,
-                     int i_membuf_instance,
-                     uint32_t i_scom_address,
-                     uint64_t i_data);
+int membuf_put_scom(MemBufConfiguration_t *i_config,
+                    int i_membuf_instance,
+                    uint32_t i_scom_address,
+                    uint64_t i_data);
 
-int membuf_put_scom_all(MemBufConfiguration_t* i_config,
-                         uint32_t i_scom_address,
-                         uint64_t i_data);
+int membuf_put_scom_all(MemBufConfiguration_t *i_config,
+                        uint32_t i_scom_address,
+                        uint64_t i_data);
 
 int check_and_reset_mmio_fir(MemBufConfiguration_t * i_config,unsigned int i_membuf);
 
@@ -95,7 +95,6 @@ void swap_u32(uint32_t * data32)
     val = ((val << 8) & 0xff00ff00) | ((val >> 8) & 0x00ff00ff);
     *data32 = (val << 16) | (val >> 16);
 }
-
 
 /**
  * Create PBA slave configuration parameters.
@@ -170,7 +169,6 @@ int gpe_pba_parms_create(GpePbaParms* parms,
 
         slvctl->fields.read_prefetch_ctl = PBA_READ_PREFETCH_NONE;
         mask->fields.read_prefetch_ctl = all1;
-
     }
     else
     {
@@ -184,7 +182,6 @@ int gpe_pba_parms_create(GpePbaParms* parms,
     return 0;
 
 } // end gpe_pba_parms_create()
-
 
 /**
  * Configure the PBABAR for inband access
@@ -312,9 +309,8 @@ int configure_pba_bar_for_inband_access(MemBufConfiguration_t * i_config)
 
 } // end configure_pba_bar_for_inband_access()
 
-
 int ocmb_check_sensor_cache_enabled(MemBufConfiguration_t * i_config,
-                                         int i_instance)
+                                    int i_instance)
 {
     int rc = 0;
     mmio_merrctl_t merrctl;
@@ -350,12 +346,13 @@ int ocmb_check_sensor_cache_enabled(MemBufConfiguration_t * i_config,
             //         merrctl.words.high_order,
             //         merrctl.words.low_order);
         }
-
     }
     return rc;
 }
 
-int gpe_ocmb_configuration_create(MemBufConfiguration_t* o_config, uint32_t i_max_dts)
+int gpe_ocmb_configuration_create(MemBufConfiguration_t *o_config,
+                                  uint32_t i_max_dts,
+                                  uint32_t i_mem_type)
 {
     int rc = 0;
     int i = 0;
@@ -364,7 +361,7 @@ int gpe_ocmb_configuration_create(MemBufConfiguration_t* o_config, uint32_t i_ma
     int dts_num = 0;
     int designated_sync = -1;
     mcfgpr_t mcfgpr;
-    uint64_t*   ptr64 = (uint64_t*)o_config;
+    uint64_t *ptr64 = (uint64_t*)o_config;
     ocmb_therm_t sensor;
     int fail_count = 0;
 
@@ -381,6 +378,7 @@ int gpe_ocmb_configuration_create(MemBufConfiguration_t* o_config, uint32_t i_ma
     }
     barrier();   //Needed to prevent compiler optimizing out restore of l_config
 
+    o_config->membuf_type = i_mem_type;
     o_config->configRc = MEMBUF_NOT_CONFIGURED;
     o_config->config = l_config;
 
@@ -421,7 +419,7 @@ int gpe_ocmb_configuration_create(MemBufConfiguration_t* o_config, uint32_t i_ma
 
             rc = getscom_abs(MI_MCFGPR[i], &(mcfgpr.value));
 
-            if( rc )
+            if (rc)
             {
                 PK_TRACE("gpe_ocmb_configuration_create: Channel[%d] MI_MCFGPR SCOM failed rc %08x", i, rc);
                 rc = 0; // Can't be scommed, ignore channel and MEMBUFs for channel
@@ -433,7 +431,6 @@ int gpe_ocmb_configuration_create(MemBufConfiguration_t* o_config, uint32_t i_ma
                 PK_TRACE("gpe_ocmb_configuration_create: mmio_valid bit not set for Channel %d", i);
                 continue;  // MEMBUF MMIOBAR not configured, ignore channel and MEMBUFs for channel
             }
-
 
             l_mmio_bar =
                 (uint32_t)(mcfgpr.fields.mmio_group_base_addr) << 1;
@@ -508,7 +505,7 @@ int gpe_ocmb_configuration_create(MemBufConfiguration_t* o_config, uint32_t i_ma
         {
             rc = configure_pba_bar_for_inband_access(o_config);
 
-            if( rc )
+            if (rc)
             {
                 break;
             }
@@ -576,6 +573,42 @@ int gpe_ocmb_configuration_create(MemBufConfiguration_t* o_config, uint32_t i_ma
                     o_config->baseAddress[i] = 0;
                 }
                 rc = 0; // error not terminal. The 405 will notice any missing sensors.
+
+                // Is DTS work-around implemented and active
+                // Assume if one of the work-around regs has an 'un-touched'
+                // value and at least one dts is present, then the work-around is active.
+                // Is more verification needed?
+                if (o_config->membuf_type == MEMTYPE_OCMB_DDR5)
+                {
+                    ocmb_wa0_t wa0; wa0.value = 0;
+                    ocmb_wa1_t wa1; wa0.value = 0;
+
+                    // Some of the "untouched" bits fall into the "present" fields
+                    // so test only if "not untouched"
+                    rc = membuf_get_scom(o_config, i, OCMB_WA0_DDR5, &wa0.value);
+                    if (rc == 0)
+                    {
+                        rc = membuf_get_scom(o_config, i, OCMB_WA1_DDR5, &wa1.value);
+                    
+                        if (rc == 0 &&(
+                            (wa0.value != OCMB_WA0_UNTOUCHED &&
+                                (wa0.fields.dts0_present ||
+                                 wa0.fields.dts1_present ||
+                                 wa0.fields.octs_present)) ||
+                            (wa1.value != OCMB_WA1_UNTOUCHED &&
+                                (wa1.fields.dts2_present ||
+                                 wa1.fields.dts3_present))))
+                        {
+                            // make sure read and write counts are also implemented as there is
+                            // a version of the work-around that lacks them.
+                            rc = membuf_get_scom(o_config, i, OCMB_WA2_DDR5, &wa0.value);
+                            if (rc == 0 && wa0.value != 0)
+                            {
+                                o_config->dts_work_around_present |= MEMBUF_WA_ENABLED(i);
+                            }
+                        }
+                    }
+                }
             } // if valid base address
             else if(CHIP_CONFIG_MEMBUF(i) & o_config->config)
             {
@@ -591,8 +624,8 @@ int gpe_ocmb_configuration_create(MemBufConfiguration_t* o_config, uint32_t i_ma
                  (uint32_t)(o_config->dts_config));
         PK_TRACE("OCMB ubdts_config: %08x",o_config->ubdts_config);
         PK_TRACE("OCMB_config: %08x",o_config->config);
-    }
-    while( 0 );
+        PK_TRACE("OCMB_DDR5 work-around present: %08x",o_config->dts_work_around_present);
+    } while (0);
 
     o_config->configRc = rc;
 
@@ -692,7 +725,8 @@ int ocmb_throttle_sync(MemBufConfiguration_t* i_config, uint32_t i_sync_type)
                 }
             }
         }
-        if (rc) break;
+        if (rc)
+            break;
 
         // setup designated sync and toggle go
         rc = getscom_abs(i_config->mcSyncAddr,&data);
@@ -774,8 +808,8 @@ void extract_32b(uint32_t oci_addr, uint64_t * i_dest_addr)
     pk_critical_section_exit(&ctx);
 }
 
-int get_ocmb_sensorcache(MemBufConfiguration_t* i_config,
-                             MemBufGetMemDataParms_t* i_parms)
+int get_ocmb_sensorcache(MemBufConfiguration_t *i_config,
+                         MemBufGetMemDataParms_t *i_parms)
 {
     int rc = 0;
     uint64_t pba_slvctln_save;
@@ -810,7 +844,7 @@ int get_ocmb_sensorcache(MemBufConfiguration_t* i_config,
 
             int rc1 = check_and_reset_mmio_fir(i_config, i_parms->collect);
             int rc2 = ocmb_check_sensor_cache_enabled(i_config,
-                                                          i_parms->collect);
+                                                      i_parms->collect);
 
             if(rc2)
             {
@@ -820,7 +854,107 @@ int get_ocmb_sensorcache(MemBufConfiguration_t* i_config,
             {
                 rc = rc1; //mmio scom fail or MEMBUF_SCACHE_ERROR;
             }
-            else
+            else if (0 != (i_config->dts_work_around_present & MEMBUF_WA_ENABLED(i_parms->collect)))
+            {
+                // Read work-around regss and move data to dts area
+                uint8_t scom_buf[8];
+                ocmb_wa0_t *wa0 = (ocmb_wa0_t *)scom_buf;
+                ocmb_wa1_t *wa1 = (ocmb_wa1_t *)scom_buf;
+                ocmb_wa2_t *wa2 = (ocmb_wa2_t *)scom_buf;
+                OcmbMemDataDDR5 *mem_data = (OcmbMemDataDDR5 *)i_parms->data;
+                wa0->value = 0;
+                rc = membuf_get_scom(i_config,
+                                     i_parms->collect,
+                                     OCMB_WA0_DDR5,
+                                     (uint64_t *)scom_buf);
+                if (rc)
+                {
+                    // mem_data will be bad.  If scoms are failing there is a bigger problem
+                    PK_TRACE("E>Inband getscom failed for address %08x. rc: %d", OCMB_WA0_DDR5, rc);
+                }
+
+                mem_data->status.value = 0;
+                mem_data->status.fields.ubdts0_err = wa0->fields.octs_error;
+                mem_data->status.fields.ubdts0_valid = wa0->fields.octs_valid;
+                mem_data->status.fields.ubdts0_present = wa0->fields.octs_present;
+                mem_data->status.fields.memdts0_err = wa0->fields.dts0_error;
+                mem_data->status.fields.memdts0_valid = wa0->fields.dts0_valid;
+                mem_data->status.fields.memdts0_present = wa0->fields.dts0_present;
+                mem_data->status.fields.memdts1_err = wa0->fields.dts1_error;
+                mem_data->status.fields.memdts1_valid = wa0->fields.dts1_valid;
+                mem_data->status.fields.memdts1_present = wa0->fields.dts1_present;
+                mem_data->status.fields.event = wa0->fields.event;
+                // These instructions could cause un-aligned memory reads on GPE
+                // mem_data->ubdts0                        = wa0->fields.octs_reading;
+                // mem_data->memdts[0]                     = wa0->fields.dts0_reading;
+                // mem_data->memdts[1]                     = wa0->fields.dts1_reading;
+                mem_data->ubdts0 = (wa0->value >> 44) & 0xffffull;
+                mem_data->memdts[0] = (wa0->value >> 24) & 0xffffull;
+                mem_data->memdts[1] = (wa0->value >> 4) & 0xffffull;
+
+                wa0->fields.octs_valid = 0;
+                wa0->fields.dts0_valid = 0;
+                wa0->fields.dts1_valid = 0;
+
+                rc = membuf_put_scom(i_config,
+                                     i_parms->collect,
+                                     OCMB_WA0_DDR5,
+                                     wa0->value);
+                if (rc)
+                {
+                    PK_TRACE("E>Inband putscom failed for address %08x. rc: %d", OCMB_WA0_DDR5, rc);
+                }
+
+                rc = membuf_get_scom(i_config,
+                                     i_parms->collect,
+                                     OCMB_WA1_DDR5,
+                                     (uint64_t *)scom_buf);
+                if (rc)
+                {
+                    // mem_data will be bad
+                    PK_TRACE("E>Inband get scom failed for address %08x. rc: %d", OCMB_WA1_DDR5, rc);
+                }
+
+                mem_data->status.fields.memdts2_err = wa1->fields.dts2_error;
+                mem_data->status.fields.memdts2_valid = wa1->fields.dts2_valid;
+                ;
+                mem_data->status.fields.memdts2_present = wa1->fields.dts2_present;
+                ;
+                mem_data->status.fields.memdts3_err = wa1->fields.dts3_error;
+                mem_data->status.fields.memdts3_valid = wa1->fields.dts3_valid;
+                mem_data->status.fields.memdts3_present = wa1->fields.dts3_present;
+                // These could cause un-aligned memory access on GPE
+                // mem_data->memdts[2]                     = wa1->fields.dts2_reading;
+                // mem_data->memdts[3]                     = wa1->fields.dts3_reading;
+                mem_data->memdts[2] = (wa1->value >> 44) & 0xffffull;
+                mem_data->memdts[3] = (wa1->value >> 24) & 0xffffull;
+
+                wa1->fields.dts2_valid = 0;
+                wa1->fields.dts3_valid = 0;
+
+                rc = membuf_put_scom(i_config,
+                                     i_parms->collect,
+                                     OCMB_WA1_DDR5,
+                                     wa1->value);
+                if (rc)
+                {
+                    PK_TRACE("E>Inband put scom failed for address %08x. rc: %d", OCMB_WA1_DDR5, rc);
+                }
+
+                rc = membuf_get_scom(i_config,
+                                     i_parms->collect,
+                                     OCMB_WA2_DDR5,
+                                     (uint64_t *)scom_buf);
+                if (rc)
+                {
+                    // memdata will be bad
+                    PK_TRACE("E>Inband get scom failed for address %08x. rc: %d", OCMB_WA2_DDR5, rc);
+                }
+
+                mem_data->side0_rd = wa2->reads_side0_1;
+                mem_data->side0_wr = wa2->writes_side0_1;
+            }
+            else  // Read sensor cache
             {
 
                 // NOTE: inband_scom_setup can be used to map the oci_addr so
@@ -879,11 +1013,9 @@ int get_ocmb_sensorcache(MemBufConfiguration_t* i_config,
         ocmb_throttle_sync(i_config, MCS_MCSYNC_SYNC_TYPE_OCC_TOUCH);
     }
 
-
     i_parms->error.rc = rc;
     return rc;
 }
-
 
 int gpe_ocmb_init(MemBufConfiguration_t * i_config)
 {
@@ -900,13 +1032,12 @@ int gpe_ocmb_init(MemBufConfiguration_t * i_config)
         l_mba_farb8q_addr = OCMB_MBA_FARB8Q_DDR5;
     }
 
-
     // Issue occ touch sync (resets deadman timer count)
     // Any errors will already be traced
     PK_TRACE("gpe_ocmb_init: Issue OCCO_TOUCH");
     ocmb_throttle_sync(i_config, MCS_MCSYNC_SYNC_TYPE_OCC_TOUCH);
 
-    // Clear emergency trottle
+    // Clear emergency throttle
     PK_TRACE("gpe_ocmb_init: Clear emergency throttle");
     membuf_put_scom_all(i_config, l_mba_farb7q_addr, 0);
 
@@ -948,12 +1079,12 @@ int check_channel_fail(int i_membuf)
     dstlfir_t fir;
 
     rc = getscom_abs(MI_DSTLFIR[i_channel],&fir.value);
-    if ( rc )
+    if (rc)
     {
         PK_TRACE("check_channel_fail: Scom read failed addr[%08x], rc[%d]",
                  MI_DSTLFIR[i_channel],
                  rc);
-        // If the scom failed the count it as a channel checkstop though the
+        // If the scom failed then count it as a channel checkstop though the
         // entire MI has probably failed or is offline
         rc = MEMBUF_CHANNEL_CHECKSTOP;
     }
@@ -978,4 +1109,3 @@ int check_channel_fail(int i_membuf)
 
     return rc;
 }
-

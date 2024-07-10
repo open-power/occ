@@ -248,6 +248,7 @@ void ocmb_init(void)
                  (uint32_t)G_dimm_enabled_sensors.dw[0],
                  (uint32_t)(G_dimm_enabled_sensors.dw[1]>>32),
                  (uint32_t)G_dimm_enabled_sensors.dw[1]);
+        TRAC_IMP("bitmap of work-around present sensors: 0x%08X",G_membufConfiguration.dts_work_around_present);
 
         // Make sure what OCC thinks is enabled matches the GPE.  scom all
         // operations i.e. setting the deadman will run on what the GPE has.

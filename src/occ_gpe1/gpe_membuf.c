@@ -51,14 +51,14 @@ void gpe_membuf_init(ipc_msg_t* i_cmd, void* i_arg)
             (payload->mem_type == MEMTYPE_OCMB_DDR5) )
         {
             PK_TRACE("Ocmb_configuration. MSR:%08x",mfmsr());
-            rc = gpe_ocmb_configuration_create(G_membuf_config, payload->max_dts);
+            rc = gpe_ocmb_configuration_create(G_membuf_config,
+                                               payload->max_dts,
+                                               payload->mem_type);
         }
         else
         {
             rc = GPE_RC_INVALID_MEMBUF_TYPE;
         }
-        // Must set membuf_type AFTER config created!
-        G_membuf_config->membuf_type = payload->mem_type;
 
         // Initialize/reset ocmb related
         if(!rc)

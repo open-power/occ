@@ -243,4 +243,7 @@ typedef enum
 
 #endif
 
+#define MEMBUF_WA_ENABLED(n) \
+    ((0x80000000ul >> CHIP_CONFIG_MEMBUF_BASE) >> (n))
+
 

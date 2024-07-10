@@ -34,6 +34,11 @@
 #include "amec_data.h"
 #include "amec_sys.h"
 #include <pstates_occ.H>
+#include "occhw_async.h"
+#include "membuf_configuration.h"
+#include "membuf_structs.h"
+#include "ocmb_register_addresses.h"
+#include "ocmb_firmware_registers.h"
 
 errlHndl_t SMGR_mode_transition_to_disabled();
 errlHndl_t SMGR_mode_transition_to_powersave();
@@ -48,6 +53,7 @@ errlHndl_t SMGR_mode_transition_to_max_perf();
 
 extern uint32_t G_present_cores;
 extern OCCPstateParmBlock_t G_oppb;   // OCC Pstate Parameters Block Structure
+extern bool G_DDR5_cache_line_workaround;
 
 // Mode that OCC is currently in
 OCC_MODE           G_occ_internal_mode      = OCC_MODE_NOCHANGE;
@@ -115,6 +121,181 @@ const smgr_sfp_parm_trans_t G_smgr_sfp_mode_parm_trans[] =
 const uint8_t G_smgr_sfp_parm_trans_count = sizeof(G_smgr_sfp_mode_parm_trans)/sizeof(smgr_sfp_parm_trans_t);
 
 extern OCCPstateParmBlock_t G_oppb;
+
+#define NUM_STR_CFG_SCOMS (2)
+#define MBARPC0QIDX (0)
+#define MBASTR0QIDX (1)
+
+GpeRequest G_str_gpe_request;
+scomList_t G_str_scom_list[NUM_STR_CFG_SCOMS] SECTION_ATTRIBUTE(".noncacheable");
+MemBufScomParms_t G_str_reg_parms SECTION_ATTRIBUTE(".noncacheable");
+
+// Function Specification
+//
+// Name: STR_configure
+//
+// Description:
+//      Configure STR mode in DIMMs
+//
+// End Function Specification
+errlHndl_t STR_configure( const OCC_MODE i_newMode) 
+{
+    errlHndl_t  l_errlHandl = NULL;
+    int         rc          = 0;
+    uint16_t    l_str_reduction_time = 0;
+    uint16_t    l_str_enter_time     = 0;
+    uint8_t     l_en_dis    = MBASTR0Q_STR_OFF;
+
+    if(G_DDR5_cache_line_workaround != TRUE ||
+       G_sysConfigData.eff_mode_mem_pwr_ctl == MEM_PWR_CTL_NO_SUPPORT ||
+       G_sysConfigData.default_mem_pwr_ctl == MEM_PWR_CTL_NO_SUPPORT)
+    {
+        return l_errlHandl;
+    }
+
+    // Self Timed Refresh - setup scom regs
+    ocmb_mbarpc0q_t mbarpc0q; mbarpc0q.value = 0;
+    ocmb_mbastr0q_t mbastr0q; mbastr0q.value = 0;
+
+    mbarpc0q.fields.min_domain_reduction_time = (-1);
+    mbastr0q.fields.str_enable = 1;
+    mbastr0q.fields.enter_str_time = (-1);
+
+    G_str_scom_list[MBARPC0QIDX].scom = OCMB_MBARPC0Q_DDR5;
+    G_str_scom_list[MBARPC0QIDX].commandType = MEMBUF_SCOM_RMW_ALL;
+    G_str_scom_list[MBARPC0QIDX].mask = mbarpc0q.value;
+
+    G_str_scom_list[MBASTR0QIDX].scom = OCMB_MBASTR0Q_DDR5;
+    G_str_scom_list[MBASTR0QIDX].commandType = MEMBUF_SCOM_RMW_ALL;
+    G_str_scom_list[MBASTR0QIDX].mask = mbastr0q.value;
+
+    G_str_reg_parms.scomList = &G_str_scom_list[0];
+    G_str_reg_parms.entries = NUM_STR_CFG_SCOMS;
+
+    // ENTER EFFICIENCY MODE
+    if( i_newMode ==  OCC_MODE_EFFICIENCY_POWER ||
+        i_newMode == OCC_MODE_EFFICIENCY_PERF)
+    {
+        switch( G_sysConfigData.eff_mode_mem_pwr_ctl)
+        {
+            case MEM_PWR_CTL_OFF:
+                l_en_dis = MBASTR0Q_STR_OFF;
+                l_str_reduction_time = G_sysConfigData.min_domain_reduction_time_off;
+                break;
+            case MEM_PWR_CTL_POWER_DOWN:
+                l_en_dis = MBASTR0Q_STR_OFF;
+                l_str_reduction_time = G_sysConfigData.min_domain_reduction_time_eff_mode;
+                break;
+            case MEM_PWR_CTL_PD_AND_STR:
+            /* fall-thru */
+            case  MEM_PWR_CTL_PD_AND_STR_CLK_STOP:
+                l_en_dis = MBASTR0Q_STR_ON;
+                l_str_reduction_time = G_sysConfigData.min_domain_reduction_time_eff_mode;
+                l_str_enter_time = G_sysConfigData.str_entry_time_eff_mode;
+                break;
+            default:
+                TRAC_ERR("mode: Unexpected eff_mode_mem_pwr_ctl value. %d. STR CFG umchanged.",
+                          G_sysConfigData.eff_mode_mem_pwr_ctl);
+                return NULL;
+                break;
+        }
+    }
+    else // Potential EXIT EFFICIENCY MODE
+    {
+        switch(G_sysConfigData.default_mem_pwr_ctl)
+        {
+            case MEM_PWR_CTL_OFF:
+                l_en_dis = MBASTR0Q_STR_OFF;
+                l_str_reduction_time = G_sysConfigData.min_domain_reduction_time_off;
+                break;
+            case MEM_PWR_CTL_POWER_DOWN:
+                l_en_dis = MBASTR0Q_STR_OFF;
+                l_str_reduction_time = G_sysConfigData.min_domain_reduction_time_default;
+                break;
+            case MEM_PWR_CTL_PD_AND_STR:
+            /* fall-thru */
+            case MEM_PWR_CTL_PD_AND_STR_CLK_STOP:
+                l_en_dis = MBASTR0Q_STR_ON;
+                l_str_reduction_time = G_sysConfigData.min_domain_reduction_time_default;
+                l_str_enter_time = G_sysConfigData.str_entry_time_default;
+                break;
+            default:
+                TRAC_ERR("mode: Unexpected default_mem_pwr_ctl value: %d. STR CFG unchanged.",
+                          G_sysConfigData.default_mem_pwr_ctl);
+                return NULL;
+                break;
+        }
+    }
+
+    mbarpc0q.fields.min_domain_reduction_time = l_str_reduction_time;
+    mbastr0q.fields.str_enable = l_en_dis;
+    mbastr0q.fields.enter_str_time = l_str_enter_time;
+
+    G_str_scom_list[MBARPC0QIDX].data = mbarpc0q.value;
+    G_str_scom_list[MBASTR0QIDX].data = mbastr0q.value;
+
+    rc = gpe_request_create(
+                            &G_str_gpe_request,             //gpe_reqest
+                            &G_async_gpe_queue1,            //gpe1 queue
+                            IPC_ST_MEMBUF_SCOM_FUNCID,      //function id
+                            &G_str_reg_parms,               //parms
+                            SSX_SECONDS(5),                 //timeout
+                            NULL,                           //callback
+                            NULL,                           //callback args
+                            ASYNC_REQUEST_BLOCKING );       // wait
+    if(rc)
+    {
+        TRAC_ERR("mode: gpe_request_create failed. rc = 0x%08x", rc);
+        /* @
+         * @errortype
+         * @moduleid    MAIN_MODE_TRANSITION_MID
+         * @reasoncode  GPE_REQUEST_CREATE_FAILURE
+         * @userdata1   gpe_request_create return code
+         * @userdata4   OCC_NO_EXTENDED_RC
+         * @devdesc     Failure to create membuf scom GpeRequest
+         */
+        l_errlHandl = createErrl(MAIN_MODE_TRANSITION_MID,
+                                 GPE_REQUEST_CREATE_FAILURE,
+                                 OCC_NO_EXTENDED_RC,
+                                 ERRL_SEV_PREDICTIVE,
+                                 NULL,
+                                 DEFAULT_TRACE_SIZE,
+                                 rc,
+                                 0
+                                );
+    }
+    else
+    {
+        rc = gpe_request_schedule(&G_str_gpe_request);
+        if ( rc || G_str_reg_parms.error.rc)
+        {
+            TRAC_ERR("mode: gpe_request_schedule failed for STR configuration. rc=%d",rc);
+            /* @
+             * @errortype
+             * @moduleid    MAIN_MODE_TRANSITION_MID
+             * @reasoncode  GPE_REQUEST_SCHEDULE_FAILURE
+             * @userdata1   gpe_request_schedule return code
+             * @userdata4   OCC_NO_EXTENDED_RC
+             * @devdesc     Failure to schedule the GPE job for STR update
+             */
+            l_errlHandl = createErrl(MAIN_MODE_TRANSITION_MID,
+                                     SSX_GENERIC_FAILURE,
+                                     ERC_MEMBUF_GPE_REQUEST_SCHEDULE_FAILURE,
+                                     ERRL_SEV_PREDICTIVE,
+                                     NULL,
+                                     DEFAULT_TRACE_SIZE,
+                                     rc,
+                                     G_str_reg_parms.error.rc
+                                    );
+        }
+        else
+        {
+            TRAC_IMP("mode: Self Timed Refresh enable: %d. enter time: %d reduction time: %d",
+            l_en_dis, l_str_enter_time, l_str_reduction_time);
+        }
+    }
+    return l_errlHandl;
+}
 
 // Function Specification
 //
@@ -457,11 +638,24 @@ void set_efficiency_mode_parms( const OCC_MODE i_mode )
 errlHndl_t SMGR_mode_transition_to_disabled()
 {
     errlHndl_t              l_errlHndl = NULL;
+    errlHndl_t              l_errlHndlSTR = NULL;
 
     TRAC_IMP("SMGR: Mode to Disabled Transition Started");
 
     // Set Freq Mode for AMEC to use
     l_errlHndl = amec_set_freq_range(OCC_MODE_DISABLED);
+
+    // attempt to disable STR even if previous fail
+    l_errlHndlSTR = STR_configure(OCC_MODE_DISABLED);
+
+    if(l_errlHndl == NULL)
+    {
+        l_errlHndl = l_errlHndlSTR;
+    }
+    else if (l_errlHndlSTR != NULL)
+    {
+        deleteErrl(&l_errlHndlSTR);
+    }
 
     CURRENT_MODE() = OCC_MODE_DISABLED;
 
@@ -492,11 +686,24 @@ errlHndl_t SMGR_mode_transition_to_disabled()
 errlHndl_t SMGR_mode_transition_to_powersave()
 {
     errlHndl_t              l_errlHndl = NULL;
+    errlHndl_t              l_errlHndlSTR = NULL;
 
     TRAC_IMP("SMGR: Mode to PowerSave Transition Started");
 
     // Set Freq Mode for AMEC to use
     l_errlHndl = amec_set_freq_range(OCC_MODE_PWRSAVE);
+
+    // attempt to disable STR even if previous fail
+    l_errlHndlSTR = STR_configure(OCC_MODE_PWRSAVE);
+
+    if(l_errlHndl == NULL)
+    {
+        l_errlHndl = l_errlHndlSTR;
+    }
+    else if (l_errlHndlSTR != NULL)
+    {
+        deleteErrl(&l_errlHndlSTR);
+    }
 
     CURRENT_MODE() = OCC_MODE_PWRSAVE;
     // not efficiency mode
@@ -527,6 +734,7 @@ errlHndl_t SMGR_mode_transition_to_powersave()
 errlHndl_t SMGR_mode_transition_to_non_deterministic()
 {
     errlHndl_t              l_errlHndl = NULL;
+    errlHndl_t              l_errlHndlSTR = NULL;
 
     TRAC_IMP("SMGR: Mode to Non-Deterministic Transition Started");
 
@@ -535,6 +743,18 @@ errlHndl_t SMGR_mode_transition_to_non_deterministic()
 
     // Set Freq Mode for AMEC to use
     l_errlHndl = amec_set_freq_range(OCC_MODE_NON_DETERMINISTIC);
+
+    // attempt to disable STR even if previous fail
+    l_errlHndlSTR = STR_configure(OCC_MODE_NON_DETERMINISTIC);
+
+    if(l_errlHndl == NULL)
+    {
+        l_errlHndl = l_errlHndlSTR;
+    }
+    else if (l_errlHndlSTR != NULL)
+    {
+        deleteErrl(&l_errlHndlSTR);
+    }
 
     CURRENT_MODE() = OCC_MODE_NON_DETERMINISTIC;
     // not efficiency mode
@@ -571,6 +791,7 @@ errlHndl_t SMGR_mode_transition_to_static_freq_point()
     uint8_t                 l_pstate = 0;
     bool                    l_fail  = FALSE;
     errlHndl_t              l_errlHndl = NULL;
+    errlHndl_t              l_errlHndlSTR = NULL;
     int                     i=0;
 
     TRAC_IMP("SMGR: Mode to Static Frequency Point with parm[0x%04X] Transition Started",
@@ -686,6 +907,18 @@ errlHndl_t SMGR_mode_transition_to_static_freq_point()
         // Set Freq Mode for AMEC to use
         l_errlHndl = amec_set_freq_range(OCC_MODE_STATIC_FREQ_POINT);
 
+        // attempt to disable STR even if previous fail
+        l_errlHndlSTR = STR_configure(OCC_MODE_STATIC_FREQ_POINT);
+
+        if(l_errlHndl == NULL)
+        {
+            l_errlHndl = l_errlHndlSTR;
+        }
+        else if (l_errlHndlSTR != NULL)
+        {
+            deleteErrl(&l_errlHndlSTR);
+        }
+
         CURRENT_MODE() = OCC_MODE_STATIC_FREQ_POINT;
         // not efficiency mode
         g_amec->eff_mode_parms.enable.fields.mode_support = 0;
@@ -715,6 +948,7 @@ errlHndl_t SMGR_mode_transition_to_static_freq_point()
 errlHndl_t SMGR_mode_transition_to_ffo()
 {
     errlHndl_t              l_errlHndl = NULL;
+    errlHndl_t              l_errlHndlSTR = NULL;
 
     TRAC_IMP("SMGR: Mode to FFO Transition Started");
 
@@ -734,6 +968,18 @@ errlHndl_t SMGR_mode_transition_to_ffo()
 
         // Set Freq Mode for AMEC to use
         l_errlHndl = amec_set_freq_range(OCC_MODE_FFO);
+
+        // attempt to disable STR even if previous fail
+        l_errlHndlSTR = STR_configure(OCC_MODE_FFO);
+
+        if(l_errlHndl == NULL)
+        {
+            l_errlHndl = l_errlHndlSTR;
+        }
+        else if (l_errlHndlSTR != NULL)
+        {
+            deleteErrl(&l_errlHndlSTR);
+        }
 
         CURRENT_MODE() = OCC_MODE_FFO;
         // not efficiency mode
@@ -793,6 +1039,7 @@ errlHndl_t SMGR_mode_transition_to_ffo()
 errlHndl_t SMGR_mode_transition_to_efficiency_power()
 {
     errlHndl_t              l_errlHndl = NULL;
+    errlHndl_t              l_errlHndlSTR = NULL;
 
     TRAC_IMP("SMGR: Mode to Efficiency Power Transition Started");
 
@@ -801,6 +1048,18 @@ errlHndl_t SMGR_mode_transition_to_efficiency_power()
 
     // Set Freq Mode for AMEC to use
     l_errlHndl = amec_set_freq_range(OCC_MODE_EFFICIENCY_POWER);
+
+     // attempt to disable STR even if previous fail
+    l_errlHndlSTR = STR_configure(OCC_MODE_EFFICIENCY_POWER);
+
+    if(l_errlHndl == NULL)
+    {
+        l_errlHndl = l_errlHndlSTR;
+    }
+    else if (l_errlHndlSTR != NULL)
+    {
+        deleteErrl(&l_errlHndlSTR);
+    }
 
     CURRENT_MODE() = OCC_MODE_EFFICIENCY_POWER;
     // set efficiency mode
@@ -832,6 +1091,7 @@ errlHndl_t SMGR_mode_transition_to_efficiency_power()
 errlHndl_t SMGR_mode_transition_to_efficiency_perf()
 {
     errlHndl_t              l_errlHndl = NULL;
+    errlHndl_t              l_errlHndlSTR = NULL;
 
     TRAC_IMP("SMGR: Mode to Efficiency Performance Transition Started");
 
@@ -840,6 +1100,18 @@ errlHndl_t SMGR_mode_transition_to_efficiency_perf()
 
     // Set Freq Mode for AMEC to use
     l_errlHndl = amec_set_freq_range(OCC_MODE_EFFICIENCY_PERF);
+
+    // attempt to disable STR even if previous fail
+    l_errlHndlSTR = STR_configure(OCC_MODE_EFFICIENCY_PERF);
+
+    if(l_errlHndl == NULL)
+    {
+        l_errlHndl = l_errlHndlSTR;
+    }
+    else if (l_errlHndlSTR != NULL)
+    {
+        deleteErrl(&l_errlHndlSTR);
+    }
 
     CURRENT_MODE() = OCC_MODE_EFFICIENCY_PERF;
     // set efficiency mode
@@ -871,11 +1143,24 @@ errlHndl_t SMGR_mode_transition_to_efficiency_perf()
 errlHndl_t SMGR_mode_transition_to_fmax()
 {
     errlHndl_t              l_errlHndl = NULL;
+    errlHndl_t              l_errlHndlSTR = NULL;
 
     TRAC_IMP("SMGR: Mode to Fmax Transition Started");
 
     // Set Freq Mode for AMEC to use
     l_errlHndl = amec_set_freq_range(OCC_MODE_FMAX);
+
+    // attempt to disable STR even if previous fail
+    l_errlHndlSTR = STR_configure(OCC_MODE_FMAX);
+
+    if(l_errlHndl == NULL)
+    {
+        l_errlHndl = l_errlHndlSTR;
+    }
+    else if (l_errlHndlSTR != NULL)
+    {
+        deleteErrl(&l_errlHndlSTR);
+    }
 
     CURRENT_MODE() = OCC_MODE_FMAX;
     // not efficiency mode
@@ -906,6 +1191,7 @@ errlHndl_t SMGR_mode_transition_to_fmax()
 errlHndl_t SMGR_mode_transition_to_balanced()
 {
     errlHndl_t              l_errlHndl = NULL;
+    errlHndl_t              l_errlHndlSTR = NULL;
 
     TRAC_IMP("SMGR: Mode to Balanced Transition Started");
 
@@ -914,6 +1200,18 @@ errlHndl_t SMGR_mode_transition_to_balanced()
 
     // Set Freq Mode for AMEC to use
     l_errlHndl = amec_set_freq_range(OCC_MODE_BALANCED);
+
+    // attempt to disable STR even if previous fail
+    l_errlHndlSTR = STR_configure(OCC_MODE_BALANCED);
+
+    if(l_errlHndl == NULL)
+    {
+        l_errlHndl = l_errlHndlSTR;
+    }
+    else if (l_errlHndlSTR != NULL)
+    {
+        deleteErrl(&l_errlHndlSTR);
+    }
 
     CURRENT_MODE() = OCC_MODE_BALANCED;
     // not efficiency mode
@@ -945,6 +1243,7 @@ errlHndl_t SMGR_mode_transition_to_balanced()
 errlHndl_t SMGR_mode_transition_to_max_perf()
 {
     errlHndl_t              l_errlHndl = NULL;
+    errlHndl_t              l_errlHndlSTR = NULL;
 
     TRAC_IMP("SMGR: Mode to Maximum Performance Transition Started");
 
@@ -956,6 +1255,18 @@ errlHndl_t SMGR_mode_transition_to_max_perf()
 
     // Set Freq Mode for AMEC to use
     l_errlHndl = amec_set_freq_range(OCC_MODE_MAX_PERF);
+
+    // attempt to disable STR even if previous fail
+    l_errlHndlSTR = STR_configure(OCC_MODE_MAX_PERF);
+
+    if(l_errlHndl == NULL)
+    {
+        l_errlHndl = l_errlHndlSTR;
+    }
+    else if (l_errlHndlSTR != NULL)
+    {
+        deleteErrl(&l_errlHndlSTR);
+    }
 
     CURRENT_MODE() = OCC_MODE_MAX_PERF;
     // not efficiency mode
