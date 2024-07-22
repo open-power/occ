@@ -173,6 +173,16 @@ inline OCC_MODE SMGR_get_mode(void);
 // Used to set OCC Mode
 errlHndl_t SMGR_set_mode(const OCC_MODE i_mode);
 
+// set idle chip parameters for efficiency modes
+typedef struct  __attribute__ ((packed))
+{
+  uint8_t    ceff_alg;    // 1= parameters are based on Vdd Ceff else based on utilization
+  uint16_t   entry_delay; // Delay Time in 32ms if util or 1ms if ceff to enter Idle Chip freq
+  uint16_t   entry_thld;  // Utilization or Ceff threshold in 0.01% to enter Idle Chip freq
+  uint16_t   exit_delay;  // Delay Time in 32ms if util or 1ms if ceff to exit Idle Chip freq
+  uint16_t   exit_thld;   // Utilization or Ceff threshold in 0.01% to exit Idle Chip freq
+}eff_mode_parms_t;
 
+void set_eff_mode_idle_chip_parms(const eff_mode_parms_t * i_eff_idle_chip_parms_ptr);
 
 #endif

@@ -42,6 +42,7 @@
 #include <proc_data.h>
 #include <dpss.h>
 #include <state.h>
+#include <mode.h>
 #include <amec_sys.h>
 #include <cmdh_fsp.h>
 #include <proc_pstate.h>
@@ -423,6 +424,7 @@ void read_wof_header(void)
 {
     int l_ssxrc = SSX_OK;
     bool l_error = false;
+    eff_mode_parms_t l_eff_idle_chip_parms = {0};
 
     // Read wof tables address, and wof tables len
     if(G_pgpe_header.wof_tables_addr == 0)
@@ -506,8 +508,8 @@ void read_wof_header(void)
                                 g_amec->static_wof_data.wof_header.vrt_block_header_size,
                                 g_amec->static_wof_data.wof_header.vrt_data_size);
 
-                MAIN_TRAC_INFO("read_wof_header: OCS Mode[%d] Core Count[%d]",
-                                g_amec->static_wof_data.wof_header.ocs_mode,
+                MAIN_TRAC_INFO("read_wof_header: Sys_Flags[0x%02X] Core Count[%d]",
+                                g_amec->static_wof_data.wof_header.sys_flags,
                                 g_amec->static_wof_data.wof_header.core_count);
 
                 // Initialize wof init state to zero
@@ -515,6 +517,14 @@ void read_wof_header(void)
 
                 // Initialize WOF over/under volting credit knob
                 g_amec->wof.wov_credit_knob = g_amec->static_wof_data.wof_header.wov_credit_knob;
+
+                // Initialize idle chip parameters for efficiency modes
+                l_eff_idle_chip_parms.ceff_alg = (g_amec->static_wof_data.wof_header.sys_flags & WOF_HEADER_FLAGS_EFF_ALG_CEFF_MASK);
+                l_eff_idle_chip_parms.entry_delay = g_amec->static_wof_data.wof_header.eff_mode_idle_chip_entry_time;
+                l_eff_idle_chip_parms.exit_delay = g_amec->static_wof_data.wof_header.eff_mode_idle_chip_exit_time;
+                l_eff_idle_chip_parms.entry_thld = g_amec->static_wof_data.wof_header.eff_mode_idle_chip_entry_thld;
+                l_eff_idle_chip_parms.exit_thld = g_amec->static_wof_data.wof_header.eff_mode_idle_chip_exit_thld;
+                set_eff_mode_idle_chip_parms(&l_eff_idle_chip_parms);
 
                 // Initialize OCS increase/decrease amounts to one step
                 g_amec->wof.ocs_increase_ceff = g_amec->static_wof_data.wof_header.vdd_step;

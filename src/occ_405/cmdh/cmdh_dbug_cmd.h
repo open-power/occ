@@ -96,7 +96,8 @@ typedef enum
     DBUG_WOF_CONTROL          = 0x28,
     DBUG_WOF_OCS              = 0x29,
     DBUG_WOF_SET_ECO_MODE     = 0x2A,
-    DBUG_WOF_SET_OV_UV_CREDIT = 0x2B
+    DBUG_WOF_SET_OV_UV_CREDIT = 0x2B,
+    DBUG_SET_IDLE_CHIP_PARMS  = 0x2C
 } DBUG_CMD;
 
 //*************************************************************************/
@@ -308,6 +309,15 @@ typedef struct __attribute__ ((packed))
     uint8_t     wov_credit;
     uint8_t     checksum[CMDH_FSP_CHECKSUM_SIZE];
 } cmdh_dbug_set_wof_ov_uv_credit_rsp_t;
+
+// DBUG_SET_IDLE_CHIP_PARMS command struct
+typedef struct __attribute__ ((packed))
+{
+    struct           cmdh_fsp_cmd_header;    // Standard command header
+    uint8_t          sub_cmd;                // Debug sub-command
+    eff_mode_parms_t idle_chip_parms;
+} cmdh_dbug_set_idle_chip_parms_cmd_t;
+
 
 // DBUG_ALLOW_TRACE command struct
 typedef struct __attribute__ ((packed))

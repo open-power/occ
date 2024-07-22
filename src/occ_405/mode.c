@@ -288,6 +288,96 @@ errlHndl_t SMGR_set_mode( const OCC_MODE i_mode )
 
 // Function Specification
 //
+// Name: set_eff_mode_idle_chip_parms
+//
+// Description: Set the idle chip parameters for efficiency modes
+//
+// End Function Specification
+void set_eff_mode_idle_chip_parms(const eff_mode_parms_t * i_eff_idle_chip_parms_ptr)
+{
+    // default not enabled
+    g_amec->eff_mode_parms.enable.fields.utilization_enable = 0;
+    g_amec->eff_mode_parms.enable.fields.ceff_enable = 0;
+
+    if(i_eff_idle_chip_parms_ptr == NULL)
+    {
+        TRAC_ERR("set_eff_mode_idle_chip_parms: Null pointer");
+    }
+    else if( (i_eff_idle_chip_parms_ptr->entry_delay == 0) ||
+        (i_eff_idle_chip_parms_ptr->exit_thld == 0) )
+    {
+        // Can't enable if entry time or exit threshold is 0
+        TRAC_IMP("set_eff_mode_idle_chip_parms: Eff mode Idle Chip Freq is disabled due to 0 entry time[%d] or 0 exit threshold[%d]",
+                       i_eff_idle_chip_parms_ptr->entry_delay, i_eff_idle_chip_parms_ptr->exit_thld);
+    }
+    // Sanity check enter/exit thresholds
+    else if(i_eff_idle_chip_parms_ptr->entry_thld >= i_eff_idle_chip_parms_ptr->exit_thld)
+    {
+        TRAC_IMP("set_eff_mode_idle_chip_parms: Eff mode Idle Chip Freq is disabled Enter Threshold[%d] >= Exit[%d]",
+                       i_eff_idle_chip_parms_ptr->entry_thld, i_eff_idle_chip_parms_ptr->exit_thld);
+    }
+    else // data valid
+    {
+        // Idle chip freq is enabled in efficiency modes set parms based on alg type
+        TRAC_IMP("set_eff_mode_idle_chip_parms: Idle Chip Freq will be enabled in efficiency modes");
+
+        if(i_eff_idle_chip_parms_ptr->ceff_alg == 0) // utilization based
+        {
+           // default frequency vote to max
+           g_amec->eff_mode_parms.idle_chip_freq_request = 0xFFFF;
+           g_amec->eff_mode_parms.entry_delay = i_eff_idle_chip_parms_ptr->entry_delay;
+           g_amec->eff_mode_parms.entry_threshold = i_eff_idle_chip_parms_ptr->entry_thld;
+           g_amec->eff_mode_parms.exit_delay = i_eff_idle_chip_parms_ptr->exit_delay;
+           g_amec->eff_mode_parms.exit_threshold = i_eff_idle_chip_parms_ptr->exit_thld;
+           g_amec->eff_mode_parms.enable.fields.utilization_enable = 1;
+           TRAC_IMP("set_eff_mode_idle_chip_parms: Enter Idle Chip Freq Time[%dms] Util[%d] Exit Time[%dms] Util[%d]",
+                         g_amec->eff_mode_parms.entry_delay * 32, // times are in terms of 32ms ticks
+                         g_amec->eff_mode_parms.entry_threshold,
+                         g_amec->eff_mode_parms.exit_delay * 32,
+                         g_amec->eff_mode_parms.exit_threshold);
+        }
+        else // ceff based
+        {
+           // default frequency vote to max
+           g_amec->eff_mode_parms.idle_chip_freq_request_ceff = 0xFFFF;
+           g_amec->eff_mode_parms.entry_threshold_ceff = i_eff_idle_chip_parms_ptr->entry_thld;
+           g_amec->eff_mode_parms.exit_threshold_ceff = i_eff_idle_chip_parms_ptr->exit_thld;
+
+           // convert times from ms to 500us WOF ticks. avoid overflow
+           if(i_eff_idle_chip_parms_ptr->entry_delay > 0x7FFF)
+           {
+              TRAC_ERR("set_eff_mode_idle_chip_parms: Idle Chip ceff entry time 0x%04X > max 0x7FFF",
+                             i_eff_idle_chip_parms_ptr->entry_delay);
+              g_amec->eff_mode_parms.entry_delay_ceff = 0xFFFF;
+           }
+           else
+           {
+              g_amec->eff_mode_parms.entry_delay_ceff = (i_eff_idle_chip_parms_ptr->entry_delay << 1);
+           }
+           if(i_eff_idle_chip_parms_ptr->exit_delay > 0x7FFF)
+           {
+              TRAC_ERR("set_eff_mode_idle_chip_parms: Idle Chip ceff exit time 0x%04X > max 0x7FFF",
+                             i_eff_idle_chip_parms_ptr->exit_delay);
+              g_amec->eff_mode_parms.exit_delay_ceff = 0xFFFF;
+           }
+           else
+           {
+              g_amec->eff_mode_parms.exit_delay_ceff = (i_eff_idle_chip_parms_ptr->exit_delay << 1);
+           }
+
+           g_amec->eff_mode_parms.enable.fields.ceff_enable = 1;
+           TRAC_IMP("set_eff_mode_idle_chip_parms: Enter Idle Chip Freq Time[%dms] Ceff[%d] Exit Time[%dms] Ceff[%d]",
+                         g_amec->eff_mode_parms.entry_delay_ceff >> 1, // times are in terms of 500us WOF ticks
+                         g_amec->eff_mode_parms.entry_threshold_ceff,
+                         g_amec->eff_mode_parms.exit_delay_ceff >> 1,
+                         g_amec->eff_mode_parms.exit_threshold_ceff);
+        }
+    }
+    return;
+}
+
+// Function Specification
+//
 // Name: set_efficiency_mode_parms
 //
 // Description: Set the max frequency clip and ceff addr from the WOF table for given mode
@@ -302,23 +392,23 @@ void set_efficiency_mode_parms( const OCC_MODE i_mode )
     switch(i_mode)
     {
         case OCC_MODE_NON_DETERMINISTIC:
-            l_freq_mhz = G_oppb.non_det_freq_limit_mhz;
-            l_table_ceff_add = G_oppb.non_det_ceff_pct;
+            l_freq_mhz = g_amec->static_wof_data.wof_header.non_det_freq_limit_mhz;
+            l_table_ceff_add = g_amec->static_wof_data.wof_header.non_det_ceff_pct;
             break;
 
         case OCC_MODE_EFFICIENCY_POWER:
-            l_freq_mhz = G_oppb.fav_pow_freq_limit_mhz;
-            l_table_ceff_add = G_oppb.fav_pow_ceff_pct;
+            l_freq_mhz = g_amec->static_wof_data.wof_header.fav_pow_freq_limit_mhz;
+            l_table_ceff_add = g_amec->static_wof_data.wof_header.fav_pow_ceff_pct;
             break;
 
         case OCC_MODE_EFFICIENCY_PERF:
-            l_freq_mhz = G_oppb.fav_perf_freq_limit_mhz;
-            l_table_ceff_add = G_oppb.fav_perf_ceff_pct;
+            l_freq_mhz = g_amec->static_wof_data.wof_header.fav_perf_freq_limit_mhz;
+            l_table_ceff_add = g_amec->static_wof_data.wof_header.fav_perf_ceff_pct;
             break;
 
         case OCC_MODE_BALANCED:
-            l_freq_mhz = G_oppb.bal_perf_freq_limit_mhz;
-            l_table_ceff_add = G_oppb.bal_perf_ceff_pct;
+            l_freq_mhz = g_amec->static_wof_data.wof_header.bal_perf_freq_limit_mhz;
+            l_table_ceff_add = g_amec->static_wof_data.wof_header.bal_perf_ceff_pct;
             break;
 
         default:

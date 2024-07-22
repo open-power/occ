@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2019,2023                        */
+/* Contributors Listed Below - COPYRIGHT 2019,2024                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -130,9 +130,11 @@
     }
 
 
+#define VID_SLOPE_FP_SHIFT_8        8
 #define VID_SLOPE_FP_SHIFT_12       12
 #define THRESH_SLOPE_FP_SHIFT       12
 #define I_SLOPE_FP_SHIFT_9           9
+#define DDS_DELAY_SLOPE_FP_SHIFT_8   8  //DDS Delay slope format 8.8
 #define DDS_DELAY_SLOPE_FP_SHIFT_12 12  //DDS Delay slope format 4.12
 #define DDS_SLOPE_FP_SHIFT_6         6  //DDS fields(except delay) slope format 2.6
 
@@ -168,6 +170,12 @@ typedef enum
     DDS_S_N_INDEX = 3
 } DDS_JUMP_VALUE_INDEX;
 #endif
+
+//WOF_VRATIO Attribute Index
+#define NUM_WOF_VRATIO_PCT      8
+#define NUM_WOV_DIRTY_UC_CTRL       2
+#define WOV_DIRTY_UC_CTRL_LIGHT_DROOP  0
+#define WOV_DIRTY_UC_CTRL_HEAVY_DROOP  1
 
 #ifndef __ASSEMBLER__
 #ifdef __cplusplus
@@ -341,9 +349,16 @@ typedef struct
         char     text[4];
     } magic_number;
 
+    /// Major DD Level
     uint8_t  major_dd_level;
+
+    /// Minor DD Level
     uint8_t  minor_dd_level;
-    // Knob to adjust WOF ceff credit for under/over volting
+
+    /// UV/OV Crdit Knob (Control)
+    ///    WOV Credit Knob = 0 forces Fudge = 0 to disable
+    ///    WOV Credit Knob = 100 results a unity gain of the UV credit
+    ///    WOV Credit Knob = 255 would exaggerate the effect by 2.55X
     uint8_t  wov_credit_knob;
 
     /// Layouut version of this structure
@@ -362,9 +377,27 @@ typedef struct
     ///    Length, in bytes, of the data field.
     uint16_t vrt_data_size;
 
-    /// Over-Current Mode.
-    /// 0: Table set assumes OCS is OFF; 1: Table set assumes OCS is ON
-    uint8_t ocs_mode;
+    //sys[0:3]: System type -
+    //0x0: Denali
+    //0x1: McKinley
+    //0x2: Everest
+    //0x3: Fuji
+    //0x4: Rainier-2U
+    //0x5: BlueRidge-2U
+    //0x6: Rainier-4U
+    //0x7: BlueRidge-4U
+    //0x8: Bonnel
+
+    //flags[4:7]
+    //[0] DIMM adjustment enablement
+    //   0: DIMM adjustment disabled
+    //   1: DIMM adjustment enabled
+    //[1] Expanded Frequency Encoding
+    //[2] Efficiency Mode Algorithm (0=Core Utilization based; 1=Ceff based)
+    //[3] Over Current Sensor Mode
+    //   0: OCS disabled
+    //   1: OCS enabled
+    uint8_t sys_flags;
 
     /// Core count
     uint8_t core_count;
@@ -471,11 +504,11 @@ typedef struct
     /// TDP Amb Cond index
     uint8_t  amb_cond_tdp_indx;
 
-    /// Thermal Design Point (TDP) IO Wattage (Watts)
-    uint8_t  io_tdp_w;
+    /// Reserved
+    uint8_t  resvd;
 
-    /// IO Minumum wattage
-    uint8_t  io_min_w;
+    /// IO Power Base (in W)
+    uint8_t   io_pwr_base_w;
 
     /// Core Sort UltraTurbo Frequency (in MHz)
     uint16_t sort_ultraturbo_freq_mhz;
@@ -485,18 +518,55 @@ typedef struct
     /// Date Timestamp of the table set as established by the generation process.
     uint32_t table_date_timestamp;
 
-    uint32_t reserved2;
+    /// Override Match Frequency (in MHz)
+    uint16_t override_match_freq_mhz;
+
+    /// Override Match Power (in Watts)
+    uint16_t override_match_power_w;
 
     ///  ---- Double word 9 and 10 ----
 
-    /// Up to 16 ASCII characters as a Table Version as established by the
+    /// Up to 8 ASCII characters as a Table Version as established by the
     /// generation process.
-    char table_version[16];
+    char table_version[8];
+
+    uint8_t cur_scale_pct[8];
 
     ///  ---- Double word 11 and 12 -----
 
-    /// Up to 16 ASCII characters as a Package designator
-    char package_name[16];
+    /// Up to 8 ASCII characters as a Package designator
+    char package_name[8];
+
+    // Efficiency Mode to enter idle chip freq
+    uint16_t eff_mode_idle_chip_entry_time;
+
+    // Efficiency Mode to exit idle chip freq
+    uint16_t eff_mode_idle_chip_exit_time;
+
+    //Threshold to enter idle chip freq
+    uint16_t eff_mode_idle_chip_entry_thld;
+
+    //Threshold to exit idle chip freq
+    uint16_t eff_mode_idle_chip_exit_thld;
+
+    /// Core Sort Power Save Frequency (in MHz) (eg Fmin @ Vmin)
+    uint16_t sort_power_save_freq_mhz;
+
+    /// Core Sort Fixed Frequency (in MHz)
+    uint16_t sort_fixed_freq_mhz;
+
+    /// Efficiency mode controls
+    uint8_t  bal_perf_ceff_pct;   // 0: sign; 1:7 percent (1% units)
+    uint8_t  fav_perf_ceff_pct;   // 0: sign; 1:7 percent (1% units)
+    uint8_t  fav_pow_ceff_pct;    // 0: sign; 1:7 percent (1% units)
+    uint8_t  non_det_ceff_pct;    // 0: sign; 1:7 percent (1% units)
+
+    uint16_t bal_perf_freq_limit_mhz;
+    uint16_t fav_perf_freq_limit_mhz;
+    uint16_t fav_pow_freq_limit_mhz;
+    uint16_t non_det_freq_limit_mhz;
+
+    uint16_t max_powr_min_freq_watts;
 
     // Padding to 128B is left to the compiler via the following attribute.
 

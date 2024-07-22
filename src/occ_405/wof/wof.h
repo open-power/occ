@@ -55,6 +55,15 @@ extern uint32_t G_max_ceff_ratio;
 #define OCS_PGPE_DIRTY_TYPE_MASK 0x20
 
 //******************************************************************************
+// WOF Header System Flag Masks
+//******************************************************************************
+#define WOF_HEADER_FLAGS_SYSTEM_TYPE_MASK 0xF0
+#define WOF_HEADER_FLAGS_DIMM_ADJ_ENABLE_MASK 0x08
+#define WOF_HEADER_FLAGS_EXPAND_FREQ_ENCODING_MASK 0x04
+#define WOF_HEADER_FLAGS_EFF_ALG_CEFF_MASK 0x02
+#define WOF_HEADER_FLAGS_OCS_ENABLE_MASK 0x01
+
+//******************************************************************************
 // WOF Reason Code Masks
 //******************************************************************************
 #define WOF_RC_NO_WOF_HEADER_MASK                  0x00000001

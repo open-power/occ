@@ -54,7 +54,6 @@ typedef enum
    DATA_FORMAT_GPU                   = 0x15,
    DATA_FORMAT_MEM_POWER             = 0x16,
    DATA_FORMAT_SOCKET_PCAP           = 0x17,
-   DATA_FORMAT_EFF_MODE_PARMS        = 0x18,
 } eConfigDataFormatVersion;
 
 // Enum of the various Cnfg Data Masks that are used
@@ -73,7 +72,6 @@ typedef enum
    DATA_MASK_GPU                   = 0x00000800,
    DATA_MASK_SOCKET_PCAP           = 0x00001000,
    DATA_MASK_MEM_PWR               = 0x00002000,
-   DATA_MASK_EFF_MODE_PARMS        = 0x00004000,
 } eConfigDataPriorityMask;
 
 typedef enum
@@ -500,20 +498,6 @@ typedef struct __attribute__ ((packed))
     cmdh_mem_pwr_data_header_t  header;
     cmdh_mem_pwr_data_set_t     data_set[1];
 } cmdh_mem_pwr_data_t;
-
-// Used by TMGT to send Efficiency mode parameters
-typedef struct __attribute__ ((packed))
-{
-    struct     cmdh_fsp_cmd_header;
-    uint8_t    format;
-    uint8_t    version;  //  version 0 parameters are based on utilization or version 1 based on Vdd Ceff
-    uint8_t    mem_pwr_ctl;
-    uint8_t    reserved[5];
-    uint16_t   idle_chip_enter_delay_time; // Delay Time in 32ms (version 0) or 1ms (version 1) to enter Idle Chip freq
-    uint16_t   idle_chip_enter_threshold;  // Utilization (version 0) or Ceff (version 1) threshold in 0.01% to enter Idle Chip freq
-    uint16_t   idle_chip_exit_delay_time;  // Delay Time in 32ms (version 0) or 1ms (version 1) to exit Idle Chip freq
-    uint16_t   idle_chip_exit_threshold;   // Utilization (version 0) or Ceff (version 1) threshold in 0.01% to exit Idle Chip freq
-}cmdh_eff_mode_parms_t;
 
 // Used to mark present the config data TMGT has sent us.
 typedef struct data_cnfg

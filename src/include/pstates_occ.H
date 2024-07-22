@@ -202,8 +202,20 @@ typedef struct
     //    to which the system is clipped.
     uint32_t            frequency_ceiling_khz;
 
+    // Control to allow for WOF dimension disablement
+    // Bit definition:
+    // 0: VDD
+    // 1: VCS
+    // 2: IO
+    // 3: Ambient condition
+    // 4: Vratio
+    // 5: Reserved
+    // 6: Reserved
+    // 7: Reserved
+    uint8_t wof_dimension_disable_vector;
+
     // Pad
-    uint8_t             pad_a[4];
+    uint8_t             pad_a[3];
 
     // UltraTurbo frequency from #V
     uint32_t ultraturbo_freq_mhz;
@@ -217,18 +229,8 @@ typedef struct
     // I/O Throttle Temperature from #V
     uint32_t io_throttle_temp_0p5C;
 
-    // Efficiency mode controls
-    uint8_t             bal_perf_ceff_pct;   // 0: sign; 1:7 percent (1% units)
-    uint8_t             fav_perf_ceff_pct;   // 0: sign; 1:7 percent (1% units)
-    uint8_t             fav_pow_ceff_pct;    // 0: sign; 1:7 percent (1% units)
-    uint8_t             non_det_ceff_pct;    // 0: sign; 1:7 percent (1% units)
-    uint16_t            bal_perf_freq_limit_mhz;
-    uint16_t            fav_perf_freq_limit_mhz;
-    uint16_t            fav_pow_freq_limit_mhz;
-    uint16_t            non_det_freq_limit_mhz;
-
     // Pad to make the structure an even 1KB
-    uint8_t             pad_b[4];
+    uint8_t             pad_b[16];
 
 } __attribute__((aligned(128))) OCCPstateParmBlock_t ;
 

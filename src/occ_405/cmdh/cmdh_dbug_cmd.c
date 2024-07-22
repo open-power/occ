@@ -877,6 +877,64 @@ void cmdh_dbug_wof_ov_uv_credit( const cmdh_fsp_cmd_t * i_cmd_ptr,
 
 // Function Specification
 //
+// Name: cmdh_dbug_set_idle_chip_parms
+//
+// Description: Overwrite Efficiency mode Idle Chip parameters that comes from the WOF tables header
+//
+// End Function Specification
+void cmdh_dbug_set_idle_chip_parms( const cmdh_fsp_cmd_t * i_cmd_ptr,
+                                    cmdh_fsp_rsp_t * o_rsp_ptr)
+{
+    const cmdh_dbug_set_idle_chip_parms_cmd_t * l_cmd_ptr = (cmdh_dbug_set_idle_chip_parms_cmd_t*) i_cmd_ptr;
+    uint16_t l_data_length = CMDH_DATALEN_FIELD_UINT16(l_cmd_ptr);
+    uint16_t l_expected_data_length = sizeof(cmdh_dbug_set_idle_chip_parms_cmd_t) - sizeof(cmdh_fsp_cmd_header_t);
+    uint16_t l_rsp_data_length = 0;
+    uint8_t  l_rc = ERRL_RC_SUCCESS;
+
+     // Do sanity check on the function inputs
+    if ((NULL == l_cmd_ptr) || (NULL == o_rsp_ptr))
+    {
+        l_rc = ERRL_RC_INTERNAL_FAIL;
+    }
+    else if(l_data_length != l_expected_data_length)
+    {
+        TRAC_ERR("cmdh_dbug_set_idle_chip_parms: invalid length Expected: 0x%04X  Received: 0x%04X",
+                          l_expected_data_length, l_data_length);
+        l_rc = ERRL_RC_INVALID_CMD_LEN;
+    }
+    else
+    {
+        TRAC_INFO("cmdh_dbug_set_idle_chip_parms() updating eff mode idle chip parameters");
+
+        // Fill in response data with current parameters
+        memcpy((void*)&(o_rsp_ptr->data[0]),
+               (void*)&(g_amec->eff_mode_parms),
+               sizeof(amec_eff_mode_t));
+        l_rsp_data_length = sizeof(amec_eff_mode_t);
+
+        // Update the Idle Chip Parameters
+        const eff_mode_parms_t* l_eff_idle_chip_parms_ptr = &(l_cmd_ptr->idle_chip_parms);
+        set_eff_mode_idle_chip_parms(l_eff_idle_chip_parms_ptr);
+
+        // Add the new parameters to the response data
+        memcpy((void*)&(o_rsp_ptr->data[l_rsp_data_length]),
+               (void*)&(g_amec->eff_mode_parms),
+               sizeof(amec_eff_mode_t));
+        l_rsp_data_length += sizeof(amec_eff_mode_t);
+    }
+
+    // fill in response data length
+    if( o_rsp_ptr != NULL )
+    {
+        o_rsp_ptr->data_length[0] = CONVERT_UINT16_UINT8_HIGH(l_rsp_data_length);
+        o_rsp_ptr->data_length[1] = CONVERT_UINT16_UINT8_LOW(l_rsp_data_length);
+    }
+    G_rsp_status = l_rc;
+    return;
+}
+
+// Function Specification
+//
 // Name: cmdh_dbug_allow_trace
 //
 // Description: Set/Clear flags that allow/prevent certain traces to appear
@@ -1960,6 +2018,10 @@ void cmdh_dbug_cmd (const cmdh_fsp_cmd_t * i_cmd_ptr,
 
         case DBUG_WOF_SET_OV_UV_CREDIT:
             cmdh_dbug_wof_ov_uv_credit(i_cmd_ptr, o_rsp_ptr);
+            break;
+
+	case DBUG_SET_IDLE_CHIP_PARMS:
+            cmdh_dbug_set_idle_chip_parms(i_cmd_ptr, o_rsp_ptr);
             break;
 
         case DBUG_DUMP_OPPB:

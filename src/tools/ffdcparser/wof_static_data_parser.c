@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2016,2023                        */
+/* Contributors Listed Below - COPYRIGHT 2016,2024                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -43,6 +43,8 @@ int main(int argc, char** argv)
     uint32_t    l_power = 0;
     uint8_t     l_extra_bytes = 0;
     uint8_t     l_num_bytes = 0;
+    uint8_t     l_sys_flags = 0;
+    uint8_t     l_system_type = 0;
 
     // Verify a file was passed as an argument
     if(argc < 2)
@@ -109,7 +111,61 @@ int main(int argc, char** argv)
     l_num_bytes += 2;
     printf("     VRT Data Size: %d\n", get_uint16(wof_file));
     l_num_bytes += 2;
-    printf("     Flags: 0x%02X\n", fgetc(wof_file));
+    l_sys_flags = fgetc(wof_file);
+    printf("     System Type and Flags byte: 0x%02X\n", l_sys_flags);
+    l_system_type = (l_sys_flags & 0xF0) >> 4;
+    printf("                                 System Type (%d) ", l_system_type);
+    switch(l_system_type)
+    {
+	case 0:
+            printf("Denali\n");
+            break;
+	case 1:
+            printf("McKinley\n");
+            break;
+	case 2:
+            printf("Everest\n");
+            break;
+	case 3:
+            printf("Fuji\n");
+            break;
+	case 4:
+            printf("Rainier-2U\n");
+            break;
+	case 5:
+            printf("BlueRidge-2U\n");
+            break;
+	case 6:
+            printf("Rainier-4U\n");
+            break;
+	case 7:
+            printf("BlueRidge-4U\n");
+            break;
+	case 8:
+            printf("Bonnell\n");
+            break;
+	default:
+            printf("Unknown\n");
+            break;
+    }
+    if(l_sys_flags & 0x08)
+        printf("                                   DIMM Adjustment Enabled\n");
+    else
+        printf("                                   DIMM Adjustment Disabled\n");
+
+    if(l_sys_flags & 0x04)
+        printf("                                   Expanded Frequency Encoding\n");
+
+    if(l_sys_flags & 0x02)
+        printf("                                   Efficiency Mode Idle Chip Alg Ceff based\n");
+    else
+        printf("                                   Efficiency Mode Idle Chip Alg Util based\n");
+
+    if(l_sys_flags & 0x01)
+        printf("                                   OCS Enabled\n");
+    else
+        printf("                                   OCS Disabled\n");
+
     l_num_bytes += 1;
     printf("     Core Count: %d\n", fgetc(wof_file));
     l_num_bytes += 1;
@@ -161,9 +217,9 @@ int main(int argc, char** argv)
     l_num_bytes += 1;
     printf("     Ambient TDP Index: %d\n", fgetc(wof_file));
     l_num_bytes += 1;
-    printf("     IO TDP Wattage: %dW\n", fgetc(wof_file));
+    printf("     Reserved: %dW\n", fgetc(wof_file));
     l_num_bytes += 1;
-    printf("     IO Min Wattage: %dW\n", fgetc(wof_file));
+    printf("     IO Power Base: %dW\n", fgetc(wof_file));
     l_num_bytes += 1;
     printf("     Sort UT Freq: %dMHz\n", get_uint16(wof_file));
     l_num_bytes += 2;
@@ -174,15 +230,29 @@ int main(int argc, char** argv)
     printf("     Override Power: %dW\n", get_uint16(wof_file));
     l_num_bytes += 2;
     printf("     Table Version: ");
-    for(i = 0; i < 16; i++)
+    for(i = 0; i < 8; i++)
         printf("%c", fgetc(wof_file));
     printf("\n");
-    l_num_bytes += 16;
+    l_num_bytes += 8;
+    printf("     Cur Scale Percent: ");
+    for(i = 0; i < 8; i++)
+        printf("%d ", fgetc(wof_file));
+    printf("\n");
+    l_num_bytes += 8;
     printf("     Package Name: ");
-    for(i = 0; i < 16; i++)
+    for(i = 0; i < 8; i++)
         printf("%c", fgetc(wof_file));
     printf("\n");
-    l_num_bytes += 16;
+    l_num_bytes += 8;
+    printf("     Eff mode Idle Chip Entry Time: %d\n", get_uint16(wof_file));
+    l_num_bytes += 2;
+    printf("     Eff mode Idle Chip Exit Time: %d\n", get_uint16(wof_file));
+    l_num_bytes += 2;
+    printf("     Eff mode Idle Chip Entry Threshold: %d\n", get_uint16(wof_file));
+    l_num_bytes += 2;
+    printf("     Eff mode Idle Chip Exit Threshold: %d\n", get_uint16(wof_file));
+    l_num_bytes += 2;
+
     printf("     Sort Power Save Freq: %dMHz\n", get_uint16(wof_file));
     l_num_bytes += 2;
     printf("     Sort Fixed Freq: %dMHz\n", get_uint16(wof_file));
