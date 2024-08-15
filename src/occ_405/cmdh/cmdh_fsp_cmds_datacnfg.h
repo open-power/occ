@@ -453,23 +453,8 @@ typedef struct __attribute__ ((packed))
     uint16_t                     util_cPercent;
     uint16_t                     int_pt_reserved;
     uint32_t                     pre_heat_power_cW;   // pre-heat only power
-}cmdh_mem_pwr_interp_pt_t; // version 1
-
-typedef struct __attribute__ ((packed))
-{
-    uint16_t                     util_cPercent;
-    uint16_t                     int_pt_reserved;
-    uint32_t                     pre_heat_power_cW;   // pre-heat only power
     uint32_t                     full_power_cW;       // full power
 }cmdh_mem_pwr_interp_pt_v2_t; // version 2
-
-typedef struct __attribute__ ((packed))
-{
-    uint8_t                     ocmb_num;
-    uint8_t                     reserved[6];
-    uint8_t                     num_interp_points;
-    cmdh_mem_pwr_interp_pt_t    interp_points[1];
-}cmdh_mem_pwr_data_set_t;  // version 1
 
 typedef struct __attribute__ ((packed))
 {
@@ -484,20 +469,8 @@ typedef struct __attribute__ ((packed))
 typedef struct __attribute__ ((packed))
 {
     cmdh_mem_pwr_data_header_t  header;
-    cmdh_mem_pwr_data_set_t     data_set[1];
-}cmdh_mem_pwr_data_v1_t;
-
-typedef struct __attribute__ ((packed))
-{
-    cmdh_mem_pwr_data_header_t  header;
     cmdh_mem_pwr_data_set_v2_t  data_set[1];
 }cmdh_mem_pwr_data_v2_t;
-
-typedef struct __attribute__ ((packed))
-{
-    cmdh_mem_pwr_data_header_t  header;
-    cmdh_mem_pwr_data_set_t     data_set[1];
-} cmdh_mem_pwr_data_t;
 
 // Used to mark present the config data TMGT has sent us.
 typedef struct data_cnfg

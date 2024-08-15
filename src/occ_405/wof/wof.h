@@ -482,6 +482,8 @@ typedef struct __attribute__ ((packed, aligned(128)))
     // OCMB util to power interpolation points uuuuuuuupppppppp
     // uuuuuuuu is util in cPercent and pppppppp is power in cW
     uint64_t ocmb_util_pwr_pts[MAX_NUM_OCMBS][MAX_NUM_MEM_INT_PTS];  // 1,536 bytes (16x12x8)
+    // Slope x10000 calculated from ocmb_util_pwr_pts
+    uint32_t util_pre_heat_power_m10000x[MAX_NUM_OCMBS];  // 64 bytes (16x4)
 } amec_static_wof_t;
 
 // Structure for sensors used in g_amec for AMESTER for additional debug
@@ -560,6 +562,11 @@ int32_t interpolate_linear( int32_t i_X,
                             int32_t i_y1,
                             int32_t i_y2,
                             bool    i_roundup );
+
+int64_t extrapolate_linear( int64_t i_X,
+                            int64_t i_x1,
+                            int64_t i_y1,
+                            int64_t i_m_10000x);
 
 void get_poundV_points( uint32_t i_freq_mhz,
                         uint8_t* o_point1_index,

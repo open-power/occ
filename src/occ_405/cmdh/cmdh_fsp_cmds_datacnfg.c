@@ -2407,7 +2407,6 @@ errlHndl_t data_store_memory_pwr_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
 {
     errlHndl_t                      l_err = NULL;
 
-    cmdh_mem_pwr_data_v1_t *        l_cmd_v1_ptr = (cmdh_mem_pwr_data_v1_t *)i_cmd_ptr;
     cmdh_mem_pwr_data_v2_t *        l_cmd_v2_ptr = (cmdh_mem_pwr_data_v2_t *)i_cmd_ptr;
     uint64_t                        l_temp64 = 0;
     uint32_t                        l_temp32 = 0;
@@ -2417,12 +2416,16 @@ errlHndl_t data_store_memory_pwr_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
     uint16_t                        l_data_offset = 0;
     uint8_t                         l_version = 0;
     uint8_t                         i, j;
+    uint8_t                         l_interp_pt1_index = 0;
+    uint8_t                         l_interp_pt2_index = 0;
+    int64_t                         l_slope10000x = 0;
+    int64_t                         l_slope_x = 0;
+    int64_t                         l_slope_y = 0;
     bool                            l_interp_error = FALSE; // Assume interpolation points are ascending util
     bool                            l_invalid_input = TRUE; //Assume bad input
 
-    // header info is same for all versions
-    l_data_length = CMDH_DATALEN_FIELD_UINT16((&l_cmd_v1_ptr->header));
-    l_version = l_cmd_v1_ptr->header.version;
+    l_data_length = CMDH_DATALEN_FIELD_UINT16((&l_cmd_v2_ptr->header));
+    l_version = l_cmd_v2_ptr->header.version;
 
     // Verification that present OCMBs match OCMBs we receive pwr data for is done during WOF
     g_amec->wof.ocmbs_present = 0;
@@ -2431,21 +2434,12 @@ errlHndl_t data_store_memory_pwr_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
     g_amec->wof.max_dimm_pwr_total_cW = 0;
 
     // Check version
-    if( (l_version == 1) || (l_version == 2) )
+    if(l_version == 2)
     {
         // each OCMB must have at least 2 interpolation points
-        if(l_version == 1)
-        {
-           l_min_data_length = sizeof(cmdh_mem_pwr_data_header_t) - sizeof(cmdh_fsp_cmd_header_t) +
-                              (l_cmd_v1_ptr->header.num_ocmbs * sizeof(cmdh_mem_pwr_data_set_t)) +
-                              (l_cmd_v1_ptr->header.num_ocmbs * sizeof(cmdh_mem_pwr_interp_pt_t));
-        }
-        else // version 2
-        {
-           l_min_data_length = sizeof(cmdh_mem_pwr_data_header_t) - sizeof(cmdh_fsp_cmd_header_t) +
-                              (l_cmd_v2_ptr->header.num_ocmbs * sizeof(cmdh_mem_pwr_data_set_v2_t)) +
-                              (l_cmd_v2_ptr->header.num_ocmbs * sizeof(cmdh_mem_pwr_interp_pt_v2_t));
-        }
+        l_min_data_length = sizeof(cmdh_mem_pwr_data_header_t) - sizeof(cmdh_fsp_cmd_header_t) +
+                            (l_cmd_v2_ptr->header.num_ocmbs * sizeof(cmdh_mem_pwr_data_set_v2_t)) +
+                            (l_cmd_v2_ptr->header.num_ocmbs * sizeof(cmdh_mem_pwr_interp_pt_v2_t));
 
         // keep track of data processed
         l_remaining_data = l_data_length - sizeof(cmdh_mem_pwr_data_header_t) + sizeof(cmdh_fsp_cmd_header_t);
@@ -2453,32 +2447,19 @@ errlHndl_t data_store_memory_pwr_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
         if(l_data_length >= l_min_data_length)
         {
             // Process each OCMB
-            for(i=0; i<l_cmd_v1_ptr->header.num_ocmbs; i++)
+            for(i=0; i<l_cmd_v2_ptr->header.num_ocmbs; i++)
             {
                 uint8_t mem_buf = 0xFF;
                 uint8_t num_interp_pts = 0xFF;
                 uint16_t data_size = 0xFF;
-                l_temp32 = (uint32_t)(&l_cmd_v1_ptr->data_set[0]) + l_data_offset;
-                cmdh_mem_pwr_data_set_t* l_data_set = (cmdh_mem_pwr_data_set_t*)l_temp32;
                 l_temp32 = (uint32_t)(&l_cmd_v2_ptr->data_set[0]) + l_data_offset;
                 cmdh_mem_pwr_data_set_v2_t* l_data_set_v2 = (cmdh_mem_pwr_data_set_v2_t*)l_temp32;
 
-                if(l_version == 1)
-                {
-                   mem_buf = l_data_set->ocmb_num;
-                   num_interp_pts = l_data_set->num_interp_points;
-                   // calculate size of data for this OCMB
-                   data_size = sizeof(cmdh_mem_pwr_data_set_t) +
-                            ( (num_interp_pts-1) * sizeof(cmdh_mem_pwr_interp_pt_t));
-                }
-                else // version 2
-                {
-                   mem_buf = l_data_set_v2->ocmb_num;
-                   num_interp_pts = l_data_set_v2->num_interp_points;
-                   // calculate size of data for this OCMB
-                   data_size = sizeof(cmdh_mem_pwr_data_set_v2_t) +
-                            ( (num_interp_pts-1) * sizeof(cmdh_mem_pwr_interp_pt_v2_t));
-                }
+                mem_buf = l_data_set_v2->ocmb_num;
+                num_interp_pts = l_data_set_v2->num_interp_points;
+                // calculate size of data for this OCMB
+                data_size = sizeof(cmdh_mem_pwr_data_set_v2_t) +
+                                ( (num_interp_pts-1) * sizeof(cmdh_mem_pwr_interp_pt_v2_t));
 
                 // Validate parameters
                 if( (mem_buf >= MAX_NUM_OCMBS) ||
@@ -2499,29 +2480,17 @@ errlHndl_t data_store_memory_pwr_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
                 l_remaining_data -= data_size;
                 l_data_offset += data_size;
 
-                // Save interpolation points
+                // Save interpolation points and calculate slope for interpolation
                 for(j=0; j<num_interp_pts; j++)
                 {
-                    cmdh_mem_pwr_interp_pt_t* l_point;
                     cmdh_mem_pwr_interp_pt_v2_t* l_v2_point;
                     uint16_t util = 0;
                     uint32_t power = 0;
                     uint32_t full_power = 0;
-
-                    if(l_version == 1)
-                    {
-                       l_point = &l_data_set->interp_points[j];
-                       util = l_point->util_cPercent;
-                       power = l_point->pre_heat_power_cW;
-                       full_power = 0; // not sent in v1
-                    }
-                    else // version 2
-                    {
-                       l_v2_point = &l_data_set_v2->interp_points[j];
-                       util = l_v2_point->util_cPercent;
-                       power = l_v2_point->pre_heat_power_cW;
-                       full_power = l_v2_point->full_power_cW;
-                    }
+                    l_v2_point = &l_data_set_v2->interp_points[j];
+                    util = l_v2_point->util_cPercent;
+                    power = l_v2_point->pre_heat_power_cW;
+                    full_power = l_v2_point->full_power_cW;
 
                     if((j!=0) && (util <= g_amec->proc[0].memctl[mem_buf].membuf.util_pwr_pt[j-1].util_cPercent))
                     {
@@ -2537,7 +2506,7 @@ errlHndl_t data_store_memory_pwr_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                       mem_buf, j, power, g_amec->proc[0].memctl[mem_buf].membuf.util_pwr_pt[j-1].pre_heat_power_cW);
                         break;
                     }
-                    if((l_version == 2) && (j!=0) && (full_power < g_amec->proc[0].memctl[mem_buf].membuf.util_pwr_pt[j-1].full_power_cW))
+                    if((j!=0) && (full_power < g_amec->proc[0].memctl[mem_buf].membuf.util_pwr_pt[j-1].full_power_cW))
                     {
                         l_interp_error = TRUE;
                         CMDH_TRAC_ERR("data_store_memory_pwr_data: OCMB %d full power[%d] %d not ascending previous power %d",
@@ -2552,7 +2521,7 @@ errlHndl_t data_store_memory_pwr_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
                     l_temp64 = (uint64_t)util;
                     l_temp64 = l_temp64 << 32;
                     g_amec->static_wof_data.ocmb_util_pwr_pts[mem_buf][j] = (l_temp64 | (uint64_t)power);
-                }
+                }  // for each inerpolation point
                 if(l_interp_error) // data failed stop processing all OCMBs
                     break;
 
@@ -2569,6 +2538,51 @@ errlHndl_t data_store_memory_pwr_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                 g_amec->proc[0].memctl[mem_buf].membuf.util_pwr_pt[num_interp_pts-1].util_cPercent,
                                 g_amec->proc[0].memctl[mem_buf].membuf.util_pwr_pt[num_interp_pts-1].pre_heat_power_cW,
                                 g_amec->proc[0].memctl[mem_buf].membuf.util_pwr_pt[num_interp_pts-1].full_power_cW);
+                // Calculate power slope for interpolation later
+                // There is an upper bound utilization depending on memory size for max power
+                // use the lowest two points possible
+                l_interp_pt1_index = 0;
+                l_interp_pt2_index = 1;
+                // if we have more than 2 points, don't use 0% since there's also a lower bound for power
+                if((num_interp_pts > 2) &&
+                   (g_amec->proc[0].memctl[mem_buf].membuf.util_pwr_pt[0].util_cPercent == 0))
+                {
+                    l_interp_pt1_index = 1;
+                    l_interp_pt2_index = 2;
+                }
+                l_slope_x = g_amec->proc[0].memctl[mem_buf].membuf.util_pwr_pt[l_interp_pt2_index].util_cPercent - g_amec->proc[0].memctl[mem_buf].membuf.util_pwr_pt[l_interp_pt1_index].util_cPercent;
+                l_slope_y = g_amec->proc[0].memctl[mem_buf].membuf.util_pwr_pt[l_interp_pt2_index].pre_heat_power_cW - g_amec->proc[0].memctl[mem_buf].membuf.util_pwr_pt[l_interp_pt1_index].pre_heat_power_cW;
+                if(l_slope_x == 0)
+                {
+                   CMDH_TRAC_IMP("OCMB[%d] pre-heat power slope is 0", mem_buf);
+                   l_slope10000x = 0;
+                }
+                else
+                {
+                   // multiply by 10000 for precision
+                   l_slope10000x = (l_slope_y * 10000) / l_slope_x;
+                }
+                g_amec->proc[0].memctl[mem_buf].membuf.util_pre_heat_power_m10000x = l_slope10000x;
+                g_amec->static_wof_data.util_pre_heat_power_m10000x[mem_buf] = (uint32_t)l_slope10000x;
+
+                // calculate slope for full power
+                l_slope_y = g_amec->proc[0].memctl[mem_buf].membuf.util_pwr_pt[l_interp_pt2_index].full_power_cW - g_amec->proc[0].memctl[mem_buf].membuf.util_pwr_pt[l_interp_pt1_index].full_power_cW;
+                if(l_slope_x == 0)
+                {
+                   CMDH_TRAC_IMP("OCMB[%d] full power slope is 0", mem_buf);
+                   l_slope10000x = 0;
+                }
+                else
+                {
+                   // multiply by 10000 for precision
+                   l_slope10000x = (l_slope_y * 10000) / l_slope_x;
+                }
+                g_amec->proc[0].memctl[mem_buf].membuf.util_full_power_m10000x = l_slope10000x;
+
+                CMDH_TRAC_INFO("OCMB[%d] slopesX10000 pre-heat[%d] full[%d]",
+                                mem_buf,
+                                (int32_t)g_amec->proc[0].memctl[mem_buf].membuf.util_pre_heat_power_m10000x,
+                                (int32_t)g_amec->proc[0].memctl[mem_buf].membuf.util_full_power_m10000x);
             }  // for each OCMB
 
             if(l_remaining_data)
@@ -2579,12 +2593,12 @@ errlHndl_t data_store_memory_pwr_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
             else if(!l_interp_error) // data is good
             {
                 l_invalid_input = FALSE;
-                g_amec->wof.mem_thermal_credit_constant = l_cmd_v1_ptr->header.thermal_credit_constant;
-                g_amec->wof.max_dimm_pwr_ocmb_cW = l_cmd_v1_ptr->header.max_dimm_pwr_ocmb_cW;
+                g_amec->wof.mem_thermal_credit_constant = l_cmd_v2_ptr->header.thermal_credit_constant;
+                g_amec->wof.max_dimm_pwr_ocmb_cW = l_cmd_v2_ptr->header.max_dimm_pwr_ocmb_cW;
 
-                if(l_cmd_v1_ptr->header.total_dimm_pwr_cW)
+                if(l_cmd_v2_ptr->header.total_dimm_pwr_cW)
                 {
-                    g_amec->wof.max_dimm_pwr_total_cW = l_cmd_v1_ptr->header.total_dimm_pwr_cW;
+                    g_amec->wof.max_dimm_pwr_total_cW = l_cmd_v2_ptr->header.total_dimm_pwr_cW;
                     CMDH_TRAC_INFO("data_store_memory_pwr_data: Total max dimm pre-heat power[%dcW]",
                                     g_amec->wof.max_dimm_pwr_total_cW);
                 }
@@ -2596,7 +2610,7 @@ errlHndl_t data_store_memory_pwr_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
                 }
 
                 CMDH_TRAC_INFO("data_store_memory_pwr_data: Received %d OCMBs present bit mask 0x%04X",
-                                l_cmd_v1_ptr->header.num_ocmbs, g_amec->wof.ocmbs_present);
+                                l_cmd_v2_ptr->header.num_ocmbs, g_amec->wof.ocmbs_present);
                 CMDH_TRAC_INFO("data_store_memory_pwr_data: Thermal constant 0x%04X max pwr per OCMB 0x%08X cW",
                                 g_amec->wof.mem_thermal_credit_constant, g_amec->wof.max_dimm_pwr_ocmb_cW);
             }
@@ -2604,9 +2618,9 @@ errlHndl_t data_store_memory_pwr_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
         else // not enough data
         {
            CMDH_TRAC_ERR("data_store_memory_pwr_data: Length %d needs to be at least %d for %d OCMBs",
-                          l_data_length, l_min_data_length, l_cmd_v1_ptr->header.num_ocmbs);
+                          l_data_length, l_min_data_length, l_cmd_v2_ptr->header.num_ocmbs);
         }
-    }  // if version 1 or 2
+    } // if version 2
     else // invalid version
     {
         CMDH_TRAC_ERR("data_store_memory_pwr_data: Invalid Version[0x%02X]", l_version);

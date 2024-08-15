@@ -45,6 +45,7 @@ int main(int argc, char** argv)
     uint8_t     l_num_bytes = 0;
     uint8_t     l_sys_flags = 0;
     uint8_t     l_system_type = 0;
+    uint8_t     l_wof_table_version = 0;
 
     // Verify a file was passed as an argument
     if(argc < 2)
@@ -101,9 +102,10 @@ int main(int argc, char** argv)
     l_num_bytes += 1;
     printf("     Minor DD Level: 0x%02X\n", fgetc(wof_file));
     l_num_bytes += 1;
-    printf("     WOV Credit Knob: 0x%02X\n", fgetc(wof_file));
+    printf("     WOV Credit Knob: %d\n", fgetc(wof_file));
     l_num_bytes += 1;
-    printf("     Version: 0x%02X\n", fgetc(wof_file));
+    l_wof_table_version = fgetc(wof_file);
+    printf("     Version: 0x%02X\n", l_wof_table_version);
     l_num_bytes += 1;
     printf("     VRT Block Size: %d\n", get_uint16(wof_file));
     l_num_bytes += 2;
@@ -112,60 +114,66 @@ int main(int argc, char** argv)
     printf("     VRT Data Size: %d\n", get_uint16(wof_file));
     l_num_bytes += 2;
     l_sys_flags = fgetc(wof_file);
-    printf("     System Type and Flags byte: 0x%02X\n", l_sys_flags);
-    l_system_type = (l_sys_flags & 0xF0) >> 4;
-    printf("                                 System Type (%d) ", l_system_type);
-    switch(l_system_type)
+    if(l_wof_table_version < 2)
     {
-	case 0:
-            printf("Denali\n");
-            break;
-	case 1:
-            printf("McKinley\n");
-            break;
-	case 2:
-            printf("Everest\n");
-            break;
-	case 3:
-            printf("Fuji\n");
-            break;
-	case 4:
-            printf("Rainier-2U\n");
-            break;
-	case 5:
-            printf("BlueRidge-2U\n");
-            break;
-	case 6:
-            printf("Rainier-4U\n");
-            break;
-	case 7:
-            printf("BlueRidge-4U\n");
-            break;
-	case 8:
-            printf("Bonnell\n");
-            break;
-	default:
-            printf("Unknown\n");
-            break;
+       printf("     Flags: 0x%02X\n", l_sys_flags);
     }
-    if(l_sys_flags & 0x08)
-        printf("                                   DIMM Adjustment Enabled\n");
     else
-        printf("                                   DIMM Adjustment Disabled\n");
+    {
+       printf("     System Type and Flags byte: 0x%02X\n", l_sys_flags);
+       l_system_type = (l_sys_flags & 0xF0) >> 4;
+       printf("                                 System Type (%d) ", l_system_type);
+       switch(l_system_type)
+       {
+           case 0:
+               printf("Denali\n");
+               break;
+           case 1:
+               printf("McKinley\n");
+               break;
+           case 2:
+               printf("Everest\n");
+               break;
+           case 3:
+               printf("Fuji\n");
+               break;
+           case 4:
+               printf("Rainier-2U\n");
+               break;
+           case 5:
+               printf("BlueRidge-2U\n");
+               break;
+           case 6:
+               printf("Rainier-4U\n");
+               break;
+           case 7:
+               printf("BlueRidge-4U\n");
+               break;
+           case 8:
+               printf("Bonnell\n");
+               break;
+           default:
+               printf("Unknown\n");
+               break;
+       } // switch system type
+       if(l_sys_flags & 0x08)
+           printf("                                   DIMM Adjustment Enabled\n");
+       else
+           printf("                                   DIMM Adjustment Disabled\n");
 
-    if(l_sys_flags & 0x04)
-        printf("                                   Expanded Frequency Encoding\n");
+       if(l_sys_flags & 0x04)
+           printf("                                   Expanded Frequency Encoding\n");
 
-    if(l_sys_flags & 0x02)
-        printf("                                   Efficiency Mode Idle Chip Alg Ceff based\n");
-    else
-        printf("                                   Efficiency Mode Idle Chip Alg Util based\n");
+       if(l_sys_flags & 0x02)
+           printf("                                   Efficiency Mode Idle Chip Alg Ceff based\n");
+       else
+           printf("                                   Efficiency Mode Idle Chip Alg Util based\n");
 
-    if(l_sys_flags & 0x01)
-        printf("                                   OCS Enabled\n");
-    else
-        printf("                                   OCS Disabled\n");
-
+       if(l_sys_flags & 0x01)
+           printf("                                   OCS Enabled\n");
+       else
+           printf("                                   OCS Disabled\n");
+    } // else wof version >= 2
     l_num_bytes += 1;
     printf("     Core Count: %d\n", fgetc(wof_file));
     l_num_bytes += 1;
@@ -187,11 +195,11 @@ int main(int argc, char** argv)
     l_num_bytes += 2;
     printf("     Vratio Size (number indicies): %d\n", get_uint16(wof_file));
     l_num_bytes += 2;
-    printf("     IO Start: %d(0.01%%)\n", get_uint16(wof_file));
+    printf("     IO Power Start: %dW\n", get_uint16(wof_file));
     l_num_bytes += 2;
-    printf("     IO Step: %d(0.01%%)\n", get_uint16(wof_file));
+    printf("     IO Power Step: %dW\n", get_uint16(wof_file));
     l_num_bytes += 2;
-    printf("     IO Size (number indicies): %d\n", get_uint16(wof_file));
+    printf("     IO Power Size (number indicies): %d\n", get_uint16(wof_file));
     l_num_bytes += 2;
     printf("     Ambient Start: %d\n", get_uint16(wof_file));
     l_num_bytes += 2;
@@ -230,28 +238,43 @@ int main(int argc, char** argv)
     printf("     Override Power: %dW\n", get_uint16(wof_file));
     l_num_bytes += 2;
     printf("     Table Version: ");
-    for(i = 0; i < 8; i++)
-        printf("%c", fgetc(wof_file));
-    printf("\n");
-    l_num_bytes += 8;
-    printf("     Cur Scale Percent: ");
-    for(i = 0; i < 8; i++)
-        printf("%d ", fgetc(wof_file));
-    printf("\n");
-    l_num_bytes += 8;
-    printf("     Package Name: ");
-    for(i = 0; i < 8; i++)
-        printf("%c", fgetc(wof_file));
-    printf("\n");
-    l_num_bytes += 8;
-    printf("     Eff mode Idle Chip Entry Time: %d\n", get_uint16(wof_file));
-    l_num_bytes += 2;
-    printf("     Eff mode Idle Chip Exit Time: %d\n", get_uint16(wof_file));
-    l_num_bytes += 2;
-    printf("     Eff mode Idle Chip Entry Threshold: %d\n", get_uint16(wof_file));
-    l_num_bytes += 2;
-    printf("     Eff mode Idle Chip Exit Threshold: %d\n", get_uint16(wof_file));
-    l_num_bytes += 2;
+    if(l_wof_table_version < 2)
+    {
+       for(i = 0; i < 16; i++)
+           printf("%c", fgetc(wof_file));
+       printf("\n");
+       l_num_bytes += 16;
+       printf("     Package Name: ");
+       for(i = 0; i < 16; i++)
+           printf("%c", fgetc(wof_file));
+       printf("\n");
+       l_num_bytes += 16;
+    }
+    else
+    {
+       for(i = 0; i < 8; i++)
+           printf("%c", fgetc(wof_file));
+       printf("\n");
+       l_num_bytes += 8;
+       printf("     Cur Scale Percent: ");
+       for(i = 0; i < 8; i++)
+           printf("%d ", fgetc(wof_file));
+       printf("\n");
+       l_num_bytes += 8;
+       printf("     Package Name: ");
+       for(i = 0; i < 8; i++)
+           printf("%c", fgetc(wof_file));
+       printf("\n");
+       l_num_bytes += 8;
+       printf("     Eff mode Idle Chip Entry Time: %d\n", get_uint16(wof_file));
+       l_num_bytes += 2;
+       printf("     Eff mode Idle Chip Exit Time: %d\n", get_uint16(wof_file));
+       l_num_bytes += 2;
+       printf("     Eff mode Idle Chip Entry Threshold: %d(0.01%%)\n", get_uint16(wof_file));
+       l_num_bytes += 2;
+       printf("     Eff mode Idle Chip Exit Threshold: %d(0.01%%)\n", get_uint16(wof_file));
+       l_num_bytes += 2;
+    } // else wof version >= 2
 
     printf("     Sort Power Save Freq: %dMHz\n", get_uint16(wof_file));
     l_num_bytes += 2;
@@ -305,13 +328,17 @@ int main(int argc, char** argv)
     printf("Last ambient condition in WOF tables: %d\n", get_uint32(wof_file));
     for(i = 0; i < MAX_NUM_OCMBS; i++)
     {
-        printf("OCMB %d Utilization to Power Interpolation points:\n", i);
+        printf("OCMB %d Utilization to pre-heat Power Interpolation points:\n", i);
         for(j = 0; j < MAX_NUM_MEM_INT_PTS; j++)
 	{
             l_util = get_uint32(wof_file);
             l_power = get_uint32(wof_file);
             printf("     Utilization %dc%% Power %dcW\n", l_util, l_power);
 	}
+    }
+    for(i = 0; i < MAX_NUM_OCMBS; i++)
+    {
+        printf("OCMB %d Utilization to pre-heat power slope x10000: %d\n", i, get_uint32(wof_file));
     }
 
     // Close the file

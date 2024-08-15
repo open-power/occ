@@ -207,6 +207,9 @@ typedef struct
   // Utilization to power interpolation points for WOF memory credit
   uint8_t              num_interp_pts;
   amec_membuf_int_pt_t util_pwr_pt[MAX_NUM_MEM_INT_PTS];
+  // slope x 10000 calculated from util_pwr points
+  int64_t              util_pre_heat_power_m10000x;
+  int64_t              util_full_power_m10000x;
 
   // OCMB read timing, used for utilization calculation, DDR5 doesn't have frame count
   uint64_t start_time_prev; // time previous read was started to determine time between reads

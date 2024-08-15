@@ -1958,6 +1958,29 @@ int32_t interpolate_linear( int32_t i_X,
 }
 
 /**
+ * extrapolate_linear
+ *
+ * Description: Helper function that takes in the necessary input for
+ *              a linear extrapolation and returns the result of the
+ *              calculation
+ *
+ *              Y = (m*10000*(X-x1)/10000 + y1
+ *
+ * Return: The result Y of the formula above
+ */
+int64_t extrapolate_linear( int64_t i_X,
+                            int64_t i_x1,
+                            int64_t i_y1,
+                            int64_t i_m_10000x)
+{
+    int64_t l_temp = i_X - i_x1;
+    l_temp *= i_m_10000x;
+    l_temp = l_temp / (int64_t)10000;
+    return l_temp + i_y1;
+}
+
+
+/**
  * get_poundV_points
  *
  * Description: Helper function that takes in a frequency (MHz) and returns the indicies
@@ -2113,29 +2136,24 @@ void read_sensor_data( void )
  */
 void calc_wof_dimm_adjustment(uint8_t i_ambient)
 {
-    uint8_t  l_index1 = 0;
-    uint8_t  l_index2 = 0;
     uint8_t  l_num_interp_pts = 0;
     uint8_t  l_new_ambient = 0;
     int8_t   l_signed = 1;
     int8_t   l_ambient_adj_for_dimm = 0;
     uint16_t l_ocmb_util = 0;
-    uint16_t l_util1 = 0;
-    uint16_t l_util2 = 0;
     uint32_t l_ocmb_total_pwr_cW = 0;
-    uint32_t l_ocmb_pwr_cW = 0;
-    uint32_t l_pwr1_cW = 0;
-    uint32_t l_pwr2_cW = 0;
+    int64_t  l_ocmb_pwr_cW = 0;
     uint32_t l_processed_ocmbs = 0;
     uint32_t l_power_delta = 0;
     uint64_t l_temp64 = 0;
     uint64_t l_adjustment = 0;
-    int l_ocmb_num, i;
+    int      l_ocmb_num;
     errlHndl_t l_errl = NULL;
     static bool L_traced_over_max = FALSE;
     static bool L_bounds_error_logged = FALSE;
     static uint8_t L_trace_over_max_count = 2;
     static uint8_t L_trace_count = 2;
+    static uint8_t L_trace_negative_power = 5;
 
     // verify present OCMBs from WOF pwr data and memory config match
     if(g_wof->ocmbs_present != G_present_membufs)
@@ -2155,57 +2173,33 @@ void calc_wof_dimm_adjustment(uint8_t i_ambient)
               // Save OCMB util used
               g_wof->memutil[l_ocmb_num] = l_ocmb_util;
 
-              // find the interpolation points for l_ocmb_util
-              l_index1 = 0;
-              l_index2 = 0;
               l_num_interp_pts = g_amec->proc[0].memctl[l_ocmb_num].membuf.num_interp_pts;
-              if(l_num_interp_pts == 0)
+              if(l_num_interp_pts < 2)
               {
-                 // no interpolation points, disable memory power credit
-                 INTR_TRAC_ERR("calc_wof_dimm_adjustment: OCMB[%d] has no interpolation points",
-                                l_ocmb_num);
+                 // needed at least 2 interpolation points to calculate a slope, disable memory power credit
+                 INTR_TRAC_ERR("calc_wof_dimm_adjustment: OCMB[%d] has %d interpolation points and needs at least 2",
+                                l_ocmb_num, l_num_interp_pts);
                  g_wof->mem_thermal_credit_constant = 0;
                  break;
               }
-              else if(l_ocmb_util >= g_amec->proc[0].memctl[l_ocmb_num].membuf.util_pwr_pt[l_num_interp_pts-1].util_cPercent)
-              {
-                 // set to last index
-                 l_index1 = l_num_interp_pts - 1;
-                 l_index2 = l_num_interp_pts - 1;
-              }
-              else
-              {
-                 for(i = 0; i < l_num_interp_pts; i++)
-                 {
-                     if(l_ocmb_util <= g_amec->proc[0].memctl[l_ocmb_num].membuf.util_pwr_pt[i].util_cPercent)
-                     {
-                        l_index1 = i;
-                        l_index2 = i;
-                        // set point 1 to be the previous point, leave equal to 2nd point
-                        // if util was found to be below first point or equal to point
-                        if( (i != 0) &&
-                            (l_ocmb_util != g_amec->proc[0].memctl[l_ocmb_num].membuf.util_pwr_pt[i].util_cPercent) )
-                        {
-                            l_index1 = i-1;
-                        }
-                        break;
-                     }
-                 }
-              }
 
-              // interpolate power for l_ocmb_util
-              l_util1 = g_amec->proc[0].memctl[l_ocmb_num].membuf.util_pwr_pt[l_index1].util_cPercent;
-              l_util2 = g_amec->proc[0].memctl[l_ocmb_num].membuf.util_pwr_pt[l_index2].util_cPercent;
-              l_pwr1_cW = g_amec->proc[0].memctl[l_ocmb_num].membuf.util_pwr_pt[l_index1].pre_heat_power_cW;
-              l_pwr2_cW = g_amec->proc[0].memctl[l_ocmb_num].membuf.util_pwr_pt[l_index2].pre_heat_power_cW;
-              l_ocmb_pwr_cW = interpolate_linear(l_ocmb_util,
-                                                 l_util1,
-                                                 l_util2,
-                                                 l_pwr1_cW,
-                                                 l_pwr2_cW,
-                                                 TRUE);  // round up
-              g_wof->mem_curr_preheat_pwr[l_ocmb_num] = l_ocmb_pwr_cW;
-              l_ocmb_total_pwr_cW += l_ocmb_pwr_cW;
+              // extrapolate power for l_ocmb_util
+              l_ocmb_pwr_cW = extrapolate_linear((int64_t)l_ocmb_util,
+                                                 (int64_t)g_amec->proc[0].memctl[l_ocmb_num].membuf.util_pwr_pt[1].util_cPercent,
+                                                 (int64_t)g_amec->proc[0].memctl[l_ocmb_num].membuf.util_pwr_pt[1].pre_heat_power_cW,
+                                                 g_amec->proc[0].memctl[l_ocmb_num].membuf.util_pre_heat_power_m10000x);
+              if(l_ocmb_pwr_cW < 0) // don't allow negative power
+              {
+                 if(L_trace_negative_power)
+                 {
+                    L_trace_negative_power--;
+                    INTR_TRAC_ERR("calc_wof_dimm_adjustment: OCMB[%d] negative power[%d] for util[%d]",
+                                   l_ocmb_num, (int16_t)l_ocmb_pwr_cW, l_ocmb_util);
+                 }
+                 l_ocmb_pwr_cW = 0;
+              }
+              g_wof->mem_curr_preheat_pwr[l_ocmb_num] = (uint16_t)l_ocmb_pwr_cW;
+              l_ocmb_total_pwr_cW += (uint16_t)l_ocmb_pwr_cW;
               l_processed_ocmbs |= (MEMBUF0_PRESENT_MASK >> l_ocmb_num);
            } // if OCMB present
        }  // for each OCMB
