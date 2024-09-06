@@ -569,22 +569,22 @@ enum e_gsid
     MEMUTILM14,
     MEMUTILM15,
 
-    MEM_RSV0,    // Reserved memory sensor
-    MEM_RSV1,
-    MEM_RSV2,
-    MEM_RSV3,
-    MEM_RSV4,
-    MEM_RSV5,
-    MEM_RSV6,
-    MEM_RSV7,
-    MEM_RSV8,
-    MEM_RSV9,
-    MEM_RSV10,
-    MEM_RSV11,
-    MEM_RSV12,
-    MEM_RSV13,
-    MEM_RSV14,
-    MEM_RSV15,
+    MEMPWRM0,    // memory power caclulated from memory utilization
+    MEMPWRM1,
+    MEMPWRM2,
+    MEMPWRM3,
+    MEMPWRM4,
+    MEMPWRM5,
+    MEMPWRM6,
+    MEMPWRM7,
+    MEMPWRM8,
+    MEMPWRM9,
+    MEMPWRM10,
+    MEMPWRM11,
+    MEMPWRM12,
+    MEMPWRM13,
+    MEMPWRM14,
+    MEMPWRM15,
 
     TEMPMEMBUF0,    // Individual Memory Buffer temperatures
     TEMPMEMBUF1,
@@ -627,7 +627,7 @@ enum e_gsid
     // ------------------------------------------------------
     // WOF Sensors
     // ------------------------------------------------------
-    RESERVED_WOF,
+    MMA_ON_AVG,  // from XGPE
     CEFFVDDRATIO,
     CEFFVCSRATIO,
     VRATIO_VDD,

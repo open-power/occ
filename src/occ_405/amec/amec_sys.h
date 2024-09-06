@@ -226,8 +226,7 @@ typedef struct
   sensor_t mrd;
   sensor_t mwr;
   sensor_t memutil;
-  sensor_t mem_reserved;  // reserved for a new memory sensor
-
+  sensor_t mempwr;        // power calculated from memutil
 } amec_memctl_t;
 
 typedef struct
@@ -458,7 +457,7 @@ typedef struct
   sensor_t ips4ms;
   vectorSensor_t ips4ms_vector;
   sensor_t pwrproc;
-  sensor_t pwr250usmem;
+  sensor_t mempwrtotal;
   sensor_t tempprocavg;
   vectorSensor_t temp4ms_vector;
   sensor_t temprtavg;

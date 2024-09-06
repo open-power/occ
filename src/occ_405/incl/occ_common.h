@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2024                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -314,6 +314,14 @@ typedef struct __attribute__ ((packed))
     uint8_t error_id;
     uint8_t error_count;
 } error_history_count_t;
+
+// struct to hold MMA reading needed by dcom and chom
+typedef struct __attribute__ ((packed))
+{
+    uint8_t  reserved;
+    uint8_t  update_tag;
+    uint16_t reading;
+} mma_reading_t;
 
 #endif //_OCC_COMMON_H
 

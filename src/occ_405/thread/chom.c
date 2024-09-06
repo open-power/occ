@@ -60,7 +60,7 @@ STATIC_ASSERT( sizeof(ChomLogData_t) > CHOM_LOG_DATA_MAX );
 
 // Chom Sensors Table
 //   Some of the chom sensors need multiple mini-sensor to calculate
-//   the max, summation of temperature or bandwidth
+//   the max, summation of temperature, memory utilization or MMA avg
 //   mark those mini-sensor "NULL" and will be updated
 //   from "chom_update_sensors()"
 
@@ -162,7 +162,7 @@ const uint16_t * g_chom_sensor_table[CHOM_NUM_OF_SENSORS] =
     &G_dcom_slv_outbox_rx[7].tempvdd,
     // Instructions per second sensor
     NULL,
-    // Memory bandwidth for process memory controller
+    // Memory utilization per OCMB
     // P0M0 ~ P0M15
     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
     // P1M0 ~ P1M15
@@ -246,6 +246,8 @@ const uint16_t * g_chom_sensor_table[CHOM_NUM_OF_SENSORS] =
     &G_dcom_slv_outbox_rx[5].pwrvcs,
     &G_dcom_slv_outbox_rx[6].pwrvcs,
     &G_dcom_slv_outbox_rx[7].pwrvcs,
+    // MMA on average (per proc)
+    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
 };
 
 
@@ -301,21 +303,27 @@ void chom_data_reset()
 void chom_update_sensors()
 {
     uint32_t l_mips = 0;
-    uint16_t l_mem_rw = 0;
     uint16_t l_sample = 0;
     uint32_t l_dirty_accum = 0;
+    uint16_t l_mma_idx = 0;
+    uint8_t  l_new_last_mma_tag = 0;
 
+    static uint8_t  L_last_mma_sample_tag[CHOM_MAX_OCCS] = {0};
     static uint32_t L_prev_ocsDirtyType0[CHOM_MAX_OCCS] = {0};
     static uint32_t L_prev_ocsDirtyType1[CHOM_MAX_OCCS] = {0};
 
-    static uint32_t L_memBWNumSamples[NUM_CHOM_MODES][MAX_NUM_MEMORY_SENSORS] = {{0}};
+    static uint32_t L_memUtilNumSamples[NUM_CHOM_MODES][MAX_NUM_MEMORY_SENSORS] = {{0}};
+    static uint32_t L_mmaNumSamples[NUM_CHOM_MODES][CHOM_MAX_OCCS] = {{0}};
 
-    // Number of samples included in each MC mem BW sensor. Use FMAX as default
-    static uint32_t * L_curMemBWNumSamplePtr = L_memBWNumSamples[CHOM_MODE_FMAX];
+    // Number of samples included in each MC mem Util sensor. Use FMAX as default
+    static uint32_t * L_curMemUtilNumSamplePtr = L_memUtilNumSamples[CHOM_MODE_FMAX];
+    // Number of samples included in each OCC MMA on sensor. Use FMAX as default
+    static uint32_t * L_curMmaNumSamplePtr = L_mmaNumSamples[CHOM_MODE_FMAX];
 
     if(TRUE == g_chom_reset)
     {
-        memset(L_memBWNumSamples, 0, sizeof(L_memBWNumSamples));
+        memset(L_memUtilNumSamples, 0, sizeof(L_memUtilNumSamples));
+        memset(L_mmaNumSamples, 0, sizeof(L_mmaNumSamples));
         g_chom_reset = FALSE;
     }
 
@@ -344,49 +352,58 @@ void chom_update_sensors()
         {
             case OCC_MODE_DISABLED:
                 g_chom_pwr_modes[CHOM_MODE_DISABLED] = 1;
-                L_curMemBWNumSamplePtr = L_memBWNumSamples[CHOM_MODE_DISABLED];
+                L_curMemUtilNumSamplePtr = L_memUtilNumSamples[CHOM_MODE_DISABLED];
+                L_curMmaNumSamplePtr = L_mmaNumSamples[CHOM_MODE_DISABLED];
                 break;
 
             case OCC_MODE_PWRSAVE:
                 g_chom_pwr_modes[CHOM_MODE_SPS] = 1;
-                L_curMemBWNumSamplePtr = L_memBWNumSamples[CHOM_MODE_SPS];
+                L_curMemUtilNumSamplePtr = L_memUtilNumSamples[CHOM_MODE_SPS];
+                L_curMmaNumSamplePtr = L_mmaNumSamples[CHOM_MODE_SPS];
                 break;
 
             case OCC_MODE_STATIC_FREQ_POINT:
             case OCC_MODE_NON_DETERMINISTIC:
                 // use SFP for all lab only modes
                 g_chom_pwr_modes[CHOM_MODE_SFP] = 1;
-                L_curMemBWNumSamplePtr = L_memBWNumSamples[CHOM_MODE_SFP];
+                L_curMemUtilNumSamplePtr = L_memUtilNumSamples[CHOM_MODE_SFP];
+                L_curMmaNumSamplePtr = L_mmaNumSamples[CHOM_MODE_SFP];
                 break;
 
             case OCC_MODE_FFO:
                 g_chom_pwr_modes[CHOM_MODE_FFO] = 1;
-                L_curMemBWNumSamplePtr = L_memBWNumSamples[CHOM_MODE_FFO];
+                L_curMemUtilNumSamplePtr = L_memUtilNumSamples[CHOM_MODE_FFO];
+                L_curMmaNumSamplePtr = L_mmaNumSamples[CHOM_MODE_FFO];
                 break;
 
             case OCC_MODE_BALANCED:
                 g_chom_pwr_modes[CHOM_MODE_BALANCED] = 1;
-                L_curMemBWNumSamplePtr = L_memBWNumSamples[CHOM_MODE_BALANCED];
+                L_curMemUtilNumSamplePtr = L_memUtilNumSamples[CHOM_MODE_BALANCED];
+                L_curMmaNumSamplePtr = L_mmaNumSamples[CHOM_MODE_BALANCED];
                 break;
 
             case OCC_MODE_MAX_PERF:
                 g_chom_pwr_modes[CHOM_MODE_MAX_PERF] = 1;
-                L_curMemBWNumSamplePtr = L_memBWNumSamples[CHOM_MODE_MAX_PERF];
+                L_curMemUtilNumSamplePtr = L_memUtilNumSamples[CHOM_MODE_MAX_PERF];
+                L_curMmaNumSamplePtr = L_mmaNumSamples[CHOM_MODE_MAX_PERF];
                 break;
 
             case OCC_MODE_FMAX:
                 g_chom_pwr_modes[CHOM_MODE_FMAX] = 1;
-                L_curMemBWNumSamplePtr = L_memBWNumSamples[CHOM_MODE_FMAX];
+                L_curMemUtilNumSamplePtr = L_memUtilNumSamples[CHOM_MODE_FMAX];
+                L_curMmaNumSamplePtr = L_mmaNumSamples[CHOM_MODE_FMAX];
                 break;
 
             case OCC_MODE_EFFICIENCY_POWER:
                 g_chom_pwr_modes[CHOM_MODE_EFF_PWR] = 1;
-                L_curMemBWNumSamplePtr = L_memBWNumSamples[CHOM_MODE_EFF_PWR];
+                L_curMemUtilNumSamplePtr = L_memUtilNumSamples[CHOM_MODE_EFF_PWR];
+                L_curMmaNumSamplePtr = L_mmaNumSamples[CHOM_MODE_EFF_PWR];
                 break;
 
             case OCC_MODE_EFFICIENCY_PERF:
                 g_chom_pwr_modes[CHOM_MODE_EFF_PERF] = 1;
-                L_curMemBWNumSamplePtr = L_memBWNumSamples[CHOM_MODE_EFF_PERF];
+                L_curMemUtilNumSamplePtr = L_memUtilNumSamples[CHOM_MODE_EFF_PERF];
+                L_curMmaNumSamplePtr = L_mmaNumSamples[CHOM_MODE_EFF_PERF];
                 break;
 
             default:
@@ -394,7 +411,8 @@ void chom_update_sensors()
                 TRAC_INFO("chom_update_sensors: Cannot record chom data for mode 0x%02X",
                           g_chom->sensorData[0].pwrMode.mode);
                 g_chom_pwr_modes[CHOM_MODE_SFP] = 1;
-                L_curMemBWNumSamplePtr = L_memBWNumSamples[CHOM_MODE_SFP];
+                L_curMemUtilNumSamplePtr = L_memUtilNumSamples[CHOM_MODE_SFP];
+                L_curMmaNumSamplePtr = L_mmaNumSamples[CHOM_MODE_SFP];
                 break;
         }
     }
@@ -418,10 +436,8 @@ void chom_update_sensors()
         l_apss_idx++;
     }
 
-
-    // update MIPS
     uint16_t l_mips_count = 0;
-    uint16_t l_mem_idx = CHOMBWP0M0;
+    uint16_t l_mem_idx = CHOMMEMUTILP0M0;
     uint16_t l_mem_num_sample_idx = 0;
 
     // Loop through OCCs updating chom sensors
@@ -434,21 +450,55 @@ void chom_update_sensors()
             l_mips_count++;
         }
 
-        // update memory bandwidth
+        // update MMA on average
+        // this is coming from the XGPE and is being cleared by the 405 for XGPE to calculate new avg
+        // multiple readings will be sent, only add new readings to the call home sensor
+        l_mma_idx = CHOMMMAONAVGP0 + i;
+        l_new_last_mma_tag = L_last_mma_sample_tag[i];
+        for( j = 0; j < DCOM_MAX_MMA_ON_ENTRIES; j++ )
+        {
+           // reading [0] is oldest, 0 update tag indicates no reading
+           if(G_dcom_slv_outbox_rx[i].mma_on_readings[j].update_tag)
+           {
+                // check if this is a new reading, handle update tag roll over
+                if( (G_dcom_slv_outbox_rx[i].mma_on_readings[j].update_tag > L_last_mma_sample_tag[i]) ||
+                    ( (L_last_mma_sample_tag[i] > (0xFF - DCOM_MAX_MMA_ON_ENTRIES) &&
+                      (G_dcom_slv_outbox_rx[i].mma_on_readings[j].update_tag) <= DCOM_MAX_MMA_ON_ENTRIES) ) )
+                {
+                    // add new reading to the sensor
+                    l_new_last_mma_tag = G_dcom_slv_outbox_rx[i].mma_on_readings[j].update_tag;
+                    l_sample = G_dcom_slv_outbox_rx[i].mma_on_readings[j].reading;
+                    g_chom->sensorData[0].sensor[l_mma_idx].sample = l_sample;
+                    // Calculate the averages/min/max for the memory utilization sensors
+                    if (g_chom->sensorData[0].sensor[l_mma_idx].sampleMin > l_sample)
+                    {
+                        g_chom->sensorData[0].sensor[l_mma_idx].sampleMin = l_sample;
+                    }
+                    if (g_chom->sensorData[0].sensor[l_mma_idx].sampleMax < l_sample)
+                    {
+                        g_chom->sensorData[0].sensor[l_mma_idx].sampleMax = l_sample;
+                    }
+                    L_curMmaNumSamplePtr[i]++;
+                    g_chom->sensorData[0].sensor[l_mma_idx].accumulator += l_sample;
+                    g_chom->sensorData[0].sensor[l_mma_idx].average =
+                                     (g_chom->sensorData[0].sensor[l_mma_idx].accumulator /
+                                      L_curMmaNumSamplePtr[i]);
+                } // if new reading
+           } // if non-zero update tag
+        }  // for MMA reading
+        L_last_mma_sample_tag[i] = l_new_last_mma_tag;
+
+        // update memory utilization
         for ( j = 0; j < MAX_NUM_MEM_CONTROLLERS; j++)
         {
-            l_mem_rw = G_dcom_slv_outbox_rx[i].mrd[j] +
-                       G_dcom_slv_outbox_rx[i].mwr[j];
-
-            // If l_mem_rw == 0, do not add to sensor
-            if(l_mem_rw != 0)
+            // Do not add 0 to sensor
+            if(G_dcom_slv_outbox_rx[i].memutil[j] != 0)
             {
-                g_chom->sensorData[0].sensor[l_mem_idx].sample = l_mem_rw;
-                L_curMemBWNumSamplePtr[l_mem_num_sample_idx]++;
+                l_sample = G_dcom_slv_outbox_rx[i].memutil[j];
+                L_curMemUtilNumSamplePtr[l_mem_num_sample_idx]++;
 
-                // Calculate the averages/min/max for the memory bandwidth sensors
-                l_sample = g_chom->sensorData[0].sensor[l_mem_idx].sample;
-
+                g_chom->sensorData[0].sensor[l_mem_idx].sample = l_sample;
+                // Calculate the averages/min/max for the memory utilization sensors
                 if (g_chom->sensorData[0].sensor[l_mem_idx].sampleMin > l_sample)
                 {
                     g_chom->sensorData[0].sensor[l_mem_idx].sampleMin = l_sample;
@@ -461,7 +511,7 @@ void chom_update_sensors()
                 g_chom->sensorData[0].sensor[l_mem_idx].accumulator += l_sample;
                 g_chom->sensorData[0].sensor[l_mem_idx].average =
                                  (g_chom->sensorData[0].sensor[l_mem_idx].accumulator /
-                                  L_curMemBWNumSamplePtr[l_mem_num_sample_idx]);
+                                  L_curMemUtilNumSamplePtr[l_mem_num_sample_idx]);
             }
             l_mem_idx++;
             l_mem_num_sample_idx++;
@@ -477,10 +527,17 @@ void chom_update_sensors()
     // loop through all sensors and update data from mini-sensors
     for (i = 0 ; i<CHOM_NUM_OF_SENSORS ; i++)
     {
-        // Skip memory bandwidth controllers since handled above
-        if( i == CHOMBWP0M0 )
+        // Skip Memory util since handled above
+        if( i == CHOMMEMUTILP0M0 )
         {
             i += (MAX_NUM_MEMORY_SENSORS-1);
+            continue;
+        }
+
+        // Skip MMA ON since handled above
+        if( i == CHOMMMAONAVGP0 )
+        {
+            i += (CHOM_MAX_OCCS-1);
             continue;
         }
 

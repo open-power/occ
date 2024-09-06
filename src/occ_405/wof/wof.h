@@ -489,6 +489,7 @@ typedef struct __attribute__ ((packed, aligned(128)))
 // Structure for sensors used in g_amec for AMESTER for additional debug
 typedef struct __attribute__ ((packed))
 {
+    sensor_t mma_on_avg_sensor;      // MMA on average from XGPE
     sensor_t ceff_ratio_vdd_sensor;  // raw ceff ratio Vdd
     sensor_t ceff_ratio_vcs_sensor;
     sensor_t v_ratio_sensor;

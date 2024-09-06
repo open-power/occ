@@ -103,6 +103,8 @@
 #define SLV_OUTBOX_RSV_SIZE      445
 #define DOORBELL_RSV_SIZE        1
 #define DCOM_MAX_ERRH_ENTRIES    8
+#define DCOM_MAX_MMA_ON_ENTRIES  3
+
 
 #define DCOM_250us_GAP 1
 #define DCOM_4MS_GAP 8
@@ -195,9 +197,9 @@ typedef struct __attribute__ ((packed))
     uint16_t ips4msp0cy[MAX_CORES];                              //   [4]
     uint16_t mcpifd4msp0cy[MAX_CORES];                           //  [68]
     uint16_t mcpifi4msp0cy[MAX_CORES];                           // [132]
-    uint16_t memReserved[MAX_NUM_MEM_CONTROLLERS];               // [196]
+    uint16_t memutil[MAX_NUM_MEM_CONTROLLERS];                   // [196]
     uint16_t pwrproc;                                            // [228]
-    uint16_t pwr250usmemp0;                                      // [230]
+    uint16_t mempwrtotalp0;                                      // [230]
     uint16_t tempmcdimmthrm;                                     // [232]
     uint16_t tempprociothermal;                                  // [234]
     uint16_t tempprocavg;                                        // [236]
@@ -205,8 +207,8 @@ typedef struct __attribute__ ((packed))
     uint16_t utilcy[MAX_CORES];                                  // [240]
     uint16_t tempvdd;                                            // [304]
     uint16_t temppmicthrm;                                       // [306]
-    uint16_t mrd[MAX_NUM_MEM_CONTROLLERS];                       // [308]
-    uint16_t mwr[MAX_NUM_MEM_CONTROLLERS];                       // [340]
+    uint16_t memReserved1[MAX_NUM_MEM_CONTROLLERS];              // [308]
+    uint16_t memReserved2[MAX_NUM_MEM_CONTROLLERS];              // [340]
     uint16_t tempmcextthrm;                                      // [372]
     uint16_t ddsAvg;                                             // [374]
     uint16_t ddsMin;                                             // [376]
@@ -216,7 +218,8 @@ typedef struct __attribute__ ((packed))
     uint16_t ovAvg;                                              // [384]
     uint16_t pwrvdd;                                             // [386]
     uint16_t pwrvcs;                                             // [388]
-    uint16_t reserved[23];                                       // [390]
+    mma_reading_t mma_on_readings[DCOM_MAX_MMA_ON_ENTRIES];      // [390]
+    uint16_t reserved[17];                                       // [402]
     uint16_t todclock[NUM_TOD_SENSORS];                          // [436]
     uint16_t tempmembufthrm;                                     // [442]
     uint16_t tempdimmthrm;                                       // [444]

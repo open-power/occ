@@ -335,7 +335,7 @@ const sensor_ptr_t G_amec_sensor_list[] =
   SENSOR_PTR( FREQA,                &g_amec_sys.proc[0].freqa),
   SENSOR_PTR( IPS,                  &g_amec_sys.proc[0].ips4ms),
   SENSOR_PTR( PWRPROC,              &g_amec_sys.proc[0].pwrproc),
-  SENSOR_PTR( PWRMEM,               &g_amec_sys.proc[0].pwr250usmem),
+  SENSOR_PTR( PWRMEM,               &g_amec_sys.proc[0].mempwrtotal),
   SENSOR_PTR( TEMPPROCAVG,          &g_amec_sys.proc[0].tempprocavg),
   SENSOR_PTR( TEMPPROCTHRM,         &g_amec_sys.proc[0].tempprocthermal),
   SENSOR_PTR( TEMPPROCIOTHRM,       &g_amec_sys.proc[0].tempprociothermal),
@@ -401,7 +401,7 @@ const sensor_ptr_t G_amec_sensor_list[] =
   MEMCONTROL_SENSOR_PTRS(MRDM,          &g_amec_sys.proc[0].memctl, mrd),
   MEMCONTROL_SENSOR_PTRS(MWRM,          &g_amec_sys.proc[0].memctl, mwr),
   MEMCONTROL_SENSOR_PTRS(MEMUTILM,      &g_amec_sys.proc[0].memctl, memutil),
-  MEMCONTROL_SENSOR_PTRS(MEM_RSV,       &g_amec_sys.proc[0].memctl, mem_reserved),
+  MEMCONTROL_SENSOR_PTRS(MEMPWRM,       &g_amec_sys.proc[0].memctl, mempwr),
   MEMCONTROL_SENSOR_PTRS(TEMPMEMBUF,    &g_amec_sys.proc[0].memctl, membuf.tempmembuf),
 
   SENSOR_PTR(MEMOTTHROT,                &g_amec_sys.proc[0].memotthrot),
@@ -425,7 +425,7 @@ const sensor_ptr_t G_amec_sensor_list[] =
   // ------------------------------------------------------
   // WOF Sensors
   // ------------------------------------------------------
-  SENSOR_PTR( RESERVED_WOF,         &g_amec_sys.wof_sensors.ceff_ratio_vdd_sensor),
+  SENSOR_PTR( MMA_ON_AVG,           &g_amec_sys.wof_sensors.mma_on_avg_sensor),
   SENSOR_PTR( CEFFVDDRATIO,         &g_amec_sys.wof_sensors.ceff_ratio_vdd_sensor),
   SENSOR_PTR( CEFFVCSRATIO,         &g_amec_sys.wof_sensors.ceff_ratio_vcs_sensor),
   SENSOR_PTR( VRATIO_VDD,           &g_amec_sys.wof_sensors.v_ratio_sensor),
@@ -509,7 +509,7 @@ const minisensor_ptr_t G_amec_mini_sensor_list[] INIT_SECTION =
   MINI_SENSOR_PTR(          FREQA,  &G_dcom_slv_outbox_tx.freqa),
   MINI_SENSOR_PTR(            IPS,  &G_dcom_slv_outbox_tx.ips4msp0),
   MINI_SENSOR_PTR(        PWRPROC,  &G_dcom_slv_outbox_tx.pwrproc),
-  MINI_SENSOR_PTR(         PWRMEM,  &G_dcom_slv_outbox_tx.pwr250usmemp0),
+  MINI_SENSOR_PTR(         PWRMEM,  &G_dcom_slv_outbox_tx.mempwrtotalp0),
   MINI_SENSOR_PTR(    TEMPPROCAVG,  &G_dcom_slv_outbox_tx.tempprocavg),
   MINI_SENSOR_PTR(   TEMPPROCTHRM,  &G_dcom_slv_outbox_tx.tempprocthermal),
   MINI_SENSOR_PTR(   TEMPPROCIOTHRM,&G_dcom_slv_outbox_tx.tempprociothermal),
@@ -572,10 +572,10 @@ const minisensor_ptr_t G_amec_mini_sensor_list[] INIT_SECTION =
   // Memory Sensors
   // ------------------------------------------------------
 
-  MEMCONTROL_MINI_SENSOR_PTRS(MRDM, &G_dcom_slv_outbox_tx.mrd),
-  MEMCONTROL_MINI_SENSOR_PTRS(MWRM, &G_dcom_slv_outbox_tx.mwr),
-  MEMCONTROL_MINI_SENSOR_PTRS_NULL(MEMUTILM),
-  MEMCONTROL_MINI_SENSOR_PTRS_NULL(MEM_RSV),
+  MEMCONTROL_MINI_SENSOR_PTRS_NULL(MRDM),
+  MEMCONTROL_MINI_SENSOR_PTRS_NULL(MWRM),
+  MEMCONTROL_MINI_SENSOR_PTRS(MEMUTILM, &G_dcom_slv_outbox_tx.memutil),
+  MEMCONTROL_MINI_SENSOR_PTRS_NULL(MEMPWRM),
   MEMCONTROL_MINI_SENSOR_PTRS_NULL(TEMPMEMBUF),
 
   MINI_SENSOR_PTR( MEMOTTHROT,   NULL),
@@ -599,7 +599,7 @@ const minisensor_ptr_t G_amec_mini_sensor_list[] INIT_SECTION =
   // ------------------------------------------------------
   // WOF Sensors
   // ------------------------------------------------------
-  MINI_SENSOR_PTR( RESERVED_WOF,  NULL),
+  MINI_SENSOR_PTR( MMA_ON_AVG,  NULL),
   MINI_SENSOR_PTR( CEFFVDDRATIO,   &G_dcom_slv_outbox_tx.ceffRatioVdd),
   MINI_SENSOR_PTR( CEFFVCSRATIO,   NULL),
   MINI_SENSOR_PTR( VRATIO_VDD,     NULL),
