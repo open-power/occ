@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2019,2020                        */
+/* Contributors Listed Below - COPYRIGHT 2019,2024                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -30,6 +30,7 @@
 // *HWP Team            : PM
 // *HWP Level           : 1
 // *HWP Consumed by     : PGPE:OCC
+
 
 #ifndef __PSTATES_PGPE_OCC_API_H__
 #define __PSTATES_PGPE_OCC_API_H__
@@ -69,6 +70,7 @@ enum MESSAGE_ID_IPI2HI
 #define PGPE_RC_REQ_WHILE_PENDING_ACK           0x21
 #define PGPE_RC_NULL_VRT_POINTER                0x22
 #define PGPE_RC_INVALID_PMCR_OWNER              0x23
+#define PGPE_WOF_RC_INVALID_FIXED_VRATIO_INDEX  0x24
 
 //
 // PMCR Owner
@@ -118,11 +120,51 @@ typedef struct ipcmsg_set_pmcr
 } ipcmsg_set_pmcr_t;
 
 
+typedef struct
+{
+    union
+    {
+        uint64_t value;
+        struct
+        {
+            uint32_t high_order;
+            uint32_t low_order;
+        } words;
+        struct
+        {
+            uint64_t magic          : 16;
+            uint64_t version        :  8;
+            uint64_t reserved1      :  8;
+            uint64_t length         : 16;
+            uint64_t reserved2      :  8;
+            uint64_t call_home_read :  8;
+        } fields;
+    } dw0;
+    union
+    {
+        uint64_t value;
+        struct
+        {
+            uint32_t high_order;
+            uint32_t low_order;
+        } words;
+        struct
+        {
+            uint64_t mma_on_avg_pct : 16;
+            uint64_t reserved1      : 16;
+            uint64_t reserved2      : 16;
+            uint64_t reserved3      : 16;
+        } fields;
+    } dw1;
+} call_home_t;
+
 //
 // WOF Control Actions
 //
 #define PGPE_ACTION_WOF_ON         1
 #define PGPE_ACTION_WOF_OFF        2
+#define PGPE_OCC_VRATIO_MODE_VARIABLE   0
+#define PGPE_OCC_VRATIO_MODE_FIXED      1
 
 typedef struct ipcmsg_wof_control
 {
@@ -136,7 +178,7 @@ typedef struct ipcmsg_wof_vrt
 {
     ipcmsg_base_t   msg_cb;
     uint8_t         vratio_mode;         // 0 = variable; 1 = fixed
-    uint8_t         fixed_vratio_index;  // if vratio_mode = fixed, index to suse
+    uint8_t         fixed_vratio_index;  // if vratio_mode = fixed, index to use
     uint8_t         pad[1];
     VRT_t*          idd_vrt_ptr; // VDD Voltage Ratio Table
     uint32_t        vdd_ceff_ratio; // Used for VDD
@@ -195,8 +237,8 @@ typedef struct
             uint64_t average_frequency_pstate   : 8;
             uint64_t wof_clip_pstate            : 8;
             uint64_t average_throttle_idx       : 8;
-            uint64_t vratio_inst                : 16;
-            uint64_t vratio_avg                 : 16;
+            uint64_t vratio_vcs_avg             : 16;
+            uint64_t vratio_vdd_avg             : 16;
         } fields;
     } dw0;
     union
@@ -209,10 +251,10 @@ typedef struct
         } words;
         struct
         {
-            uint64_t idd_avg_ma                 : 16;
-            uint64_t ics_avg_ma                 : 16;
-            uint64_t idn_avg_ma                 : 16;
-            uint64_t iio_avg_ma                 : 16;
+            uint64_t idd_avg_10ma               : 16;
+            uint64_t ics_avg_10ma               : 16;
+            uint64_t idn_avg_10ma               : 16;
+            uint64_t rdp_limit_10ma             : 16;
 
         } fields;
     } dw1;
@@ -229,7 +271,8 @@ typedef struct
             uint64_t vdd_avg_mv                 : 16;
             uint64_t vcs_avg_mv                 : 16;
             uint64_t vdn_avg_mv                 : 16;
-            uint64_t vio_avg_mv                 : 16;
+            uint64_t dirty_pstate_inst          :  8; // instantaneous Pstate when Dirty Act occurred
+            uint64_t reserved                   :  8;
         } fields;
     } dw2;
     union
@@ -243,9 +286,41 @@ typedef struct
         struct
         {
             uint64_t ocs_avg_0p01pct            : 16;
-            uint64_t reserved                   : 48;
+            uint64_t vratio_vcs_roundup_avg     : 16;
+            uint64_t vratio_vdd_roundup_avg     : 16;
+            uint64_t uv_avg_0p1pct              :  8;
+            uint64_t ov_avg_0p1pct              :  8;
         } fields;
     } dw3;
+    union
+    {
+        uint64_t value;
+        struct
+        {
+            uint32_t high_order;
+            uint32_t low_order;
+        } words;
+        struct
+        {
+            uint64_t max_vdd_current_100ma      : 16;
+            uint64_t max_vcs_current_100ma      : 16;
+            uint64_t max_idd_ocs_avg_10ma       : 16;
+            uint64_t dirty_current_10ma         : 16;
+        } fields;
+    } dw4;
+    union
+    {
+        uint64_t value;
+        struct
+        {
+            uint32_t high_order;
+            uint32_t low_order;
+        } words;
+        struct
+        {
+            uint64_t dirty_ttsr;
+        } fields;
+    } dw5;
 } pgpe_wof_values_t;
 
 typedef union
@@ -258,9 +333,11 @@ typedef union
     } words;
     struct
     {
-        uint64_t reserved0                      : 24;
+        uint64_t io_power_proxy_w               : 16;
+        uint64_t reserved0                      : 8;
         uint64_t io_index                       : 8;
-        uint64_t reserved1                      : 32;
+        uint64_t compute_pwr_10mw               : 16;
+        uint64_t reserved1                      : 16;
     } fields;
 } xgpe_wof_values_t;
 
@@ -275,18 +352,25 @@ typedef union
     struct
     {
         uint64_t sibling_base_frequency         : 16;
-        uint64_t reserved0                      : 24;
+        uint64_t reserved0                      : 8;
         uint64_t sibling_pstate                 : 8;
         uint64_t reserved1                      : 32;
     } fields;
 } occ_wof_values_t;
 
+enum ACT_CNT_IDX
+{
+    ACT_CNT_IDX_CORECLK_OFF    = 0,
+    ACT_CNT_IDX_CORE_VMIN      = 1,
+    ACT_CNT_IDX_MMA_OFF        = 2,
+    ACT_CNT_IDX_CORECACHE_OFF  = 3,
+    ACT_CNT_IDX_MAX            = 4,
+};
+
 typedef union
 {
-    uint32_t    core_off[32];
-    uint32_t    core_vmin[32];
-    uint32_t    core_mma_off[32];
-    uint32_t    l3_off[32];
+    uint8_t act_val[32][ACT_CNT_IDX_MAX];
+    uint32_t act_val_core[32];
 } iddq_activity_t;
 
 
@@ -331,7 +415,8 @@ typedef struct
     /// Pstate Table offset from start of OCC Shared SRAM
     uint16_t            pstate_table_offset;
 
-    uint16_t            reserved;
+    // Data written by PGPE/XGPE to be captured in call home sensors
+    uint16_t            call_home_offset;
 
     ///IDDQ Activity sample depth(number of samples accumulated)
     uint16_t            iddq_activity_sample_depth;
@@ -353,6 +438,9 @@ typedef struct
 
     /// Pstate Table for OCC consumption
     OCCPstateTable_t    pstate_table;
+
+    //Call home data of MMA
+    call_home_t        call_home;
 
 } HcodeOCCSharedData_t;
 

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2016,2021                        */
+/* Contributors Listed Below - COPYRIGHT 2016,2024                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -70,6 +70,7 @@ enum MESSAGE_ID_IPI2HI
 #define PGPE_RC_REQ_WHILE_PENDING_ACK           0x21
 #define PGPE_RC_NULL_VRT_POINTER                0x22
 #define PGPE_RC_INVALID_PMCR_OWNER              0x23
+#define PGPE_WOF_RC_INVALID_FIXED_VRATIO_INDEX  0x24
 
 //
 // PMCR Owner
@@ -119,11 +120,51 @@ typedef struct ipcmsg_set_pmcr
 } ipcmsg_set_pmcr_t;
 
 
+typedef struct
+{
+    union
+    {
+        uint64_t value;
+        struct
+        {
+            uint32_t high_order;
+            uint32_t low_order;
+        } words;
+        struct
+        {
+            uint64_t magic          : 16;
+            uint64_t version        :  8;
+            uint64_t reserved1      :  8;
+            uint64_t length         : 16;
+            uint64_t reserved2      :  8;
+            uint64_t call_home_read :  8;
+        } fields;
+    } dw0;
+    union
+    {
+        uint64_t value;
+        struct
+        {
+            uint32_t high_order;
+            uint32_t low_order;
+        } words;
+        struct
+        {
+            uint64_t mma_on_avg_pct : 16;
+            uint64_t reserved1      : 16;
+            uint64_t reserved2      : 16;
+            uint64_t reserved3      : 16;
+        } fields;
+    } dw1;
+} call_home_t;
+
 //
 // WOF Control Actions
 //
 #define PGPE_ACTION_WOF_ON         1
 #define PGPE_ACTION_WOF_OFF        2
+#define PGPE_OCC_VRATIO_MODE_VARIABLE   0
+#define PGPE_OCC_VRATIO_MODE_FIXED      1
 
 typedef struct ipcmsg_wof_control
 {
@@ -275,6 +316,10 @@ typedef struct
             uint32_t high_order;
             uint32_t low_order;
         } words;
+        struct
+        {
+            uint64_t dirty_ttsr;
+        } fields;
     } dw5;
 } pgpe_wof_values_t;
 
@@ -370,7 +415,8 @@ typedef struct
     /// Pstate Table offset from start of OCC Shared SRAM
     uint16_t            pstate_table_offset;
 
-    uint16_t            reserved;
+    // Data written by PGPE/XGPE to be captured in call home sensors
+    uint16_t            call_home_offset;
 
     ///IDDQ Activity sample depth(number of samples accumulated)
     uint16_t            iddq_activity_sample_depth;
@@ -392,6 +438,9 @@ typedef struct
 
     /// Pstate Table for OCC consumption
     OCCPstateTable_t    pstate_table;
+
+    //Call home data of MMA
+    call_home_t        call_home;
 
 } HcodeOCCSharedData_t;
 

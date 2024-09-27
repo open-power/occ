@@ -77,6 +77,9 @@ extern uint32_t G_present_cores;
 //*************************************************************************/
 // Defines/Enums
 //*************************************************************************/
+// number of 8ms ticks in 1 second
+#define NUM_8MS_TICKS_1S 125
+
 smh_state_t G_amec_slv_state = {AMEC_INITIAL_STATE,
                                 AMEC_INITIAL_STATE,
                                 AMEC_INITIAL_STATE};
@@ -366,6 +369,62 @@ void amec_slv_update_main_mem_sensors(void)
     }
 }
 
+// Function Specification
+//
+// Name: amec_1s_timer
+//
+// Description: Handle tasks needed on a 1s time scale
+//
+// End Function Specification
+void amec_1s_timer(void)
+{
+    call_home_t l_CallHomeValues;
+    uint8_t j = 0;
+    uint16_t l_mma_on_avg = 0;
+    uint32_t l_addr = 0;
+    static uint8_t L_update_tag = 0;
+
+    // Check if the OCC is in a good state
+    if ((CURRENT_STATE() == OCC_STATE_OBSERVATION)    ||
+        (CURRENT_STATE() == OCC_STATE_ACTIVE)         ||
+        (CURRENT_STATE() == OCC_STATE_CHARACTERIZATION))
+    {
+        // Read the call home values from PGPE shared memory
+        if(g_amec->static_wof_data.call_home_sram_addr)
+        {
+             l_CallHomeValues.dw0.value = in64(g_amec->static_wof_data.call_home_sram_addr);
+             l_CallHomeValues.dw1.value = in64(g_amec->static_wof_data.call_home_sram_addr + 8);
+
+             // verify that call home data was updated
+             // hcode will set to 0 when updated, OCC set to non-zero when read
+             if(l_CallHomeValues.dw0.fields.call_home_read == 0)
+             {
+                // Indicate data has been read so new average will be calculated
+                L_update_tag++;
+                if(L_update_tag == 0) // OCC must update with non 0 value
+                    L_update_tag++;
+                l_CallHomeValues.dw0.fields.call_home_read = L_update_tag;
+                l_addr = g_amec->static_wof_data.call_home_sram_addr + 4;
+                out32(l_addr, l_CallHomeValues.dw0.words.low_order);
+
+                // update the MMA on average sensor
+                l_mma_on_avg = (uint16_t)l_CallHomeValues.dw1.fields.mma_on_avg_pct;
+                sensor_update(AMECSENSOR_PTR(MMA_ON_AVG), l_mma_on_avg);
+
+                // update the dcom values to be sent to master for the call home log
+                for( j = 0; j < DCOM_MAX_MMA_ON_ENTRIES-1; j++ )
+                {
+                   // reading [0] is oldest, shift previous readings over
+                   G_dcom_slv_outbox_tx.mma_on_readings[j].update_tag = G_dcom_slv_outbox_tx.mma_on_readings[j+1].update_tag;
+                   G_dcom_slv_outbox_tx.mma_on_readings[j].reading = G_dcom_slv_outbox_tx.mma_on_readings[j+1].reading;
+                }
+                // place new reading at end
+                G_dcom_slv_outbox_tx.mma_on_readings[DCOM_MAX_MMA_ON_ENTRIES-1].update_tag = L_update_tag;
+                G_dcom_slv_outbox_tx.mma_on_readings[DCOM_MAX_MMA_ON_ENTRIES-1].reading = l_mma_on_avg;
+             }
+        }
+    }
+}
 
 // Function Specification
 //
@@ -1344,8 +1403,18 @@ void amec_slv_substate_5_7(void)
 // End Function Specification
 void amec_slv_substate_6_even(void)
 {
+    static uint8_t L_1s_timer = NUM_8MS_TICKS_1S;
+
     AMEC_DBG("\tAMEC Slave State 6 even substate\n");
     amec_update_proc_level_sensors();
+
+    // Check if it is time for 1s time scale updates
+    L_1s_timer--;
+    if(L_1s_timer == 0)
+    {
+        L_1s_timer = NUM_8MS_TICKS_1S;
+        amec_1s_timer();
+    }
 }
 
 // Function Specification

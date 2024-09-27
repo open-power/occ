@@ -1,11 +1,11 @@
 /* IBM_PROLOG_BEGIN_TAG                                                   */
 /* This is an automatically generated prolog.                             */
 /*                                                                        */
-/* $Source: src/occ/amec/amec_slave_smh.h $                               */
+/* $Source: src/occ_405/amec/amec_slave_smh.h $                           */
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2024                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -74,6 +74,8 @@ void amec_slv_check_apss_fail(void);
 void amec_slv_update_main_mem_sensors(void);
 
 void amec_update_proc_core_group(uint8_t);
+
+void amec_1s_timer(void);
 
 // PRE: slave common tasks
 void amec_slv_common_tasks_pre(void);

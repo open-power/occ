@@ -734,6 +734,42 @@ bool read_pgpe_header(void)
                                   hcode_etable.dw0.fields.magic_word);
                 }
 
+                // Initialization for hcode call home data
+                g_amec->static_wof_data.call_home_sram_addr = G_pgpe_header.shared_sram_addr + shared_sram->call_home_offset;
+                // verify magic number and version
+                if(g_amec->static_wof_data.call_home_sram_addr)
+                {
+                    call_home_t l_CallHomeValues;
+                    l_CallHomeValues.dw0.value = in64(g_amec->static_wof_data.call_home_sram_addr);
+                    MAIN_TRAC_IMP("read_pgpe_header: Reading call home from SRAM address[0x%08X]",
+                                   g_amec->static_wof_data.call_home_sram_addr);
+                    // verify  magic number
+                    if(l_CallHomeValues.dw0.fields.magic != CH_MAGIC_NUMBER)
+                    {
+                        MAIN_TRAC_ERR("Hcode call home disabled due to Invalid Call home Magic Number[0x%04X] expected[0x%04X]",
+                                       l_CallHomeValues.dw0.fields.magic, CH_MAGIC_NUMBER);
+                        // set address to 0 so we know this is disabled
+                        g_amec->static_wof_data.call_home_sram_addr = 0;
+                    }
+                    // verify version
+                    else if(l_CallHomeValues.dw0.fields.version != 0)
+                    {
+                        MAIN_TRAC_ERR("Hcode call home disabled due to Invalid Call home Version %d expected 0",
+                                       l_CallHomeValues.dw0.fields.version);
+                        // set address to 0 so we know this is disabled
+                        g_amec->static_wof_data.call_home_sram_addr = 0;
+                    }
+                    else
+                    {
+                        MAIN_TRAC_IMP("read_pgpe_header: Valid Call home Magic Number[0x%04X] and version %d",
+                                       l_CallHomeValues.dw0.fields.magic, l_CallHomeValues.dw0.fields.version);
+                    }
+                }
+                else
+                {
+                    MAIN_TRAC_ERR("read_pgpe_header: Call home SRAM address is 0! call home offset[0x%04X]",
+                                   shared_sram->call_home_offset);
+                }
                 // Initialization for WOF data
                 g_amec->static_wof_data.occ_values_sram_addr = G_pgpe_header.shared_sram_addr + shared_sram->occ_data_offset;
                 g_amec->static_wof_data.pgpe_values_sram_addr = G_pgpe_header.shared_sram_addr + shared_sram->pgpe_data_offset;

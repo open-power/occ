@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2020                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2024                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -32,6 +32,8 @@
 // magic number for OCC-PGPE Shared SRAM
 #define OPS_MAGIC_NUMBER_P10         0x4F505332ull   // "OPS2"
 
+// magic number for HCODE Call Home
+#define CH_MAGIC_NUMBER         0x4348   // "CH"
 
 // Address and offset to find PGPE PK trace
 #define PGPE_DEBUG_PTRS_ADDR           0xFFF20200   // 0xfff20000 + 0x200

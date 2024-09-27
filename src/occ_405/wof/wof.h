@@ -484,6 +484,8 @@ typedef struct __attribute__ ((packed, aligned(128)))
     uint64_t ocmb_util_pwr_pts[MAX_NUM_OCMBS][MAX_NUM_MEM_INT_PTS];  // 1,536 bytes (16x12x8)
     // Slope x10000 calculated from ocmb_util_pwr_pts
     uint32_t util_pre_heat_power_m10000x[MAX_NUM_OCMBS];  // 64 bytes (16x4)
+    // The address in shared OCC-PGPE SRAM for Call home values written by PGPE or XGPE
+    uint32_t call_home_sram_addr;
 } amec_static_wof_t;
 
 // Structure for sensors used in g_amec for AMESTER for additional debug
