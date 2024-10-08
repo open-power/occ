@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2019                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2024                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -58,5 +58,7 @@ void pgpe_start_suspend_callback(void);
 int pgpe_request_schedule(GpeRequest* request);
 
 int set_nominal_pstate(void);
+
+void update_occ_produced_sram(void);
 
 #endif /* #ifndef _PGPE_INTERFACE_H_ */

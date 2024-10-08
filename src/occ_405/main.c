@@ -69,6 +69,9 @@ uint8_t G_max_wof_control_chances = MAX_WOF_CONTROL_CHANCES_EVERY_TICK;
 
 uint32_t G_max_ceff_ratio = MAX_CEFF_RATIO;
 
+// indicates if OCC-PGPE shared SRAM supports writing version 1 data
+bool G_occ_v1_shared_sram_supported = FALSE;
+
 extern uint32_t __ssx_boot; // Function address is 32 bits
 extern uint32_t G_occ_phantom_critical_count;
 extern uint32_t G_occ_phantom_noncritical_count;
@@ -707,7 +710,8 @@ bool read_pgpe_header(void)
             // we have non-zero shared SRAM address now verify shared SRAM version
             // OCC-PGPE shared SRAM version is first word of shared SRAM
             pgpe_shared_magic_number = in32(G_pgpe_header.shared_sram_addr);
-            if(pgpe_shared_magic_number == OPS_MAGIC_NUMBER_P10)
+            if( (pgpe_shared_magic_number == HCODE_OCC_SHARED_MAGIC_NUMBER_OPS2) ||
+                (pgpe_shared_magic_number == HCODE_OCC_SHARED_MAGIC_NUMBER_OPS3) )
             {
                 MAIN_TRAC_IMP("read_pgpe_header: Valid PGPE Shared SRAM address[0x%08X] and Magic Number[0x%08X]",
                                G_pgpe_header.shared_sram_addr, pgpe_shared_magic_number);
@@ -818,6 +822,19 @@ bool read_pgpe_header(void)
                               g_amec->static_wof_data.iddq_activity_sample_depth,
                               g_amec->static_wof_data.iddq_activity_divide_bit_shift);
 
+                // check if supported to write version 1 data to OCC produced shared SRAM
+                if( (g_amec->static_wof_data.occ_values_sram_addr != 0) &&
+                    (shared_sram->occ_data_length >= sizeof(occ_wof_values_t)) )
+                {
+                    G_occ_v1_shared_sram_supported = TRUE;
+                    MAIN_TRAC_IMP("read_pgpe_header: OCC will write version 1 data to shared SRAM");
+                }
+                else
+                {
+                    G_occ_v1_shared_sram_supported = FALSE;
+                    MAIN_TRAC_IMP("read_pgpe_header: OCC shared data length %d doesn't allow for version 1 data",
+                                   shared_sram->occ_data_length);
+                }
                 g_amec->static_wof_data.pstate_tbl_sram_addr   = G_pgpe_header.occ_pstate_table_sram_addr;
 
                 MAIN_TRAC_IMP("read_pgpe_header: Pstate table SRAM Address[0x%08X]",

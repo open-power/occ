@@ -29,9 +29,6 @@
 #define OPPB_MAGIC_NUMBER_10         0x4F43435050423030ull   // "OCCPPB00"
 #define PGPE_MAGIC_NUMBER_10         0x504750455F312E30ull   // "PGPE_1.0"
 
-// magic number for OCC-PGPE Shared SRAM
-#define OPS_MAGIC_NUMBER_P10         0x4F505332ull   // "OPS2"
-
 // magic number for HCODE Call Home
 #define CH_MAGIC_NUMBER         0x4348   // "CH"
 

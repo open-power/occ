@@ -69,6 +69,7 @@ extern dcom_slv_inbox_t G_dcom_slv_inbox_rx;
 extern opal_proc_voting_reason_t G_amec_opal_proc_throt_reason;
 extern GpeRequest G_wof_vrt_req;
 extern uint32_t G_present_cores;
+extern bool G_occ_v1_shared_sram_supported;
 
 //*************************************************************************
 // Macros
@@ -503,6 +504,18 @@ void amec_slv_common_tasks_post(void)
             L_run_pcap_ticks = 0;
         }
 
+        if(G_internal_flags & INT_FLAG_ENABLE_EVERY_TICK_TEMP_DVFS)
+        {
+            // update the processor thermal sensor to reflect core updates from this tick
+            // and run the processor-based thermal controller
+            sensor_vector_update(AMECSENSOR_PTR(TEMPPROCTHRM), 1);
+            amec_controller_proc_thermal();
+        }
+
+        // if supported, write the core temperatures out to OCC-PGPE shared SRAM
+        if(G_occ_v1_shared_sram_supported)
+            update_occ_produced_sram();
+
         // Call the OCC slave's processor voting box
         amec_slv_proc_voting_box();
 
@@ -579,7 +592,8 @@ void amec_slv_state_0(void)
   // Update vector sensors
   //-------------------------------------------------------
   sensor_vector_update(AMECSENSOR_PTR(TEMPPROCAVG),  1);
-  sensor_vector_update(AMECSENSOR_PTR(TEMPPROCTHRM), 1);
+  if(!(G_internal_flags & INT_FLAG_ENABLE_EVERY_TICK_TEMP_DVFS))
+      sensor_vector_update(AMECSENSOR_PTR(TEMPPROCTHRM), 1);
   sensor_vector_update(AMECSENSOR_PTR(TEMPRTAVG), 1);
   sensor_vector_update(AMECSENSOR_PTR(TEMPPROCIOTHRM), 1);
   sensor_vector_update(AMECSENSOR_PTR(IPS),     1);
@@ -1224,8 +1238,9 @@ void amec_slv_substate_5_0(void)
     //-------------------------------------------------------
     amec_update_proc_core_group(2);
 
-    // Call processor-based thermal controller
-    amec_controller_proc_thermal();
+    // Call processor-based thermal controller if not doing it every tick
+    if(!(G_internal_flags & INT_FLAG_ENABLE_EVERY_TICK_TEMP_DVFS))
+        amec_controller_proc_thermal();
 }
 
 void amec_slv_substate_5_1(void)
@@ -1273,8 +1288,9 @@ void amec_slv_substate_5_2(void)
     //-------------------------------------------------------
     amec_update_proc_core_group(2);
 
-    // Call processor-based thermal controller
-    amec_controller_proc_thermal();
+    // Call processor-based thermal controller if not doing it every tick
+    if(!(G_internal_flags & INT_FLAG_ENABLE_EVERY_TICK_TEMP_DVFS))
+        amec_controller_proc_thermal();
 }
 
 void amec_slv_substate_5_3(void)
@@ -1320,8 +1336,9 @@ void amec_slv_substate_5_4(void)
     //-------------------------------------------------------
     amec_update_proc_core_group(2);
 
-    // Call processor-based thermal controller
-    amec_controller_proc_thermal();
+    // Call processor-based thermal controller if not doing it every tick
+    if(!(G_internal_flags & INT_FLAG_ENABLE_EVERY_TICK_TEMP_DVFS))
+        amec_controller_proc_thermal();
 }
 
 void amec_slv_substate_5_5(void)
@@ -1366,8 +1383,9 @@ void amec_slv_substate_5_6(void)
     //-------------------------------------------------------
     amec_update_proc_core_group(2);
 
-    // Call processor-based thermal controller
-    amec_controller_proc_thermal();
+    // Call processor-based thermal controller if not doing it every tick
+    if(!(G_internal_flags & INT_FLAG_ENABLE_EVERY_TICK_TEMP_DVFS))
+        amec_controller_proc_thermal();
 }
 
 void amec_slv_substate_5_7(void)

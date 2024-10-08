@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2023                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2024                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -1079,4 +1079,46 @@ int pgpe_request_schedule(GpeRequest* request)
         }
     }
     return rc;
+}
+
+// Function Specification
+//
+// Name: update_occ_produced_sram
+//
+// Description: Write OCC Produced section in PGPE/OCC Shared SRAM
+//
+// End Function Specification
+void update_occ_produced_sram(void)
+{
+    occ_wof_values_t l_occ_wof_values = {0};
+    uint8_t l_core = 0;
+    static uint8_t L_max_cores = MAX_CORES;
+    sensor_t *l_sensor = NULL;
+
+    // Only version 1 is supported
+    l_occ_wof_values.occ_value_version = 1;
+    // populate the max core temp
+    l_sensor = getSensorByGsid(TEMPPROCTHRM);
+    l_occ_wof_values.max_core_temp_degC = (uint8_t)l_sensor->sample;
+
+    // populate individual core temperatures
+    // sanity check size allocated in shared SRAM is large enough for all cores
+    if(sizeof(l_occ_wof_values.core_temp_degC) < L_max_cores)
+    {
+        TRAC_ERR("update_occ_produced_sram: SRAM allocated for %d cores is less than max %d cores",
+                  sizeof(l_occ_wof_values.core_temp_degC), L_max_cores);
+        L_max_cores = sizeof(l_occ_wof_values.core_temp_degC);
+    }
+    for(l_core = 0; l_core < L_max_cores; l_core++)
+    {
+        l_sensor = AMECSENSOR_ARRAY_PTR(TEMPPROCTHRMC0, l_core);
+        l_occ_wof_values.core_temp_degC[l_core] = (uint8_t)l_sensor->sample;
+    }
+
+    // write out to SRAM
+    memcpy( (void *) g_amec->static_wof_data.occ_values_sram_addr,
+            (void *) &l_occ_wof_values,
+            sizeof(occ_wof_values_t) );
+
+    return;
 }
