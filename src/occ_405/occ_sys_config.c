@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2022                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2024                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -213,8 +213,13 @@ occSysConfigData_t G_sysConfigData =
     .dimm_huids = {{0,0},{0,0}},
     .mem_type = MEM_TYPE_OCM_DDR4,
     .dimm_i2c_engine = PIB_I2C_ENGINE_E,
-    .ips_mem_pwr_ctl = MEM_PWR_CTL_OFF,
-    .default_mem_pwr_ctl = MEM_PWR_CTL_OFF,
+    .eff_mode_mem_pwr_ctl = MEM_PWR_CTL_NO_SUPPORT,
+    .default_mem_pwr_ctl = MEM_PWR_CTL_NO_SUPPORT,
+    .min_domain_reduction_time_off = 64,
+    .min_domain_reduction_time_default = 4,
+    .min_domain_reduction_time_eff_mode = 1,
+    .str_entry_time_default = 8,
+    .str_entry_time_eff_mode = 4,
 
     // -------------------------------------------------------------------
     // Memory Throttle Limits Initialization

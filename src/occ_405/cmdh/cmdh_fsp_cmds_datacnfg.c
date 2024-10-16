@@ -58,6 +58,7 @@
 
 #define DATA_MEM_CFG_VERSION_30    0x30
 #define DATA_MEM_CFG_VERSION_31    0x31
+#define DATA_MEM_CFG_VERSION_32    0x32
 
 #define DATA_MEM_THROT_VERSION_40  0x40
 
@@ -1706,6 +1707,7 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
     errlHndl_t                      l_err = NULL;
     cmdh_mem_cfg_v30_t*             l_cmd_ptr = (cmdh_mem_cfg_v30_t*)i_cmd_ptr;
     cmdh_mem_cfg_v31_t*             l_cmd_v31_ptr = (cmdh_mem_cfg_v31_t*)i_cmd_ptr;
+    cmdh_mem_cfg_v32_t*             l_cmd_v32_ptr = (cmdh_mem_cfg_v32_t*)i_cmd_ptr;
     uint16_t                        l_data_length = 0;
     uint16_t                        l_exp_data_length = 0;
     uint16_t                        l_ocmb_update_time_ms = 200;
@@ -1748,18 +1750,27 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
         }
 
         if( (l_cmd_ptr->header.version == DATA_MEM_CFG_VERSION_30) ||
-            (l_cmd_ptr->header.version == DATA_MEM_CFG_VERSION_31) )
+            (l_cmd_ptr->header.version == DATA_MEM_CFG_VERSION_31) ||
+            (l_cmd_ptr->header.version == DATA_MEM_CFG_VERSION_32))
         {
-            num_data_sets = l_cmd_ptr->header.num_data_sets;
             // Verify the actual data length matches the expected data length for this version
             if(l_cmd_ptr->header.version == DATA_MEM_CFG_VERSION_30)
             {
-                l_exp_data_length = sizeof(cmdh_mem_cfg_header_v3x_t) - sizeof(cmdh_fsp_cmd_header_t) +
+                num_data_sets = l_cmd_ptr->num_data_sets;
+                l_exp_data_length = sizeof(cmdh_mem_cfg_header_v3x_t) - sizeof(cmdh_fsp_cmd_header_t) + 1 +
                                     (num_data_sets * sizeof(cmdh_mem_cfg_data_set_t));
             }
-            else // DATA_MEM_CFG_VERSION_31
+            else if(l_cmd_ptr->header.version == DATA_MEM_CFG_VERSION_31)
             {
+                num_data_sets = l_cmd_v31_ptr->num_data_sets;
+                l_exp_data_length = sizeof(cmdh_mem_cfg_header_v3x_t) - sizeof(cmdh_fsp_cmd_header_t) + 1 +
+                                    (num_data_sets * sizeof(cmdh_mem_cfg_data_set_v31_t));
+            }
+            else // DATA_MEM_CFG_VERSION_32
+            {
+                num_data_sets = l_cmd_v32_ptr->num_data_sets;
                 l_exp_data_length = sizeof(cmdh_mem_cfg_header_v3x_t) - sizeof(cmdh_fsp_cmd_header_t) +
+                                    sizeof(cmdh_mem_cfg_pwr_ctrl_t) + 1 +
                                     (num_data_sets * sizeof(cmdh_mem_cfg_data_set_v31_t));
             }
 
@@ -1779,8 +1790,27 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
             l_ocmb_update_time_ms = l_cmd_ptr->header.update_time_ms;
 
             // Store the mem config data
-            G_sysConfigData.ips_mem_pwr_ctl = l_cmd_ptr->header.ips_mem_pwr_ctl;
-            G_sysConfigData.default_mem_pwr_ctl = l_cmd_ptr->header.default_mem_pwr_ctl;
+            if(l_cmd_ptr->header.version == DATA_MEM_CFG_VERSION_32)
+            {
+                G_sysConfigData.eff_mode_mem_pwr_ctl = l_cmd_v32_ptr->header.eff_mode_mem_pwr_ctl;
+                G_sysConfigData.default_mem_pwr_ctl = l_cmd_v32_ptr->header.default_mem_pwr_ctl;
+                G_sysConfigData.min_domain_reduction_time_off = l_cmd_v32_ptr->mem_pwr_contrl_parms.min_domain_reduction_time_off;
+                G_sysConfigData.min_domain_reduction_time_default = l_cmd_v32_ptr->mem_pwr_contrl_parms.min_domain_reduction_time_default;
+                G_sysConfigData.min_domain_reduction_time_eff_mode = l_cmd_v32_ptr->mem_pwr_contrl_parms.min_domain_reduction_time_eff_mode;
+                G_sysConfigData.str_entry_time_default = l_cmd_v32_ptr->mem_pwr_contrl_parms.str_entry_time_default;
+                G_sysConfigData.str_entry_time_eff_mode = l_cmd_v32_ptr->mem_pwr_contrl_parms.str_entry_time_eff_mode;
+                CMDH_TRAC_IMP("Memory power control settings: min_domain_reduction_time_off = %d,"
+                              " min_domain_reduction_time_default = %d, min_domain_reduction_time_eff_mode = %d,"
+                              " str_entry_time_default = %d, str_entry_time_eff_mode = %d",
+                              G_sysConfigData.min_domain_reduction_time_off, G_sysConfigData.min_domain_reduction_time_default,
+                              G_sysConfigData.min_domain_reduction_time_eff_mode, G_sysConfigData.str_entry_time_default,
+                              G_sysConfigData.str_entry_time_eff_mode);
+            }
+            else // older versions have no support for mem pwr control
+            {
+                G_sysConfigData.eff_mode_mem_pwr_ctl = MEM_PWR_CTL_NO_SUPPORT;
+                G_sysConfigData.default_mem_pwr_ctl = MEM_PWR_CTL_NO_SUPPORT;
+            }
         }
         else
         {
@@ -1796,8 +1826,10 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
             // Store the memory type
             if(l_cmd_ptr->header.version == DATA_MEM_CFG_VERSION_30)
                 l_memory_type = l_cmd_ptr->data_set[0].memory_type & OCMB_TYPE_TYPE_MASK;
-            else // version 0x31
+            else if(l_cmd_ptr->header.version == DATA_MEM_CFG_VERSION_31)
                 l_memory_type = l_cmd_v31_ptr->data_set[0].memory_type & OCMB_TYPE_TYPE_MASK;
+            else // version 0x32
+                l_memory_type = l_cmd_v32_ptr->data_set[0].memory_type & OCMB_TYPE_TYPE_MASK;
 
             // verify this is a valid memory type, currently only OCM types are valid
             if(IS_OCM_MEM_TYPE(l_memory_type))
@@ -1826,10 +1858,17 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
                     l_dimm_info2 = l_data_set->dimm_info2;
                     l_dimm_info3 = l_data_set->dimm_info3;
                 }
-                else // version 0x31
+                else
                 {
                     cmdh_mem_cfg_data_set_v31_t* l_data_set;
-                    l_data_set = &l_cmd_v31_ptr->data_set[i];
+                    if(l_cmd_ptr->header.version == DATA_MEM_CFG_VERSION_31)
+                    {
+                        l_data_set = &l_cmd_v31_ptr->data_set[i];
+                    }
+                    else // version 0x32
+                    {
+                        l_data_set = &l_cmd_v32_ptr->data_set[i];
+                    }
                     l_memory_type = (l_data_set->memory_type & OCMB_TYPE_TYPE_MASK);
                     // Get the physical OCMB location from type
                     l_membuf_num = (l_data_set->memory_type & OCMB_TYPE_LOCATION_MASK);
@@ -1896,8 +1935,8 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
                            // Store the thermal sensor type
                            g_amec->proc[0].memctl[l_membuf_num].membuf.membuf_hottest.temp_fru_type = l_dimm_info2;
 
-                           // Version 0x31 has additional data for OCMB
-                           if(l_cmd_ptr->header.version == DATA_MEM_CFG_VERSION_31)
+                           // Versions 0x31 and 0x32 has additional data for OCMB
+                           if(l_cmd_ptr->header.version != DATA_MEM_CFG_VERSION_30)
                            {
                                // Additional data1 is Port 0 clock freq
                                g_amec->proc[0].memctl[l_membuf_num].membuf.portpair[0].data_rate_Mbps = l_addl_data1;
@@ -2165,8 +2204,8 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
             SMGR_VALIDATE_DATA_ACTIVE_MASK |= DATA_MASK_MEM_THROT;
 
             CMDH_TRAC_IMP("Memory monitoring is allowed (mem config data sets = %d,"
-                          " ips_mem_pwr_ctl = %d, default_mem_pwr_ctl = %d)",
-                          num_data_sets, G_sysConfigData.ips_mem_pwr_ctl,
+                          " eff_mode_mem_pwr_ctl = %d, default_mem_pwr_ctl = %d)",
+                          num_data_sets, G_sysConfigData.eff_mode_mem_pwr_ctl,
                           G_sysConfigData.default_mem_pwr_ctl);
         }
     }

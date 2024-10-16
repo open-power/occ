@@ -345,9 +345,8 @@ typedef struct __attribute__ ((packed))
     uint8_t                 version;
     uint16_t                update_time_ms;       // time in ms that the cache line is updated
     uint8_t                 default_mem_pwr_ctl;  // default memory power control
-    uint8_t                 ips_mem_pwr_ctl;      // Idle Power Save memory power control
-    uint8_t                 num_data_sets;
-}cmdh_mem_cfg_header_v3x_t;  // same header for both versions 0x30 and 0x31
+    uint8_t                 eff_mode_mem_pwr_ctl; // Efficiency mode memory power control
+}cmdh_mem_cfg_header_v3x_t;  // same header for all versions 0x30, 0x31 and 0x32
 
 // Config packet definition used to send
 // sensor mappings for membufs and dimms
@@ -378,15 +377,34 @@ typedef struct __attribute__ ((packed))
 
 typedef struct __attribute__ ((packed))
 {
+    uint8_t   min_domain_reduction_time_off;
+    uint8_t   min_domain_reduction_time_default;
+    uint8_t   min_domain_reduction_time_eff_mode;
+    uint8_t   str_entry_time_default;
+    uint8_t   str_entry_time_eff_mode;
+}cmdh_mem_cfg_pwr_ctrl_t;
+
+typedef struct __attribute__ ((packed))
+{
     cmdh_mem_cfg_header_v3x_t   header;
+    uint8_t                 num_data_sets;
     cmdh_mem_cfg_data_set_t data_set[1];
 }cmdh_mem_cfg_v30_t;
 
 typedef struct __attribute__ ((packed))
 {
     cmdh_mem_cfg_header_v3x_t   header;
+    uint8_t                     num_data_sets;
     cmdh_mem_cfg_data_set_v31_t data_set[1];
 }cmdh_mem_cfg_v31_t;
+
+typedef struct __attribute__ ((packed))
+{
+    cmdh_mem_cfg_header_v3x_t   header;
+    cmdh_mem_cfg_pwr_ctrl_t     mem_pwr_contrl_parms;
+    uint8_t                     num_data_sets;
+    cmdh_mem_cfg_data_set_v31_t data_set[1]; // same format as 0x31
+}cmdh_mem_cfg_v32_t;
 
 // Header data for mem throttle packet
 typedef struct __attribute__ ((packed))

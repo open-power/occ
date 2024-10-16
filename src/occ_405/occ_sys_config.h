@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2023                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2024                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -453,8 +453,13 @@ typedef struct
   uint32_t dimm_huids[MAX_NUM_OCMBS][MAX_NUM_DTS_PER_OCMB];
   uint8_t mem_type;
   uint8_t dimm_i2c_engine;     // only used for i2c memory type
-  uint8_t ips_mem_pwr_ctl;     // IPS memory power control
+  uint8_t eff_mode_mem_pwr_ctl;  // Efficiency mode memory power control
   uint8_t default_mem_pwr_ctl; // default memory power control
+  uint8_t min_domain_reduction_time_off;
+  uint8_t min_domain_reduction_time_default;
+  uint8_t min_domain_reduction_time_eff_mode;
+  uint8_t str_entry_time_default;
+  uint8_t str_entry_time_eff_mode;
 
   // --------------------------------------
   // Memory Throttle limits
