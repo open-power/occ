@@ -523,10 +523,62 @@ void read_wof_header(void)
 
                 // Initialize idle chip parameters for efficiency modes
                 l_eff_idle_chip_parms.ceff_alg = (g_amec->static_wof_data.wof_header.sys_flags & WOF_HEADER_FLAGS_EFF_ALG_CEFF_MASK);
-                l_eff_idle_chip_parms.entry_delay = g_amec->static_wof_data.wof_header.eff_mode_idle_chip_entry_time;
-                l_eff_idle_chip_parms.exit_delay = g_amec->static_wof_data.wof_header.eff_mode_idle_chip_exit_time;
-                l_eff_idle_chip_parms.entry_thld = g_amec->static_wof_data.wof_header.eff_mode_idle_chip_entry_thld;
-                l_eff_idle_chip_parms.exit_thld = g_amec->static_wof_data.wof_header.eff_mode_idle_chip_exit_thld;
+
+                // Some WOF tables were made with bad units for utiliation based alg
+                if(l_eff_idle_chip_parms.ceff_alg == 0)
+                {
+                    // times should be in number of 32ms ticks, bad tables were made in ms
+                    // this will need to be removed if a table ever wants more than 32 x32ms ticks
+                    if(g_amec->static_wof_data.wof_header.eff_mode_idle_chip_entry_time >= 32)
+                    {
+                        l_eff_idle_chip_parms.entry_delay = (g_amec->static_wof_data.wof_header.eff_mode_idle_chip_entry_time / 32);
+                        MAIN_TRAC_IMP("read_wof_header: Fixing unit for eff mode idle entry time from[%dms] to[%d 32ms ticks]",
+                                    g_amec->static_wof_data.wof_header.eff_mode_idle_chip_entry_time,
+                                    l_eff_idle_chip_parms.entry_delay);
+                    }
+                    else
+                        l_eff_idle_chip_parms.entry_delay = g_amec->static_wof_data.wof_header.eff_mode_idle_chip_entry_time;
+
+                    if(g_amec->static_wof_data.wof_header.eff_mode_idle_chip_exit_time >= 32)
+                    {
+                        l_eff_idle_chip_parms.exit_delay = (g_amec->static_wof_data.wof_header.eff_mode_idle_chip_exit_time / 32);
+                        MAIN_TRAC_IMP("read_wof_header: Fixing unit for eff mode idle exit time from[%dms] to[%d 32ms ticks]",
+                                    g_amec->static_wof_data.wof_header.eff_mode_idle_chip_exit_time,
+                                    l_eff_idle_chip_parms.exit_delay);
+                    }
+                    else
+                        l_eff_idle_chip_parms.exit_delay = g_amec->static_wof_data.wof_header.eff_mode_idle_chip_exit_time;
+
+                    // utilization thresholds should be in 0.01% unit bad tables was made in 1% unit
+                    // this will need to be removed if a table ever wants a threshold below 1%
+                    if(g_amec->static_wof_data.wof_header.eff_mode_idle_chip_entry_thld < 100)
+                    {
+                        l_eff_idle_chip_parms.entry_thld = (g_amec->static_wof_data.wof_header.eff_mode_idle_chip_entry_thld * 100);
+                        MAIN_TRAC_IMP("read_wof_header: Fixing unit for eff mode idle entry utilization from[%d] to[%d (0.01)]",
+                                    g_amec->static_wof_data.wof_header.eff_mode_idle_chip_entry_thld,
+                                    l_eff_idle_chip_parms.entry_thld);
+                    }
+                    else
+                        l_eff_idle_chip_parms.entry_thld = g_amec->static_wof_data.wof_header.eff_mode_idle_chip_entry_thld;
+
+                    if(g_amec->static_wof_data.wof_header.eff_mode_idle_chip_exit_thld < 100)
+                    {
+                        l_eff_idle_chip_parms.exit_thld = (g_amec->static_wof_data.wof_header.eff_mode_idle_chip_exit_thld * 100);
+                        MAIN_TRAC_IMP("read_wof_header: Fixing unit for eff mode idle exit threshold from[%d] to[%d (0.01)]",
+                                    g_amec->static_wof_data.wof_header.eff_mode_idle_chip_exit_thld,
+                                    l_eff_idle_chip_parms.exit_thld);
+                    }
+                    else
+                        l_eff_idle_chip_parms.exit_thld = g_amec->static_wof_data.wof_header.eff_mode_idle_chip_exit_thld;
+                } // if utilization based alg
+                else // ceff based alg, no bad tables
+                {
+                    l_eff_idle_chip_parms.entry_delay = g_amec->static_wof_data.wof_header.eff_mode_idle_chip_entry_time;
+                    l_eff_idle_chip_parms.exit_delay = g_amec->static_wof_data.wof_header.eff_mode_idle_chip_exit_time;
+                    l_eff_idle_chip_parms.entry_thld = g_amec->static_wof_data.wof_header.eff_mode_idle_chip_entry_thld;
+                    l_eff_idle_chip_parms.exit_thld = g_amec->static_wof_data.wof_header.eff_mode_idle_chip_exit_thld;
+                }
+
                 set_eff_mode_idle_chip_parms(&l_eff_idle_chip_parms);
 
                 // Initialize OCS increase/decrease amounts to one step

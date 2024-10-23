@@ -82,11 +82,16 @@ void amec_controller_proc_thermal()
     uint16_t                      l_thermal_winner = 0;
     uint16_t                      l_residue = 0;
     uint16_t                      l_old_residue = 0;
+    uint16_t                      l_freq_request = 0;
     int16_t                       l_error = 0;
     int16_t                       l_cpu_speed = 0;
     int16_t                       l_throttle_chg = 0;
     int32_t                       l_throttle = 0;
     sensor_t                    * l_sensor = NULL;
+    static uint16_t               L_last_thermal_winner = 0;
+    static uint16_t               L_last_freq_request = 0;
+    static uint16_t               L_num_ticks_passed = MAX_NUM_TICKS; // num ticks since last freq change
+    static bool                   L_freq_increase = TRUE; // last freq request was a freq increase
 
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
@@ -100,7 +105,14 @@ void amec_controller_proc_thermal()
 
     // Check if there is an error
     if (g_amec->thermalproc.setpoint == l_thermal_winner)
+    {
+        if((G_internal_flags & INT_FLAG_ENABLE_EVERY_TICK_TEMP_DVFS) &&
+           (L_num_ticks_passed < MAX_NUM_TICKS))
+        {
+            L_num_ticks_passed++;
+        }
         return;
+    }
 
     // Calculate the thermal control error
     l_error = g_amec->thermalproc.setpoint - l_thermal_winner;
@@ -140,13 +152,39 @@ void amec_controller_proc_thermal()
     if (l_cpu_speed < g_amec->sys.min_speed)
         l_cpu_speed = g_amec->sys.min_speed;
 
-    // Generate the new thermal speed request
-    g_amec->thermalproc.speed_request = l_cpu_speed;
     // Calculate frequency request based on thermal speed request
-    g_amec->thermalproc.freq_request = amec_controller_speed2freq(
-            g_amec->thermalproc.speed_request,
+    l_freq_request = amec_controller_speed2freq(
+            l_cpu_speed,
             g_amec->sys.fmax);
 
+    if(G_internal_flags & INT_FLAG_ENABLE_EVERY_TICK_TEMP_DVFS)
+    {
+        // wait MAX_NUM_TICKS for additional changes for moving frequency same direction
+        if( (l_thermal_winner != L_last_thermal_winner) ||
+            ((L_num_ticks_passed >= MAX_NUM_TICKS) && (L_last_freq_request != l_freq_request)) ||
+            (L_freq_increase && (l_freq_request < L_last_freq_request)) ||
+            ((L_freq_increase == FALSE) && (l_freq_request > L_last_freq_request)))
+        {
+            if(l_freq_request < L_last_freq_request)
+                L_freq_increase = FALSE; // frequency is being lowered
+            else
+                L_freq_increase = TRUE;
+
+            L_num_ticks_passed = 0;
+            g_amec->thermalproc.speed_request = l_cpu_speed;
+            g_amec->thermalproc.freq_request = l_freq_request;
+            L_last_freq_request = g_amec->thermalproc.freq_request;
+        }
+       else if(L_num_ticks_passed < MAX_NUM_TICKS)
+            L_num_ticks_passed++;
+    }
+    else
+    {
+        g_amec->thermalproc.speed_request = l_cpu_speed;
+        g_amec->thermalproc.freq_request = l_freq_request;
+        L_last_freq_request = g_amec->thermalproc.freq_request;
+        L_num_ticks_passed = MAX_NUM_TICKS;
+    }
     // Update the Processor OT Throttle Sensor
     if(g_amec->thermalproc.freq_request < g_amec->sys.fmax)
     {
@@ -157,6 +195,8 @@ void amec_controller_proc_thermal()
     {
        sensor_update(AMECSENSOR_PTR(PROCOTTHROT), 0);
     }
+
+    L_last_thermal_winner = l_thermal_winner;
 }
 
 // Function Specification
