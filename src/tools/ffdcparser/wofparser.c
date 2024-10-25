@@ -28,7 +28,7 @@
 #include <string.h>
 #include "parser_common.h"
 
-#define WOF_DATA_SIZE 962
+#define WOF_DATA_SIZE 963
 // NOTE: This tool is to be used when WOF Dynamic data is dumped by the OCC, and currently
 //       only accepts input files in binary format.
 
@@ -316,6 +316,7 @@ int main(int argc, char** argv)
     for(i = 0; i < MAX_NUM_OCMBS; i++)
         printf("OCMB%d Current Preheat power %dcW\n", i, get_uint16(wof_file));
     printf("WOF Adjustment Reasons: 0x%02X\n", fgetc(wof_file));
+    printf("WOF DIMM Credit Disable Reasons: 0x%02X\n", fgetc(wof_file));
 
     // Close the file
     if(wof_file != NULL)

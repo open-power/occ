@@ -596,6 +596,23 @@ void read_wof_header(void)
                                    ( g_amec->static_wof_data.wof_header.amb_cond_step *
                                     (g_amec->static_wof_data.wof_header.amb_cond_size - 1) );
 
+                // Default WOF ambient dimm credit to disabled until we recieve data
+                g_amec->wof.dimm_credit_disable = (WOF_DIMM_DISABLE_0_THERMAL_CONSTANT | WOF_DIMM_DISABLE_0_MAX_PREHEAT_PWR);
+
+                // WOF ambient table size must support the credit
+                if(g_amec->static_wof_data.wof_header.amb_cond_size >= WOF_DIMM_CREDIT_AMBIENT_TABLE_MIN_SIZE)
+                {
+                    MAIN_TRAC_IMP("read_wof_header: WOF ambient size %d supports DIMM credit",
+                                    g_amec->static_wof_data.wof_header.amb_cond_size);
+                }
+                else
+                {
+                    g_amec->wof.dimm_credit_disable |= WOF_DIMM_DISABLE_AMBIENT_TABLE_SIZE;
+
+                    MAIN_TRAC_IMP("read_wof_header: NO DIMM CREDIT! ambient size %d < %d minimum required for DIMM credit",
+                                    g_amec->static_wof_data.wof_header.amb_cond_size, WOF_DIMM_CREDIT_AMBIENT_TABLE_MIN_SIZE);
+                }
+
                 // Default to no overrides
                 g_amec->wof.vcs_override_index = WOF_VRT_IDX_NO_OVERRIDE;
                 g_amec->wof.vdd_override_index = WOF_VRT_IDX_NO_OVERRIDE;

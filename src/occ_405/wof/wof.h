@@ -48,6 +48,9 @@ extern uint32_t G_max_ceff_ratio;
 // else the override value is the index to use
 #define WOF_VRT_IDX_NO_OVERRIDE     0xFF
 
+// minimum ambient table size required for DIMM credit
+#define WOF_DIMM_CREDIT_AMBIENT_TABLE_MIN_SIZE 5
+
 //******************************************************************************
 // Bit Vector Masks
 //******************************************************************************
@@ -110,6 +113,16 @@ extern uint32_t G_max_ceff_ratio;
 #define WOF_AMBIENT_ADJUST_NO_AMBIENT              0x20
 #define WOF_AMBIENT_ADJUST_ALTITUDE                0x40
 #define WOF_AMBIENT_ADJUST_DIMM                    0x80
+
+//******************************************************************************
+// WOF ambient DIMM power Credit disable (dimm_credit_disable) Reason Masks
+//******************************************************************************
+#define WOF_DIMM_DISABLE_AMBIENT_TABLE_SIZE        0x01
+#define WOF_DIMM_DISABLE_0_THERMAL_CONSTANT        0x02
+#define WOF_DIMM_DISABLE_0_MAX_PREHEAT_PWR         0x04
+#define WOF_DIMM_DISABLE_INTERPOLATION             0x08
+#define WOF_DIMM_DISABLE_OCMB_DATA_MISMATCH        0x10
+#define WOF_DIMM_DISABLE_OCMB_PRESENT_MISMATCH     0x20
 
 //***************************************************************************
 // Temp space used to save hard coded addresses
@@ -444,7 +457,9 @@ typedef struct __attribute__ ((packed))
     uint16_t mem_curr_preheat_pwr[MAX_NUM_OCMBS];
     // [961] Bit vector where each bit signifies a different WOF adjustment reason
     uint8_t  wof_adjust_reasons;
-} amec_wof_t;  // 962 bytes total
+    // [962] Bit vector where each bit signifies a different reason WOF DIMM credit is disabled
+    uint8_t  dimm_credit_disable;
+} amec_wof_t;  // 963 bytes total
 
 // Structure used in g_amec to hold static WOF data
 typedef struct __attribute__ ((packed, aligned(128)))

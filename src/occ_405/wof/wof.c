@@ -2070,28 +2070,21 @@ void read_sensor_data( void )
        if(g_wof->ambient_adj_for_altitude >= 0)
        {
            g_wof->ambient_condition = l_ambient + g_wof->ambient_adj_for_altitude;
-           l_new_wof_adjust_reason |= WOF_AMBIENT_ADJUST_ALTITUDE;
+           if(g_wof->ambient_adj_for_altitude)
+               l_new_wof_adjust_reason |= WOF_AMBIENT_ADJUST_ALTITUDE;
        }
        else  // negative adjust
        {
-           // Don't lower ambient condition (raises freq) in efficiency modes
-           if(g_amec->eff_mode_parms.enable.fields.mode_support)
-               g_wof->ambient_condition = l_ambient;
-           else
-           {
-               l_new_wof_adjust_reason |= WOF_AMBIENT_ADJUST_ALTITUDE;
+           l_new_wof_adjust_reason |= WOF_AMBIENT_ADJUST_ALTITUDE;
 
-               if(l_ambient >= (-g_wof->ambient_adj_for_altitude)) // prevent overflow
-                   g_wof->ambient_condition = l_ambient + g_wof->ambient_adj_for_altitude;
-               else
-                   g_wof->ambient_condition = 0;
-           }
+           if(l_ambient >= (-g_wof->ambient_adj_for_altitude)) // prevent overflow
+               g_wof->ambient_condition = l_ambient + g_wof->ambient_adj_for_altitude;
+           else
+               g_wof->ambient_condition = 0;
        }
 
        // If DIMM power credit is enabled determine adjustment to account for DIMM power
-       // This is disabled in efficiency modes
-       if(g_wof->mem_thermal_credit_constant && g_wof->max_dimm_pwr_total_cW &&
-          (g_amec->eff_mode_parms.enable.fields.mode_support == 0) )
+       if(g_wof->dimm_credit_disable == 0)
        {
            // determine g_wof->ambient_adj_for_dimm
            calc_wof_dimm_adjustment(l_ambient);
@@ -2161,7 +2154,7 @@ void calc_wof_dimm_adjustment(uint8_t i_ambient)
        // Mismatch in OCMB data disable WOF memory credit
        INTR_TRAC_ERR("calc_wof_dimm_adjustment: Mismatch OCMB Present[0x%08X] and OCMB WOF Pwr data[0x%08X]",
                       G_present_membufs, g_wof->ocmbs_present);
-       g_wof->mem_thermal_credit_constant = 0;
+       g_wof->dimm_credit_disable |= WOF_DIMM_DISABLE_OCMB_DATA_MISMATCH;
     }
     else
     {
@@ -2179,7 +2172,7 @@ void calc_wof_dimm_adjustment(uint8_t i_ambient)
                  // needed at least 2 interpolation points to calculate a slope, disable memory power credit
                  INTR_TRAC_ERR("calc_wof_dimm_adjustment: OCMB[%d] has %d interpolation points and needs at least 2",
                                 l_ocmb_num, l_num_interp_pts);
-                 g_wof->mem_thermal_credit_constant = 0;
+                 g_wof->dimm_credit_disable |= WOF_DIMM_DISABLE_INTERPOLATION;
                  break;
               }
 
@@ -2210,12 +2203,12 @@ void calc_wof_dimm_adjustment(uint8_t i_ambient)
            INTR_TRAC_ERR("calc_wof_dimm_adjustment: Mismatch OCMB Present[0x%08X] and processed OCMBs[0x%08X]",
                           G_present_membufs, l_processed_ocmbs);
            // disable WOF memory credit
-           g_wof->mem_thermal_credit_constant = 0;
+           g_wof->dimm_credit_disable |= WOF_DIMM_DISABLE_OCMB_PRESENT_MISMATCH;
        }
     }  // else present OCMBs from WOF pwr data and memory config match
 
     // make sure didn't hit an error during processing causing disable
-    if(g_wof->mem_thermal_credit_constant)
+    if(g_wof->dimm_credit_disable == 0)
     {
        g_wof->total_dimm_preheat_pwr_cW = l_ocmb_total_pwr_cW;
        // check if total power is over the max

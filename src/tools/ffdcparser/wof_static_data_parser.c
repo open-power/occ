@@ -46,6 +46,7 @@ int main(int argc, char** argv)
     uint8_t     l_sys_flags = 0;
     uint8_t     l_system_type = 0;
     uint8_t     l_wof_table_version = 0;
+    uint8_t     l_wof_ambient_size = 0;
 
     // Verify a file was passed as an argument
     if(argc < 2)
@@ -156,11 +157,6 @@ int main(int argc, char** argv)
                printf("Unknown\n");
                break;
        } // switch system type
-       if(l_sys_flags & 0x08)
-           printf("                                   DIMM Adjustment Enabled\n");
-       else
-           printf("                                   DIMM Adjustment Disabled\n");
-
        if(l_sys_flags & 0x04)
            printf("                                   Expanded Frequency Encoding\n");
 
@@ -205,8 +201,14 @@ int main(int argc, char** argv)
     l_num_bytes += 2;
     printf("     Ambient Step: %d\n", get_uint16(wof_file));
     l_num_bytes += 2;
-    printf("     Ambient Size (number indicies): %d\n", get_uint16(wof_file));
+
+    l_wof_ambient_size = get_uint16(wof_file);
+    if(l_wof_ambient_size >= 5)
+        printf("     Ambient Size %d (number indicies) Supports DIMM credit\n", l_wof_ambient_size);
+    else
+        printf("     Ambient Size %d (number indicies) Too small NO DIMM credit\n", l_wof_ambient_size);
     l_num_bytes += 2;
+
     printf("     Sort Throttle Freq: %dMHz\n", get_uint16(wof_file));
     l_num_bytes += 2;
     printf("     Socket Power: %dW\n", get_uint16(wof_file));

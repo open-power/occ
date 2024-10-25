@@ -2468,7 +2468,8 @@ errlHndl_t data_store_memory_pwr_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
 
     // Verification that present OCMBs match OCMBs we receive pwr data for is done during WOF
     g_amec->wof.ocmbs_present = 0;
-    // thermal constant of 0 disables WOF memory power credit, will be set if data checks out
+    // thermal constant and max dimm preheat pwr must be non-zero for WOF memory power credit
+    g_amec->wof.dimm_credit_disable |= (WOF_DIMM_DISABLE_0_THERMAL_CONSTANT | WOF_DIMM_DISABLE_0_MAX_PREHEAT_PWR);
     g_amec->wof.mem_thermal_credit_constant = 0;
     g_amec->wof.max_dimm_pwr_total_cW = 0;
 
@@ -2562,7 +2563,10 @@ errlHndl_t data_store_memory_pwr_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
                     g_amec->static_wof_data.ocmb_util_pwr_pts[mem_buf][j] = (l_temp64 | (uint64_t)power);
                 }  // for each inerpolation point
                 if(l_interp_error) // data failed stop processing all OCMBs
+                {
+                    g_amec->wof.dimm_credit_disable |= WOF_DIMM_DISABLE_INTERPOLATION;
                     break;
+                }
 
                 g_amec->proc[0].memctl[mem_buf].membuf.num_interp_pts = num_interp_pts;
                 g_amec->wof.ocmbs_present |= (MEMBUF0_PRESENT_MASK >> mem_buf);
@@ -2631,12 +2635,17 @@ errlHndl_t data_store_memory_pwr_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
             }
             else if(!l_interp_error) // data is good
             {
+                g_amec->wof.dimm_credit_disable &= ~WOF_DIMM_DISABLE_INTERPOLATION;
                 l_invalid_input = FALSE;
                 g_amec->wof.mem_thermal_credit_constant = l_cmd_v2_ptr->header.thermal_credit_constant;
+                if(g_amec->wof.mem_thermal_credit_constant)
+                    g_amec->wof.dimm_credit_disable &= ~WOF_DIMM_DISABLE_0_THERMAL_CONSTANT;
+
                 g_amec->wof.max_dimm_pwr_ocmb_cW = l_cmd_v2_ptr->header.max_dimm_pwr_ocmb_cW;
 
                 if(l_cmd_v2_ptr->header.total_dimm_pwr_cW)
                 {
+                    g_amec->wof.dimm_credit_disable &= ~WOF_DIMM_DISABLE_0_MAX_PREHEAT_PWR;
                     g_amec->wof.max_dimm_pwr_total_cW = l_cmd_v2_ptr->header.total_dimm_pwr_cW;
                     CMDH_TRAC_INFO("data_store_memory_pwr_data: Total max dimm pre-heat power[%dcW]",
                                     g_amec->wof.max_dimm_pwr_total_cW);
@@ -2652,6 +2661,15 @@ errlHndl_t data_store_memory_pwr_data(const cmdh_fsp_cmd_t * i_cmd_ptr,
                                 l_cmd_v2_ptr->header.num_ocmbs, g_amec->wof.ocmbs_present);
                 CMDH_TRAC_INFO("data_store_memory_pwr_data: Thermal constant 0x%04X max pwr per OCMB 0x%08X cW",
                                 g_amec->wof.mem_thermal_credit_constant, g_amec->wof.max_dimm_pwr_ocmb_cW);
+            }
+            if(g_amec->wof.dimm_credit_disable)
+            {
+                CMDH_TRAC_IMP("data_store_memory_pwr_data: No WOF DIMM Credit dimm_credit_disable[0x%02X]",
+                                g_amec->wof.dimm_credit_disable);
+            }
+            else
+            {
+                CMDH_TRAC_IMP("data_store_memory_pwr_data: WOF DIMM Credit enabled");
             }
         }
         else // not enough data
