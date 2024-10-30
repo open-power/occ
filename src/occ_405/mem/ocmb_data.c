@@ -72,6 +72,10 @@ extern gpe_shared_data_t G_shared_gpe_data;
 uint32_t G_present_membufs = 0;
 uint32_t G_membuf_dts_enabled = 0;
 
+// indicates if DDR5 hw workaround is present for all OCMBs allowing for STR
+// in efficiency modes
+bool G_DDR5_cache_line_workaround = FALSE;
+
 //Memory data collect structures used for task data pointers
 struct membuf_data_task {
         uint8_t start_membuf;
@@ -162,6 +166,7 @@ void ocmb_init(void)
     bool l_gpe_config_mismatch = FALSE;
     uint32_t missing_membuf_bitmap = 0;
     uint32_t l_gpe_present_membufs = 0;
+    uint32_t l_cache_line_hw_wa_present = 0;
     GpeRequest l_gpe_request;
     static scomList_t L_scomList[1] SECTION_ATTRIBUTE(".noncacheable");
     static MemBufScomParms_t L_ocmb_reg_parms SECTION_ATTRIBUTE(".noncacheable");
@@ -254,6 +259,32 @@ void ocmb_init(void)
                      G_present_membufs, l_gpe_present_membufs);
            l_gpe_config_mismatch = TRUE;
            break;
+        }
+
+        // check if DDR5 cache line HW workaround is present
+        if(IS_OCM_DDR5_MEM_TYPE(G_sysConfigData.mem_type))
+        {
+            l_cache_line_hw_wa_present = (G_membufConfiguration.dts_work_around_present & 0x0000FFFF);
+
+            // this must be enabled on none or all present membufs
+            if(l_cache_line_hw_wa_present == 0)
+            {
+                TRAC_IMP("ocmb_init: Missing DDR5 cache line hw wokaround");
+                G_DDR5_cache_line_workaround = FALSE;
+            }
+            else if(l_cache_line_hw_wa_present == l_gpe_present_membufs)
+            {
+                TRAC_IMP("ocmb_init: DDR5 hw wokaround[0x%08x] is enabled",
+                         l_cache_line_hw_wa_present);
+                G_DDR5_cache_line_workaround = TRUE;
+            }
+            else
+            {
+                TRAC_ERR("ocmb_init: DDR5 hw wokaround[0x%08x] is not on all membufs[0x%08x]",
+                         l_cache_line_hw_wa_present, l_gpe_present_membufs);
+                l_gpe_config_mismatch = TRUE;
+                break;
+            }
         }
 
         // Setup the OCMB deadman timer

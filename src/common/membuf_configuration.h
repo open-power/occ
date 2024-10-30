@@ -98,6 +98,10 @@ typedef struct
     // use CHIP_CONFIG_MEMBUF(n) to set/test
     uint32_t ubdts_config;
 
+    // Odyssey DDR5 cache line work-around present (1), or not(0)
+    // this is for reading dts and read/write counters and required
+    // to enable STR for efficiency modes
+    uint32_t dts_work_around_present;
 
     /// A "chip configuration" bit mask denoting valid memory buffer.
     ///

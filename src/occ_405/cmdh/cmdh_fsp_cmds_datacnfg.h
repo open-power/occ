@@ -108,6 +108,10 @@ extern PWR_READING_TYPE  G_pwr_reading_type;
 // Set OCC Role Masks
 #define OCC_ROLE_MASTER_MASK        0x01
 
+// Bit mask in poll for indicating DDR5 workaround is being used
+// memory data is coming from SCOM regs and STR can be enabled
+#define OCC_DDR5_WORKAROUND_POLL_STATUS_MASK 0x04
+
 // Bit mask in poll for indicating if OCC thinks
 // it is running in simulation.
 #define OCC_SIMICS_ENVIRONMENT      0x08

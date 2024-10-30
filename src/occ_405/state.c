@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2021                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2024                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -44,6 +44,7 @@
 // Maximum time to wait for a PGPE task before timeout
 #define WAIT_PGPE_TASK_TIMEOUT (MICS_PER_TICK * 4)
 
+extern bool G_DDR5_cache_line_workaround;
 extern bool G_allowPstates;
 extern bool G_mem_monitoring_allowed;
 extern task_t G_task_table[TASK_END];  // Global task table
@@ -1386,6 +1387,11 @@ uint8_t SMGR_validate_get_valid_states(void)
     if(G_proc_pmcr_owner == PMCR_OWNER_OCC)
     {
         l_valid_states |= OCC_PMCR_OWNER_POLL_STATUS_MASK;
+    }
+
+    if(G_DDR5_cache_line_workaround)
+    {
+        l_valid_states |= OCC_DDR5_WORKAROUND_POLL_STATUS_MASK;
     }
 
     return l_valid_states;
