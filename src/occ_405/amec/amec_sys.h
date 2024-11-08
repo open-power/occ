@@ -709,10 +709,6 @@ typedef struct
   // PowerCap Data
   amec_pcap_t           pcap;
 
-  // Save off proc and mem sensor data for debug usage
-  uint16_t              proc_snr_pwr[MAX_NUM_CHIP_MODULES];
-  uint16_t              mem_snr_pwr[MAX_NUM_CHIP_MODULES];
-
   // save off when pcap is considered valid
   uint8_t               pcap_valid;
 

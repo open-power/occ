@@ -1295,22 +1295,6 @@ void amec_slv_check_perf(void)
                 TRAC_ERR("SnrBulkPwr %d > Sys Pcap %d ",l_snrBulkPwr,
                          G_sysConfigData.pcap.system_pcap );
 
-                TRAC_ERR("SnrGpuPrw %d ",
-                        AMECSENSOR_PTR(PWRGPU)->sample );
-
-                TRAC_ERR("SnrProcPwr 0 %d, SnrProcPwr 1 %d, SnrProcPwr 2 %d, SnrProcPwr 3 %d",
-                        g_amec->proc_snr_pwr[0],
-                        g_amec->proc_snr_pwr[1],
-                        g_amec->proc_snr_pwr[2],
-                        g_amec->proc_snr_pwr[3] );
-
-                TRAC_ERR("SnrMemPwr 0 %d, SnrMemPwr 1 %d, SnrMemPwr 2 %d, SnrMemPwr 3 %d",
-                        g_amec->mem_snr_pwr[0],
-                        g_amec->mem_snr_pwr[1],
-                        g_amec->mem_snr_pwr[2],
-                        g_amec->mem_snr_pwr[3] );
-
-
                 l_throttle_traced = TRUE;
                 l_time = ssx_timebase_get();
 

@@ -103,7 +103,7 @@ enum e_gsid
     FREQA,
     IPS,
     PWRPROC,
-    PWRMEM,
+    PWRMEM,         // Total memory power in W behind this proc (sum of MEMPWRMx sensors)
     TEMPPROCAVG,    // Average of all TEMPPROCTHRMC core temperatures
     TEMPPROCTHRM,   // Maximum of all TEMPPROCTHRMC core temperatures
     TEMPPROCIOTHRM, // Maximum of all proc PAU temperatures
@@ -569,7 +569,7 @@ enum e_gsid
     MEMUTILM14,
     MEMUTILM15,
 
-    MEMPWRM0,    // memory power caclulated from memory utilization
+    MEMPWRM0,    // memory power in cW caclulated from memory utilization
     MEMPWRM1,
     MEMPWRM2,
     MEMPWRM3,

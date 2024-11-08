@@ -73,8 +73,11 @@ typedef enum
 #define EXTN_NAME_FMAX    0x464D4158 // "FMAX"
 #define EXTN_NAME_CLIP    0x434C4950 // "CLIP"
 #define EXTN_NAME_WOFC    0x574F4643 // "WOFC"
+#define EXTN_NAME_WOFI    0x574F4649 // "WOFI"
 #define EXTN_NAME_MODE    0x4D4F4445 // "MODE"
 #define EXTN_NAME_ERRHIST 0x45525248 // "ERRH"
+#define EXTN_NAME_PWRM    0x5057524D // "PWRM"
+#define EXTN_NAME_PWRP    0x50575250 // "PWRP"
 
 #define MAX_EXTN_SENSORS 32
 //---------------------------------------------------------

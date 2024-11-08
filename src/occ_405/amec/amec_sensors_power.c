@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2022                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2024                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -345,14 +345,6 @@ bool amec_update_apss_sensors(void)
                 sensor_update(AMECSENSOR_PTR(PWRPROC), (uint16_t) temp32);
             }
 
-            // Save off the combined power from all modules
-            for (l_idx=0; l_idx < MAX_NUM_CHIP_MODULES; l_idx++)
-            {
-                uint32_t l_vd = ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.vdd[l_idx]);
-                uint32_t l_vpcie = ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.vcs_vio_vpcie[l_idx]);
-                g_amec->proc_snr_pwr[l_idx] = ROUND_POWER((l_vpcie + l_vd) * l_bulk_voltage);
-            }
-
             // All readings from APSS come back as milliUnits, so if we want
             // to convert one, we need to
             //  divide by    1 to get it back to milliUnits (0.001)
@@ -363,29 +355,6 @@ bool amec_update_apss_sensors(void)
             // ----------------------------------------------------
             // Convert Other Raw Misc Power from APSS into sensors
             // ----------------------------------------------------
-
-            // Memory: Add up all channels for the same processor.
-            temp32 = ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.memory[l_proc][0]);
-            temp32 += ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.memory[l_proc][1]);
-            temp32 += ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.memory[l_proc][2]);
-            temp32 += ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.memory[l_proc][3]);
-            //Only for FSP-LESS systems do we add in membuf power because it is measured on its own A/D channel, but is part of memory power
-            if (FSP_SUPPORTED_OCC != G_occ_interrupt_type)
-            {
-                temp32 += ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.mem_cache);
-            }
-            temp32 = ROUND_POWER(temp32  * l_bulk_voltage);
-            sensor_update( AMECSENSOR_PTR(PWRMEM), (uint16_t)temp32);
-
-            // Save off the combined power from all memory
-            for (l_idx=0; l_idx < MAX_NUM_CHIP_MODULES; l_idx++)
-            {
-                uint32_t l_temp = ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.memory[l_idx][0]);
-                l_temp += ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.memory[l_idx][1]);
-                l_temp += ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.memory[l_idx][2]);
-                l_temp += ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.memory[l_idx][3]);
-                g_amec->mem_snr_pwr[l_idx] = ROUND_POWER(l_temp  * l_bulk_voltage);
-            }
 
             // Save total GPU adapter for this proc
             if (l_proc < MAX_GPU_DOMAINS)

@@ -70,6 +70,7 @@ extern opal_proc_voting_reason_t G_amec_opal_proc_throt_reason;
 extern GpeRequest G_wof_vrt_req;
 extern uint32_t G_present_cores;
 extern bool G_occ_v1_shared_sram_supported;
+extern uint16_t G_membuf_power_updated_bitmap;
 
 //*************************************************************************
 // Macros
@@ -133,7 +134,7 @@ const smh_tbl_t amec_slv_state_1_substate_table[AMEC_SMH_STATES_PER_LVL] =
 const smh_tbl_t amec_slv_state_2_substate_table[AMEC_SMH_STATES_PER_LVL] =
 {
   {amec_slv_substate_2_even, NULL}, // Substate 2.0
-  {NULL,                     NULL}, // Substate 2.1 (not used)
+  {amec_update_total_mem_pwr, NULL}, // Substate 2.1
   {amec_slv_substate_2_even, NULL}, // Substate 2.2
   {NULL,                     NULL}, // Substate 2.3 (not used)
   {amec_slv_substate_2_even, NULL}, // Substate 2.4
@@ -997,13 +998,41 @@ void amec_slv_substate_1_7(void)
 // Description: even numbered slave substates
 //              gives state 2 substate function to be called every 16th tick
 //              Time = 16 * MICS_PER_TICK
-//              odd substates of state 2 are not currently used
 //
 // End Function Specification
 void amec_slv_substate_2_even(void)
 {
     AMEC_DBG("\tAMEC Slave State 2 even substate\n");
     amec_slv_update_main_mem_sensors();
+}
+
+// Function Specification
+//
+// Name: amec_update_total_mem_pwr
+//
+// Description: Update total memory power based on membuf powers updated
+//
+// End Function Specification
+void amec_update_total_mem_pwr(void)
+{
+    uint8_t  l_membuf = 0;
+    uint16_t l_pwr_cw = 0;
+    uint16_t l_pwr_w = 0;
+
+    for(l_membuf=0; l_membuf < MAX_NUM_OCMBS; l_membuf++)
+    {
+        if(G_membuf_power_updated_bitmap & (MEMBUF0_PRESENT_MASK >> l_membuf))
+        {
+             l_pwr_cw += getSensorByGsid((uint16_t)(MEMPWRM0 + l_membuf))->sample;
+        }
+    }
+
+    // convert power to W
+    l_pwr_w = (l_pwr_cw / 100);
+    sensor_update(AMECSENSOR_PTR(PWRMEM), l_pwr_w);
+
+    // save config of membufs that went into this reading into ipmi sid
+    AMECSENSOR_PTR(PWRMEM)->ipmi_sid = (uint32_t)G_membuf_power_updated_bitmap;
 }
 
 // Function Specification

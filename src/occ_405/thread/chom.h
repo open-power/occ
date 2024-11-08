@@ -31,7 +31,7 @@
 #include <apss.h>
 
 #define  CHOM_GEN_LOG_PERIODIC_TIME     86400 // seconds in a day
-#define  CHOM_VERSION                   0x10
+#define  CHOM_VERSION                   0x11
 // Max size of chom data this should be less than MAX_ERRL_CALL_HOME_SZ
 // to account for error log header/possible other data in the call home log
 #define  CHOM_LOG_DATA_MAX              (MAX_ERRL_CALL_HOME_SZ - 256)

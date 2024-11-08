@@ -788,7 +788,38 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
         l_extnSensorList[l_sensorHeader.count].data[3] = CONVERT_UINT16_UINT8_HIGH(g_amec->wof.v_ratio_vdd);
         l_extnSensorList[l_sensorHeader.count].data[4] = CONVERT_UINT16_UINT8_LOW(g_amec->wof.v_ratio_vdd);
         l_extnSensorList[l_sensorHeader.count].data[5] = g_amec->wof.wof_adjust_reasons;
+        l_sensorHeader.count++;
+
+        // additional WOF information
+        l_extnSensorList[l_sensorHeader.count].name = EXTN_NAME_WOFI;
+        l_extnSensorList[l_sensorHeader.count].data[0] = g_amec->wof.VRT[1];
+        l_extnSensorList[l_sensorHeader.count].data[1] = g_amec->wof.VRT[2];
+        l_extnSensorList[l_sensorHeader.count].data[2] = g_amec->wof.VRT[3];
+        l_extnSensorList[l_sensorHeader.count].data[3] = g_amec->wof.dimm_credit_disable;
+        l_extnSensorList[l_sensorHeader.count].data[4] = g_amec->wof.ambient_adj_for_dimm;
+        l_extnSensorList[l_sensorHeader.count].data[5] = 0; // reserved
     }
+    l_sensorHeader.count++;
+
+    // Add memory power
+    l_extnSensorList[l_sensorHeader.count].name = EXTN_NAME_PWRM;
+    // the ocmb status bit mask used for the current reading is stored in ipmi_sid
+    l_extnSensorList[l_sensorHeader.count].data[0] = CONVERT_UINT32_UINT8_LOWER_HIGH(G_amec_sensor_list[PWRMEM]->ipmi_sid);
+    l_extnSensorList[l_sensorHeader.count].data[1] = CONVERT_UINT32_UINT8_LOWER_LOW(G_amec_sensor_list[PWRMEM]->ipmi_sid);
+    l_extnSensorList[l_sensorHeader.count].data[2] = CONVERT_UINT16_UINT8_HIGH(G_amec_sensor_list[PWRMEM]->gsid);
+    l_extnSensorList[l_sensorHeader.count].data[3] = CONVERT_UINT16_UINT8_LOW(G_amec_sensor_list[PWRMEM]->gsid);
+    l_extnSensorList[l_sensorHeader.count].data[4] = CONVERT_UINT16_UINT8_HIGH(G_amec_sensor_list[PWRMEM]->sample);
+    l_extnSensorList[l_sensorHeader.count].data[5] = CONVERT_UINT16_UINT8_LOW(G_amec_sensor_list[PWRMEM]->sample);
+    l_sensorHeader.count++;
+
+    // Add processor power
+    l_extnSensorList[l_sensorHeader.count].name = EXTN_NAME_PWRP;
+    l_extnSensorList[l_sensorHeader.count].data[0] = 0; // reserved
+    l_extnSensorList[l_sensorHeader.count].data[1] = 0; // reserved
+    l_extnSensorList[l_sensorHeader.count].data[2] = CONVERT_UINT16_UINT8_HIGH(G_amec_sensor_list[PWRPROC]->gsid);
+    l_extnSensorList[l_sensorHeader.count].data[3] = CONVERT_UINT16_UINT8_LOW(G_amec_sensor_list[PWRPROC]->gsid);
+    l_extnSensorList[l_sensorHeader.count].data[4] = CONVERT_UINT16_UINT8_HIGH(G_amec_sensor_list[PWRPROC]->sample);
+    l_extnSensorList[l_sensorHeader.count].data[5] = CONVERT_UINT16_UINT8_LOW(G_amec_sensor_list[PWRPROC]->sample);
     l_sensorHeader.count++;
 
     // add any non-0 error history counts

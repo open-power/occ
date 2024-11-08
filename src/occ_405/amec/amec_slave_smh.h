@@ -102,8 +102,9 @@ void amec_slv_substate_1_5(void);
 void amec_slv_substate_1_6(void);
 void amec_slv_substate_1_7(void);
 
-// Slave SubState 2 (odd SubStates currently unused)
+// Slave SubState 2
 void amec_slv_substate_2_even(void);
+void amec_update_total_mem_pwr(void); // state 2.1
 
 // Slave SubState 3
 void amec_slv_substate_3_0(void);

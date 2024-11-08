@@ -53,6 +53,7 @@ dimm_sensor_flags_t G_dimm_overtemp_bitmap = {{0}};
 dimm_sensor_flags_t G_dimm_temp_updated_bitmap = {{0}};
 uint16_t            G_membuf_overtemp_bitmap = 0;
 uint16_t            G_membuf_temp_updated_bitmap = 0;
+uint16_t            G_membuf_power_updated_bitmap = 0;
 
 extern uint8_t  G_membuf_needs_recovery;
 extern uint64_t G_inject_dimm;
@@ -99,6 +100,12 @@ void amec_update_ocmb_sensors(uint8_t i_membuf)
             amec_perfcount_ocmb_getmc(l_sensor_cache, i_membuf);
         }
         CLEAR_MEMBUF_UPDATED(i_membuf);
+    }
+    else if(G_membuf_power_updated_bitmap & (MEMBUF0_PRESENT_MASK >> i_membuf))
+    {
+       // this membuf was part of total memory power and is no longer present remove from power calc
+       G_membuf_power_updated_bitmap &= ~(MEMBUF0_PRESENT_MASK >> i_membuf);
+       TRAC_IMP("amec_update_ocmb_sensors: membuf[%d] no longer present removing from total power calculation new G_membuf_power_updated_bitmap[0x%04X]", i_membuf, G_membuf_power_updated_bitmap);
     }
 }
 
@@ -727,15 +734,17 @@ void amec_perfcount_ocmb_getmc( OcmbMemData * i_sensor_cache,
     uint64_t                    l_sample_time_us  = 0;
     uint64_t                    l_sample_time_p001ns  = 0;
     uint64_t                    temp64        = 0;
+    int64_t                     l_ocmb_pwr_cW = 0;
     static uint8_t              L_accumulator_reads[MAX_NUM_OCMBS] = {0};
     static bool                 L_traced_no_util_support = FALSE;
     static bool                 L_traced_0_time = FALSE;
     static uint8_t              L_trace_count = 4; // number of traces when ALOW_MEM_TRACE set
 
-
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
+    // clear memory power updated, this will get set if updated
+    G_membuf_power_updated_bitmap &= ~(MEMBUF0_PRESENT_MASK >> i_membuf);
 
     // DDR4
     OcmbMemData * l_sensor_cache = i_sensor_cache;
@@ -969,6 +978,17 @@ void amec_perfcount_ocmb_getmc( OcmbMemData * i_sensor_cache,
                        g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].perf.memwrite2ms);
 
         sensor_update( (&(g_amec->proc[0].memctl[i_membuf].memutil)), l_memutil);
+
+        // calculate power based on utilization
+        l_ocmb_pwr_cW = extrapolate_linear((int64_t)l_memutil,
+                                           (int64_t)g_amec->proc[0].memctl[i_membuf].membuf.util_pwr_pt[1].util_cPercent,
+                                           (int64_t)g_amec->proc[0].memctl[i_membuf].membuf.util_pwr_pt[1].full_power_cW,
+                                           g_amec->proc[0].memctl[i_membuf].membuf.util_full_power_m10000x);
+        if(l_ocmb_pwr_cW >= 0) // don't allow negative power
+        {
+            sensor_update( (&(g_amec->proc[0].memctl[i_membuf].mempwr)), (uint16_t)l_ocmb_pwr_cW);
+            G_membuf_power_updated_bitmap |= (MEMBUF0_PRESENT_MASK >> i_membuf);
+        }
     }
     else
     {

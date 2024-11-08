@@ -473,16 +473,6 @@ void apss_store_ipmi_sensor_id(const uint16_t i_channel, const apss_cfg_adc_v20_
 
     switch (i_adc->assignment)
     {
-        case ADC_MEMORY_PROC_0:
-        case ADC_MEMORY_PROC_1:
-        case ADC_MEMORY_PROC_2:
-        case ADC_MEMORY_PROC_3:
-            if (l_proc == (i_adc->assignment - ADC_MEMORY_PROC_0))
-            {
-                AMECSENSOR_PTR(PWRMEM)->ipmi_sid = i_adc->ipmisensorId;
-            }
-            break;
-
         case ADC_GPU_0_0:
         case ADC_GPU_0_1:
         case ADC_GPU_0_2:
