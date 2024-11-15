@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2017                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2024                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -201,8 +201,10 @@ typedef union ocmb_wa2
     uint64_t value;
     struct
     {
-        uint32_t reads_side0_1;
-        uint32_t writes_side0_1;
+        uint16_t reads_side0_1;
+        uint16_t writes_side0_1;
+        uint16_t cycles_p5ns; // used to calculate time between occ reads for utilization calc
+        uint16_t str_cycles;  // self time refresh cycles. Not used by the occ
     };
 } ocmb_wa2_t;
 

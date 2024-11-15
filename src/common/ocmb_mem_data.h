@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2016,2018                        */
+/* Contributors Listed Below - COPYRIGHT 2016,2024                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -126,7 +126,7 @@ typedef struct
     ocmb_status_ddr5_t status;   // 32 bit status
     uint16_t ubdts0;             // Membuf thermal sensor
     uint16_t memdts[4];          // dts0/1/2/3 thermal sensors
-    uint16_t reserved1;
+    uint16_t frame_count;        // only used with HW workaround, reserved with cache line read
 
     uint32_t side0_rd;           // reads
     uint32_t side0_wr;           // writes

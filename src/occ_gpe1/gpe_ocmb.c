@@ -951,8 +951,9 @@ int get_ocmb_sensorcache(MemBufConfiguration_t *i_config,
                     PK_TRACE("E>Inband get scom failed for address %08x. rc: %d", OCMB_WA2_DDR5, rc);
                 }
 
-                mem_data->side0_rd = wa2->reads_side0_1;
-                mem_data->side0_wr = wa2->writes_side0_1;
+                mem_data->side0_rd = (uint32_t)wa2->reads_side0_1;
+                mem_data->side0_wr = (uint32_t)wa2->writes_side0_1;
+                mem_data->frame_count = wa2->cycles_p5ns;
             }
             else  // Read sensor cache
             {

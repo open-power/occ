@@ -794,28 +794,50 @@ void amec_perfcount_ocmb_getmc( OcmbMemData * i_sensor_cache,
        l_prev_p0_write = g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].perf.wr_cnt_accum;
        l_prev_p1_write = g_amec->proc[0].memctl[i_membuf].membuf.portpair[1].perf.wr_cnt_accum;
 
-       if(g_amec->proc[0].memctl[i_membuf].membuf.read_time_us)
-           l_sample_time_us = g_amec->proc[0].memctl[i_membuf].membuf.read_time_us;
-       else
+       // if using HW workaround instead of cache line then the frame_count is populated to
+       // calculate update time the HW workaround scom reg with reads/writes was updated
+       if(G_DDR5_cache_line_workaround)
        {
-           l_sample_time_us = G_ocmb_read_time_ms * 1000;
-           if( (L_accumulator_reads[i_membuf] >= MIN_OCMB_READS_FOR_BW_SENSOR) &&
-               ((L_traced_0_time == FALSE) || ((G_allow_trace_flags & ALLOW_MEM_TRACE) && L_trace_count)))
+           l_cache_frame_count = (uint32_t)l_ddr5_sensor_cache->frame_count;
+           l_prev_frame_count = g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].perf.frame_count;
+           l_frame_count_diff = amec_diff_adjust_for_overflow(l_cache_frame_count, l_prev_frame_count);
+           l_sample_time_p001ns = (uint64_t)((uint64_t)l_frame_count_diff * (uint64_t)g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].addr_clock_p001ns);
+           l_time_us = (uint32_t)(l_sample_time_p001ns / 1000000);
+           if(l_time_us)
+               l_num_ocmb_reads_per_1000s = 1000000000 / l_time_us;
+           else if(L_traced_0_time == FALSE)
            {
                L_traced_0_time = TRUE;  // only trace once
-               TRAC_ERR("amec_perfcount_ocmb_getmc No read time for OCMB[%d] using default l_sample_time_us[0x%08X%08X]",
-                         i_membuf, (uint32_t)(l_sample_time_us>>32), (uint32_t)l_sample_time_us);
+               TRAC_ERR("amec_perfcount_ocmb_getmc: sample time is 0us! frame_diff[0x%08X] addr_clock_p001ns[%d]",
+                         l_frame_count_diff,
+                         g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].addr_clock_p001ns);
            }
        }
-
-       // sample_time_us *1000 --> ns * 1000 --> .001ns
-       l_sample_time_p001ns = (uint64_t)((uint64_t)l_sample_time_us * (uint64_t)(1000000));
-       if((G_allow_trace_flags & ALLOW_MEM_TRACE) && L_trace_count)
+       else
        {
-           TRAC_INFO("amec_perfcount_ocmb_getmc DEBUG START DDR5 OCMB[%d]: l_sample_time_us[0x%08X%08X]",
-                      i_membuf, (uint32_t)(l_sample_time_us>>32), (uint32_t)l_sample_time_us);
-       }
-    }
+           if(g_amec->proc[0].memctl[i_membuf].membuf.read_time_us)
+               l_sample_time_us = g_amec->proc[0].memctl[i_membuf].membuf.read_time_us;
+           else
+           {
+               l_sample_time_us = G_ocmb_read_time_ms * 1000;
+               if( (L_accumulator_reads[i_membuf] >= MIN_OCMB_READS_FOR_BW_SENSOR) &&
+                   ((L_traced_0_time == FALSE) || ((G_allow_trace_flags & ALLOW_MEM_TRACE) && L_trace_count)))
+               {
+                   L_traced_0_time = TRUE;  // only trace once
+                   TRAC_ERR("amec_perfcount_ocmb_getmc No read time for OCMB[%d] using default l_sample_time_us[0x%08X%08X]",
+                             i_membuf, (uint32_t)(l_sample_time_us>>32), (uint32_t)l_sample_time_us);
+               }
+           }
+
+           // sample_time_us *1000 --> ns * 1000 --> .001ns
+           l_sample_time_p001ns = (uint64_t)((uint64_t)l_sample_time_us * (uint64_t)(1000000));
+           if((G_allow_trace_flags & ALLOW_MEM_TRACE) && L_trace_count)
+           {
+               TRAC_INFO("amec_perfcount_ocmb_getmc DEBUG START DDR5 OCMB[%d]: l_sample_time_us[0x%08X%08X]",
+                          i_membuf, (uint32_t)(l_sample_time_us>>32), (uint32_t)l_sample_time_us);
+           }
+       } // else reading DDR5 cache line (no HW workaround)
+    } // DDR5
 
     if( (L_accumulator_reads[i_membuf] >= MIN_OCMB_READS_FOR_BW_SENSOR)&&
         ((G_allow_trace_flags & ALLOW_MEM_TRACE) && L_trace_count) && l_frame_count_diff)
@@ -830,14 +852,6 @@ void amec_perfcount_ocmb_getmc( OcmbMemData * i_sensor_cache,
     l_cache_write_total = l_cache_p0_write + l_cache_p1_write;
     l_prev_write_total = l_prev_p0_write + l_prev_p1_write;
     l_write_diff = amec_diff_adjust_for_overflow(l_cache_write_total, l_prev_write_total);
-
-    // if the writes came from SCOM reg for HW workaround instead of cache line then in
-    // order to preserve all 32 bits of the PMU counter data the value is prescalar of 4
-    // multiply value by 2^4
-    if(G_DDR5_cache_line_workaround)
-    {
-        l_write_diff *= 16;
-    }
 
     // Save latest accumulator away for next time
     g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].perf.wr_cnt_accum = l_cache_p0_write;
@@ -889,14 +903,6 @@ void amec_perfcount_ocmb_getmc( OcmbMemData * i_sensor_cache,
     l_cache_read_total = l_cache_p0_read + l_cache_p1_read;
     l_prev_read_total = l_prev_p0_read + l_prev_p1_read;
     l_read_diff = amec_diff_adjust_for_overflow(l_cache_read_total, l_prev_read_total);
-
-    // if the reads came from SCOM reg for HW workaround instead of cache line then in
-    // order to preserve all 32 bits of the PMU counter data the value is prescalar of 4
-    // multiply value by 2^4
-    if(G_DDR5_cache_line_workaround)
-    {
-        l_read_diff *= 16;
-    }
 
     // Save latest accumulator away for next time
     g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].perf.rd_cnt_accum = l_cache_p0_read;
