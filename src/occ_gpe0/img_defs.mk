@@ -118,9 +118,16 @@ endif
 
 # libs needed by compiler
 ifndef PPE_TOOL_PATH
+
+ifneq (,$(wildcard /usr/local/ppe42))
+	PPE_TOOL_PATH=/usr/local/ppe42
+else
 PPE_TOOL_PATH = $(CTEPATH)/tools/ppetools/prod
+endif
+
 LD_LIBRARY_PATH += :$(PPE_TOOL_PATH)/lib:
 export LD_LIBRARY_PATH
+
 endif
 
 ifndef GCC-TOOL-PREFIX

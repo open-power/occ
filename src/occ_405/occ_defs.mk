@@ -23,7 +23,7 @@
 #
 # IBM_PROLOG_END_TAG
 
-GCC-CFLAGS += -Werror
+GCC-CFLAGS += -Werror -Wno-address-of-packed-member
 
 %.o: %.c
 $(OBJDIR)/%.o: %.c

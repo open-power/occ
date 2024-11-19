@@ -118,7 +118,11 @@ ifndef GCC-TOOL-PREFIX
 ifdef CROSS_PREFIX
 GCC-TOOL-PREFIX = $(CROSS_PREFIX)
 else
+ifneq (,$(wildcard /usr/local/power/bin/powerpc-linux-gcc))
+GCC-TOOL-PREFIX=/usr/local/power/bin/powerpc-linux-
+else
 GCC-TOOL-PREFIX = $(CTEPATH)/tools/ppcgcc/prod/bin/powerpc-linux-
+endif
 endif
 endif
 
