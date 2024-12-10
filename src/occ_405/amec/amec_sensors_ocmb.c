@@ -63,7 +63,8 @@ extern uint32_t G_ocmb_read_time_ms;
 extern uint16_t G_allow_trace_flags;
 extern bool G_DDR5_cache_line_workaround;
 
-uint64_t amec_diff_adjust_for_overflow(uint32_t i_new_value, uint32_t i_old_value);
+uint32_t amec_diff_adjust_for_overflow(uint32_t i_new_value, uint32_t i_old_value);
+uint16_t amec_diff_adjust_for_overflow_16bit(uint16_t i_new_value, uint16_t i_old_value);
 
 // number of times OCMB cache line must be read before starting to update bandwidth sensors
 // this is required to have a good starting accumulator
@@ -725,9 +726,9 @@ void amec_perfcount_ocmb_getmc( OcmbMemData * i_sensor_cache,
     uint32_t                    l_prev_write_total  = 0;
     uint32_t                    l_prev_frame_count = 0;
     uint32_t                    tempreg       = 0;
-    uint64_t                    l_read_diff   = 0;
-    uint64_t                    l_write_diff   = 0;
-    uint64_t                    l_frame_count_diff   = 0;
+    uint32_t                    l_read_diff   = 0;
+    uint32_t                    l_write_diff   = 0;
+    uint32_t                    l_frame_count_diff   = 0;
     uint32_t                    l_num_ocmb_reads_per_1000s = G_num_ocmb_reads_per_1000s;
     uint32_t                    l_time_us = 0;
     uint64_t                    l_time_over_freq = 0;
@@ -800,9 +801,11 @@ void amec_perfcount_ocmb_getmc( OcmbMemData * i_sensor_cache,
        {
            l_cache_frame_count = (uint32_t)l_ddr5_sensor_cache->frame_count;
            l_prev_frame_count = g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].perf.frame_count;
-           l_frame_count_diff = amec_diff_adjust_for_overflow(l_cache_frame_count, l_prev_frame_count);
+           l_frame_count_diff = (uint16_t)amec_diff_adjust_for_overflow_16bit((uint16_t)l_cache_frame_count, (uint16_t)l_prev_frame_count);
            l_sample_time_p001ns = (uint64_t)((uint64_t)l_frame_count_diff * (uint64_t)g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].addr_clock_p001ns);
-           l_time_us = (uint32_t)(l_sample_time_p001ns / 1000000);
+           // counters for the workaround have a prescaler of 16, each tick counts as 2^16
+           l_sample_time_p001ns *= 65536;
+           l_time_us = (uint32_t)(l_sample_time_p001ns / 1000000000);
            if(l_time_us)
                l_num_ocmb_reads_per_1000s = 1000000000 / l_time_us;
            else if(L_traced_0_time == FALSE)
@@ -851,7 +854,14 @@ void amec_perfcount_ocmb_getmc( OcmbMemData * i_sensor_cache,
 
     l_cache_write_total = l_cache_p0_write + l_cache_p1_write;
     l_prev_write_total = l_prev_p0_write + l_prev_p1_write;
-    l_write_diff = amec_diff_adjust_for_overflow(l_cache_write_total, l_prev_write_total);
+    if(G_DDR5_cache_line_workaround)
+    {
+       l_write_diff = (uint16_t)amec_diff_adjust_for_overflow_16bit((uint16_t)l_cache_write_total, (uint16_t)l_prev_write_total);
+       // apply the prescaler 2^16
+       l_write_diff = (uint32_t)((uint32_t)l_write_diff * 65536);
+    }
+    else
+       l_write_diff = amec_diff_adjust_for_overflow(l_cache_write_total, l_prev_write_total);
 
     // Save latest accumulator away for next time
     g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].perf.wr_cnt_accum = l_cache_p0_write;
@@ -877,8 +887,8 @@ void amec_perfcount_ocmb_getmc( OcmbMemData * i_sensor_cache,
                    i_membuf, g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].perf.memwrite2ms);
         TRAC_INFO("amec_perfcount_ocmb_getmc[2]: Raw sensor cache Write data NEW[0x%08X] PREVIOUS[0x%08X]",
                    l_cache_write_total, l_prev_write_total);
-        TRAC_INFO("amec_perfcount_ocmb_getmc[3]: Write Difference[0x%08X%08X]",
-                   (uint32_t)(l_write_diff>>32), (uint32_t)l_write_diff);
+        TRAC_INFO("amec_perfcount_ocmb_getmc[3]: Write Difference[0x%08X]",
+                   l_write_diff);
     }
 
     // -------------------------------------------------------------------------
@@ -902,7 +912,14 @@ void amec_perfcount_ocmb_getmc( OcmbMemData * i_sensor_cache,
 
     l_cache_read_total = l_cache_p0_read + l_cache_p1_read;
     l_prev_read_total = l_prev_p0_read + l_prev_p1_read;
-    l_read_diff = amec_diff_adjust_for_overflow(l_cache_read_total, l_prev_read_total);
+    if(G_DDR5_cache_line_workaround)
+    {
+       l_read_diff = (uint16_t)amec_diff_adjust_for_overflow_16bit((uint16_t)l_cache_read_total, (uint16_t)l_prev_read_total);
+       // apply the prescaler 2^16
+       l_read_diff = (uint32_t)((uint32_t)l_read_diff * 65536);
+    }
+    else
+       l_read_diff = amec_diff_adjust_for_overflow(l_cache_read_total, l_prev_read_total);
 
     // Save latest accumulator away for next time
     g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].perf.rd_cnt_accum = l_cache_p0_read;
@@ -943,7 +960,7 @@ void amec_perfcount_ocmb_getmc( OcmbMemData * i_sensor_cache,
     {
        // calculate utilization
        l_time_over_freq = l_sample_time_p001ns / g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].addr_clock_p001ns;
-       temp64 = (uint64_t)(l_read_diff + l_write_diff) * (uint64_t)l_addr_to_data_conv_p0;
+       temp64 = (l_read_diff + l_write_diff) * l_addr_to_data_conv_p0;
        temp64 *= 10000; // times 10000 to convert to 0.01% unit
        l_memutil = (uint16_t)(temp64 / l_time_over_freq);
 
@@ -951,13 +968,12 @@ void amec_perfcount_ocmb_getmc( OcmbMemData * i_sensor_cache,
        {
            TRAC_INFO("amec_perfcount_ocmb_getmc[UTILM%d]: l_sample_time_p001ns[0x%08X%08X]",
                       i_membuf, (uint32_t)(l_sample_time_p001ns>>32), (uint32_t)l_sample_time_p001ns);
-           TRAC_INFO("amec_perfcount_ocmb_getmc[UTILM%d]: addr_clock_p001ns[%d]",
+           TRAC_INFO("amec_perfcount_ocmb_getmc[UTILM%d]: addr_clock_p001ns[%d] addr_to_data_conv[%d]",
                       i_membuf,
-                      g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].addr_clock_p001ns);
-           TRAC_INFO("amec_perfcount_ocmb_getmc[UTILM%d]: l_read_diff[0x%08X%08X]",
-                      i_membuf, (uint32_t)(l_read_diff>>32), (uint32_t)l_read_diff);
-           TRAC_INFO("amec_perfcount_ocmb_getmc[UTILM%d]: l_write_diff[0x%08X%08X]",
-                      i_membuf, (uint32_t)(l_write_diff>>32), (uint32_t)l_write_diff);
+                      g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].addr_clock_p001ns),
+                      l_addr_to_data_conv_p0;
+           TRAC_INFO("amec_perfcount_ocmb_getmc[UTILM%d]: l_read_diff[0x%08X] l_write_diff[0x%08X]",
+                      i_membuf, l_read_diff, l_write_diff);
            TRAC_INFO("amec_perfcount_ocmb_getmc[UTILM%d] = 0x%04X;  temp64[0x%08X%08X]",
                       i_membuf, l_memutil, (uint32_t)(temp64>>32), (uint32_t)temp64);
        }
@@ -972,10 +988,8 @@ void amec_perfcount_ocmb_getmc( OcmbMemData * i_sensor_cache,
                        i_membuf, g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].perf.memread2ms);
             TRAC_INFO("amec_perfcount_ocmb_getmc[5]: Raw sensor cache Read data NEW[0x%08X] PREVIOUS[0x%08X]",
                        l_cache_read_total, l_prev_read_total);
-            TRAC_INFO("amec_perfcount_ocmb_getmc[6]: Read Difference[0x%08X%08X]",
-                       (uint32_t)(l_read_diff>>32), (uint32_t)l_read_diff);
-            TRAC_INFO("amec_perfcount_ocmb_getmc[7]: temp64[0x%08X%08X]",
-                       (uint32_t)(temp64>>32), (uint32_t)temp64);
+            TRAC_INFO("amec_perfcount_ocmb_getmc[6]: Read Difference[0x%08X] temp64[0x%08X%08X]",
+                       l_read_diff, (uint32_t)(temp64>>32), (uint32_t)temp64);
         }
         sensor_update( (&(g_amec->proc[0].memctl[i_membuf].mrd)),
                         g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].perf.memread2ms);
@@ -1031,14 +1045,41 @@ void amec_perfcount_ocmb_getmc( OcmbMemData * i_sensor_cache,
 //              while accounting for overflow.
 //
 // End Function Specification
-uint64_t amec_diff_adjust_for_overflow(uint32_t i_new_value, uint32_t i_old_value)
+uint32_t amec_diff_adjust_for_overflow(uint32_t i_new_value, uint32_t i_old_value)
 {
-    uint64_t l_result = 0;
+    uint32_t l_result = 0;
     uint64_t l_overflow = 0;
 
     if(i_new_value < i_old_value)
     {
         l_overflow = 0xFFFFFFFF + i_new_value;
+        l_overflow = l_overflow - i_old_value;
+        l_result = l_overflow;
+    }
+    else
+    {
+        l_result = i_new_value - i_old_value;
+    }
+
+    return l_result;
+}
+
+// Function Specification
+//
+// Name: amec_diff_adjust_for_overflow_16bit
+//
+// Description: Calculates the diff between 16-bit accumulator values
+//              while accounting for overflow.
+//
+// End Function Specification
+uint16_t amec_diff_adjust_for_overflow_16bit(uint16_t i_new_value, uint16_t i_old_value)
+{
+    uint16_t l_result = 0;
+    uint32_t l_overflow = 0;
+
+    if(i_new_value < i_old_value)
+    {
+        l_overflow = 0xFFFF + i_new_value;
         l_overflow = l_overflow - i_old_value;
         l_result = l_overflow;
     }
