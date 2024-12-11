@@ -970,8 +970,8 @@ void amec_perfcount_ocmb_getmc( OcmbMemData * i_sensor_cache,
                       i_membuf, (uint32_t)(l_sample_time_p001ns>>32), (uint32_t)l_sample_time_p001ns);
            TRAC_INFO("amec_perfcount_ocmb_getmc[UTILM%d]: addr_clock_p001ns[%d] addr_to_data_conv[%d]",
                       i_membuf,
-                      g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].addr_clock_p001ns),
-                      l_addr_to_data_conv_p0;
+                      g_amec->proc[0].memctl[i_membuf].membuf.portpair[0].addr_clock_p001ns,
+                      l_addr_to_data_conv_p0);
            TRAC_INFO("amec_perfcount_ocmb_getmc[UTILM%d]: l_read_diff[0x%08X] l_write_diff[0x%08X]",
                       i_membuf, l_read_diff, l_write_diff);
            TRAC_INFO("amec_perfcount_ocmb_getmc[UTILM%d] = 0x%04X;  temp64[0x%08X%08X]",
