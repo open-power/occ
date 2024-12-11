@@ -316,6 +316,7 @@ typedef struct __attribute__ ((packed))
     struct           cmdh_fsp_cmd_header;    // Standard command header
     uint8_t          sub_cmd;                // Debug sub-command
     eff_mode_parms_t idle_chip_parms;
+    uint8_t          eff_mode_memory_pwr_ctl;  // optional extra byte
 } cmdh_dbug_set_idle_chip_parms_cmd_t;
 
 

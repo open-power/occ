@@ -143,7 +143,7 @@ errlHndl_t STR_configure( const OCC_MODE i_newMode)
     errlHndl_t  l_errlHandl = NULL;
     int         rc          = 0;
     uint16_t    l_str_reduction_time = 0;
-    uint16_t    l_str_enter_time     = 0;
+    uint16_t    l_str_enter_time     = G_sysConfigData.str_entry_time_default; // use default if str off
     uint8_t     l_en_dis    = MBASTR0Q_STR_OFF;
 
     if(G_DDR5_cache_line_workaround != TRUE ||

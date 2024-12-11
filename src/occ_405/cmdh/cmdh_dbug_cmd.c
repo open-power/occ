@@ -890,13 +890,16 @@ void cmdh_dbug_set_idle_chip_parms( const cmdh_fsp_cmd_t * i_cmd_ptr,
     uint16_t l_expected_data_length = sizeof(cmdh_dbug_set_idle_chip_parms_cmd_t) - sizeof(cmdh_fsp_cmd_header_t);
     uint16_t l_rsp_data_length = 0;
     uint8_t  l_rc = ERRL_RC_SUCCESS;
+    bool l_mem_pwr_ctl_byte = TRUE;
 
+    if(l_data_length == (l_expected_data_length - 1))
+        l_mem_pwr_ctl_byte = FALSE;
      // Do sanity check on the function inputs
     if ((NULL == l_cmd_ptr) || (NULL == o_rsp_ptr))
     {
         l_rc = ERRL_RC_INTERNAL_FAIL;
     }
-    else if(l_data_length != l_expected_data_length)
+    else if((l_data_length != l_expected_data_length) && l_mem_pwr_ctl_byte)
     {
         TRAC_ERR("cmdh_dbug_set_idle_chip_parms: invalid length Expected: 0x%04X  Received: 0x%04X",
                           l_expected_data_length, l_data_length);
@@ -915,6 +918,13 @@ void cmdh_dbug_set_idle_chip_parms( const cmdh_fsp_cmd_t * i_cmd_ptr,
         // Update the Idle Chip Parameters
         const eff_mode_parms_t* l_eff_idle_chip_parms_ptr = &(l_cmd_ptr->idle_chip_parms);
         set_eff_mode_idle_chip_parms(l_eff_idle_chip_parms_ptr);
+
+        // check if optional byte is present to set memory power control
+        if(l_mem_pwr_ctl_byte)
+        {
+            G_sysConfigData.eff_mode_mem_pwr_ctl = l_cmd_ptr->eff_mode_memory_pwr_ctl;
+            g_amec->eff_mode_parms.memory_pwr_control = G_sysConfigData.eff_mode_mem_pwr_ctl;
+        }
 
         // Add the new parameters to the response data
         memcpy((void*)&(o_rsp_ptr->data[l_rsp_data_length]),

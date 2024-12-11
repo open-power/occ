@@ -1801,6 +1801,8 @@ errlHndl_t data_store_mem_cfg(const cmdh_fsp_cmd_t * i_cmd_ptr,
                 G_sysConfigData.eff_mode_mem_pwr_ctl = MEM_PWR_CTL_NO_SUPPORT;
                 G_sysConfigData.default_mem_pwr_ctl = MEM_PWR_CTL_NO_SUPPORT;
             }
+            // copy eff mode pwr ctl to debug structure
+            g_amec->eff_mode_parms.memory_pwr_control = G_sysConfigData.eff_mode_mem_pwr_ctl;
         }
         else
         {
