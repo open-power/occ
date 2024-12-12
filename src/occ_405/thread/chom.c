@@ -204,6 +204,7 @@ const uint16_t * g_chom_sensor_table[CHOM_NUM_OF_SENSORS] =
     &G_dcom_slv_outbox_rx[5].curVdd,
     &G_dcom_slv_outbox_rx[6].curVdd,
     &G_dcom_slv_outbox_rx[7].curVdd,
+    // Adjusted Ceff Ratio
     &G_dcom_slv_outbox_rx[0].ceffRatioVdd,
     &G_dcom_slv_outbox_rx[1].ceffRatioVdd,
     &G_dcom_slv_outbox_rx[2].ceffRatioVdd,
@@ -248,6 +249,15 @@ const uint16_t * g_chom_sensor_table[CHOM_NUM_OF_SENSORS] =
     &G_dcom_slv_outbox_rx[7].pwrvcs,
     // MMA on average (per proc)
     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+    // Raw Ceff Ratio
+    &G_dcom_slv_outbox_rx[0].rawCeffRatio,
+    &G_dcom_slv_outbox_rx[1].rawCeffRatio,
+    &G_dcom_slv_outbox_rx[2].rawCeffRatio,
+    &G_dcom_slv_outbox_rx[3].rawCeffRatio,
+    &G_dcom_slv_outbox_rx[4].rawCeffRatio,
+    &G_dcom_slv_outbox_rx[5].rawCeffRatio,
+    &G_dcom_slv_outbox_rx[6].rawCeffRatio,
+    &G_dcom_slv_outbox_rx[7].rawCeffRatio,
 };
 
 

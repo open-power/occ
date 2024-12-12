@@ -600,11 +600,11 @@ const minisensor_ptr_t G_amec_mini_sensor_list[] INIT_SECTION =
   // WOF Sensors
   // ------------------------------------------------------
   MINI_SENSOR_PTR( MMA_ON_AVG,  NULL),
-  MINI_SENSOR_PTR( CEFFVDDRATIO,   &G_dcom_slv_outbox_tx.ceffRatioVdd),
+  MINI_SENSOR_PTR( CEFFVDDRATIO,   &G_dcom_slv_outbox_tx.rawCeffRatio),
   MINI_SENSOR_PTR( CEFFVCSRATIO,   NULL),
   MINI_SENSOR_PTR( VRATIO_VDD,     NULL),
   MINI_SENSOR_PTR( OCS_ADDR,       NULL),
-  MINI_SENSOR_PTR( CEFFVDDRATIOADJ, NULL),
+  MINI_SENSOR_PTR( CEFFVDDRATIOADJ, &G_dcom_slv_outbox_tx.ceffRatioVdd),
   MINI_SENSOR_PTR( IO_PWR_PROXY,   NULL),
   MINI_SENSOR_PTR( UV_AVG,         &G_dcom_slv_outbox_tx.uvAvg),
   MINI_SENSOR_PTR( OV_AVG,         &G_dcom_slv_outbox_tx.ovAvg),
