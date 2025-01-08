@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2016,2024                        */
+/* Contributors Listed Below - COPYRIGHT 2016,2025                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -3132,14 +3132,30 @@ uint32_t scale( uint16_t i_target_temp,
     int32_t  l_iddqt2 = 0;
     int32_t  l_result = 0;
     int32_t  l_temp32 = 0;
+    int32_t  l_coeff_a = 0;
+    int32_t  l_coeff_b = 0;
+    int32_t  l_coeff_c = 0;
+    int32_t  l_coeff_d = 0;
 
     // Temperature scaling lines are 3rd degree polynomials: aT^3 + bT^2 + cT + d
     // default coefficients a, b, c, d for core scaling line
     // coefficients are in 0.00001 unit
-    int32_t l_coeff_a = 31;      //   0.000306435182
-    int32_t l_coeff_b = -869;    //  -0.00869469445
-    int32_t l_coeff_c = 97938;   //   0.979379065
-    int32_t l_coeff_d = 1429459; //  14.2945863
+    // Different coefficients for P10 vs P11 modules
+    // Having expanded ambient WOF table for DIMM credit indicates P11 modules
+    if(g_wof->dimm_credit_disable & WOF_DIMM_DISABLE_AMBIENT_TABLE_SIZE) // P10
+    {
+        l_coeff_a = 31;      //   0.000306435182
+        l_coeff_b = -869;    //  -0.00869469445
+        l_coeff_c = 97938;   //   0.979379065
+        l_coeff_d = 1429459; //  14.2945863
+    }
+    else // P11
+    {
+        l_coeff_a = 8;       //   0.00008233
+        l_coeff_b = -333;    //  -0.003329
+        l_coeff_c = 36560;   //   0.3656
+        l_coeff_d = 639200;  //   6.392
+    }
 
 /*
     // currently we will use the same coefficients for non-core
