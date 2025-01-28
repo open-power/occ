@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2024                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2025                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -320,6 +320,7 @@ extern uint8_t  G_rsp_status;
 // To set flags:  tmgtclient -X 0x40 --data 0x1f<4 byte value for G_internal_flags>
 extern uint32_t G_internal_flags;
 #define INT_FLAG_DISABLE_24X7                0x00000001
+#define INT_FLAG_ENABLE_P10_WOF_COEFF        0x00000002  // Use P10 WOF leakage temperature coefficients
 #define INT_FLAG_ENABLE_OCS_HOLD_NEW         0x00000010  // keep calculated ceff on dirty block action
 #define INT_FLAG_ENABLE_WOF_AMBIENT_INTERP   0x00000020  // enable VRT interpolation based on ambient condition
 #define INT_FLAG_ENABLE_WOF_CHAR_TEST        0x00000080  // special WOF testing mode requested by Frank

@@ -3142,7 +3142,8 @@ uint32_t scale( uint16_t i_target_temp,
     // coefficients are in 0.00001 unit
     // Different coefficients for P10 vs P11 modules
     // Having expanded ambient WOF table for DIMM credit indicates P11 modules
-    if(g_wof->dimm_credit_disable & WOF_DIMM_DISABLE_AMBIENT_TABLE_SIZE) // P10
+    if( (g_wof->dimm_credit_disable & WOF_DIMM_DISABLE_AMBIENT_TABLE_SIZE) ||
+        (G_internal_flags & INT_FLAG_ENABLE_P10_WOF_COEFF) ) // P10 modules or debug command set to use P10
     {
         l_coeff_a = 31;      //   0.000306435182
         l_coeff_b = -869;    //  -0.00869469445
@@ -3156,7 +3157,15 @@ uint32_t scale( uint16_t i_target_temp,
         l_coeff_c = 36560;   //   0.3656
         l_coeff_d = 639200;  //   6.392
     }
-
+    if(g_amec_sys.static_wof_data.coeff_a != l_coeff_a)
+    {
+        INTR_TRAC_IMP("Leakage temperature scale: coefficients a[%d] b[%d] c[%d] d[%d]",
+                       l_coeff_a, l_coeff_b, l_coeff_c, l_coeff_d);
+        g_amec_sys.static_wof_data.coeff_a = l_coeff_a;
+        g_amec_sys.static_wof_data.coeff_b = l_coeff_b;
+        g_amec_sys.static_wof_data.coeff_c = l_coeff_c;
+        g_amec_sys.static_wof_data.coeff_d = l_coeff_d;
+    }
 /*
     // currently we will use the same coefficients for non-core
     if(i_non_core_scaling_line)

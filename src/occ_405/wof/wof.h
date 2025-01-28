@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2016,2024                        */
+/* Contributors Listed Below - COPYRIGHT 2016,2025                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -501,6 +501,14 @@ typedef struct __attribute__ ((packed, aligned(128)))
     uint32_t util_pre_heat_power_m10000x[MAX_NUM_OCMBS];  // 64 bytes (16x4)
     // The address in shared OCC-PGPE SRAM for Call home values written by PGPE or XGPE
     uint32_t call_home_sram_addr;
+    // Leakage temperature scaling coefficienct a
+    int32_t coeff_a;
+    // Leakage temperature scaling coefficienct b
+    int32_t coeff_b;
+    // Leakage temperature scaling coefficienct c
+    int32_t coeff_c;
+    // Leakage temperature scaling coefficienct d
+    int32_t coeff_d;
 } amec_static_wof_t;
 
 // Structure for sensors used in g_amec for AMESTER for additional debug
