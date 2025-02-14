@@ -477,6 +477,8 @@ void call_wof_main( void )
  */
 void wof_main( void )
 {
+    uint16_t l_rounded_ambient_condition = 0;
+
     // Read out the sensor data needed for calculations
     read_sensor_data();
 
@@ -549,8 +551,13 @@ void wof_main( void )
 
     if(g_wof->ambient_override_index == WOF_VRT_IDX_NO_OVERRIDE)
     {
+        // Round and convert ambient_condition from 0.1C to full degrees C
+        l_rounded_ambient_condition = g_wof->ambient_condition / 10;
+        if((g_wof->ambient_condition % 10) >= 5)
+            l_rounded_ambient_condition += 1;
+
         g_wof->ambient_step_from_start =
-                             calculate_step_from_start( g_wof->ambient_condition,
+                             calculate_step_from_start( l_rounded_ambient_condition,
                                                         g_amec_sys.static_wof_data.wof_header.amb_cond_step,
                                                         g_amec_sys.static_wof_data.wof_header.amb_cond_start,
                                                         g_amec_sys.static_wof_data.wof_header.amb_cond_size );
@@ -671,7 +678,7 @@ uint32_t calc_vrt_mainstore_addr( void )
             // if ambient condition is greater than last table or
             // if there is an ambient condition override set
             if( (g_wof->ambient_step_from_start == 0) ||
-                (g_wof->ambient_condition >= g_amec_sys.static_wof_data.last_ambient_condition) ||
+                ((g_wof->ambient_condition/10) >= g_amec_sys.static_wof_data.last_ambient_condition) ||
                 (g_wof->ambient_override_index != WOF_VRT_IDX_NO_OVERRIDE) )
             {
                 g_wof->interpolate_ambient_vrt = 0;
@@ -2048,12 +2055,12 @@ void get_poundV_points( uint32_t i_freq_mhz,
  */
 void read_sensor_data( void )
 {
-    uint8_t l_ambient = 0;
+    uint16_t l_ambient = 0;
     uint8_t l_new_wof_adjust_reason = 0;
 
     // Read out necessary Sensor data for WOF calculation
 
-    l_ambient = (uint8_t)getSensorByGsid(TEMPAMBIENT)->sample;
+    l_ambient = getSensorByGsid(TEMPAMBIENT)->sample;
     // default no ambient adjustements
     l_new_wof_adjust_reason = g_wof->wof_adjust_reasons & ~WOF_ADJUST_AMBIENT_REASONS_MASK;
 
@@ -2066,6 +2073,8 @@ void read_sensor_data( void )
     }
     else
     {
+       // ambient adjustments are in 0.1C unit
+       l_ambient *= 10;
        // add on adjustment to account for altitude
        if(g_wof->ambient_adj_for_altitude >= 0)
        {
@@ -2127,7 +2136,7 @@ void read_sensor_data( void )
  *
  * Description: Calculate adjustment to ambient condition to account for DIMMs
  */
-void calc_wof_dimm_adjustment(uint8_t i_ambient)
+void calc_wof_dimm_adjustment(uint16_t i_ambient)
 {
     uint8_t  l_num_interp_pts = 0;
     uint8_t  l_new_ambient = 0;
@@ -2243,29 +2252,38 @@ void calc_wof_dimm_adjustment(uint8_t i_ambient)
             INTR_TRAC_INFO("MEM PWR DBUG3: l_adjustment[0x%08X%08X]",
                            (uint32_t)(l_adjustment>>32), (uint32_t)l_adjustment);
        }
-       // adjustment / 1,000,000 -->
-       //                           10,000 for mem_thermal_credit_constant sent to OCC as x10,000
-       //                           100 for cW-->W
-       l_temp64 = l_adjustment / (uint64_t)1000000;
+       // adjustment / 10,000 for mem_thermal_credit_constant sent to OCC as x10,000
+       l_temp64 = l_adjustment / (uint64_t)10000;
        if((G_allow_trace_flags & ALLOW_MEM_TRACE) && L_trace_count)
        {
-            INTR_TRAC_INFO("MEM PWR DBUG4: l_adjustment/1,000,000 = 0x%04X",
+            INTR_TRAC_INFO("MEM PWR DBUG4: l_adjustment/10,000 = 0x%04X",
                            (uint16_t)l_temp64);
        }
 
        // round up if we are over max power
        if(l_signed == 1)
        {
+           l_temp64 /= 10; // power is in cW convert unit to tenths
            // make sure at least 1 degree is added to ambient
-           if((l_temp64 == 0) || (l_adjustment % 1000000))
-               l_temp64++;
+           if((l_temp64 == 0) || (l_adjustment % 10000))
+               l_temp64 += 10;
+       }
+       else // negative adjust
+       {
+           // round and convert to tenths
+           if((l_temp64 % 10) >= 5)
+           {
+               l_temp64 += 10;
+           }
+           l_temp64 /= 10;
        }
 
        l_ambient_adj_for_dimm = (int8_t)(l_temp64 * l_signed);
 
        // sanity check dimm adjustment shouldn't cause ambient to be more than
        // 3 degrees from first/last ambient condition in WOF table
-       l_new_ambient = i_ambient + l_ambient_adj_for_dimm;
+       // /10 to convert ambient to full degrees
+       l_new_ambient = (i_ambient + l_ambient_adj_for_dimm) / 10;
 
        if( (l_new_ambient < (g_amec_sys.static_wof_data.wof_header.amb_cond_start - 3)) ||
            (l_new_ambient > (g_amec_sys.static_wof_data.last_ambient_condition + 3)) )
@@ -3670,6 +3688,7 @@ void interpolate_ambient_vrt(uint8_t * i_ping_pong_buffer_address,
     int i;
     uint16_t l_ac1 = 0;
     uint16_t l_ac2 = 0;
+    uint32_t l_rounded_ambient_condition = 0;
 
     // set VRT header to header of first VRT
     l_new_vrt.vrtHeader.value = l_vrt1_ptr->vrtHeader.value;
@@ -3683,10 +3702,15 @@ void interpolate_ambient_vrt(uint8_t * i_ping_pong_buffer_address,
     // second VRT ambient condition is one step size more
     l_ac2 = l_ac1 + g_amec_sys.static_wof_data.wof_header.amb_cond_step;
 
+    // Round and convert ambient_condition from 0.1C to full degrees C
+    l_rounded_ambient_condition = g_wof->ambient_condition / 10;
+    if((g_wof->ambient_condition % 10) >= 5)
+        l_rounded_ambient_condition += 1;
+
     // interpolate each VRT entry Pstate and round up (i.e. lower freq) to be safe
     for(i = 0; i < WOF_VRT_SIZE; i++)
     {
-        l_new_vrt.data[i] = interpolate_linear(g_wof->ambient_condition,
+        l_new_vrt.data[i] = interpolate_linear(l_rounded_ambient_condition,
                                                l_ac1,
                                                l_ac2,
                                                l_vrt1_ptr->data[i],

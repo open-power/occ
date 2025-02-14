@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2024                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2025                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -194,7 +194,7 @@ typedef struct __attribute__ ((packed)) cmdh_poll_temp_sensor
     uint8_t  fru_type;
     uint8_t  value;    // current temperature sensor reading in degrees C
     uint8_t  throttle;
-    uint8_t  _reserved;
+    uint8_t  error;
 } cmdh_poll_temp_sensor_t;
 
 typedef struct __attribute__ ((packed)) cmdh_poll_freq_sensor

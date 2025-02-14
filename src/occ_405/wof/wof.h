@@ -251,7 +251,7 @@ typedef struct __attribute__ ((packed))
     uint32_t ceff_ratio_vcs;
     // [416]
     uint8_t Vdd_chip_index;
-    // [417] Contains degrees C ambient is changed by to account for higher/lower altitudes than reference altitude this may be lowering ambient
+    // [417] amount ambient is changed in 0.1 degrees C to account for higher/lower altitudes than reference altitude this may be lowering ambient
     int8_t ambient_adj_for_altitude;
     // [418] Altitude in meters 0xffff indicates not available
     uint16_t altitude;
@@ -394,7 +394,7 @@ typedef struct __attribute__ ((packed))
     uint32_t ocs_dirty_type0_count;
     // [668] count of number of times dirty with type act (1)
     uint32_t ocs_dirty_type1_count;
-    // [672] Ambient condition used to determine VRT
+    // [672] Ambient condition in 0.1 degrees C used to determine VRT
     uint32_t ambient_condition;
     // [676] #V index 1 used for ceff ratio frequency interpolation
     uint8_t  vpd_index1;
@@ -443,7 +443,7 @@ typedef struct __attribute__ ((packed))
     uint32_t max_dimm_pwr_total_cW;
     // [885] Total DDIMM preheat power in cW
     uint32_t total_dimm_preheat_pwr_cW;
-    // [889] Contains degrees C ambient is changed by to account for DIMM power
+    // [889] amount ambient is changed in 0.1 degrees C to account for DIMM power
     int8_t   ambient_adj_for_dimm;
     // [890] Ceff credit to account for under and over volting comes from WOF table header
     uint8_t  wov_credit_knob;
@@ -602,7 +602,7 @@ uint32_t calculate_exp_1p3(uint32_t i_x);
 
 void read_sensor_data( void );
 
-void calc_wof_dimm_adjustment( uint8_t i_ambient );
+void calc_wof_dimm_adjustment( uint16_t i_ambient );
 
 void setup_vdd( void );
 

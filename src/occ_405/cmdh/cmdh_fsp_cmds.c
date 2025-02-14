@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2024                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2025                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -324,7 +324,7 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
             l_tempSensorList[l_sensorHeader.count].fru_type = DATA_FRU_PROC;
             l_tempSensorList[l_sensorHeader.count].value = (G_amec_sensor_list[TEMPPROCTHRMC0 + k]->sample) & 0xFF;
             l_tempSensorList[l_sensorHeader.count].throttle = G_data_cnfg->thrm_thresh.data[DATA_FRU_PROC].dvfs;
-
+            l_tempSensorList[l_sensorHeader.count].error = G_data_cnfg->thrm_thresh.data[DATA_FRU_PROC].error;
             l_sensorHeader.count++;
         }
     }
@@ -342,6 +342,7 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
             l_tempSensorList[l_sensorHeader.count].id = l_temp_sid;
             l_tempSensorList[l_sensorHeader.count].fru_type = l_fru_type;
             l_tempSensorList[l_sensorHeader.count].throttle = G_data_cnfg->thrm_thresh.data[l_fru_type].dvfs;
+            l_tempSensorList[l_sensorHeader.count].error = G_data_cnfg->thrm_thresh.data[l_fru_type].error;
 
             if (G_membuf_timeout_logged_bitmap & (MEMBUF0_PRESENT_MASK >> l_membuf))
             {
@@ -386,6 +387,7 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
                     l_tempSensorList[l_sensorHeader.count].id = l_temp_sid;
                     l_tempSensorList[l_sensorHeader.count].fru_type = l_fru_type;
                     l_tempSensorList[l_sensorHeader.count].throttle = G_data_cnfg->thrm_thresh.data[l_fru_type].dvfs;
+                    l_tempSensorList[l_sensorHeader.count].error = G_data_cnfg->thrm_thresh.data[l_fru_type].error;
 
                     // Set temperature to 0 (unavailable) if sensor is not enabled
                     if ( !(G_dimm_enabled_sensors.bytes[l_membuf] & (DIMM_SENSOR0 >> l_dimm)) )
@@ -418,6 +420,7 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
             l_tempSensorList[l_sensorHeader.count].id = AMECSENSOR_PTR(TEMPVDD)->ipmi_sid;
             l_tempSensorList[l_sensorHeader.count].fru_type = DATA_FRU_VRM_VDD;
             l_tempSensorList[l_sensorHeader.count].throttle = G_data_cnfg->thrm_thresh.data[DATA_FRU_VRM_VDD].dvfs;
+            l_tempSensorList[l_sensorHeader.count].error = G_data_cnfg->thrm_thresh.data[DATA_FRU_VRM_VDD].error;
             if (G_vrm_vdd_temp_expired)
             {
                 l_tempSensorList[l_sensorHeader.count].value = 0xFF;
@@ -437,6 +440,7 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
         l_tempSensorList[l_sensorHeader.count].id = AMECSENSOR_PTR(TEMPPROCIOTHRM)->ipmi_sid;
         l_tempSensorList[l_sensorHeader.count].fru_type = DATA_FRU_PROC_IO;
         l_tempSensorList[l_sensorHeader.count].throttle = G_data_cnfg->thrm_thresh.data[DATA_FRU_PROC_IO].dvfs;
+        l_tempSensorList[l_sensorHeader.count].error = G_data_cnfg->thrm_thresh.data[DATA_FRU_PROC_IO].error;
         if(G_proc_io_temp_expired)
         {
             l_tempSensorList[l_sensorHeader.count].value = 0xFF;
@@ -2179,7 +2183,9 @@ errlHndl_t cmdh_send_ambient_temp(const cmdh_fsp_cmd_t * i_cmd_ptr,
     ERRL_RC                     l_rc    = ERRL_RC_SUCCESS;
     uint16_t                    l_data_length = sizeof(cmdh_send_ambient_temp_t) - sizeof(cmdh_fsp_cmd_header_t);
     int32_t                     l_temp32 = 0;
+    int16_t                     l_temp16 = 0;
     int8_t                      l_amb_adj = 0;
+    int8_t                      l_sign = 1;
     static bool L_trace_fail = FALSE, L_trace_success = FALSE;
     do
     {
@@ -2252,12 +2258,23 @@ errlHndl_t cmdh_send_ambient_temp(const cmdh_fsp_cmd_t * i_cmd_ptr,
             // altitude_temp_adj_degCpm is in (degrees Celcius/km)*1000
             l_temp32 = g_amec->sys.altitude - g_amec->static_wof_data.altitude_reference_m;
             l_temp32 *= g_amec->static_wof_data.altitude_temp_adj_degCpm;
-            // divide by 1000000 --> 1000 for meter to km * 1000 in altitude_temp_adj_degCpm
-            l_amb_adj = (int8_t)(l_temp32 / 1000000);
 
-            // round for positive adjust only
-            if( (l_temp32 > 0) && ((l_temp32 % 1000000) > 500000) )
-                l_amb_adj++;
+            // divide by 10000 --> 1000 for meter to km * 1000/100 in altitude_temp_adj_degCpm times 100 convert to 0.01C
+            l_temp16 = (int16_t)(l_temp32 / 10000);
+
+            // round and convert to nearest tenth
+            if(l_temp16 < 0) // negative adjustment
+            {
+                l_sign = -1;
+                l_temp16 = -l_temp16;
+            }
+            if((l_temp16 % 10) >= 5)
+            {
+               l_temp16 += 10;
+            }
+            // convert to tenths
+            l_amb_adj = (int8_t)((l_temp16 * l_sign) / 10);
+
             // save final value to be used by WOF alg
             g_amec->wof.ambient_adj_for_altitude = l_amb_adj;
             g_amec->wof.altitude = g_amec->sys.altitude;
