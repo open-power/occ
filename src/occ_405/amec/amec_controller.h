@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2024                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2025                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -61,8 +61,12 @@ typedef struct amec_controller
 {
     ///Over-temperature error for FRU callout (in degrees C)
     uint8_t                       ot_error;
-    ///Setpoint or reference for the controller
+    ///Setpoint aka DVFS temperature in 0.1 degrees C for the controller
     uint16_t                      setpoint;
+    ///Current temperature in degrees C used by the controller
+    uint16_t                      current_temp;
+    ///Average temperature in degrees C for debug
+    uint16_t                      avg_temp;
     ///Proportional gain of the controller
     uint16_t                      Pgain;
     ///Theoretical controller residue summation

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2016,2024                        */
+/* Contributors Listed Below - COPYRIGHT 2016,2025                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -28,7 +28,7 @@
 #include <string.h>
 #include "parser_common.h"
 
-#define WOF_STATIC_DATA_SIZE 1792
+#define WOF_STATIC_DATA_SIZE 1920
 #define WOF_TABLE_HEADER_SIZE 128
 // NOTE: This tool is to be used when WOF Static data is dumped by the OCC, and currently
 //       only accepts input files in binary format.

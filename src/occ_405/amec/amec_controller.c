@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2024                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2025                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -96,9 +96,15 @@ void amec_controller_proc_thermal()
     /*------------------------------------------------------------------------*/
     /*  Code                                                                  */
     /*------------------------------------------------------------------------*/
+    // average temp is not used, just save for debug
+    l_sensor = getSensorByGsid(TEMPPROCAVG);
+    g_amec->thermalproc.avg_temp = l_sensor->sample;
+
     // Get TEMPPROCTHRM sensor, which is hottest core temperature in OCC
     // processor
     l_sensor = getSensorByGsid(TEMPPROCTHRM);
+    // save the temperature used by control loop for debug
+    g_amec->thermalproc.current_temp = l_sensor->sample;
 
     // Use the highest temperature of all processors in 0.1 degrees C
     l_thermal_winner = l_sensor->sample * 10;

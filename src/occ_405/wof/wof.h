@@ -97,6 +97,7 @@ extern uint32_t G_max_ceff_ratio;
 #define WOF_RC_RESET_DEBUG_CMD                     0x02000000
 #define WOF_RC_DIVIDE_BY_ZERO_VCS                  0x04000000
 #define WOF_RC_INVALID_IDDQ_SAMPLE_DEPTH           0x08000000
+#define WOF_RC_ZERO_PSTATE                         0x10000000
 #define WOF_RC_NEGATIVE_MMA_LEAKAGE                0x20000000
 
 //******************************************************************************

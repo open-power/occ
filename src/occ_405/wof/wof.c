@@ -1067,36 +1067,57 @@ void read_pgpe_produced_wof_values( void )
     // populate values used by WOF alg
 
     // Average Frequency
-    uint32_t l_steps = 0;
-    l_freq = proc_pstate2freq((Pstate_t)l_PgpeWofValues.dw0.fields.average_frequency_pstate, &l_steps);
-    // value returned in kHz, save in MHz
-    g_wof->avg_freq_mhz = (l_freq / 1000);
-    // Need to do some linear interpolation with #V data to track Ceff ratio with current
-    // average frequency, find the two #V points that the average frequency falls between
-    get_poundV_points(g_wof->avg_freq_mhz,
-                      &g_wof->vpd_index1,
-                      &g_wof->vpd_index2);
+    // Pstate should never be 0
+    if(l_PgpeWofValues.dw0.fields.average_frequency_pstate && l_PgpeWofValues.dw0.fields.average_pstate)
+    {
+       if(g_wof->wof_disabled & WOF_RC_ZERO_PSTATE)
+       {
+           INTR_TRAC_IMP("read_pgpe_produced_wof_values: Enable freq sensor received non 0 Pstates from PGPE dw0[0x%08X%08X]",
+                           WORD_HIGH(l_PgpeWofValues.dw0.value), WORD_LOW(l_PgpeWofValues.dw0.value));
+           set_clear_wof_disabled( CLEAR,
+                                   WOF_RC_ZERO_PSTATE,
+                                   ERC_WOF_ZERO_PSTATE );
+       }
+       uint32_t l_steps = 0;
+       l_freq = proc_pstate2freq((Pstate_t)l_PgpeWofValues.dw0.fields.average_frequency_pstate, &l_steps);
+       // value returned in kHz, save in MHz
+       g_wof->avg_freq_mhz = (l_freq / 1000);
+       // Need to do some linear interpolation with #V data to track Ceff ratio with current
+       // average frequency, find the two #V points that the average frequency falls between
+       get_poundV_points(g_wof->avg_freq_mhz,
+                         &g_wof->vpd_index1,
+                         &g_wof->vpd_index2);
 
-    // save pstates and freq in sensors
-    sensor_update(AMECSENSOR_PTR(FREQ_PSTATE), (uint16_t)l_PgpeWofValues.dw0.fields.average_frequency_pstate);
-    sensor_update(AMECSENSOR_PTR(PSTATE), (uint16_t)l_PgpeWofValues.dw0.fields.average_pstate);
-    sensor_update(AMECSENSOR_PTR(FREQA), (uint16_t)g_wof->avg_freq_mhz);
+       // save pstates and freq in sensors
+       sensor_update(AMECSENSOR_PTR(FREQ_PSTATE), (uint16_t)l_PgpeWofValues.dw0.fields.average_frequency_pstate);
+       sensor_update(AMECSENSOR_PTR(PSTATE), (uint16_t)l_PgpeWofValues.dw0.fields.average_pstate);
+       sensor_update(AMECSENSOR_PTR(FREQA), (uint16_t)g_wof->avg_freq_mhz);
 
-    g_wof->v_ratio_vcs = l_PgpeWofValues.dw3.fields.vratio_vcs_roundup_avg;
+       g_wof->v_ratio_vcs = l_PgpeWofValues.dw3.fields.vratio_vcs_roundup_avg;
 
-    g_wof->v_ratio_vdd = l_PgpeWofValues.dw3.fields.vratio_vdd_roundup_avg;
-    sensor_update(AMECSENSOR_PTR(VRATIO_VDD), (uint16_t)g_wof->v_ratio_vdd);
+       g_wof->v_ratio_vdd = l_PgpeWofValues.dw3.fields.vratio_vdd_roundup_avg;
+       sensor_update(AMECSENSOR_PTR(VRATIO_VDD), (uint16_t)g_wof->v_ratio_vdd);
 
-    // clip Pstate is the last value read from VRT and used for debug only
-    g_wof->f_clip_ps = l_PgpeWofValues.dw0.fields.wof_clip_pstate;
+       // clip Pstate is the last value read from VRT and used for debug only
+       g_wof->f_clip_ps = l_PgpeWofValues.dw0.fields.wof_clip_pstate;
 
-    // save over/under volting percentages into sensors
-    l_uv_avg_0p1pct = (uint16_t)l_PgpeWofValues.dw3.fields.uv_avg_0p1pct;
-    l_ov_avg_0p1pct = (uint16_t)l_PgpeWofValues.dw3.fields.ov_avg_0p1pct;
-    sensor_update(AMECSENSOR_PTR(UV_AVG), l_uv_avg_0p1pct);
-    sensor_update(AMECSENSOR_PTR(OV_AVG), l_ov_avg_0p1pct);
-    // Save the Over volting difference to adjust ceff later
-    g_wof->ov_uv_diff_0p01pct = 10*(l_ov_avg_0p1pct - l_uv_avg_0p1pct);
+       // save over/under volting percentages into sensors
+       l_uv_avg_0p1pct = (uint16_t)l_PgpeWofValues.dw3.fields.uv_avg_0p1pct;
+       l_ov_avg_0p1pct = (uint16_t)l_PgpeWofValues.dw3.fields.ov_avg_0p1pct;
+       sensor_update(AMECSENSOR_PTR(UV_AVG), l_uv_avg_0p1pct);
+       sensor_update(AMECSENSOR_PTR(OV_AVG), l_ov_avg_0p1pct);
+       // Save the Over volting difference to adjust ceff later
+       g_wof->ov_uv_diff_0p01pct = 10*(l_ov_avg_0p1pct - l_uv_avg_0p1pct);
+    }  // if non-zero Pstate
+    else if(!(g_wof->wof_disabled & WOF_RC_ZERO_PSTATE))
+    {
+       INTR_TRAC_ERR("read_pgpe_produced_wof_values: Pstate is 0 from PGPE dw0[0x%08X%08X]",
+                       WORD_HIGH(l_PgpeWofValues.dw0.value), WORD_LOW(l_PgpeWofValues.dw0.value));
+
+       set_clear_wof_disabled( SET,
+                               WOF_RC_ZERO_PSTATE,
+                               ERC_WOF_ZERO_PSTATE );
+    }
 
     // save the full PGPE WOF values for debug
     g_wof->pgpe_wof_values_dw0 = l_PgpeWofValues.dw0.value;

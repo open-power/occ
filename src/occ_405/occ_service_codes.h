@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2024                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2025                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -299,6 +299,7 @@ enum occExtReasonCode
     ERC_WOF_RESET_DEBUG_CMD                     = 0x0219,
     ERC_WOF_DIVIDE_BY_ZERO_VCS                  = 0x021A,
     ERC_WOF_INVALID_IDDQ_SAMPLE_DEPTH           = 0x021B,
+    ERC_WOF_ZERO_PSTATE                         = 0x021C,
     ERC_WOF_NEGATIVE_MMA_LEAKAGE                = 0x021D,
 };
 

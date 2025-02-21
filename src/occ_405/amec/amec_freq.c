@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2024                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2025                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -73,6 +73,8 @@ extern uint32_t G_present_cores;
 // Power cap alg does not run every tick. Make this a multiple of how often power cap alg
 // runs to give time for new power capping votes
 #define NUM_TICKS_LOG_HARD_PCAP_PERF_LOSS (NUM_TICKS_RUN_PCAP * 4)
+
+#define MAX_PROC_TEMP_HISTORY 5
 //*************************************************************************
 // Structures
 //*************************************************************************
@@ -303,6 +305,9 @@ void amec_slv_proc_voting_box(void)
     uint16_t                        l_core_freq = 0;
     uint16_t                        l_core_freq_max = 0;  // max freq across all cores
     uint16_t                        l_core_freq_min = g_amec->sys.fmax;  // min freq across all cores
+    uint16_t                        l_history_temp = 0;
+    uint16_t                        l_history_freq = 0;
+    uint16_t                        l_dvfs_temp = 0;
     uint32_t                        l_current_reason = 0;  // used for debug purposes
     static uint32_t                 L_last_reason = 0;     // used for debug purposes
     uint32_t                        l_chip_reason = 0;
@@ -325,6 +330,11 @@ void amec_slv_proc_voting_box(void)
     static uint16_t                 L_ticks_below_disabled_freq = 0;
     static uint16_t                 L_ticks_hard_pcap_reason = 0;
     sensor_t                        *l_sensor = NULL;
+    uint32_t                        l_history_data = 0;
+    static uint32_t                 L_proc_temp_vote_history[MAX_PROC_TEMP_HISTORY] = {0};
+    static uint8_t                  L_proc_temp_avg_history[MAX_PROC_TEMP_HISTORY] = {0};
+    static uint8_t                  L_proc_temp_vote_history_index = 0;
+
 
     // frequency threshold for reporting throttling
     OCC_FREQ_POINT l_freq_point = OCC_FREQ_PT_WOF_BASE;
@@ -431,6 +441,23 @@ void amec_slv_proc_voting_box(void)
             l_kvm_throt_reason = CPU_OVERTEMP;
         }
     }
+    // save temp/freq vote if either are different than previous
+    l_history_temp = (uint16_t)(L_proc_temp_vote_history[L_proc_temp_vote_history_index] >> 16);
+    l_history_freq = (uint16_t)(L_proc_temp_vote_history[L_proc_temp_vote_history_index]);
+    if( (l_history_temp != g_amec->thermalproc.current_temp) ||
+        (l_history_freq != g_amec->thermalproc.freq_request) )
+    {
+        L_proc_temp_vote_history_index++;
+        if(L_proc_temp_vote_history_index >= MAX_PROC_TEMP_HISTORY)
+            L_proc_temp_vote_history_index = 0;
+
+        l_history_data = (uint32_t)g_amec->thermalproc.current_temp;
+        l_history_data = (l_history_data << 16);
+        l_history_data |= g_amec->thermalproc.freq_request;
+        L_proc_temp_vote_history[L_proc_temp_vote_history_index] = l_history_data;
+        L_proc_temp_avg_history[L_proc_temp_vote_history_index] = g_amec->thermalproc.avg_temp;
+    }
+
 
     //Thermal controller input based on VRM Vdd temperature
     if(g_amec->thermalvdd.freq_request < l_chip_fmax)
@@ -637,12 +664,12 @@ void amec_slv_proc_voting_box(void)
         (CURRENT_MODE() != OCC_MODE_NOCHANGE) && // must check that mode was set since state change is processed first
         (g_amec->sys.fmax >= G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_DISABLED]) &&
         (g_amec->wof.avg_freq_mhz < l_temp_freq) &&
-        (G_present_cores != 0) && (!ignore_pgpe_error()) )   // make sure there are cores and freq update could be sent to PGPE
+        (G_present_cores != 0) && (!ignore_pgpe_error()) ) // make sure there are cores and freq update could be sent to PGPE
     {
         // log error if OCC reason is one that should result in perf loss error or
         // if OCC is not voting for any clipping which would indicate PGPE driving freq low
         if( (!L_perf_loss_error_logged) && (L_last_reason & FREQ_REASON_PERF_LOSS_ERROR) &&
-            (l_current_reason & FREQ_REASON_PERF_LOSS_ERROR) )
+           (l_current_reason & FREQ_REASON_PERF_LOSS_ERROR) )
         {
             // only log power cap error on master OCC since it is the one that determined the lower freq
             // and sent to all other OCCs
@@ -658,14 +685,33 @@ void amec_slv_proc_voting_box(void)
                 if(l_current_reason == AMEC_VOTING_REASON_PROC_THRM)
                 {
                    l_sensor = getSensorByGsid(TEMPPROCTHRM);
-                   TRAC_ERR("Low frequency due to processor OT current temp[%d] max temp[%d]",
-                             l_sensor->sample, l_sensor->sample_max);
+                   l_dvfs_temp = g_amec->thermalproc.setpoint / 10;
+                   TRAC_ERR("Low frequency due to processor OT DVFS[%d] current temp[%d] max temp[%d]",
+                             l_dvfs_temp, g_amec->thermalproc.current_temp,
+                             l_sensor->sample_max);
+                   // trace history
+                   for (k=0; k<MAX_PROC_TEMP_HISTORY; k++)
+                   {
+                        l_history_temp = (uint16_t)(L_proc_temp_vote_history[k] >> 16);
+                        l_history_freq = (uint16_t)(L_proc_temp_vote_history[k]);
+                        if(k == L_proc_temp_vote_history_index)
+                        {
+                           TRAC_INFO("CURRENT Temperature frequency vote: temp[%d] frequency[%d] avgtemp[%d]",
+                                     l_history_temp, l_history_freq, L_proc_temp_avg_history[k]);
+                        }
+                        else
+                        {
+                           TRAC_INFO("Temperature frequency vote: temp[%d] frequency[%d] avgtemp[%d]",
+                                     l_history_temp, l_history_freq, L_proc_temp_avg_history[k]);
+                        }
+                   }
                 }
                 else if(l_current_reason == AMEC_VOTING_REASON_VDD_THRM)
                 {
                    l_sensor = getSensorByGsid(TEMPVDD);
-                   TRAC_ERR("Low frequency due to Vdd VRM OT current temp[%d] max temp[%d]",
-                             l_sensor->sample, l_sensor->sample_max);
+                   l_dvfs_temp = g_amec->thermalvdd.setpoint / 10;
+                   TRAC_ERR("Low frequency due to Vdd VRM OT DVFS[%d] current temp[%d] max temp[%d]",
+                             l_dvfs_temp, l_sensor->sample, l_sensor->sample_max);
                 }
                 else if(l_current_reason == AMEC_VOTING_REASON_SOCKET_VDD_CAP)
                 {

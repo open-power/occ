@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2024                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2025                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -1259,6 +1259,10 @@ bool read_oppb_params()
             MAIN_TRAC_IMP("read_oppb_params:  pstate_max_throttle[0x%02X]/%dkHz(%d steps)  Fmin Pstate[0x%02X]",
                           G_oppb.pstate_max_throttle, l_max_throt_freq, l_steps,
                           G_oppb.pstate_min);
+
+           // Disable WOF until we are getting non-zero pstates from PGPE. In P11 Pstate 0 is never valid
+           // must set bit directly here and not call set_clear_wof_disabled() which would create an error log
+           g_amec->wof.wof_disabled |= WOF_RC_ZERO_PSTATE;
         }
         else
         {
