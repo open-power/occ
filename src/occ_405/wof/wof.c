@@ -1074,9 +1074,9 @@ void read_pgpe_produced_wof_values( void )
        {
            INTR_TRAC_IMP("read_pgpe_produced_wof_values: Enable freq sensor received non 0 Pstates from PGPE dw0[0x%08X%08X]",
                            WORD_HIGH(l_PgpeWofValues.dw0.value), WORD_LOW(l_PgpeWofValues.dw0.value));
-           set_clear_wof_disabled( CLEAR,
-                                   WOF_RC_ZERO_PSTATE,
-                                   ERC_WOF_ZERO_PSTATE );
+           // Clear flag (since non-zero pstate found) - skip calling set_clear_wof_disabled
+           // since that generates an error log
+           g_amec->wof.wof_disabled &= ~WOF_RC_ZERO_PSTATE;
        }
        uint32_t l_steps = 0;
        l_freq = proc_pstate2freq((Pstate_t)l_PgpeWofValues.dw0.fields.average_frequency_pstate, &l_steps);
@@ -1114,9 +1114,9 @@ void read_pgpe_produced_wof_values( void )
        INTR_TRAC_ERR("read_pgpe_produced_wof_values: Pstate is 0 from PGPE dw0[0x%08X%08X]",
                        WORD_HIGH(l_PgpeWofValues.dw0.value), WORD_LOW(l_PgpeWofValues.dw0.value));
 
-       set_clear_wof_disabled( SET,
-                               WOF_RC_ZERO_PSTATE,
-                               ERC_WOF_ZERO_PSTATE );
+       // Set flag (since zero pstate found) - skip calling set_clear_wof_disabled
+       // since that generates an error log
+       g_amec->wof.wof_disabled |= WOF_RC_ZERO_PSTATE;
     }
 
     // save the full PGPE WOF values for debug
