@@ -6,7 +6,7 @@
 #
 # OpenPOWER OnChipController Project
 #
-# Contributors Listed Below - COPYRIGHT 2023,2024
+# Contributors Listed Below - COPYRIGHT 2023,2025
 # [+] International Business Machines Corp.
 #
 #
@@ -39,13 +39,13 @@ if [ ${TERM:0:5} == "xterm" ]; then
         normal="\033[0m";
 fi
 
-TOOL_VERSION="15-Aug-2024"
+TOOL_VERSION="5-Mar-2025"
 
 let occ=0
 patchSrc="/home/service/patch-occ"
 patchDir="/usr/local/share/hostfw/running"
 driverLidDir="/media/hostfw/running-ro"
-workDir="${patchSrc}/tmp"
+workDir="${patchSrc}/tmp/"
 if [ -z "${HOSTNAME}" ]; then
     HOSTNAME="BMCNAME"
 fi
@@ -57,8 +57,12 @@ tmpName="/tmp/.occ.tmp"
 
 function usage
 {
-    echo "Usage: occ <cmd>"
+    echo "Usage: occ <options> <cmd>"
     echo "       without <cmd> will show OCC devices and occActive status"
+    echo ""
+    echo "    options:"
+    echo "       -v - Verbose mode"
+    echo "       -h - Help"
     echo "    cmds:"
     echo "       state <occ> - display state of specified OCC"
     echo "       poll <occ> - force poll to specified OCC"
@@ -68,8 +72,6 @@ function usage
     echo "                 --> occ S 0 0x00100008  (dump utilization 0x0010 for memory 0x0008)"
     echo "       S <occ> <type+loc> 1 - dump and clear OCC sensors "
     echo "                 --> occ S 0 0x00100040 1 (dump utilization 0x0010 for cores 0x0040)"
-    echo "       sensors - display available OCC sensors from BMC"
-    echo "       devices - display installed BMC devices"
     echo "       mode <newmode <oemdata>> - show or set system power mode"
     echo "       pcap <on | off | ###> - show current power cap properties and optionally enable/disable/set"
     echo "       ips <on | off> - show current idle power save properties and optionally enable/disable"
@@ -80,28 +82,36 @@ function usage
     echo "           i throttle <instance> - introspect OCC throttle or specified proc (default: 0)"
     echo "           i <objpath> - find service and introspect object from specified path"
     echo "           i <interface> - find service and introspect object with specified interface"
-    echo "       dbusfind <interface> - find dbus object for specified interface"
+    echo "       getall <objpath> <interface> - GetAll properties"
+    echo "       getsubtree <interface <root>> - find dbus object for specified interface and optional base path"
+    echo "       getobjects <busName <path>> - find managed objects for specified name and optional base path"
+    echo "       getobjectsval <busName <path>> - find managed objects for specified name and optional base path"
     echo "       dbusfindbyobj <objpath> - find dbus object for specified object path"
     echo "       tree <em | occ | adc | cpu | fan | fru | psu | temp> - get tree for specifid bus"
     echo "       tree <option> values - get tree for specified bus and dump values w/units"
-    echo "       getall <objpath> <interface> - GetAll properties"
+    echo "       sensors <em> - display available OCC sensors from BMC or all EntityManager sensors"
+    echo "       devices - display installed BMC devices"
     echo ""
     echo "       driver - show the BMC / PNOR driver info"./
     echo "       patches - list all patches on system: ${patchDir}"
     echo "       overlay <dir> - move patches and install overlay (default dir: /usr)"
     echo "       install - install patches from $patchSrc/ (use install! to ignore overlay warning)"
     echo "       uninstall - uninstall patches (restore .orig files from $patchSrc/)"
+    echo "       restore-occ - restore original OCC lids from $driverLidDir"
     echo ""
     echo "       pel <-i | uniq | occ | save> - show list of pels (or info or unique SRCs or HTMGT/OCC/*GPE)"
     echo "       clear - clear elogs and trim journal"
     echo "       con /coff - power chassis on or off and wait for it to complete"
     echo "       on / off  - power host on or off and wait for it to complete (wait for OCCs)"
     echo "       on runtime - power host on and wait for state of runtime (does NOT wait for OCCs)"
+    echo "       reboot    - power host off and back on and wait for it to complete (wait for OCCs)"
     echo "       bootloop <c> <loops> <delay time> - host power on, delay, power off, delay"
     echo "                (default=host (c=chassis), default loop=-1=infinite, default time=random 0-60 seconds)"
     echo "       active - wait for the OCCs to go active"
     echo "       reset <occ> - inject OCC error triggering a PM Complex reset (default=OCC 0)"
     echo "       safe <occ> - inject OCC errors until system ends up in safe mode (default=OCC 0)"
+    echo "       exitsafe - attempt to exit safe mode (PLDM message to HTMGT)"
+    echo "       clearresets - clear the PM Complex reset counts (PLDM message to HTMGT)"
     echo "       callhome - force OCC telemetry / call-home log"
     echo "       service <service> - display service status (or list all active services if not specified)"
     echo "       restart <service> - restart service ([occ], settings, entity, etc)"
@@ -121,7 +131,7 @@ function usage
     echo "       debug - enable kernel debug traces"
     echo "       jdebug - enable journal debug traces"
     echo "       nojdebug - disable journal debug traces"
-    echo "       hbdebug - enable hostboot debug traces during boot"
+    echo "       hbdebug <string> - enable hostboot debug traces during boot (if string specified, will monitor trace for string)"
     echo "       nohbdebug - disable hostboot debug traces during boot"
     echo ""
     echo "       journaltrim - trim/vacuum journal to 100K"
@@ -175,10 +185,16 @@ function getOccDevices
     do
         grep -q occ /sys/class/hwmon/${file}/name
         if [ $? -eq 0 ]; then
+            # Get the hwmon instance from the symlink:
+            # /sys/class/hwmon/hwmon12 -> ../../devices/platform/ahb/ahb:apb/1e79b000.fsi/fsi-master/fsi0/slave@00:00/00:00:00:06/sbefifo1-dev0/occ-hwmon.1/hwmon/hwmon12
+            let hwmonIndex=`ls -l /sys/class/hwmon/$file | sed 's#.*/occ-hwmon\.\([^/]*\).*#\\1#'`
+            # OCC instance is offset by 1 (occ-hwmon.1 --> OCC0)
+            let occIndex=$hwmonIndex-1
+            #echo "==> $file -> OCC$occIndex ($hwmonIndex)"
             if [ $hwmon_occ_count -eq $guardedProc ]; then
                 let hwmon_occ_count=$hwmon_occ_count+1
             fi
-            occ_device[$hwmon_occ_count]="/sys/class/hwmon/$file"
+            occ_device[$occIndex]="/sys/class/hwmon/$file"
             let hwmon_occ_count=$hwmon_occ_count+1
         fi
     done
@@ -279,10 +295,10 @@ function power_on
     startTime=`date +'%F %T'`
     trap "echo 'INTERRUPT - power_on - killing tail'; kill $tailPidOn; exit 99" INT TERM
     if [ $hostPower -eq 1 ]; then
-        echo "==> obmcutil poweron    (`date +'%H:%M:%S'`)"
+        echo -e "${bold}==> obmcutil poweron${normal}    (`date +'%H:%M:%S'`)"
         obmcutil poweron
     else
-        echo "==> obmcutil chassison    (`date +'%H:%M:%S'`)"
+        echo -e "${bold}==> obmcutil chassison${normal}    (`date +'%H:%M:%S'`)"
         obmcutil chassison
     fi
     let rc=$?
@@ -334,7 +350,7 @@ function power_on
     if [ "$2" == "ACTIVE" ]; then
         echo ""
         #wait_for_state ACTIVE 1 # Ignore safe mode???
-        wait_for_state ACTIVE $startTime
+        wait_for_state ACTIVE "$startTime"
     fi
 
     rm -f $lastFile
@@ -347,8 +363,13 @@ function power_on
     return 0
 }
 
+# power off system
+#   power_off         (obmcutil poweroff)
+#   power_off chassis (obmcutil chassisoff)
+# returns 0 on success
 function power_off
 {
+    ((poffRc = 0))
     let hostPower=1
     if [ "$1" == "chassis" ]; then
         let hostPower=0
@@ -367,21 +388,23 @@ function power_off
     echo "    tail pid: $tailPidOff"
     trap "echo 'INTERRUPT - power_off - killing tail'; kill $tailPidOff; exit 99" INT TERM
     if [ $hostPower -eq 1 ]; then
-        echo "==> obmcutil poweroff    (`date +'%H:%M:%S'`)"
+        echo -e "${bold}==> obmcutil poweroff${normal}    (`date +'%H:%M:%S'`)"
         obmcutil poweroff
+        ((poffRc = $?))
     else
-        echo "==> obmcutil chassisoff    (`date +'%H:%M:%S'`)"
+        echo -e "${bold}==> obmcutil chassisoff${normal}    (`date +'%H:%M:%S'`)"
         obmcutil chassisoff
+        ((poffRc = $?))
     fi
-    let rc=$?
-    if [ $rc -ne 0 ]; then
+    if [ $poffRc -ne 0 ]; then
         echo -e "${red}ERROR: poweroff failed with rc=$rc${normal}";
         echo "Killing console dumps"; kill $tailPidOff
         trap - INT TERM
-        exit $rc
+        exit $poffRc
     fi
 
-    while [ $rc -eq 0 ]; do
+    ((waitRc = 0))
+    while [ $waitRc -eq 0 ]; do
         obmcutil power > $curFile
         obmcutil status > $curFileS
         diff -q $curFile $lastFile > /dev/null
@@ -390,18 +413,18 @@ function power_off
             grep -v -f $lastFile $curFile
         fi
         grep '^..... = ' $curFile | grep 1 > /dev/null
-        let rc=$?
+        ((waitRc = $?))
         mv $curFile $lastFile
         diff -q $curFileS $lastFileS > /dev/null
         if [ $? -ne 0 ]; then
             echo -n "`date +'%H:%M:%S :'` "
             grep -v -f $lastFileS $curFileS
         fi
-        if [ $rc -ne 0 ]; then
+        if [ $waitRc -ne 0 ]; then
             # make sure host is also off
             grep -q 'HostState.Off' $curFileS > /dev/null
             if [ $? -eq 1 ]; then
-                let rc=0
+                ((waitRc = 0))
             fi
         fi
         mv $curFileS $lastFileS
@@ -414,11 +437,12 @@ function power_off
         kill $tailPidOff
     fi
     trap - INT TERM
-    return 0
+    return $poffRc
 }
 
 function installPatch
 {
+    let rc=0
     let installed=0
     targetFile="$1"
     targetService="$2"
@@ -430,14 +454,21 @@ function installPatch
         diff -b $targetFile ${patchFile} > /dev/null
         if [ $? -ne 0 ]; then
             cp -v ${patchFile} $targetPath
-            let installed=1
+            let rc=$?
+            if [ $rc -eq 0 ]; then
+                let installed=1
+            else
+                echo -e "${red}ERROR: copy failed with rc=$rc${normal} (cp $patchFile $targetPath)";
+            fi
         fi
     fi
-    if [ "$targetService" == "restartApp" ]; then
-        echo -e "${bold}NOTE: you need to restart any app using $targetFile${normal}"
-    elif [ -n "$targetService" ] && [ $installed -ne 0 ]; then
-        echo "==> systemctl restart $targetService"
-        systemctl restart $targetService
+    if [ $installed -ne 0 ]; then
+        if [ "$targetService" == "restartApp" ]; then
+            echo -e "${bold}NOTE: you need to restart any app using $targetFile${normal}"
+        elif [ -n "$targetService" ]; then
+            echo "==> systemctl restart $targetService"
+            systemctl restart $targetService
+        fi
     fi
     return $installed
 }
@@ -513,30 +544,34 @@ function backup_for_patches
         backupFile "/usr/bin/ipmid"
         backupFile "/usr/sbin/pgood_wait"
         backupFile "/usr/sbin/power_control.exe"
+        pythonBase=`python3 -c "import sys; print('\n'.join(sys.path))" | grep site-packages`
+        if [ -z "pythonBase" ]; then
+            pythonBase="/usr/lib/python3.9/site-packages"
+        fi
         file="b2600.py" # HTMGT elog parser
         if [ -e "${patchSrc}/${file}" ]; then
             if [ -e "${patchSrc}/${file}.orig" ]; then
                 if [ $overlayFound -eq 0 ] || [ $newDriver -eq 1 ]; then
-                    diff -b /usr/lib/python3.9/site-packages/udparsers/b2600/${file} ${patchSrc}/${file}.orig > /dev/null
+                    diff -b ${pythonBase}/udparsers/b2600/${file} ${patchSrc}/${file}.orig > /dev/null
                     if [ $? -ne 0 ]; then
-                        cp -iv /usr/lib/python3.9/site-packages/udparsers/b2600/${file} ${patchSrc}/${file}.orig
+                        cp -iv ${pythonBase}/udparsers/b2600/${file} ${patchSrc}/${file}.orig
                     fi
                 fi
             else
-                cp -v /usr/lib/python3.9/site-packages/udparsers/b2600/${file} ${patchSrc}/${file}.orig
+                cp -v ${pythonBase}/udparsers/b2600/${file} ${patchSrc}/${file}.orig
             fi
         fi
         file="b2a00.py" # HTMGT elog parser
         if [ -e "${patchSrc}/${file}" ]; then
             if [ -e "${patchSrc}/${file}.orig" ]; then
                 if [ $overlayFound -eq 0 ] || [ $newDriver -eq 1 ]; then
-                    diff -b /usr/lib/python3.9/site-packages/udparsers/b2a00/${file} ${patchSrc}/${file}.orig > /dev/null
+                    diff -b ${pythonBase}/udparsers/b2a00/${file} ${patchSrc}/${file}.orig > /dev/null
                     if [ $? -ne 0 ]; then
-                        cp -iv /usr/lib/python3.9/site-packages/udparsers/b2a00/${file} ${patchSrc}/${file}.orig
+                        cp -iv ${pythonBase}/udparsers/b2a00/${file} ${patchSrc}/${file}.orig
                     fi
                 fi
             else
-                cp -v /usr/lib/python3.9/site-packages/udparsers/b2a00/${file} ${patchSrc}/${file}.orig
+                cp -v ${pythonBase}/udparsers/b2a00/${file} ${patchSrc}/${file}.orig
             fi
         fi
         # Lids
@@ -668,6 +703,7 @@ function wait_for_state
             if [ $ignoreSafe -eq 0 ]; then
                 # Check if already in safe mode
                 if [ -n "$startTime" ]; then
+                    #echo "==> journalctl _EXE=/usr/bin/openpower-occ-control -q --since \"$startTime\" | grep 'is in SAFE MODE'"
                     journalctl _EXE=/usr/bin/openpower-occ-control -q --since "$startTime" | grep 'is in SAFE MODE'
                 else
                     journalctl _EXE=/usr/bin/openpower-occ-control -q | grep 'is in SAFE MODE'
@@ -827,33 +863,33 @@ function get_clip_reason
     let rc=$1
     clip_string=""
     let bitset="$rc & 0x00000001";
-    if [ $bitset -ne 0 ]; then clip_string="$clip_string SOCKET_VDD_CAP" ; fi;
+    if [ $bitset -ne 0 ]; then clip_string+=" SOCKET_VDD_CAP" ; fi;
     let bitset="$rc & 0x00000002";
-    if [ $bitset -ne 0 ]; then clip_string="$clip_string TOT_SOCKET_CAP" ; fi;
+    if [ $bitset -ne 0 ]; then clip_string+=" TOT_SOCKET_CAP" ; fi;
     let bitset="$rc & 0x00000040";
-    if [ $bitset -ne 0 ]; then clip_string="$clip_string PROC_THRM" ; fi;
+    if [ $bitset -ne 0 ]; then clip_string+=" PROC_THRM" ; fi;
     let bitset="$rc & 0x00000200";
-    if [ $bitset -ne 0 ]; then clip_string="$clip_string OVER_CURRENT" ; fi;
+    if [ $bitset -ne 0 ]; then clip_string+=" OVER_CURRENT" ; fi;
     let bitset="$rc & 0x00000400";
-    if [ $bitset -ne 0 ]; then clip_string="$clip_string OVERRIDE" ; fi;
+    if [ $bitset -ne 0 ]; then clip_string+=" OVERRIDE" ; fi;
     let bitset="$rc & 0x00002000";
-    if [ $bitset -ne 0 ]; then clip_string="$clip_string PPB_HARD_CAP" ; fi;
+    if [ $bitset -ne 0 ]; then clip_string+=" PPB_HARD_CAP" ; fi;
     let bitset="$rc & 0x00004000";
-    if [ $bitset -ne 0 ]; then clip_string="$clip_string PPB_SOFT_CAP" ; fi;
+    if [ $bitset -ne 0 ]; then clip_string+=" PPB_SOFT_CAP" ; fi;
     let bitset="$rc & 0x00008000";
-    if [ $bitset -ne 0 ]; then clip_string="$clip_string UTIL/DPM" ; fi;
+    if [ $bitset -ne 0 ]; then clip_string+=" UTIL/DPM" ; fi;
     let bitset="$rc & 0x00020000";
-    if [ $bitset -ne 0 ]; then clip_string="$clip_string OVERRIDE_CORE" ; fi;
+    if [ $bitset -ne 0 ]; then clip_string+=" OVERRIDE_CORE" ; fi;
     let bitset="$rc & 0x00040000";
-    if [ $bitset -ne 0 ]; then clip_string="$clip_string IPS" ; fi;
+    if [ $bitset -ne 0 ]; then clip_string+=" IPS" ; fi;
     let bitset="$rc & 0x00080000";
-    if [ $bitset -ne 0 ]; then clip_string="$clip_string APSS_PMAX" ; fi;
+    if [ $bitset -ne 0 ]; then clip_string+=" APSS_PMAX" ; fi;
     let bitset="$rc & 0x00100000";
-    if [ $bitset -ne 0 ]; then clip_string="$clip_string VDD_THRM" ; fi;
+    if [ $bitset -ne 0 ]; then clip_string+=" VDD_THRM" ; fi;
     let bitset="$rc & 0x00200000";
-    if [ $bitset -ne 0 ]; then clip_string="$clip_string EFF_MODE_IDLE_UTIL" ; fi;
+    if [ $bitset -ne 0 ]; then clip_string+=" EFF_MODE_IDLE_UTIL" ; fi;
     let bitset="$rc & 0x00400000";
-    if [ $bitset -ne 0 ]; then clip_string="$clip_string EFF_MODE_IDLE_CEFF" ; fi;
+    if [ $bitset -ne 0 ]; then clip_string+=" EFF_MODE_IDLE_CEFF" ; fi;
 }
 
 # from wof/wof.h
@@ -862,29 +898,53 @@ function get_wof_reason
     let rc=$1
     wof_string=""
     let bitset="$rc & 0x00000001";
-    if [ $bitset -ne 0 ]; then wof_string="$wof_string NO_WOF_HEADER_MASK" ; fi;
+    if [ $bitset -ne 0 ]; then wof_string+=" NO_WOF_HEADER_MASK" ; fi;
     let bitset="$rc & 0x00000004";
-    if [ $bitset -ne 0 ]; then wof_string="$wof_string INVALID_VDD_VDN" ; fi;
+    if [ $bitset -ne 0 ]; then wof_string+=" INVALID_VDD_VDN" ; fi;
     let bitset="$rc & 0x00000010";
-    if [ $bitset -ne 0 ]; then wof_string="$wof_string PGPE_WOF_DISABLED" ; fi;
+    if [ $bitset -ne 0 ]; then wof_string+=" PGPE_WOF_DISABLED" ; fi;
     let bitset="$rc & 0x00000020";
-    if [ $bitset -ne 0 ]; then wof_string="$wof_string PSTATE_PROTOCOL_OFF" ; fi;
+    if [ $bitset -ne 0 ]; then wof_string+=" PSTATE_PROTOCOL_OFF" ; fi;
     let bitset="$rc & 0x00000040";
-    if [ $bitset -ne 0 ]; then wof_string="$wof_string VRT_REQ_TIMEOUT" ; fi;
+    if [ $bitset -ne 0 ]; then wof_string+=" VRT_REQ_TIMEOUT" ; fi;
     let bitset="$rc & 0x00000080";
-    if [ $bitset -ne 0 ]; then wof_string="$wof_string CONTROL_REQ_TIMEOUT" ; fi;
+    if [ $bitset -ne 0 ]; then wof_string+=" CONTROL_REQ_TIMEOUT" ; fi;
     let bitset="$rc & 0x00000100";
-    if [ $bitset -ne 0 ]; then wof_string="$wof_string STATE_CHANGE" ; fi;
+    if [ $bitset -ne 0 ]; then wof_string+=" STATE_CHANGE" ; fi;
     let bitset="$rc & 0x00000400";
-    if [ $bitset -ne 0 ]; then wof_string="$wof_string MODE_NO_SUPPORT_MASK" ; fi;
+    if [ $bitset -ne 0 ]; then wof_string+=" MODE_NO_SUPPORT_MASK" ; fi;
+    let bitset="$rc & 0x00000800";
+    if [ $bitset -ne 0 ]; then wof_string+=" DIVIDE_BY_ZERO_VDD" ; fi;
+    let bitset="$rc & 0x00001000";
+    if [ $bitset -ne 0 ]; then wof_string+=" VRT_REQ_FAILURE" ; fi;
+    let bitset="$rc & 0x00002000";
+    if [ $bitset -ne 0 ]; then wof_string+=" CONTROL_REQ_FAILURE" ; fi;
+    let bitset="$rc & 0x00004000";
+    if [ $bitset -ne 0 ]; then wof_string+=" VRT_ALIGNMENT_ERROR" ; fi;
+    let bitset="$rc & 0x00010000";
+    if [ $bitset -ne 0 ]; then wof_string+=" UTURBO_IS_ZERO" ; fi;
     let bitset="$rc & 0x00020000";
-    if [ $bitset -ne 0 ]; then wof_string="$wof_string OCC_WOF_DISABLED" ; fi;
+    if [ $bitset -ne 0 ]; then wof_string+=" OCC_WOF_DISABLED" ; fi;
     let bitset="$rc & 0x00040000";
-    if [ $bitset -ne 0 ]; then wof_string="$wof_string OPPB_WOF_DISABLED" ; fi;
+    if [ $bitset -ne 0 ]; then wof_string+=" OPPB_WOF_DISABLED" ; fi;
     let bitset="$rc & 0x00080000";
-    if [ $bitset -ne 0 ]; then wof_string="$wof_string SYSTEM_WOF_DISABLE" ; fi;
+    if [ $bitset -ne 0 ]; then wof_string+=" SYSTEM_WOF_DISABLE" ; fi;
     let bitset="$rc & 0x00100000";
-    if [ $bitset -ne 0 ]; then wof_string="$wof_string RESET_LIMIT_REACHED" ; fi;
+    if [ $bitset -ne 0 ]; then wof_string+=" RESET_LIMIT_REACHED" ; fi;
+    let bitset="$rc & 0x00400000";
+    if [ $bitset -ne 0 ]; then wof_string+=" NO_CONFIGURED_CORES" ; fi;
+    let bitset="$rc & 0x00800000";
+    if [ $bitset -ne 0 ]; then wof_string+=" IPC_FAILURE" ; fi;
+    let bitset="$rc & 0x02000000";
+    if [ $bitset -ne 0 ]; then wof_string+=" RESET_DEBUG_CMD" ; fi;
+    let bitset="$rc & 0x04000000";
+    if [ $bitset -ne 0 ]; then wof_string+=" DIVIDE_BY_ZERO_VCS" ; fi;
+    let bitset="$rc & 0x08000000";
+    if [ $bitset -ne 0 ]; then wof_string+=" INVALID_IDDQ_SAMPLE_DEPTH" ; fi;
+    let bitset="$rc & 0x10000000";
+    if [ $bitset -ne 0 ]; then wof_string+=" ZERO_PSTATE" ; fi;
+    let bitset="$rc & 0x20000000";
+    if [ $bitset -ne 0 ]; then wof_string+=" NEGATIVE_MMA_LEAKAGE" ; fi;
 }
 
 function get_wof_adjustment_reason
@@ -892,19 +952,37 @@ function get_wof_adjustment_reason
     let rc=$1
     wof_adjust_string=""
     let bitset="$rc & 0x01";
-    if [ $bitset -ne 0 ]; then wof_adjust_string="$wof_adjust_string CEFF_OVERCURRENT" ; fi;
+    if [ $bitset -ne 0 ]; then wof_adjust_string+=" CEFF_OVERCURRENT" ; fi;
     let bitset="$rc & 0x02";
-    if [ $bitset -ne 0 ]; then wof_adjust_string="$wof_adjust_string CEFF_THROTTLE" ; fi;
+    if [ $bitset -ne 0 ]; then wof_adjust_string+=" CEFF_THROTTLE" ; fi;
     let bitset="$rc & 0x04";
-    if [ $bitset -ne 0 ]; then wof_adjust_string="$wof_adjust_string CEFF_OVERVOLT" ; fi;
+    if [ $bitset -ne 0 ]; then wof_adjust_string+=" CEFF_OVERVOLT" ; fi;
     let bitset="$rc & 0x08";
-    if [ $bitset -ne 0 ]; then wof_adjust_string="$wof_adjust_string CEFF_EFFICIENCY_MODE" ; fi;
+    if [ $bitset -ne 0 ]; then wof_adjust_string+=" CEFF_EFFICIENCY_MODE" ; fi;
     let bitset="$rc & 0x20";
-    if [ $bitset -ne 0 ]; then wof_adjust_string="$wof_adjust_string AMBIENT_NO_AMBIENT" ; fi;
+    if [ $bitset -ne 0 ]; then wof_adjust_string+=" AMBIENT_NO_AMBIENT" ; fi;
     let bitset="$rc & 0x40";
-    if [ $bitset -ne 0 ]; then wof_adjust_string="$wof_adjust_string AMBIENT_ALTITUDE" ; fi;
+    if [ $bitset -ne 0 ]; then wof_adjust_string+=" AMBIENT_ALTITUDE" ; fi;
     let bitset="$rc & 0x80";
-    if [ $bitset -ne 0 ]; then wof_adjust_string="$wof_adjust_string AMBIENT_DIMM" ; fi;
+    if [ $bitset -ne 0 ]; then wof_adjust_string+=" AMBIENT_DIMM" ; fi;
+}
+
+function get_dimm_disable_reason
+{
+    let rc=$1
+    dimm_disable_string=""
+    let bitset="$rc & 0x01";
+    if [ $bitset -ne 0 ]; then dimm_disable_string+=" WOF_TABLE_SIZE" ; fi;
+    let bitset="$rc & 0x02";
+    if [ $bitset -ne 0 ]; then dimm_disable_string+=" 0_THERMAL_CONSTANT" ; fi;
+    let bitset="$rc & 0x04";
+    if [ $bitset -ne 0 ]; then dimm_disable_string+=" 0_MAX_PREHEAT_PWR" ; fi;
+    let bitset="$rc & 0x08";
+    if [ $bitset -ne 0 ]; then dimm_disable_string+=" INTERPOLATION" ; fi;
+    let bitset="$rc & 0x10";
+    if [ $bitset -ne 0 ]; then dimm_disable_string+=" OCMB_DATA_MISMATCH" ; fi;
+    let bitset="$rc & 0x20";
+    if [ $bitset -ne 0 ]; then dimm_disable_string+=" OCMB_PRESENCE_MISMATCH" ; fi;
 }
 
 function get_mem_pwr_ctrl_string
@@ -946,13 +1024,15 @@ function parse_rsp_poll
             flags=" Master"
         fi
         let bitset="$rstatus & 0x10";
-        if [ $bitset -ne 0 ]; then flags="$flags OCCPmcrOwner"; fi
+        if [ $bitset -ne 0 ]; then flags+=" OCCPmcrOwner"; fi
         let bitset="$rstatus & 0x08";
-        if [ $bitset -ne 0 ]; then flags="$flags SIMICS"; fi
+        if [ $bitset -ne 0 ]; then flags+=" SIMICS"; fi
         let bitset="$rstatus & 0x02";
-        if [ $bitset -ne 0 ]; then flags="$flags ObsReady"; fi
+        if [ $bitset -ne 0 ]; then flags+=" ObsReady"; fi
         let bitset="$rstatus & 0x01";
-        if [ $bitset -ne 0 ]; then flags="$flags ActReady"; fi
+        if [ $bitset -ne 0 ]; then flags+=" ActReady"; fi
+        let bitset="$rstatus & 0x04";
+        if [ $bitset -ne 0 ]; then flags+=" DDR5Workaround"; fi
         if [ -n "$flags" ]; then flags="($flags)"; fi
         printf "       Status: 0x%02X $flags\n" $rstatus
         let offset=$offset+1
@@ -961,13 +1041,13 @@ function parse_rsp_poll
         let bitset="$xstatus & 0x80";
         if [ $bitset -ne 0 ]; then flags=" DVFS-OT"; fi
         let bitset="$xstatus & 0x40";
-        if [ $bitset -ne 0 ]; then flags="$flags DVFS-power"; fi
+        if [ $bitset -ne 0 ]; then flags+=" DVFS-power"; fi
         let bitset="$xstatus & 0x20";
-        if [ $bitset -ne 0 ]; then flags="$flags MemThrottle-OT"; fi
+        if [ $bitset -ne 0 ]; then flags+=" MemThrottle-OT"; fi
         let bitset="$xstatus & 0x10";
-        if [ $bitset -ne 0 ]; then flags="$flags QckPwrDrop"; fi
+        if [ $bitset -ne 0 ]; then flags+=" QckPwrDrop"; fi
         let bitset="$xstatus & 0x08";
-        if [ $bitset -ne 0 ]; then flags="$flags DVFS-Vdd-OT"; fi
+        if [ $bitset -ne 0 ]; then flags+=" DVFS-Vdd-OT"; fi
         if [ -n "$flags" ]; then
             flags="($flags )";
             echo -en "$bold";
@@ -1054,7 +1134,7 @@ function parse_rsp_poll
                     indent="       ";
 
                     if [ "$sensor" == "TEMP" ]; then
-                        echo "$indent  SSSSSSSS FF TT LL (SSSS = Sensor ID, FF is FRU type, TT is temp in C, LL is throttle temp)";
+                        echo "$indent  SSSSSSSS FF TT LL EE (SSSS=Sensor ID, FF=FRU type, TT=temp in C, LL=throttle, EE=error)";
                     elif [ "$sensor" == "FREQ" ]; then
                         echo "$indent  SSSSSSSS FFFF  (SSSS = Sensor ID, FFFF is freq in MHz)";
                     elif [ "$sensor" == "POWR" ]; then
@@ -1229,17 +1309,42 @@ function parse_rsp_poll
                                     else
                                         let vratio=0x${freq_data:19:4}
                                         if [ $foundMode -ne 0 ]; then
-                                            let vddCeff=0x${freq_data:15:4}/100
+                                            let vddCeff=0x${freq_data:15:4}
+                                            vddCeffFloat=$(awk "BEGIN {print $vddCeff / 100}")
                                             let wofAdjustReason=0x${freq_data:23:2}
                                             get_wof_adjustment_reason $wofAdjustReason
-                                            printf "           $freq_data    WOF pSstate: %3d, Vdd Ceff: %.2f%%, vRatio: 0x%04X" $pstate $vddCeff $vratio;
+                                            printf "           $freq_data    WOF pSstate: %3d, Vdd Ceff: %.2f%%, vRatio: 0x%04X" $pstate $vddCeffFloat $vratio;
                                             if [ $wofAdjustReason -ne 0 ]; then
-                                                printf ", WOF Adjustments:$wof_adjust_string\n"
+                                                printf ", Adjustments:$wof_adjust_string\n"
                                             else
                                                 printf "\n"
                                             fi
                                         else
                                             printf "           $freq_data    WOF pSstate: %3d, vRatio: 0x%04X\n" $pstate $vratio;
+                                        fi
+                                    fi
+                                elif [ $sensor_id == "574F4649" ]; then # WOFI additional WOF Info
+                                    freq_data=`hexdump -s $offset -n $sensorLength -e ' 4/1 "%_p" "   " 1/1 "%02X" " " 1/1 "%02X" " " 6/1 "%02X""\n"' ${binfile}`
+                                    let vrt1=0x${freq_data:13:2}
+                                    let vrt2=0x${freq_data:15:2}
+                                    let vrt3=0x${freq_data:17:2}
+                                    let dimm_disable=0x${freq_data:19:2}
+                                    let amb_adjust=0x${freq_data:21:2}
+                                    if [ $amb_adjust -gt 127 ]; then
+                                        # Convert to signed
+                                        let amb_adjust="($amb_adjust | 0xFFFFFFFFFFFFFF00)"
+                                    fi
+                                    let io_idx="(($vrt1 & 0x0F) << 1) | (($vrt2 & 0x80) >> 7)";
+                                    let amb_idx="($vrt2 & 0x7C) >> 2";
+                                    let vdd_idx="($vrt3 & 0x1F)";
+                                    get_dimm_disable_reason $dimm_disable
+                                    printf "           $freq_data    IO idx: %d, Amb idx: %d, Vdd idx: %d, " $io_idx $amb_idx $vdd_idx;
+                                    if [ $dimm_disable -ne 0 ]; then
+                                        printf "DIMM Disable: $dimm_disable_string\n";
+                                    else
+                                        printf "dimm ambient adjust: %.0f\n" $amb_adjust;
+                                        if [ $amb_adjust -gt 0 ]; then
+                                            printf "WARNING: dimm ambient adjust is > 0! DIMM using more power then allowed in MRW\n";
                                         fi
                                     fi
                                 elif [ $sensor_id == "4D4F4445" ]; then # MODE
@@ -1250,9 +1355,23 @@ function parse_rsp_poll
                                         printf "           $freq_data    Frequency: %d MHz\n" $modeParm
                                     else
                                         let vddCeff=0x${freq_data:17:4}/100
+                                        vddCeffFloat=$(awk "BEGIN {print $vddCeff}")
                                         let rawCeff=0x${freq_data:21:4}/100
-                                        printf "           $freq_data    Freq limit: %d MHz, Vdd Ceff addr: %.2f%%, Raw Ceff: %.2f%%\n" $modeParm $vddCeff $rawCeff
+                                        rawCeffFloat=$(awk "BEGIN {print $rawCeff}")
+                                        printf "           $freq_data    Freq limit: %d MHz, Vdd Ceff addr: %.2f%%, Raw Ceff: %.2f%%\n" $modeParm $vddCeffFloat $rawCeffFloat
                                     fi
+                                elif [ $sensor_id == "5057524D" ]; then # PWRM (memory power)
+                                    freq_data=`hexdump -s $offset -n $sensorLength -e ' 4/1 "%_p" "   " 1/1 "%02X" " " 1/1 "%02X" " " 6/1 "%02X""\n"' ${binfile}`
+                                    let ocmb_status=0x${freq_data:13:4}
+                                    let gsid=0x${freq_data:17:4}
+                                    let power=0x${freq_data:21:4}
+                                    printf "           $freq_data    OCMB Status: 0x%04X, GSID: 0x%04X, Total mem power: %dW\n" $ocmb_status $gsid $power;
+                                elif [ $sensor_id == "50575250" ]; then # PWRP (memory power)
+                                    freq_data=`hexdump -s $offset -n $sensorLength -e ' 4/1 "%_p" "   " 1/1 "%02X" " " 1/1 "%02X" " " 6/1 "%02X""\n"' ${binfile}`
+                                    let reserved=0x${freq_data:13:4}
+                                    let gsid=0x${freq_data:17:4}
+                                    let power=0x${freq_data:21:4}
+                                    printf "           $freq_data    reserved: 0x%04X,    GSID: 0x%04X, Proc chip power: %dW\n" $reserved $gsid $power;
                                 else
                                     hexdump -s $offset -n $sensorLength -e '"           " 4/1 "%_p" "   " 1/1 "%02X" " " 1/1 "%02X" " " 6/1 "%02X""\n"' ${binfile}
                                 fi
@@ -1302,11 +1421,11 @@ function parse_rsp_eff_mode_dump
                 let util_bitset="$enable & 0x80";
                 if [ $util_bitset -ne 0 ]; then flags=" Utilization"; fi
                 let ceff_bitset="$enable & 0x40";
-                if [ $ceff_bitset -ne 0 ]; then flags="$flags Ceff"; fi
+                if [ $ceff_bitset -ne 0 ]; then flags+=" Ceff"; fi
                 let mode_bitset="$enable & 0x20";
                 if [ -n "$flags" ]; then
-                    if [ $mode_bitset -ne 0 ]; then flags="$flags ACTIVE";
-                    else flags="$flags NOT active for current mode"; fi
+                    if [ $mode_bitset -ne 0 ]; then flags+=" ACTIVE";
+                    else flags+=" NOT active for current mode"; fi
                     flags="($flags )";
                 fi
                 printf "    Idle Chip Enable: 0x%02X $flags\n" $enable
@@ -1467,6 +1586,7 @@ function parse_rsp_sensor
 # Get object path and service for an interface
 function getServiceAndObjectPath
 {
+    ((gsaopRc = 99))
     interface="$1"
     if [ -n "$interface" ]; then
         if [ $G_verbose -gt 0 ]; then
@@ -1478,6 +1598,7 @@ function getServiceAndObjectPath
                 echo "Service: $G_service"
                 echo "ObjectPath: $G_objectPath"
             fi
+            ((gsaopRc = 0))
         else
             echo -e "${red}ERROR: Unable to determine Service/Object Path for Interface: $interface${normal}"
             busctl call xyz.openbmc_project.ObjectMapper /xyz/openbmc_project/object_mapper xyz.openbmc_project.ObjectMapper GetSubTree sias "/" 0 1 $interface
@@ -1487,6 +1608,7 @@ function getServiceAndObjectPath
         G_service=""
         G_objectPath=""
     fi
+    return $gsaopRc
 }
 
 # Given an interface ObjectMapper will be call to get the service and sets global G_service or "" on error
@@ -1551,7 +1673,7 @@ function getSubTree
         echo "$interface" | grep -q '\.'
         if [ $? -ne 0 ]; then
             echo -e "${red}WARNING: expected an interface to getSubTree call, but argument is $interface${normal}"
-            echo "Did you want to use dbusfindbyobj instead?"
+            echo "Did you want to use introspect <objPath> or dbusfindbyobj instead?"
             sleep 1;
         fi
         echo "==> busctl call xyz.openbmc_project.ObjectMapper /xyz/openbmc_project/object_mapper xyz.openbmc_project.ObjectMapper GetSubTree sias \"$root\" 0 1 \"$interface\""
@@ -1579,18 +1701,22 @@ function getSubTree
 
 function getAllProperties
 {
+    ((gapRc = 97))
     interface="$1"
     quiet="$2"
     if [ -n "$interface" ]; then
         getServiceAndObjectPath $interface
-
-        if [ -z "$quiet" ]; then
-            echo "==> busctl call $G_service $G_objectPath org.freedesktop.DBus.Properties GetAll s $interface"
+        if [ $? -eq 0 ]; then
+            if [ -z "$quiet" ] || [ $G_verbose -gt 0 ]; then
+                echo "==> busctl call $G_service $G_objectPath org.freedesktop.DBus.Properties GetAll s $interface"
+            fi
+            busctl call $G_service $G_objectPath org.freedesktop.DBus.Properties GetAll s $interface
+            ((gapRc = $?))
         fi
-        busctl call $G_service $G_objectPath org.freedesktop.DBus.Properties GetAll s $interface
     else
         echo -e "${red}ERROR: getAllProperties requires interface${normal}"
     fi
+    return $gapRc
 }
 
 function occStatus
@@ -1643,7 +1769,7 @@ function printOccPels
     #peltool -lhf | grep -A6 SRC | grep -A5 -e '"B...2[69AEF].."' -e '"B...32.."' -e '"B...35.."' | grep -v -i -e hostboot > /tmp/pel_temp.txt
     peltool -lhf | grep -A6 SRC | grep -A6 -e '"B...2[69AEF].."' -e '"B...32.."' -e '"B...35.."' | grep -e '--' -e "SRC" -e "PLID" -e "Commit Time" -e "Sev" > /tmp/pel_temp.txt
     if [ -e /tmp/pel_temp.txt ]; then
-        awk -F: 'BEGIN {
+       awk -F: 'BEGIN {
         sl="--"
         FS=": "
         count=0
@@ -1660,6 +1786,40 @@ function printOccPels
         printf("\n    (total of %d pels)\n", ++count) } ' /tmp/pel_temp.txt
         rm /tmp/pel_temp.txt
     fi
+    if [ 0 -eq 1 ]; then
+    if [ -e /tmp/pel_temp.txt ]; then
+        awk -F: 'BEGIN {
+        FS=":  "
+        sl=": {"
+        bl="{"
+        el="},"
+        plid="PLID"
+        msg="Message"
+        cid="CreatorID"
+        sid="Subsystem"
+        ssText=""
+        coid="CompID"
+        msgText=""
+        first=1
+        skip=0
+        count=0
+        #"   0x50002F42  BD571008  01/25/2022 22:09:26  Unrecoverable Error        "There was a failure when reading a hardware
+        printf("       PLID       SRC            DATE             SEVERITY\n")
+        printf("  "); }
+        $1~msg { skip=1; msgText=$2; gsub(/^[ \t"]+/,"",msgText); gsub(/[ \t",]+$/,"",msgText); }
+        $1~sid { skip=1; ssText=$2; gsub(/^[ \t"]+/,"",ssText); gsub(/[ \t",]+$/,"",ssText); }
+        $1~cid || $1~coid || $1~plid || $1~bl || $1~el { skip=1 }
+        $1~sl && first == 0 { skip=1; printf( " \t%s\n  ", msgText); msgText=""; ssText=""; ++count ; gsub(/^[ \t"]+/,"",$1); gsub(/[ \t:,"{]+/,"",$1); printf("  %s", $1); }
+        $1~sl && first == 1 { first=0 ; skip=1; gsub(/^[ \t"]+/,"",$1); gsub(/[ \t:,"{]+/,"",$1); printf("  %s", $1); }
+        skip == 0 {
+        gsub(/^[ \t"]+/,"",$2);   # remove leading  spaces
+        gsub(/[ \t,"]+$/,"",$2);   # remove trailing spaces
+        printf( "  %s" $2) }
+        skip == 1 { skip=0 }
+    END {
+        printf("\t%s\n    (total of %d pels)\n", msgText, ++count) }' /tmp/pel_temp.txt
+    fi
+    fi
     echo "To display detailed log: peltool -i <PLID>"
 }
 
@@ -1667,6 +1827,7 @@ function printOccPels
 # doIntrospect <service> <objectPath>
 function doIntrospect
 {
+    ((diRc = 98))
     if [ -z "$2" ]; then
         objPath="$1"
         findServiceByObjPath $objPath
@@ -1677,9 +1838,11 @@ function doIntrospect
     if [ -n "$G_service" ]; then
         echo "==> busctl -l introspect $G_service $objPath"
         busctl -l introspect $G_service $objPath
+        ((diRc = 0))
     else
         echo "ERROR: Unable to determine service for object path: $objPath"
     fi
+    return $diRc
 }
 
 function doOverlay
@@ -1694,9 +1857,9 @@ function doOverlay
         if [ "$overlaySrc" == "/usr" ]; then
             if [ "$(ls -A ${patchDir})" ]; then
                 # Found patch files, save them to install after overlay
-                echo -e "${bold}Found patch files:${normal}"
+                echo -e "${bold}Found patch files:${normal}  (${patchDir}/)"
                 ls -l ${patchDir}/
-                read -p "Copy patches to overlay [n]/y? " answer
+                read -p "Copy patches to /usr overlay [n]/y? " answer
                 if [ "$answer" == "y" ] || [ "$answer" == "Y" ]; then
                     mkdir -v /tmp/usr-work/pnor-patches
                     cp -v ${patchDir}/* /tmp/usr-work/pnor-patches/
@@ -1816,8 +1979,7 @@ else
                 ;;
             "--help" ) usage
                 ;;
-            "-v" ) usage
-                let G_verbose=1
+            "-v" ) let G_verbose=1
                 ;;
 
             "active" )
@@ -1871,7 +2033,19 @@ else
                                     parse_rsp_poll /tmp/occ_poll_rsp.bin
                                     rm /tmp/occ_poll_rsp.bin
                                 fi
+                            elif [ $cmd -eq $((0x40)) ]; then # OCC Debug Command
+                                let subCmd=$((0x${cmdString:2:2}))
+                                if [ $subCmd -eq 7 ] || [ $subCmd -eq 12 ]; then # Get / Get & Clear Sensor
+                                    hex_dump_to_bin /tmp/occ_sensor_rsp.bin "$rsp"
+                                    if [ -e /tmp/occ_sensor_rsp.bin ]; then
+                                        parse_rsp_sensor /tmp/occ_sensor_rsp.bin
+                                        rm /tmp/occ_sensor_rsp.bin
+                                    fi
+                                else
+                                    hex_dump "$rsp"
+                                fi
                             else
+                                echo "CMDDATA=$cmdData"
                                 hex_dump "$rsp"
                             fi
                         else
@@ -2134,6 +2308,13 @@ else
                 tail -F /var/log/obmc-console1.log | weave.py > ${workDir}/hb_trace.txt &
                 let tailPid=$!
                 echo "    tail pid: $tailPid"
+
+                if [ -n "$2" ]; then
+                    echo -e "\nMonitoring trace for \"$2\":"
+                    echo "==> tail -f ${workDir}/hb_trace.txt | grep -i $2"
+                    tail -f ${workDir}/hb_trace.txt | grep -i "$2"
+                    shift
+                fi
                 ;;
 
             "nohbdebug" )
@@ -2253,51 +2434,68 @@ else
                 ;;
 
             "sensors" )
-                echo "==> dbus-send --system --print-reply --dest=org.open_power.OCC.Control /xyz/openbmc_project/sensors org.freedesktop.DBus.ObjectManager.GetManagedObjects"
-                dbus-send --system --print-reply --dest=org.open_power.OCC.Control /xyz/openbmc_project/sensors org.freedesktop.DBus.ObjectManager.GetManagedObjects | grep -e "object path" -e variant | grep -v -e 'inf$' -e 'boolean true' -e string -e array | sed 's/ *object path *\([^\s]*\)/\1/' | sed 's/ *variant *double //g' | awk 'NR%2{printf "%s \t",$0;next;}1' | sort -
+                if [ -z "$2" ]; then
+                    # OCC sensors
+                    echo "==> dbus-send --system --print-reply --dest=org.open_power.OCC.Control /xyz/openbmc_project/sensors org.freedesktop.DBus.ObjectManager.GetManagedObjects"
+                    dbus-send --system --print-reply --dest=org.open_power.OCC.Control /xyz/openbmc_project/sensors org.freedesktop.DBus.ObjectManager.GetManagedObjects | grep -e "object path" -e variant | grep -v -e 'inf$' -e 'boolean true' -e string -e array | sed 's/ *object path *\([^\s]*\)/\1/' | sed 's/ *variant *double //g' | awk 'NR%2{printf "%s \t",$0;next;}1' | sort -
+                else
+                    # All sensors
+                    echo "==> dbus-send --system --print-reply --dest=xyz.openbmc_project.EntityManager /xyz/openbmc_project/inventory org.freedesktop.DBus.ObjectManager.GetManagedObjects"
+                    #dbus-send --system --print-reply --dest=xyz.openbmc_project.EntityManager /xyz/openbmc_project/inventory org.freedesktop.DBus.ObjectManager.GetManagedObjects | grep -e "object path" -e variant | grep -v -e 'inf$' -e 'boolean true' -e string -e array | sed 's/ *object path *\([^\s]*\)/\1/' | sed 's/ *variant *double //g' | awk 'NR%2{printf "%s \t",$0;next;}1' # | sort -
+                    dbus-send --system --print-reply --dest=xyz.openbmc_project.EntityManager /xyz/openbmc_project/inventory org.freedesktop.DBus.ObjectManager.GetManagedObjects  | grep -A1 -e "object path" -e "Value" -e xyz -e Name | grep -v -e '--' -e array -e Value -e Name | sed 's/variant//' | sed 's/ *object path *//' | sed 's/ *string/    /' | sed 's/ *double/        /' | grep -v -e '--' -e array -e Value -e Name
+                    # dump last arg
+                    shift
+                fi
                 ;;
 
             "devices" )
                 # Numerical sort on the hwmon number
                 for file in `ls /sys/class/hwmon/hwmon*/name | sort -n -k 1.23`
                 do
-                    echo -en "${bold}${file%/*}/ : ${blue}"
-                    cat $file
-                    echo -en "${normal}"
-                    ls -l ${file%/*} | awk '{print "\t-> " $11}' | sed 's#/hwmon.*##'
+                    devPath=`ls -l ${file%/*} | awk '{print $11}' | sed 's#/hwmon.*##'`
+                    devString=${devPath##*/}
+                    devName=`cat $file`
+                    echo -en "${bold}${file%/*}/ : ${blue}${devName}${normal}"
+                    if [ ${#devString} -ge 6 ] && [ ${#devString} -le 8 ]; then
+                        devAddr=${devString##*-}
+                        devBus=${devString%-*}
+                        if [ "${devAddr:0:2}" == "00" ]; then
+                            devAddr="${devAddr:2}"
+                        fi
+                        echo -ne "\t(${bold}bus $devBus, addr 0x$devAddr${normal})"
+                    fi
+                    echo -e "\n\t-> $devPath"
                 done
                 ;;
 
             "patch" | "patches" )
-                echo -e "${bold}Active patches: (${patchDir}/)${normal}"
-                ls -ltr ${patchDir}/
-                echo ""
-                if [ -e /etc/systemd/system/org.open_power.OCC.Control.service ]; then
-                    echo -e "${red}Found Persistent Patch: ${normal}${bold}/etc/systemd/system/org.open_power.OCC.Control.service${normal}"
-                    echo ""
-                fi
                 mount | grep 'overlay on ' > /dev/null
                 if [ $? -eq 0 ]; then
+                    echo -e "${bold}Current overlays:${normal}"
+                    mount | grep 'overlay on' | sed 's#overlay on \([^ ]*\)[^(]*(.*upperdir=\([^,]*\),.*)#    \1 <-- \2#'
+                    echo ""
+                else
+                    echo -e "${bold}No overlay was found${normal}\n"
+                fi
                     mount | grep 'overlay on /usr' > /dev/null
                     if [ $? -eq 0 ]; then
-                        echo -e "${bold}/usr overlay was found:${normal}"
-                        mount | grep 'overlay on'
-                        echo -en "${bold}"
-                        find /tmp/usr -type f
-                        echo -en "${normal}"
-                    else
-                        echo -e "${bold}No /usr overlay was found${normal}"
-                        echo "Current overlays:"
-                        mount | grep 'overlay on'
-                    fi
+                    echo -e "${bold}Active patches in /usr/:${normal}"
+                    echo -en "${blue}"
+                    find /tmp/usr -type f -exec ls -l --color=never \{\} \; | sed 's# /tmp/# /#'
                 else
-                    echo -e "${bold}No overlay was found${normal}"
+                    echo -e "${bold}Active patches in ${patchDir}/:${normal}"
+                    echo -en "${blue}"
+                    ls -ltr --color=never ${patchDir}/
                 fi
-                echo ""
-                echo -e "${bold}Potential patches: (${patchSrc}/)${normal}"
-                ls -ltr ${patchSrc}/
-                echo ""
-                echo -e "${bold}Checking if fieldmode enabled: (fw_printenv fieldmode)${normal}"
+                        echo -en "${normal}"
+                if [ -e /etc/systemd/system/org.open_power.OCC.Control.service ]; then
+                    echo -e "\n${red}Found Persistent Patch: ${normal}${bold}/etc/systemd/system/org.open_power.OCC.Control.service${normal}"
+                    fi
+                if [ -d "${patchSrc}" ]; then
+                    echo -e "\n${bold}Potential patches: (${patchSrc}/)${normal}"
+                    ls -ltr --color=never ${patchSrc}/
+                fi
+                echo -e "\n${bold}Checking if fieldmode enabled: (fw_printenv fieldmode)${normal}"
                 if [ `fw_printenv fieldmode | grep true` ]; then
                     echo -e "${red}"
                     fw_printenv fieldmode
@@ -2340,10 +2538,14 @@ else
                 # Setup to allow scp to these locations:
                 if [ -z "`ls -ld /tmp/images | grep wheel`" ]; then
                     echo "Fixing up /tmp/images/ and /media/hostfw/* to allow scp..."
-                    chown -R root:wheel /media/hostfw/patch-*
-                    chmod -R ug+w       /media/hostfw/patch-*
-                    chown -R root:wheel /media/hostfw/running
-                    chmod -R ug+w       /media/hostfw/running
+                    if [ -d /media/hostfw ]; then
+                        chown -R root:wheel /media/hostfw/patch-*
+                        chmod -R ug+w       /media/hostfw/patch-*
+                    fi
+                    if [ -d /media/hostfw/running ]; then
+                        chown -R root:wheel /media/hostfw/running
+                        chmod -R ug+w       /media/hostfw/running
+                    fi
                     chown -R root:wheel /tmp/images
                     chmod -R ug+w       /tmp/images
                 fi
@@ -2374,9 +2576,9 @@ else
                 # Make sure backups are made before patches installed
                 backup_for_patches
 
+                let loaded=0;
                 if [ $allowBmcPatch -eq 1 ]; then
                     echo -e "\n${bold}Installing patches:${normal}"
-                    let loaded=0;
                     installPatch /usr/lib/libphosphor_dbus.so.1.0.0 restartApp
                     let loaded=$loaded+$?
                     installPatch /usr/bin/phosphor-settings-manager xyz.openbmc_project.Settings
@@ -2398,19 +2600,19 @@ else
                     let loaded=$loaded+$?
                     file="b2600.py" # HTMGT elog parser
                     if [ -e "${patchSrc}/${file}" ]; then
-                        diff -b /usr/lib/python3.9/site-packages/udparsers/b2600/${file} ${patchSrc}/${file} > /dev/null
+                        diff -b ${pythonBase}/udparsers/b2600/${file} ${patchSrc}/${file} > /dev/null
                         if [ $? -ne 0 ]; then
-                            cp -v ${patchSrc}/${file} /usr/lib/python3.9/site-packages/udparsers/b2600/
+                            cp -v ${patchSrc}/${file} ${pythonBase}/udparsers/b2600/
                         fi
                     fi
                     file="b2a00.py" # OCC elog parser
                     if [ -e "${patchSrc}/${file}" ]; then
-                        if [ ! -d /usr/lib/python3.9/site-packages/udparsers/b2a00 ]; then
-                            mkdir /usr/lib/python3.9/site-packages/udparsers/b2a00
+                        if [ ! -d ${pythonBase}/udparsers/b2a00 ]; then
+                            mkdir ${pythonBase}/udparsers/b2a00
                         fi
-                        diff -b /usr/lib/python3.9/site-packages/udparsers/b2a00/${file} ${patchSrc}/${file} > /dev/null
+                        diff -b ${pythonBase}/udparsers/b2a00/${file} ${patchSrc}/${file} > /dev/null
                         if [ $? -ne 0 ]; then
-                            cp -v ${patchSrc}/${file} /usr/lib/python3.9/site-packages/udparsers/b2a00/
+                            cp -v ${patchSrc}/${file} ${pythonBase}/udparsers/b2a00/
                         fi
                     fi
                 fi
@@ -2467,9 +2669,16 @@ else
                 removePatch /usr/bin/openpower-occ-control org.open_power.OCC.Control.service
                 removePatch /usr/bin/entity-manager xyz.openbmc_project.EntityManager.service
                 removePatch /usr/sbin/pgood_wait
+                pythonBase=`python3 -c "import sys; print('\n'.join(sys.path))" | grep site-packages`
+                if [ -z "pythonBase" ]; then
+                    pythonBase=`ls -ld /usr/lib/python3*/site-packages`
+                    if [ -z "pythonBase" ]; then
+                        pythonBase="/usr/lib/python3.9/site-packages"
+                    fi
+                fi
                 file="b2600.py" # HTMGT elog parser
                 if [ -e "${patchSrc}/${file}.orig" ]; then
-                    cp -v ${patchSrc}/${file}.orig /usr/lib/python3.9/site-packages/udparsers/b2600/${file}
+                    cp -v ${patchSrc}/${file}.orig ${pythonBase}/udparsers/b2600/${file}
                 fi
                 # Lids
                 ls ${patchSrc}/8???????.lid > /dev/null 2>&1
@@ -2493,6 +2702,45 @@ else
                     else
                         echo "WARNING: Could not find ${driverLidDir}/${lid} to use"
                     fi
+                fi
+                ;;
+
+            "restore-occ" )
+                patchDir="/usr/local/share/hostfw/running"
+                driverLidDir="/media/hostfw/running-ro"
+                if [ -d "$patchDir" ]; then
+                    echo -e "${bold}Removing OCC patches${normal}"
+                    lid="81e00430.lid"
+                    if [ -e "${patchDir}/$lid" ]; then
+                        rm -v "${patchDir}/$lid"
+                        #cp -v "$driverLidDir/$lid" ${patchDir}/
+                    else
+                        echo -e "${red}WARNING: could not find ${patchDir}/$lid${normal}"
+                    fi
+                    lid="81e00687.lid"
+                    if [ -e "${patchDir}/$lid" ]; then
+                        rm -v "${patchDir}/$lid"
+                        #cp -v "$driverLidDir/$lid" ${patchDir}/
+                    else
+                        echo -e "${red}WARNING: could not find ${patchDir}/$lid${normal}"
+                    fi
+                    lid="81e002ff.lid"
+                    if [ -e "${patchDir}/$lid" ]; then
+                        rm -v "${patchDir}/$lid"
+                        #cp -v "$driverLidDir/$lid" ${patchDir}/
+                    fi
+                    lid="80d00000.lid"
+                    if [ -e "${patchDir}/$lid" ]; then
+                        rm -v "${patchDir}/$lid"
+                        #cp -v "$driverLidDir/$lid" ${patchDir}/
+                    fi
+                    lid="80d0000b.lid"
+                    if [ -e "${patchDir}/$lid" ]; then
+                        rm -v "${patchDir}/$lid"
+                        #cp -v "$driverLidDir/$lid" ${patchDir}/
+                    fi
+                    echo "==> systemctl restart pldmd"
+                    systemctl restart pldmd
                 fi
                 ;;
 
@@ -2528,16 +2776,17 @@ else
                         echo ""
                         echo "==> cat ${workDir}/occ_journal_delta.txt"
                         cat ${workDir}/occ_journal_delta.txt
+                        echo -e "\n(Delta stored in ${workDir}/occ_journal_delta.txt)"
                     fi
                 fi
                 ;;
 
-            "dbusfind" )
+            "getsubtree" | "dbusfind" )
                 getSubTree $2 $3
-                shift
                 if [ -n "$3" ]; then
                     shift
                 fi
+                shift
                 ;;
 
             "dbusfindbyobj" )
@@ -2550,6 +2799,30 @@ else
                     fi
                 fi
                 shift
+                ;;
+
+            "getobjects" )
+                name="$2"
+                objPath="/xyz/openbmc_project/sensors"
+                if [ -n "$3" ]; then
+                    objPath="$3"
+                    shift
+                fi
+                shift
+                echo "==> dbus-send --system --print-reply --dest=$name $objPath org.freedesktop.DBus.ObjectManager.GetManagedObjects"
+                dbus-send --system --print-reply --dest=$name $objPath org.freedesktop.DBus.ObjectManager.GetManagedObjects
+                ;;
+
+            "getobjectsval" )
+                name="$2"
+                objPath="/xyz/openbmc_project/sensors"
+                if [ -n "$3" ]; then
+                    objPath="$3"
+                    shift
+                fi
+                shift
+                echo "==> dbus-send --system --print-reply --dest=$name $objPath org.freedesktop.DBus.ObjectManager.GetManagedObjects"
+                dbus-send --system --print-reply --dest=$name $objPath org.freedesktop.DBus.ObjectManager.GetManagedObjects | grep -e "object path" -A 1 -e '\"Value' -e Value.Unit | grep -v -e array -e '--' -e ')' -e '\"Value' | awk '{print $3}' | sed 's/.*Value\.Unit\./"/' | grep -v '==' | xargs -n 3 printf "%s %s %s\n" | sort
                 ;;
 
             "getall" )
@@ -2646,20 +2919,32 @@ else
                     busctl tree org.open_power.OCC.Control
                     doIntrospect org.open_power.OCC.Control /org/open_power/control/occ$occ
                 elif [ "$type" == "pcap" ]; then
+                    getServiceAndObjectPath xyz.openbmc_project.Control.Power.CapLimits
+                    if [ $? -eq 0 ]; then
+                        doIntrospect $G_service $G_objectPath
+                    fi
                     getServiceAndObjectPath xyz.openbmc_project.Control.Power.Cap
-                    doIntrospect $G_service $G_objectPath
+                    if [ $? -eq 0 ]; then
+                        doIntrospect $G_service $G_objectPath
+                    fi
                 elif [ "$type" == "mode" ]; then
                     interface="xyz.openbmc_project.Control.Power.Mode"
                     getServiceAndObjectPath $interface
-                    doIntrospect $G_service $G_objectPath
-                    # Get the mode property directly since introspect cuts off the value
-                    echo "==> busctl get-property $G_service $G_objectPath $interface PowerMode"
-                    echo -en "${bold}"
-                    busctl get-property $G_service $G_objectPath $interface PowerMode
-                    echo -en "${normal}"
+                    if [ $? -eq 0 ]; then
+                        doIntrospect $G_service $G_objectPath
+                        # Get the mode property directly since introspect cuts off the value
+                        echo "==> busctl get-property $G_service $G_objectPath $interface PowerMode"
+                        echo -en "${bold}"
+                        busctl get-property $G_service $G_objectPath $interface PowerMode
+                        echo -en "${normal}"
+                    fi
                 elif [ "$type" == "ips" ]; then
                     getServiceAndObjectPath xyz.openbmc_project.Control.Power.IdlePowerSaver
-                    doIntrospect $G_service $G_objectPath
+                    if [ $? -eq 0 ]; then
+                        doIntrospect $G_service $G_objectPath
+                    else
+                        echo "NOTE: IPS will be disable in the Efficiency Power Modes"
+                    fi
                 elif [ "$type" == "ambient" ]; then
                     doIntrospect xyz.openbmc_project.VirtualSensor /xyz/openbmc_project/sensors/temperature/Ambient_Virtual_Temp
                 elif [ "$type" == "altitude" ]; then
@@ -2715,13 +3000,23 @@ else
                 ;;
 
             "pcap" )
+                if [ $G_verbose -gt 0 ]; then
+                    # Display the persisted power cap data
+                    if [ -e "/var/lib/openpower-occ-control/powerCapLimitData" ]; then
+                        echo "==> hexdump /var/lib/openpower-occ-control/powerCapLimitData"
+                        hexdump /var/lib/openpower-occ-control/powerCapLimitData
+                    fi
+                fi
+                getAllProperties xyz.openbmc_project.Control.Power.CapLimits quiet
                 if [ -n "$2" ]; then
                     getAllProperties xyz.openbmc_project.Control.Power.Cap quiet
                     if [ "$2" == "on" ]; then
+                        echo -e "\n${blue}Enabling Power Cap${normal}"
                         echo -e "${bold}==> busctl set-property xyz.openbmc_project.Settings /xyz/openbmc_project/control/host0/power_cap xyz.openbmc_project.Control.Power.Cap PowerCapEnable b true${normal}"
                         busctl set-property xyz.openbmc_project.Settings /xyz/openbmc_project/control/host0/power_cap xyz.openbmc_project.Control.Power.Cap PowerCapEnable b true
                         shift
                     elif [ "$2" == "off" ]; then
+                        echo -e "\n${blue}Disabling Power Cap${normal}"
                         echo -e "==> ${bold}busctl set-property xyz.openbmc_project.Settings /xyz/openbmc_project/control/host0/power_cap xyz.openbmc_project.Control.Power.Cap PowerCapEnable b false${normal}"
                         busctl set-property xyz.openbmc_project.Settings /xyz/openbmc_project/control/host0/power_cap xyz.openbmc_project.Control.Power.Cap PowerCapEnable b false
                         shift
@@ -2739,7 +3034,7 @@ else
                     fi
                     getAllProperties xyz.openbmc_project.Control.Power.Cap quiet
                 else
-                    getAllProperties xyz.openbmc_project.Control.Power.Cap
+                    getAllProperties xyz.openbmc_project.Control.Power.Cap quiet
                 fi
                 ;;
 
@@ -2755,15 +3050,18 @@ else
                     fi
                 fi
                 if [ $enable -eq 1 ]; then
-                    echo -e "\n${blue}Enabling IPS${normal}"
+                    echo -e "\n${blue}Enabling Idle Power Saver${normal}"
                     echo "==> busctl set-property org.open_power.OCC.Control /xyz/openbmc_project/control/host0/power_ips xyz.openbmc_project.Control.Power.IdlePowerSaver Enabled b true"
                     busctl set-property org.open_power.OCC.Control /xyz/openbmc_project/control/host0/power_ips xyz.openbmc_project.Control.Power.IdlePowerSaver Enabled b true
                 elif [ $enable -eq 0 ]; then
-                    echo -e "\n${blue}Disabling IPS${normal}"
+                    echo -e "\n${blue}Disabling Idle Power Saver${normal}"
                     echo "==> busctl set-property org.open_power.OCC.Control /xyz/openbmc_project/control/host0/power_ips xyz.openbmc_project.Control.Power.IdlePowerSaver Enabled b false"
                     busctl set-property org.open_power.OCC.Control /xyz/openbmc_project/control/host0/power_ips xyz.openbmc_project.Control.Power.IdlePowerSaver Enabled b false
                 fi
                 getAllProperties xyz.openbmc_project.Control.Power.IdlePowerSaver
+                if [ $? -ne 0 ]; then
+                    echo "NOTE: IPS will be disable in the Efficiency Power Modes"
+                fi
                 ;;
 
             "throttle" )
@@ -2813,6 +3111,16 @@ else
 
             "off" )
                 power_off "host"
+                ;;
+
+            "reboot" )
+                power_off "host"
+                if [ $? -eq 0 ]; then
+                    echo -e "\n${bold}System is OFF, powering back on${normal}\n"
+                    power_on "host" "ACTIVE"
+                else
+                    echo -e "${red}ERROR: Power off failed${normal} Skipping power on"
+                fi
                 ;;
 
             "bootloop" )
@@ -2973,6 +3281,42 @@ else
                 echo "OCC no longer active after ${injectCount} injects"
                 ;;
 
+            "exitsafe" )
+                startTime=`date +'%F %T'`
+                echo "==> pldmtool raw -m 10 -d 0x80 0x3f 0x0f 5"
+                pldmtool raw -m 10 -d 0x80 0x3f 0x0f 5
+                let rc=$?
+                echo -e "${bold}NOTE: pldmtool failures can happen due to timeout waiting for reset to complete (rc=$rc)${normal}"
+                wait_for_state ACTIVE "$startTime"
+                let inSafe=$?
+                if [ $inSafe -eq 0 ]; then
+                    sleep 5
+                    # Clear reset counts
+                    echo "==> pldmtool raw -m 10 -d 0x80 0x3f 0x0f 4"
+                    pldmtool raw -m 10 -d 0x80 0x3f 0x0f 4
+                    let rc=$?
+                    if [ $rc -ne 0 ]; then
+                        echo "ERROR: failed with $rc";
+                    else
+                        echo -e "${bold}PM Complex reset counts should now be 0${normal}"
+                    fi
+                else
+                    echo -e "${red}ERROR: Failed to exit safe mode successfully${normal}"
+                    let G_rc=99
+                fi
+                ;;
+
+            "clearresets" )
+                echo "==> pldmtool raw -m 10 -d 0x80 0x3f 0x0f 4"
+                pldmtool raw -m 10 -d 0x80 0x3f 0x0f 4
+                let rc=$?
+                if [ $rc -ne 0 ]; then
+                    echo "ERROR: failed with $rc";
+                else
+                    echo -e "Done. ${bold}PM Complex reset counts should now be 0${normal}"
+                fi
+                ;;
+
             "err" | "errl" | "pel" | "pels" )
                 if [ "${2:0:4}" == "uniq" ]; then
                     shift
@@ -3005,7 +3349,7 @@ else
                         #peltool -i $pel >> $pelfile
                         peltool -i $pel 2>/dev/null > ${pelfile}.tmp
                         ref=`grep 'Reference Code' ${pelfile}.tmp | awk '{print $3}'`
-                        desc=`grep -e 'Message' -e 'devdesc' ${pelfile}.tmp | sed 's#.*:\s*##'`
+                        desc=`grep -e '"Message":' -e 'devdesc' ${pelfile}.tmp | sed 's#.*:\s*##'`
                         echo "$ref $desc"
                         printf "\n--#3d: PLID:%s---------------------------------------\n" $index $pel >> $pelfile
                         #echo -e "\n--PLID:$pel---------------------------------------\n" >> $pelfile
