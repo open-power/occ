@@ -2337,15 +2337,6 @@ void calc_wof_dimm_adjustment(uint16_t i_ambient)
                                     l_ambient_adj_for_dimm,
                                     i_ambient );
 
-                // set the mfg action flag (allows callout to be added to info error)
-                setErrlActions(l_errl, ERRL_ACTIONS_MANUFACTURING_ERROR);
-
-                // Callout Firmware
-                addCalloutToErrl(l_errl,
-                                 ERRL_CALLOUT_TYPE_COMPONENT_ID,
-                                 ERRL_COMPONENT_ID_FIRMWARE,
-                                 ERRL_CALLOUT_PRIORITY_HIGH);
-
                 // commit the error log
                 commitErrl(&l_errl);
                 L_bounds_error_logged = TRUE;
