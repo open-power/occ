@@ -1074,9 +1074,9 @@ void read_pgpe_produced_wof_values( void )
        {
            INTR_TRAC_IMP("read_pgpe_produced_wof_values: Enable freq sensor received non 0 Pstates from PGPE dw0[0x%08X%08X]",
                            WORD_HIGH(l_PgpeWofValues.dw0.value), WORD_LOW(l_PgpeWofValues.dw0.value));
-           // Clear flag (since non-zero pstate found) - skip calling set_clear_wof_disabled
-           // since that generates an error log
-           g_amec->wof.wof_disabled &= ~WOF_RC_ZERO_PSTATE;
+           set_clear_wof_disabled( CLEAR,
+                                   WOF_RC_ZERO_PSTATE,
+                                   ERC_WOF_ZERO_PSTATE );
        }
        uint32_t l_steps = 0;
        l_freq = proc_pstate2freq((Pstate_t)l_PgpeWofValues.dw0.fields.average_frequency_pstate, &l_steps);
@@ -1114,9 +1114,9 @@ void read_pgpe_produced_wof_values( void )
        INTR_TRAC_ERR("read_pgpe_produced_wof_values: Pstate is 0 from PGPE dw0[0x%08X%08X]",
                        WORD_HIGH(l_PgpeWofValues.dw0.value), WORD_LOW(l_PgpeWofValues.dw0.value));
 
-       // Set flag (since zero pstate found) - skip calling set_clear_wof_disabled
-       // since that generates an error log
-       g_amec->wof.wof_disabled |= WOF_RC_ZERO_PSTATE;
+       set_clear_wof_disabled( SET,
+                               WOF_RC_ZERO_PSTATE,
+                               ERC_WOF_ZERO_PSTATE );
     }
 
     // save the full PGPE WOF values for debug
@@ -2311,7 +2311,6 @@ void calc_wof_dimm_adjustment(uint16_t i_ambient)
        {
            // adjust is out of WOF table bounds don't apply adjustment and log an error
            g_wof->ambient_adj_for_dimm = 0;
-
            if(L_bounds_error_logged == FALSE)
            {
                INTR_TRAC_ERR("calc_wof_dimm_adjustment: dimm adjust[%d] puts ambient %d >3 degrees outside WOF table[%d to %d]",
@@ -3446,120 +3445,124 @@ uint32_t prevent_over_current( uint32_t i_ceff_ratio )
     uint32_t l_new_ratio_from_measured = 0;
     uint32_t l_new_ratio_from_prev = 0;
 
-    // determine if Ceff needs to be adjusted for overcurrent
-    if(l_clipped_ratio > G_max_ceff_ratio)
-         l_clipped_ratio = G_max_ceff_ratio;
-
-    if((g_wof->ocs_dirty & OCS_PGPE_DIRTY_MASK) == 0)
+    // check if OC protection was disabled
+    if(!(G_internal_flags & INT_FLAG_DISABLE_OC_ACTUATION))
     {
-        // no over current condition detected on previous PGPE tick time
-        // decrease OC CeffRatio addr, stop at 0
-        if(g_wof->vdd_oc_ceff_add > g_wof->ocs_decrease_ceff)
-        {
-            g_wof->vdd_oc_ceff_add -= g_wof->ocs_decrease_ceff;
+       // determine if Ceff needs to be adjusted for overcurrent
+       if(l_clipped_ratio > G_max_ceff_ratio)
+            l_clipped_ratio = G_max_ceff_ratio;
 
-            // now determine if any adjustment is needed
-            if(i_ceff_ratio < g_wof->vdd_ceff_ratio_adj_prev)
-            {
-                 // new measured ratio is lower than previous add the adder but max out at previous
-                 l_clipped_ratio += g_wof->vdd_oc_ceff_add;
-                 if(l_clipped_ratio > g_wof->vdd_ceff_ratio_adj_prev)
-                     l_clipped_ratio = g_wof->vdd_ceff_ratio_adj_prev;
-            }
-        }
-        else // no adjustment to ceff ratio
-        {
-            g_wof->vdd_oc_ceff_add = 0;
-        }
-        if( (L_ocs_dirty_prev != g_wof->ocs_dirty) &&
-            (G_allow_trace_flags & ALLOW_WOF_OCS_TRACE) )
-        {
-           INTR_TRAC_IMP("OCS NOW CLEAN: Adder[%d]  Measured[%d] Previous[%d] Adjusted[%d]",
-                           g_wof->vdd_oc_ceff_add,
-                           i_ceff_ratio,
-                           g_wof->vdd_ceff_ratio_adj_prev,
-                           l_clipped_ratio);
-        }
+       if((g_wof->ocs_dirty & OCS_PGPE_DIRTY_MASK) == 0)
+       {
+           // no over current condition detected on previous PGPE tick time
+           // decrease OC CeffRatio addr, stop at 0
+           if(g_wof->vdd_oc_ceff_add > g_wof->ocs_decrease_ceff)
+           {
+               g_wof->vdd_oc_ceff_add -= g_wof->ocs_decrease_ceff;
 
-    }
-    else if(g_wof->ocs_dirty == (OCS_PGPE_DIRTY_MASK | OCS_PGPE_DIRTY_TYPE_MASK)) // dirty type 1 (act)
-    {
-        INCREMENT_ERR_HISTORY( ERRH_CEFF_RATIO_VDD_EXCURSION );
+               // now determine if any adjustment is needed
+               if(i_ceff_ratio < g_wof->vdd_ceff_ratio_adj_prev)
+               {
+                    // new measured ratio is lower than previous add the adder but max out at previous
+                    l_clipped_ratio += g_wof->vdd_oc_ceff_add;
+                    if(l_clipped_ratio > g_wof->vdd_ceff_ratio_adj_prev)
+                        l_clipped_ratio = g_wof->vdd_ceff_ratio_adj_prev;
+               }
+           }
+           else // no adjustment to ceff ratio
+           {
+               g_wof->vdd_oc_ceff_add = 0;
+           }
+           if( (L_ocs_dirty_prev != g_wof->ocs_dirty) &&
+               (G_allow_trace_flags & ALLOW_WOF_OCS_TRACE) )
+           {
+              INTR_TRAC_IMP("OCS NOW CLEAN: Adder[%d]  Measured[%d] Previous[%d] Adjusted[%d]",
+                              g_wof->vdd_oc_ceff_add,
+                              i_ceff_ratio,
+                              g_wof->vdd_ceff_ratio_adj_prev,
+                              l_clipped_ratio);
+           }
 
-        // over current condition detected on previous PGPE tick time
-        // increase OC CeffRatio addr stop at max
-        g_wof->vdd_oc_ceff_add += g_wof->ocs_increase_ceff;
+       }
+       else if(g_wof->ocs_dirty == (OCS_PGPE_DIRTY_MASK | OCS_PGPE_DIRTY_TYPE_MASK)) // dirty type 1 (act)
+       {
+           INCREMENT_ERR_HISTORY( ERRH_CEFF_RATIO_VDD_EXCURSION );
 
-        if(g_wof->vdd_oc_ceff_add > G_max_ceff_ratio)
-        {
-            g_wof->vdd_oc_ceff_add = G_max_ceff_ratio;
-        }
+           // over current condition detected on previous PGPE tick time
+           // increase OC CeffRatio addr stop at max
+           g_wof->vdd_oc_ceff_add += g_wof->ocs_increase_ceff;
 
-        // Calculate adjusted Ceff Ratio for new and previous
-        // Add the full accumulated adder to the new measured ceff
-        l_new_ratio_from_measured = i_ceff_ratio + g_wof->vdd_oc_ceff_add;
+           if(g_wof->vdd_oc_ceff_add > G_max_ceff_ratio)
+           {
+               g_wof->vdd_oc_ceff_add = G_max_ceff_ratio;
+           }
 
-        // only add one ceff adder to the previous
-        l_new_ratio_from_prev = g_wof->vdd_ceff_ratio_adj_prev + g_wof->ocs_increase_ceff;
+           // Calculate adjusted Ceff Ratio for new and previous
+           // Add the full accumulated adder to the new measured ceff
+           l_new_ratio_from_measured = i_ceff_ratio + g_wof->vdd_oc_ceff_add;
 
-        // use the max for the new Ceff Ratio
-        if(l_new_ratio_from_measured > l_new_ratio_from_prev)
-        {
-            l_clipped_ratio = l_new_ratio_from_measured;
-        }
-        else
-        {
-            l_clipped_ratio = l_new_ratio_from_prev;
-        }
+           // only add one ceff adder to the previous
+           l_new_ratio_from_prev = g_wof->vdd_ceff_ratio_adj_prev + g_wof->ocs_increase_ceff;
 
-        if(l_clipped_ratio > G_max_ceff_ratio)
-           l_clipped_ratio = G_max_ceff_ratio;
+           // use the max for the new Ceff Ratio
+           if(l_new_ratio_from_measured > l_new_ratio_from_prev)
+           {
+               l_clipped_ratio = l_new_ratio_from_measured;
+           }
+           else
+           {
+               l_clipped_ratio = l_new_ratio_from_prev;
+           }
 
-        if( (L_ocs_dirty_prev != g_wof->ocs_dirty) &&
-            (G_allow_trace_flags & ALLOW_WOF_OCS_TRACE) )
-        {
-           INTR_TRAC_IMP("OCS DIRTY ACT TYPE: Measured[%d] Previous[%d] Adjusted[%d]",
-                           i_ceff_ratio,
-                           g_wof->vdd_ceff_ratio_adj_prev,
-                           l_clipped_ratio);
-        }
+           if(l_clipped_ratio > G_max_ceff_ratio)
+              l_clipped_ratio = G_max_ceff_ratio;
 
-    }
-    else // OCS Dirty but type is 0 (block action)
-    {
-        INCREMENT_ERR_HISTORY(ERRH_OCS_DIRTY_BLOCK);
+           if( (L_ocs_dirty_prev != g_wof->ocs_dirty) &&
+               (G_allow_trace_flags & ALLOW_WOF_OCS_TRACE) )
+           {
+              INTR_TRAC_IMP("OCS DIRTY ACT TYPE: Measured[%d] Previous[%d] Adjusted[%d]",
+                              i_ceff_ratio,
+                              g_wof->vdd_ceff_ratio_adj_prev,
+                              l_clipped_ratio);
+           }
 
-        // over current condition detected on previous PGPE tick time
-        // but type is block action so no adjustment to the new measured or addr
-        // default to use max of new and previous but command allows switching to
-        // test alg always using new
-        if(g_wof->vdd_ceff_ratio_adj_prev > l_clipped_ratio)
-        {
-            l_clipped_ratio = g_wof->vdd_ceff_ratio_adj_prev;
+       }
+       else // OCS Dirty but type is 0 (block action)
+       {
+           INCREMENT_ERR_HISTORY(ERRH_OCS_DIRTY_BLOCK);
 
-            if(l_clipped_ratio > G_max_ceff_ratio)
-               l_clipped_ratio = G_max_ceff_ratio;
-        }
-        if(G_internal_flags & INT_FLAG_ENABLE_OCS_HOLD_NEW)  // debug enabled to use new?
-            l_clipped_ratio = i_ceff_ratio;
+           // over current condition detected on previous PGPE tick time
+           // but type is block action so no adjustment to the new measured or addr
+           // default to use max of new and previous but command allows switching to
+           // test alg always using new
+           if(g_wof->vdd_ceff_ratio_adj_prev > l_clipped_ratio)
+           {
+               l_clipped_ratio = g_wof->vdd_ceff_ratio_adj_prev;
 
-        if( (L_ocs_dirty_prev != g_wof->ocs_dirty) &&
-            (G_allow_trace_flags & ALLOW_WOF_OCS_TRACE) )
-        {
-           INTR_TRAC_IMP("OCS DIRTY HOLD TYPE: Measured[%d] Previous[%d] Using[%d]",
-                           i_ceff_ratio,
-                           g_wof->vdd_ceff_ratio_adj_prev,
-                           l_clipped_ratio);
-        }
-    }
+               if(l_clipped_ratio > G_max_ceff_ratio)
+                  l_clipped_ratio = G_max_ceff_ratio;
+           }
+           if(G_internal_flags & INT_FLAG_ENABLE_OCS_HOLD_NEW)  // debug enabled to use new?
+               l_clipped_ratio = i_ceff_ratio;
+
+           if( (L_ocs_dirty_prev != g_wof->ocs_dirty) &&
+               (G_allow_trace_flags & ALLOW_WOF_OCS_TRACE) )
+           {
+              INTR_TRAC_IMP("OCS DIRTY HOLD TYPE: Measured[%d] Previous[%d] Using[%d]",
+                              i_ceff_ratio,
+                              g_wof->vdd_ceff_ratio_adj_prev,
+                              l_clipped_ratio);
+           }
+       }
+
+       // update sensor for calculated CeffRatio addr due to dirty
+       sensor_update(AMECSENSOR_PTR(OCS_ADDR), (uint16_t)g_wof->vdd_oc_ceff_add);
+
+    } // if OC protection enabled
 
     // save to previous
     g_wof->vdd_ceff_ratio_adj_prev = l_clipped_ratio;
     L_ocs_dirty_prev = g_wof->ocs_dirty;
-
-    // update sensor for calculated CeffRatio addr due to dirty
-    sensor_update(AMECSENSOR_PTR(OCS_ADDR), (uint16_t)g_wof->vdd_oc_ceff_add);
-
     return l_clipped_ratio;
 }
 
@@ -3579,8 +3582,8 @@ void prevent_oc_wof_off( void )
            uint32_t l_freq_kHz = 0;
            bool     l_trace_final_vote = FALSE;
 
-    // check if OC protection when WOF is off was disabled
-    if(G_internal_flags & INT_FLAG_DISABLE_OC_WOF_OFF)
+    // check if OC protection was disabled
+    if(G_internal_flags & INT_FLAG_DISABLE_OC_ACTUATION)
         return;
 
     if((g_wof->ocs_dirty & OCS_PGPE_DIRTY_MASK) == 0)

@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2015,2024                        */
+/* Contributors Listed Below - COPYRIGHT 2015,2025                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -1101,14 +1101,19 @@ void cmdh_dbug_internal_flags( const cmdh_fsp_cmd_t * i_cmd_ptr,
     {
         if (data_length == flag_size)
         {
-            // if disabling WOF off OC protection clear the clip
-            if( (l_cmd_ptr->flags & INT_FLAG_DISABLE_OC_WOF_OFF) &&
-                !(G_internal_flags & INT_FLAG_DISABLE_OC_WOF_OFF) )
+            // if disabling OC protection clear the frequency/ceff clips
+            if( (l_cmd_ptr->flags & INT_FLAG_DISABLE_OC_ACTUATION) &&
+                !(G_internal_flags & INT_FLAG_DISABLE_OC_ACTUATION) )
             {
                 TRAC_INFO("DEBUG - Disabling WOF off OC protection current pstate clip[0x%02X]",
                           g_amec->oc_wof_off.pstate_request);
                 g_amec->oc_wof_off.pstate_request = 0;
                 g_amec->oc_wof_off.freq_request = 0xFFFF;
+
+                TRAC_INFO("DEBUG - Disabling OC protection with WOF current ceff add[%d]",
+                           g_amec->wof.vdd_oc_ceff_add);
+                g_amec->wof.vdd_oc_ceff_add = 0;
+                sensor_update(AMECSENSOR_PTR(OCS_ADDR), (uint16_t)g_amec->wof.vdd_oc_ceff_add);
             }
 
             TRAC_INFO("DEBUG - updating internal flags from 0x%08X to 0x%08X",
