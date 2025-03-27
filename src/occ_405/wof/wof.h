@@ -51,6 +51,13 @@ extern uint32_t G_max_ceff_ratio;
 // minimum ambient table size required for DIMM credit
 #define WOF_DIMM_CREDIT_AMBIENT_TABLE_MIN_SIZE 5
 
+// Maximum possible calculated dimm credit rounded in tenths by system type
+#define MAX_WOF_DIMM_CREDIT_BLUERIDGE_2U -64
+#define MAX_WOF_DIMM_CREDIT_BLUERIDGE_4U -64
+#define MAX_WOF_DIMM_CREDIT_FUJI -54
+#define MAX_WOF_DIMM_CREDIT_MCKINLEY -94
+
+
 //******************************************************************************
 // Bit Vector Masks
 //******************************************************************************
@@ -66,6 +73,10 @@ extern uint32_t G_max_ceff_ratio;
 #define WOF_HEADER_FLAGS_EFF_ALG_CEFF_MASK 0x02
 #define WOF_HEADER_FLAGS_OCS_ENABLE_MASK 0x01
 
+#define WOF_HEADER_SYS_TYPE_MCKINLEY 0x10
+#define WOF_HEADER_SYS_TYPE_FUJI 0x30
+#define WOF_HEADER_SYS_TYPE_BLUERIDGE_2U 0x50
+#define WOF_HEADER_SYS_TYPE_BLUERIDGE_4U 0x70
 //******************************************************************************
 // WOF Reason Code Masks
 //******************************************************************************
@@ -124,6 +135,7 @@ extern uint32_t G_max_ceff_ratio;
 #define WOF_DIMM_DISABLE_INTERPOLATION             0x08
 #define WOF_DIMM_DISABLE_OCMB_DATA_MISMATCH        0x10
 #define WOF_DIMM_DISABLE_OCMB_PRESENT_MISMATCH     0x20
+#define WOF_DIMM_DISABLE_INVALID_SYS_TYPE          0x40
 
 //***************************************************************************
 // Temp space used to save hard coded addresses
@@ -510,6 +522,8 @@ typedef struct __attribute__ ((packed, aligned(128)))
     int32_t coeff_c;
     // Leakage temperature scaling coefficienct d
     int32_t coeff_d;
+    // Maximum possible ambient dimm credit
+    int8_t  max_dimm_credit;
 } amec_static_wof_t;
 
 // Structure for sensors used in g_amec for AMESTER for additional debug

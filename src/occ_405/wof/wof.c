@@ -2160,7 +2160,6 @@ void read_sensor_data( void )
 void calc_wof_dimm_adjustment(uint16_t i_ambient)
 {
     uint8_t  l_num_interp_pts = 0;
-    uint8_t  l_new_ambient = 0;
     int8_t   l_signed = 1;
     int8_t   l_ambient_adj_for_dimm = 0;
     uint16_t l_ocmb_util = 0;
@@ -2301,29 +2300,22 @@ void calc_wof_dimm_adjustment(uint16_t i_ambient)
 
        l_ambient_adj_for_dimm = (int8_t)(l_temp64 * l_signed);
 
-       // sanity check dimm adjustment shouldn't cause ambient to be more than
-       // 3 degrees from first/last ambient condition in WOF table
-       // /10 to convert ambient to full degrees
-       l_new_ambient = (i_ambient + l_ambient_adj_for_dimm) / 10;
-
-       if( (l_new_ambient < (g_amec_sys.static_wof_data.wof_header.amb_cond_start - 3)) ||
-           (l_new_ambient > (g_amec_sys.static_wof_data.last_ambient_condition + 3)) )
+       // sanity check dimm adjustment shouldn't be taking more credit than
+       // the determined max (max is negative applying credit)
+       if(l_ambient_adj_for_dimm < g_amec_sys.static_wof_data.max_dimm_credit)
        {
-           // adjust is out of WOF table bounds don't apply adjustment and log an error
+           // adjust is out of bounds don't apply adjustment and log an error
            g_wof->ambient_adj_for_dimm = 0;
            if(L_bounds_error_logged == FALSE)
            {
-               INTR_TRAC_ERR("calc_wof_dimm_adjustment: dimm adjust[%d] puts ambient %d >3 degrees outside WOF table[%d to %d]",
-                               l_ambient_adj_for_dimm,
-                               i_ambient,
-                               g_amec_sys.static_wof_data.wof_header.amb_cond_start,
-                               g_amec_sys.static_wof_data.last_ambient_condition);
+               INTR_TRAC_ERR("calc_wof_dimm_adjustment: dimm adjust[%d] is more than max possible[%d]",
+                               l_ambient_adj_for_dimm, g_amec_sys.static_wof_data.max_dimm_credit);
                 /** @
                  *  @errortype
                  *  @moduleid   CALC_WOF_DIMM_ADJUST
                  *  @reasoncode INVALID_WOF_DIMM_CREDIT
                  *  @userdata1  calculated adjust
-                 *  @userdata2  current ambient
+                 *  @userdata2  max possible adjustment
                  *  @userdata4  OCC_NO_EXTENDED_RC
                  *  @devdesc    Invalid WOF DIMM Credit
                  */
@@ -2334,7 +2326,16 @@ void calc_wof_dimm_adjustment(uint16_t i_ambient)
                                     NULL,
                                     DEFAULT_TRACE_SIZE,
                                     l_ambient_adj_for_dimm,
-                                    i_ambient );
+                                    g_amec_sys.static_wof_data.max_dimm_credit);
+
+                // set the mfg action flag (allows callout to be added to info error)
+                setErrlActions(l_errl, ERRL_ACTIONS_MANUFACTURING_ERROR);
+
+                // Callout Firmware
+                addCalloutToErrl(l_errl,
+                                 ERRL_CALLOUT_TYPE_COMPONENT_ID,
+                                 ERRL_COMPONENT_ID_FIRMWARE,
+                                 ERRL_CALLOUT_PRIORITY_HIGH);
 
                 // commit the error log
                 commitErrl(&l_errl);

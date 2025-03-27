@@ -428,6 +428,7 @@ void read_wof_header(void)
     int l_ssxrc = SSX_OK;
     bool l_error = false;
     eff_mode_parms_t l_eff_idle_chip_parms = {0};
+    uint8_t l_sys_type = 0;
 
     // Read wof tables address, and wof tables len
     if(G_pgpe_header.wof_tables_addr == 0)
@@ -602,8 +603,39 @@ void read_wof_header(void)
                 // WOF ambient table size must support the credit
                 if(g_amec->static_wof_data.wof_header.amb_cond_size >= WOF_DIMM_CREDIT_AMBIENT_TABLE_MIN_SIZE)
                 {
-                    MAIN_TRAC_IMP("read_wof_header: WOF ambient size %d supports DIMM credit",
-                                    g_amec->static_wof_data.wof_header.amb_cond_size);
+                    // initialize the max possible dimm credit
+                    l_sys_type = (uint8_t)(g_amec->static_wof_data.wof_header.sys_flags & WOF_HEADER_FLAGS_SYSTEM_TYPE_MASK);
+                    if(l_sys_type == WOF_HEADER_SYS_TYPE_BLUERIDGE_2U)
+                    {
+                        g_amec->static_wof_data.max_dimm_credit = MAX_WOF_DIMM_CREDIT_BLUERIDGE_2U;
+                    }
+                    else if(l_sys_type == WOF_HEADER_SYS_TYPE_BLUERIDGE_4U)
+                    {
+                        g_amec->static_wof_data.max_dimm_credit = MAX_WOF_DIMM_CREDIT_BLUERIDGE_4U;
+                    }
+                    else if(l_sys_type == WOF_HEADER_SYS_TYPE_FUJI)
+                    {
+                        g_amec->static_wof_data.max_dimm_credit = MAX_WOF_DIMM_CREDIT_FUJI;
+                    }
+                    else if(l_sys_type == WOF_HEADER_SYS_TYPE_MCKINLEY)
+                    {
+                        g_amec->static_wof_data.max_dimm_credit = MAX_WOF_DIMM_CREDIT_MCKINLEY;
+                    }
+                    else
+                    {
+                        g_amec->static_wof_data.max_dimm_credit = 0;
+                        g_amec->wof.dimm_credit_disable |= WOF_DIMM_DISABLE_INVALID_SYS_TYPE;
+
+                        MAIN_TRAC_IMP("read_wof_header: NO DIMM CREDIT! Invalid system type %d to determine max credit",
+                                       l_sys_type);
+                    }
+
+                    if(g_amec->static_wof_data.max_dimm_credit != 0)
+                    {
+                        MAIN_TRAC_IMP("read_wof_header: WOF ambient size %d supports DIMM credit. Max credit %d(tenths)",
+                                       g_amec->static_wof_data.wof_header.amb_cond_size,
+                                       g_amec->static_wof_data.max_dimm_credit);
+                    }
                 }
                 else
                 {
