@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2024                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2025                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -134,6 +134,12 @@ void sensor_clear_minmax(sensor_t * io_sensor_ptr,
         {
             io_sensor_ptr->job_s_sample_min = UINT16_MAX;
             io_sensor_ptr->job_s_sample_max = UINT16_MIN;
+        }
+
+        if (i_clear_type & AMEC_SENSOR_CLEAR_AVERAGE)
+        {
+            io_sensor_ptr->accumulator = 0;
+            io_sensor_ptr->update_tag = 0;
         }
     }
     else

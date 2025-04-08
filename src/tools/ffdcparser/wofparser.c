@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2016,2024                        */
+/* Contributors Listed Below - COPYRIGHT 2016,2025                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -28,7 +28,7 @@
 #include <string.h>
 #include "parser_common.h"
 
-#define WOF_DATA_SIZE 963
+#define WOF_DATA_SIZE 979
 // NOTE: This tool is to be used when WOF Dynamic data is dumped by the OCC, and currently
 //       only accepts input files in binary format.
 
@@ -317,6 +317,13 @@ int main(int argc, char** argv)
         printf("OCMB%d Current Preheat power %dcW\n", i, get_uint16(wof_file));
     printf("WOF Adjustment Reasons: 0x%02X\n", fgetc(wof_file));
     printf("WOF DIMM Credit Disable Reasons: 0x%02X\n", fgetc(wof_file));
+    printf("pgpe_wof_values_dw4:\n");
+    printf("     Max Vdd Current 100ma: %d\n", get_uint16(wof_file));
+    printf("     Max Vcs Current 100ma: %d\n", get_uint16(wof_file));
+    printf("     Max Idd OCS avg 10ma:  %d\n", get_uint16(wof_file));
+    printf("     Dirty Current 10ma:    %d\n", get_uint16(wof_file));
+    printf("pgpe_wof_values_dw5:\n");
+    printf("     Dirty TTSR: 0x%08X%08X\n", get_uint32(wof_file), get_uint32(wof_file));
 
     // Close the file
     if(wof_file != NULL)

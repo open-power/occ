@@ -167,10 +167,19 @@ void cmdh_dbug_get_ame_sensor (const cmdh_fsp_cmd_t * i_cmd_ptr,
     uint16_t                     i = 0;
     uint16_t                     l_resp_data_length = 0;
     uint16_t                     l_num_of_sensors = CMDH_DBUG_MAX_NUM_SENSORS;
+    uint16_t                     l_max_num_sensors = CMDH_DBUG_MAX_NUM_SENSORS;
     cmdh_dbug_get_sensor_query_t *l_cmd_ptr = (cmdh_dbug_get_sensor_query_t*) i_cmd_ptr;
     cmdh_dbug_get_sensor_resp_t  *l_resp_ptr = (cmdh_dbug_get_sensor_resp_t*) o_rsp_ptr;
+    cmdh_dbug_get_sensor_avg_resp_t  *l_avg_resp_ptr = (cmdh_dbug_get_sensor_avg_resp_t*) o_rsp_ptr;
     sensor_t                     *l_sensor_ptr = NULL;
     errlHndl_t                   l_err = NULL;
+
+    if( (l_cmd_ptr->sub_cmd == DBUG_GET_AME_SENSOR_AVG) ||
+        (l_cmd_ptr->sub_cmd == DBUG_GET_AND_CLEAR_AME_SENSOR_AVG) )
+    {
+       l_num_of_sensors = CMDH_DBUG_AVG_MAX_NUM_SENSORS;
+       l_max_num_sensors = CMDH_DBUG_AVG_MAX_NUM_SENSORS;
+    }
 
     do
     {
@@ -184,7 +193,8 @@ void cmdh_dbug_get_ame_sensor (const cmdh_fsp_cmd_t * i_cmd_ptr,
         // Capture user inputs
         l_type = l_cmd_ptr->type;
         l_location = l_cmd_ptr->location;
-        if(l_cmd_ptr->sub_cmd == DBUG_GET_AND_CLEAR_AME_SENSOR)
+        if( (l_cmd_ptr->sub_cmd == DBUG_GET_AND_CLEAR_AME_SENSOR) ||
+            (l_cmd_ptr->sub_cmd == DBUG_GET_AND_CLEAR_AME_SENSOR_AVG) )
             l_clear = TRUE;
 
         TRAC_INFO("dbug_get_ame_sensor: Type[0x%04x] Location[0x%04x] Clear?[%d]",
@@ -222,25 +232,35 @@ void cmdh_dbug_get_ame_sensor (const cmdh_fsp_cmd_t * i_cmd_ptr,
             TRAC_INFO("dbug_get_ame_sensor: Numbers of sensors found[%u]",
                       l_num_of_sensors);
 
-            if (l_num_of_sensors > CMDH_DBUG_MAX_NUM_SENSORS)
+            if (l_num_of_sensors > l_max_num_sensors)
             {
                 // Got too many sensors back, need to truncate the list
                 TRAC_INFO("dbug_get_ame_sensor: Got too many sensors back[%u]. Truncating number of sensors to %u",
                           l_num_of_sensors,
-                          CMDH_DBUG_MAX_NUM_SENSORS);
+                          l_max_num_sensors);
 
-                l_num_of_sensors = CMDH_DBUG_MAX_NUM_SENSORS;
+                l_num_of_sensors = l_max_num_sensors;
             }
 
             // Populate the response data packet
             l_resp_ptr->num_sensors = l_num_of_sensors;
             for (i=0; i<l_num_of_sensors; i++)
             {
-                l_resp_ptr->sensor[i].gsid = G_sensor_list[i].gsid;
-                l_resp_ptr->sensor[i].sample = G_sensor_list[i].sample;
-                strcpy(l_resp_ptr->sensor[i].name, G_sensor_list[i].name);
+                if( (l_cmd_ptr->sub_cmd == DBUG_GET_AME_SENSOR) ||
+                    (l_cmd_ptr->sub_cmd == DBUG_GET_AND_CLEAR_AME_SENSOR) )
+                {
+                    l_resp_ptr->sensor[i].gsid = G_sensor_list[i].gsid;
+                    l_resp_ptr->sensor[i].sample = G_sensor_list[i].sample;
+                    strcpy(l_resp_ptr->sensor[i].name, G_sensor_list[i].name);
+                }
+                else // avg command
+                {
+                    l_avg_resp_ptr->sensor[i].gsid = G_sensor_list[i].gsid;
+                    l_avg_resp_ptr->sensor[i].sample = G_sensor_list[i].sample;
+                    strcpy(l_avg_resp_ptr->sensor[i].name, G_sensor_list[i].name);
+                }
 
-                // Capture the min and max value for this sensor
+                // Get sensor specific info
                 l_sensor_ptr = getSensorByGsid(G_sensor_list[i].gsid);
                 if (l_sensor_ptr == NULL)
                 {
@@ -250,14 +270,36 @@ void cmdh_dbug_get_ame_sensor (const cmdh_fsp_cmd_t * i_cmd_ptr,
                     // Didn't find this sensor, just continue
                     continue;
                 }
-                l_resp_ptr->sensor[i].sample_min = l_sensor_ptr->sample_min;
-                l_resp_ptr->sensor[i].sample_max = l_sensor_ptr->sample_max;
+                if( (l_cmd_ptr->sub_cmd == DBUG_GET_AME_SENSOR) ||
+                    (l_cmd_ptr->sub_cmd == DBUG_GET_AND_CLEAR_AME_SENSOR) )
+                {
+                    l_resp_ptr->sensor[i].sample_min = l_sensor_ptr->sample_min;
+                    l_resp_ptr->sensor[i].sample_max = l_sensor_ptr->sample_max;
+                }
+                else // avg command
+                {
+                    l_avg_resp_ptr->sensor[i].sample_min = l_sensor_ptr->sample_min;
+                    l_avg_resp_ptr->sensor[i].sample_max = l_sensor_ptr->sample_max;
+                    if(l_sensor_ptr->update_tag)
+                    {
+                        l_avg_resp_ptr->sensor[i].sample_avg = (uint16_t)(l_sensor_ptr->accumulator / (uint64_t)l_sensor_ptr->update_tag);
+                        l_avg_resp_ptr->sensor[i].update_tag = l_sensor_ptr->update_tag;
+                    }
+                }
 
                 if(l_clear)
                 {
                     // Only clear the sample min/max fields in sensor
                     sensor_clear_minmax(l_sensor_ptr,
                                         AMEC_SENSOR_CLEAR_SAMPLE_MINMAX);
+
+                    // if avg command clear update tag and accumulator
+                    if(l_cmd_ptr->sub_cmd == DBUG_GET_AND_CLEAR_AME_SENSOR_AVG)
+                    {
+                        // clear the accumulator and update tag used to calc average
+                        sensor_clear_minmax(l_sensor_ptr,
+                                            AMEC_SENSOR_CLEAR_AVERAGE);
+                    }
                 }
             }
         }
@@ -265,10 +307,18 @@ void cmdh_dbug_get_ame_sensor (const cmdh_fsp_cmd_t * i_cmd_ptr,
     }while(0);
 
     // Populate the response data header (with actual number of sensors collected)
-    l_resp_data_length = sizeof(l_num_of_sensors) + (l_num_of_sensors * sizeof(cmdh_dbug_sensor_list_t));
+    if( (l_cmd_ptr->sub_cmd == DBUG_GET_AME_SENSOR) ||
+        (l_cmd_ptr->sub_cmd == DBUG_GET_AND_CLEAR_AME_SENSOR) )
+    {
+        l_resp_data_length = sizeof(l_num_of_sensors) + (l_num_of_sensors * sizeof(cmdh_dbug_sensor_list_t));
+    }
+    else // avg command
+        l_resp_data_length = sizeof(l_num_of_sensors) + (l_num_of_sensors * sizeof(cmdh_dbug_sensor_list_avg_t));
+
     G_rsp_status = l_rc;
     o_rsp_ptr->data_length[0] = ((uint8_t *)&l_resp_data_length)[0];
     o_rsp_ptr->data_length[1] = ((uint8_t *)&l_resp_data_length)[1];
+
 } // end cmdh_dbug_get_ame_sensor()
 
 
@@ -1869,6 +1919,8 @@ void cmdh_dbug_cmd (const cmdh_fsp_cmd_t * i_cmd_ptr,
         case DBUG_GET_AME_SENSOR:
         case DBUG_WRITE_SENSOR:
         case DBUG_GET_AND_CLEAR_AME_SENSOR:
+        case DBUG_GET_AME_SENSOR_AVG:
+        case DBUG_GET_AND_CLEAR_AME_SENSOR_AVG:
             // Don't trace that we got these debug commands, they happen too
             // often, or are not destructive when they do occur.
             break;
@@ -1907,6 +1959,8 @@ void cmdh_dbug_cmd (const cmdh_fsp_cmd_t * i_cmd_ptr,
 
         case DBUG_GET_AME_SENSOR:
         case DBUG_GET_AND_CLEAR_AME_SENSOR:
+        case DBUG_GET_AME_SENSOR_AVG:
+        case DBUG_GET_AND_CLEAR_AME_SENSOR_AVG:
             cmdh_dbug_get_ame_sensor(i_cmd_ptr, o_rsp_ptr);
             break;
 

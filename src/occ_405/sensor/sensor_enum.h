@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2024                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2025                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -638,6 +638,7 @@ enum e_gsid
     OV_AVG,
     FREQ_PSTATE,   // average frequency pstate from PGPE dw0
     THROTTLE_ADDR,
+    DIRTY_CURRENT, // Measured current used when indicating active dirty to OCC from PGPE dw4
     // ------------------------------------------------------
     // END of Sensor List (this must be last entry)
     // ------------------------------------------------------

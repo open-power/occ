@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2021                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2025                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -132,7 +132,8 @@ typedef enum
     AMEC_SENSOR_CLEAR_CSM_SAMPLE_MINMAX       = 0x10,
     AMEC_SENSOR_CLEAR_PROFILER_SAMPLE_MINMAX  = 0x20,
     AMEC_SENSOR_CLEAR_JOB_S_SAMPLE_MINMAX     = 0x40,
-    AMEC_SENSOR_CLEAR_ALL_MINMAX              = 0xff,
+    AMEC_SENSOR_CLEAR_AVERAGE                 = 0x80,
+    AMEC_SENSOR_CLEAR_ALL_MINMAX              = 0x7f,
 } AMEC_SENSOR_CLEAR_TYPE;
 // The bits for types must match the defined owners in the clear sensor data command
 // Define the owners allowed to be cleared via clear sensor data command

@@ -472,7 +472,11 @@ typedef struct __attribute__ ((packed))
     uint8_t  wof_adjust_reasons;
     // [962] Bit vector where each bit signifies a different reason WOF DIMM credit is disabled
     uint8_t  dimm_credit_disable;
-} amec_wof_t;  // 963 bytes total
+    // [963] PGPE Produced WOF Values
+    uint64_t pgpe_wof_values_dw4;
+    // [971] PGPE Produced WOF Values
+    uint64_t pgpe_wof_values_dw5;
+} amec_wof_t;  // 979 bytes total
 
 // Structure used in g_amec to hold static WOF data
 typedef struct __attribute__ ((packed, aligned(128)))
@@ -540,6 +544,7 @@ typedef struct __attribute__ ((packed))
     sensor_t ov_avg_sensor;
     sensor_t freq_pstate_sensor;
     sensor_t throttle_addr_sensor;
+    sensor_t dirty_current_sensor;
 } amec_wof_sensors_t;
 
 typedef struct __attribute__ ((packed))

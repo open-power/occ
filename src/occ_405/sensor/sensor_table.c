@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2024                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2025                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -436,6 +436,7 @@ const sensor_ptr_t G_amec_sensor_list[] =
   SENSOR_PTR( OV_AVG,               &g_amec_sys.wof_sensors.ov_avg_sensor),
   SENSOR_PTR( FREQ_PSTATE,          &g_amec_sys.wof_sensors.freq_pstate_sensor),
   SENSOR_PTR( THROTTLE_ADDR,        &g_amec_sys.wof_sensors.throttle_addr_sensor),
+  SENSOR_PTR( DIRTY_CURRENT,        &g_amec_sys.wof_sensors.dirty_current_sensor),
 };
 STATIC_ASSERT(   (NUMBER_OF_SENSORS_IN_LIST != (sizeof(G_amec_sensor_list)/sizeof(sensor_ptr_t)))   );
 STATIC_ASSERT(   (MAX_AMEC_SENSORS < (sizeof(G_amec_sensor_list)/sizeof(sensor_ptr_t)))   );
@@ -610,6 +611,7 @@ const minisensor_ptr_t G_amec_mini_sensor_list[] INIT_SECTION =
   MINI_SENSOR_PTR( OV_AVG,         &G_dcom_slv_outbox_tx.ovAvg),
   MINI_SENSOR_PTR( FREQ_PSTATE,   NULL),
   MINI_SENSOR_PTR( THROTTLE_ADDR, NULL),
+  MINI_SENSOR_PTR( DIRTY_CURRENT, NULL),
 };
 STATIC_ASSERT(   (NUMBER_OF_SENSORS_IN_LIST != (sizeof(G_amec_mini_sensor_list)/sizeof(uint16_t *)))   );
 STATIC_ASSERT(   (MAX_AMEC_SENSORS < (sizeof(G_amec_mini_sensor_list)/sizeof(uint16_t *)))   );

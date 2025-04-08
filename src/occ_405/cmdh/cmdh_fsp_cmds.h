@@ -430,6 +430,18 @@ typedef struct cmdh_dbug_sensor_list
     uint16_t    sample_max;
 }cmdh_dbug_sensor_list_t;
 
+typedef struct __attribute__ ((packed))
+{
+    char        name[MAX_SENSOR_NAME_SZ];
+    uint16_t    gsid;
+    uint16_t    sample;
+    uint16_t    sample_min;
+    uint16_t    sample_max;
+    uint16_t    sample_avg;
+    uint32_t    update_tag; // number of samples used to calculate avg
+}cmdh_dbug_sensor_list_avg_t;
+
+
 // Used by OCC to response "GET_FIELD_DEBUG_DATA" cmd
 typedef struct __attribute__ ((packed))
 {

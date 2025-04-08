@@ -984,6 +984,8 @@ void read_pgpe_produced_wof_values( void )
     l_PgpeWofValues.dw1.value = in64(g_amec_sys.static_wof_data.pgpe_values_sram_addr + 0x08);
     l_PgpeWofValues.dw2.value = in64(g_amec_sys.static_wof_data.pgpe_values_sram_addr + 0x10);
     l_PgpeWofValues.dw3.value = in64(g_amec_sys.static_wof_data.pgpe_values_sram_addr + 0x18);
+    l_PgpeWofValues.dw4.value = in64(g_amec_sys.static_wof_data.pgpe_values_sram_addr + 0x20);
+    l_PgpeWofValues.dw5.value = in64(g_amec_sys.static_wof_data.pgpe_values_sram_addr + 0x28);
 
     // save Vdd voltage to sensor
     l_voltage = (uint16_t)l_PgpeWofValues.dw2.fields.vdd_avg_mv;
@@ -1040,6 +1042,15 @@ void read_pgpe_produced_wof_values( void )
         // Reading from SRAM is already in 10mA
         sensor_update(AMECSENSOR_PTR(CURVCS), l_current);
         l_update_pwr_sensors |= AVSBUS_PGPE_VCS;
+    }
+
+    // Save dirty current to sensor
+    l_current = (uint16_t)l_PgpeWofValues.dw4.fields.dirty_current_10ma;
+    if (l_current != 0)
+    {
+        // Current value stored in the sensor should be in 10mA (A scale -2)
+        // Reading from SRAM is already in 10mA
+        sensor_update(AMECSENSOR_PTR(DIRTY_CURRENT), l_current);
     }
 
     // Update the chip voltage and power sensors
@@ -1124,6 +1135,8 @@ void read_pgpe_produced_wof_values( void )
     g_wof->pgpe_wof_values_dw1 = l_PgpeWofValues.dw1.value;
     g_wof->pgpe_wof_values_dw2 = l_PgpeWofValues.dw2.value;
     g_wof->pgpe_wof_values_dw3 = l_PgpeWofValues.dw3.value;
+    g_wof->pgpe_wof_values_dw4 = l_PgpeWofValues.dw4.value;
+    g_wof->pgpe_wof_values_dw5 = l_PgpeWofValues.dw5.value;
 }
 
 /**
