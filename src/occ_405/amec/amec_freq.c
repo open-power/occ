@@ -67,15 +67,13 @@ extern uint32_t G_present_cores;
 //*************************************************************************
 // Defines/Enums
 //*************************************************************************
-// give time for frequency to come up after boot/throttle event
-#define NUM_TICKS_LOG_PGPE_PERF_LOSS 16  // 8ms
+// Delay time to log perf loss error for all reasons.  This is to give time for control
+// algs (power, thermal....) or boot/throttle event to bring frequency back up
+// No error will be logged if frequency is back up within this time frame
+#define NUM_TICKS_BEFORE_PERF_LOSS_ELOG 2000 // 1s
 
-// Power cap alg does not run every tick. Make this a multiple of how often power cap alg
-// runs to give time for new power capping votes
-#define NUM_TICKS_LOG_HARD_PCAP_PERF_LOSS (NUM_TICKS_RUN_PCAP * 4)
 
-#define MAX_PROC_TEMP_HISTORY 5
-#define MAX_TICKS_BEFORE_ELOG 2000 // 1s
+#define MAX_PROC_TEMP_HISTORY 3
 //*************************************************************************
 // Structures
 //*************************************************************************
@@ -322,19 +320,15 @@ void amec_slv_proc_voting_box(void)
     uint32_t                        l_temp_freq = 0;
     uint32_t                        l_user_data2 = 0;
     bool                            l_log_error = FALSE; // indicates if should log perf loss error
-    bool                            l_log_ot_error = FALSE; // indicates if should log perf loss error due to ot
     bool                            l_pgpe_error = FALSE; // indicates error is due to PGPE
-    bool                            l_wof_clip_error = FALSE; // indicates error is due to wof
     bool                            l_ocs_dirty_error = FALSE; // indicates error is due to OCS dirty
     static bool                     L_perf_loss_error_logged = FALSE; // indicates if perf loss error was logged
     static bool                     L_pgpe_perf_loss_error_logged = FALSE; // indicates if perf loss error due to pgpe was logged
-    static bool                     L_wof_clip_perf_loss_error_logged = FALSE; // indicates if perf loss error due to WOF was logged
     static bool                     L_pgpe_ocs_dirty_error_logged = FALSE; // indicates if perf loss error due to dirty was logged
     errlHndl_t                      l_err = NULL;
     static uint16_t                 L_ticks_below_disabled_freq = 0;
-    static uint16_t                 L_ticks_hard_pcap_reason = 0;
-    static uint16_t                 L_ticks_proc_ot_perf_loss = 0;
     static uint16_t                 L_ticks_proc_ot_dvfs = 0;
+    static uint16_t                 L_ot_dvfs_min_freq = 0xFFFF;
     sensor_t                        *l_sensor = NULL;
     uint32_t                        l_history_data = 0;
     static uint32_t                 L_proc_temp_vote_history[MAX_PROC_TEMP_HISTORY] = {0};
@@ -448,6 +442,15 @@ void amec_slv_proc_voting_box(void)
             L_proc_avgT_wof_history[0] |= (uint8_t)(g_amec->wof.f_clip_ps);
             L_ticks_proc_ot_dvfs = 1;
         }
+        else if(g_amec->thermalproc.freq_request >= G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_DISABLED])
+        {
+            // keep track of number of ticks it is taking to drop freq below fixed freq
+            if(L_ticks_proc_ot_dvfs != 0xFFFF) // avoid wrapping
+                L_ticks_proc_ot_dvfs++;
+        }
+        // keep track of how far freq is dropped due to OT for debug
+        if(g_amec->thermalproc.freq_request < L_ot_dvfs_min_freq)
+            L_ot_dvfs_min_freq = g_amec->thermalproc.freq_request;
 
         if( l_report_throttle_freq <= l_chip_fmax)
         {
@@ -459,6 +462,12 @@ void amec_slv_proc_voting_box(void)
             l_kvm_throt_reason = CPU_OVERTEMP;
         }
     }
+    else
+    {
+        L_ticks_proc_ot_dvfs = 0;
+        L_ot_dvfs_min_freq = 0xFFFF;
+    }
+
     // save temp/freq vote if either are different than previous
     l_history_temp = (uint16_t)(L_proc_temp_vote_history[L_proc_temp_vote_history_index] >> 16);
     l_history_freq = (uint16_t)(L_proc_temp_vote_history[L_proc_temp_vote_history_index]);
@@ -655,17 +664,6 @@ void amec_slv_proc_voting_box(void)
          sensor_update(AMECSENSOR_PTR(PROCPWRTHROT), 0);
     }
 
-    // keep track of number of ticks hard power capping is driving the frequency down
-    if(l_current_reason == AMEC_VOTING_REASON_PPB_HARD_CAP)
-    {
-        if(L_ticks_hard_pcap_reason != 0xFFFF) // avoid wrapping
-            L_ticks_hard_pcap_reason++;
-    }
-    else
-    {
-        L_ticks_hard_pcap_reason = 0;
-    }
-
     // check if need to log performance loss error when running PowerVM (not OPAL)
     // this is logged if frequency drops below the modes disabled freq point due to power or thermal
     // when in a mode that has a max freq of disabled or higher, determined by g_amec->sys.fmax.
@@ -679,103 +677,6 @@ void amec_slv_proc_voting_box(void)
     if(l_temp_freq > G_mhz_per_pstate)
            l_temp_freq -= G_mhz_per_pstate;
 
-    // special handling for processor OT if we haven't already logged perf loss error
-    if( (!L_perf_loss_error_logged) &&
-        ((l_current_reason == AMEC_VOTING_REASON_PROC_THRM) || (L_ticks_proc_ot_perf_loss)) )
-    {
-        // keep track of number of ticks proc OT is driving freq below disabled
-        if(g_amec->thermalproc.freq_request < G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_DISABLED])
-        {
-            if(L_ticks_proc_ot_perf_loss != 0xFFFF) // avoid wrapping
-                L_ticks_proc_ot_perf_loss++;
-            // Stop waiting to get out of OT condition just log the error
-            if(L_ticks_proc_ot_perf_loss >= MAX_TICKS_BEFORE_ELOG)
-            {
-                l_log_ot_error = TRUE;
-                TRAC_ERR("Frequency still below fixed freq");
-            }
-        }
-        else if(L_ticks_proc_ot_perf_loss)
-        {
-             // there is no longer a performance loss due to proc OT
-             // now log the error that we did hit a perf loss due to OT
-             l_log_ot_error = TRUE;
-        }
-        else if(L_ticks_proc_ot_dvfs != 0xFFFF) // avoid wrapping
-             L_ticks_proc_ot_dvfs++;
-    }
-    else
-        L_ticks_proc_ot_dvfs = 0;
-
-    if(l_log_ot_error)
-    {
-         l_dvfs_temp = g_amec->thermalproc.setpoint / 10;
-         TRAC_ERR("DVFS for %d ticks before below fixed freq[%d] due to processor DVFS limit[%d] below fixed for %d ticks",
-                   L_ticks_proc_ot_dvfs,
-                   G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_DISABLED],
-                   l_dvfs_temp,
-                   L_ticks_proc_ot_perf_loss);
-
-         L_ticks_proc_ot_perf_loss = 0;
-         // trace history
-         for (k=0; k<MAX_PROC_TEMP_HISTORY; k++)
-         {
-              l_history_temp = (uint16_t)(L_proc_temp_vote_history[k] >> 16);
-              l_history_freq = (uint16_t)(L_proc_temp_vote_history[k]);
-              l_history_avg = (uint8_t)(L_proc_avgT_wof_history[k] >> 8);
-              l_history_wof = (uint8_t)(L_proc_avgT_wof_history[k]);
-              if(k == 0)
-              {
-                    TRAC_INFO("Started OT DVFS with temp[%d] frequency[%d] avgtemp[%d] WOF[%d]",
-                               l_history_temp, l_history_freq, l_history_avg, l_history_wof);
-              }
-              else if(k == L_proc_temp_vote_history_index)
-              {
-                    TRAC_INFO("CURRENT Temperature frequency vote: temp[%d] frequency[%d] avgtemp[%d] WOF[%d]",
-                               l_history_temp, l_history_freq, l_history_avg, l_history_wof);
-              }
-              else
-              {
-                    TRAC_INFO("Temperature frequency vote: temp[%d] frequency[%d] avgtemp[%d] WOF[%d]",
-                               l_history_temp, l_history_freq, l_history_avg, l_history_wof);
-              }
-         }
-       /* @
-        * @errortype
-        * @moduleid    AMEC_SLV_PROC_VOTING_BOX
-        * @reasoncode  PERFORMANCE_LOSS
-        * @userdata1   Frequency
-        * @userdata2   Freq clip history
-        * @userdata4   ERC_AMEC_PROC_ERROR_OVER_TEMPERATURE
-        * @devdesc     Frequency below nominal due to processor thermal
-        */
-         l_err = createErrl(AMEC_SLV_PROC_VOTING_BOX,      //modId
-                            PERFORMANCE_LOSS,              //reasoncode
-                            ERC_AMEC_PROC_ERROR_OVER_TEMPERATURE,  //Extended reason code
-                            ERRL_SEV_INFORMATIONAL,        //Severity
-                            NULL,                          //Trace Buf
-                            DEFAULT_TRACE_SIZE,            //Trace Size
-                            g_amec->wof.avg_freq_mhz,      //userdata1
-                            g_amec->proc[0].chip_f_reason_history); //userdata2
-
-         L_perf_loss_error_logged = TRUE;
-
-         // set the mfg action flag (allows callout to be added to info error)
-         setErrlActions(l_err, ERRL_ACTIONS_MANUFACTURING_ERROR);
-         // Callout Firmware
-         addCalloutToErrl(l_err,
-                          ERRL_CALLOUT_TYPE_COMPONENT_ID,
-                          ERRL_COMPONENT_ID_FIRMWARE,
-                          ERRL_CALLOUT_PRIORITY_HIGH);
-         // add processor callout
-         addCalloutToErrl(l_err,
-                          ERRL_CALLOUT_TYPE_HUID,
-                          G_sysConfigData.proc_huid,
-                          ERRL_CALLOUT_PRIORITY_LOW);
-         // Commit Error
-         commitErrl(&l_err);
-    }  // if(l_log_ot_error)
-
     if( (g_amec->wof.avg_freq_mhz) && (!G_sysConfigData.system_type.kvm) &&
         (CURRENT_MODE() != OCC_MODE_NOCHANGE) && // must check that mode was set since state change is processed first
         (g_amec->sys.fmax >= G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_DISABLED]) &&
@@ -787,74 +688,109 @@ void amec_slv_proc_voting_box(void)
         if( (!L_perf_loss_error_logged) && (L_last_reason & FREQ_REASON_PERF_LOSS_ERROR) &&
            (l_current_reason & FREQ_REASON_PERF_LOSS_ERROR) )
         {
-            // only log power cap error on master OCC since it is the one that determined the lower freq
-            // and sent to all other OCCs
-            if( (l_current_reason != AMEC_VOTING_REASON_PPB_HARD_CAP) &&
-                (l_current_reason != AMEC_VOTING_REASON_PROC_THRM) ) // wait to log OT error until no longer OT
+            if(L_ticks_below_disabled_freq != 0xFFFF) // avoid wrapping
+                L_ticks_below_disabled_freq++;
+
+            // only log when below for NUM_TICKS_BEFORE_PERF_LOSS_ELOG consecutive ticks
+            if(L_ticks_below_disabled_freq == NUM_TICKS_BEFORE_PERF_LOSS_ELOG)
             {
-                TRAC_ERR("Current freq %dMHz is below disabled freq %dMHz due to OCC Reason 0x%08X",
-                           g_amec->wof.avg_freq_mhz,
-                           G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_DISABLED],
-                           l_current_reason);
-
-                l_log_error = TRUE;
-
-                if(l_current_reason == AMEC_VOTING_REASON_VDD_THRM)
+                // only log power cap error on master OCC since it is the one that determined the lower freq
+                // and sent to all other OCCs
+                if( (l_current_reason != AMEC_VOTING_REASON_PPB_HARD_CAP) ||
+                   ((l_current_reason == AMEC_VOTING_REASON_PPB_HARD_CAP) && (OCC_MASTER == G_occ_role)) )
                 {
-                   l_sensor = getSensorByGsid(TEMPVDD);
-                   l_dvfs_temp = g_amec->thermalvdd.setpoint / 10;
-                   TRAC_ERR("Low frequency due to Vdd VRM OT DVFS[%d] current temp[%d] max temp[%d]",
-                             l_dvfs_temp, l_sensor->sample, l_sensor->sample_max);
-                }
-                else if(l_current_reason == AMEC_VOTING_REASON_SOCKET_VDD_CAP)
-                {
-                   if( (G_pbax_id.chip_id == 0) || (G_pbax_id.chip_id == 1) )
-                       l_sensor = getSensorByGsid(PWRAPSSCH02);
-                   else
-                       l_sensor = getSensorByGsid(PWRAPSSCH03);
+                    TRAC_ERR("Frequency still below fixed freq after %d ticks", NUM_TICKS_BEFORE_PERF_LOSS_ELOG);
+                    TRAC_ERR("Current freq %dMHz is below disabled freq %dMHz due to OCC Reason 0x%08X",
+                               g_amec->wof.avg_freq_mhz,
+                               G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_DISABLED],
+                               l_current_reason);
 
-                   TRAC_ERR("Low frequency due to socket Vdd Pcap[%d] Current Vdd power[%d] max Vdd power[%d]",
-                             G_sysConfigData.vdd_socket_pcap_w, l_sensor->sample, l_sensor->sample_max);
-                }
-                else if(l_current_reason == AMEC_VOTING_REASON_TOTAL_SOCKET_CAP)
-                {
-                   if( (G_pbax_id.chip_id == 0) || (G_pbax_id.chip_id == 1) )
-                       l_sensor = getSensorByGsid(PWRAPSSCH02);
-                   else
-                       l_sensor = getSensorByGsid(PWRAPSSCH03);
+                    l_log_error = TRUE;
 
-                   TRAC_ERR("Low frequency due to total socket Pcap[%d] Current Vdd power[%d] max Vdd power[%d]",
-                             G_sysConfigData.total_socket_pcap_w, l_sensor->sample, l_sensor->sample_max);
+                    // add debug data based on reason
+                    if(l_current_reason == AMEC_VOTING_REASON_PPB_HARD_CAP)
+                    {
+                        l_sensor = getSensorByGsid(PWRSYS);
+                        TRAC_ERR("Low frequency due to power capping current node power[%d] max node power[%d]",
+                                 l_sensor->sample, l_sensor->sample_max);
+                        TRAC_ERR("Current power cap[%d] hard pcap min[%d]",
+                                 g_amec->pcap.active_node_pcap, G_sysConfigData.pcap.hard_min_pcap);
+                    }
 
-                   if( (G_pbax_id.chip_id == 0) || (G_pbax_id.chip_id == 1) )
-                       l_sensor = getSensorByGsid(PWRAPSSCH04);
-                   else
-                       l_sensor = getSensorByGsid(PWRAPSSCH05);
+                    else if(l_current_reason == AMEC_VOTING_REASON_VDD_THRM)
+                    {
+                       l_sensor = getSensorByGsid(TEMPVDD);
+                       l_dvfs_temp = g_amec->thermalvdd.setpoint / 10;
+                       TRAC_ERR("Low frequency due to Vdd VRM OT DVFS[%d] current temp[%d] max temp[%d]",
+                                 l_dvfs_temp, l_sensor->sample, l_sensor->sample_max);
+                    }
+                    else if(l_current_reason == AMEC_VOTING_REASON_SOCKET_VDD_CAP)
+                    {
+                       if( (G_pbax_id.chip_id == 0) || (G_pbax_id.chip_id == 1) )
+                           l_sensor = getSensorByGsid(PWRAPSSCH02);
+                       else
+                           l_sensor = getSensorByGsid(PWRAPSSCH03);
 
-                   TRAC_ERR("Non Vdd socket power[%d] max[%d]",
-                             l_sensor->sample, l_sensor->sample_max);
-                }
-            }  // if OCC reason not power cap or processor OT
+                       TRAC_ERR("Low frequency due to socket Vdd Pcap[%d] Current Vdd power[%d] max Vdd power[%d]",
+                                 G_sysConfigData.vdd_socket_pcap_w, l_sensor->sample, l_sensor->sample_max);
+                    }
+                    else if(l_current_reason == AMEC_VOTING_REASON_TOTAL_SOCKET_CAP)
+                    {
+                       if( (G_pbax_id.chip_id == 0) || (G_pbax_id.chip_id == 1) )
+                           l_sensor = getSensorByGsid(PWRAPSSCH02);
+                       else
+                           l_sensor = getSensorByGsid(PWRAPSSCH03);
 
-            // power capping alg does not run every tick, allow extra time for pcap alg
-            // to run and raise freq after a power excursion
-            else if( (OCC_MASTER == G_occ_role) &&
-                     (l_current_reason == AMEC_VOTING_REASON_PPB_HARD_CAP) &&
-                     (L_ticks_hard_pcap_reason == NUM_TICKS_LOG_HARD_PCAP_PERF_LOSS) )
-            {
-                TRAC_ERR("Current freq %dMHz is below disabled freq %dMHz due to OCC Reason 0x%08X",
-                           g_amec->wof.avg_freq_mhz,
-                           G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_DISABLED],
-                           l_current_reason);
+                       TRAC_ERR("Low frequency due to total socket Pcap[%d] Current Vdd power[%d] max Vdd power[%d]",
+                                 G_sysConfigData.total_socket_pcap_w, l_sensor->sample, l_sensor->sample_max);
 
-                l_log_error = TRUE;
-                l_sensor = getSensorByGsid(PWRSYS);
-                TRAC_ERR("Low frequency due to power capping current node power[%d] max node power[%d]",
-                         l_sensor->sample, l_sensor->sample_max);
-                TRAC_ERR("Current power cap[%d] hard pcap min[%d]",
-                         g_amec->pcap.active_node_pcap, G_sysConfigData.pcap.hard_min_pcap);
-            }  // else if OCC is master and reason pcap
-        }
+                       if( (G_pbax_id.chip_id == 0) || (G_pbax_id.chip_id == 1) )
+                           l_sensor = getSensorByGsid(PWRAPSSCH04);
+                       else
+                           l_sensor = getSensorByGsid(PWRAPSSCH05);
+
+                       TRAC_ERR("Non Vdd socket power[%d] max[%d]",
+                                 l_sensor->sample, l_sensor->sample_max);
+                    }
+                    else if(l_current_reason == AMEC_VOTING_REASON_PROC_THRM)
+                    {
+                        l_dvfs_temp = g_amec->thermalproc.setpoint / 10;
+                        TRAC_ERR("DVFS for %d ticks before below fixed freq[%d] due to processor DVFS limit[%d] DVFS min freq[%d]",
+                                   L_ticks_proc_ot_dvfs,
+                                   G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_DISABLED],
+                                   l_dvfs_temp,
+                                   L_ot_dvfs_min_freq);
+
+                        // trace history
+                        for (k=0; k<MAX_PROC_TEMP_HISTORY; k++)
+                        {
+                            l_history_temp = (uint16_t)(L_proc_temp_vote_history[k] >> 16);
+                            l_history_freq = (uint16_t)(L_proc_temp_vote_history[k]);
+                            l_history_avg = (uint8_t)(L_proc_avgT_wof_history[k] >> 8);
+                            l_history_wof = (uint8_t)(L_proc_avgT_wof_history[k]);
+                            if(k == 0)
+                            {
+                                TRAC_INFO("Started OT DVFS with temp[%d] frequency[%d] avgtemp[%d] WOF[%d]",
+                                           l_history_temp, l_history_freq, l_history_avg, l_history_wof);
+                            }
+                            else if(k == L_proc_temp_vote_history_index)
+                            {
+                                TRAC_INFO("CURRENT Temperature frequency vote: temp[%d] frequency[%d] avgtemp[%d] WOF[%d]",
+                                           l_history_temp, l_history_freq, l_history_avg, l_history_wof);
+                            }
+                            else
+                            {
+                                TRAC_INFO("Temperature frequency vote: temp[%d] frequency[%d] avgtemp[%d] WOF[%d]",
+                                            l_history_temp, l_history_freq, l_history_avg, l_history_wof);
+                            }
+                        }
+                    } // if AMEC_VOTING_REASON_PROC_THRM
+
+                } // if logging error due to OCC reason
+
+            }  // if freq below for NUM_TICKS_BEFORE_PERF_LOSS_ELOG consecutive ticks
+
+        } // if OCC reason
 
         // Check if PGPE drove the freq down
         // if OCC is not voting for freq drop (reason 0) then it must be PGPE
@@ -864,8 +800,8 @@ void amec_slv_proc_voting_box(void)
             if(L_ticks_below_disabled_freq != 0xFFFF) // avoid wrapping
                 L_ticks_below_disabled_freq++;
 
-            // only log when below for NUM_TICKS_LOG_PGPE_PERF_LOSS consecutive ticks
-            if(L_ticks_below_disabled_freq == NUM_TICKS_LOG_PGPE_PERF_LOSS)
+            // only log when below for NUM_TICKS_BEFORE_PERF_LOSS_ELOG consecutive ticks
+            if(L_ticks_below_disabled_freq == NUM_TICKS_BEFORE_PERF_LOSS_ELOG)
             {
                 // Check if low freq is due to dirty indication from PGPE
                 if( (l_current_reason == AMEC_VOTING_REASON_OVER_CURRENT) ||
@@ -895,28 +831,9 @@ void amec_slv_proc_voting_box(void)
                                 (uint32_t)(g_amec->wof.pgpe_wof_values_dw0) );
                    }
                 }
-
-                // Check if due to WOF enabled (but not due to dirty checked above)
-                else if(!g_amec->wof.wof_disabled)
+                else if((g_amec->wof.wof_disabled) && (!L_pgpe_perf_loss_error_logged))
                 {
-                   // only log if haven't already logged error due to WOF clipping
-                   if(!L_wof_clip_perf_loss_error_logged)
-                   {
-                       l_wof_clip_error = TRUE;
-                       l_log_error = TRUE;
-
-                       TRAC_ERR("Current freq %dMHz is below disabled freq %dMHz due to WOF! System max %dMHz",
-                                 g_amec->wof.avg_freq_mhz,
-                                 G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_DISABLED],
-                                 g_amec->sys.fmax);
-
-                       TRAC_ERR("PGPE dw0[0x%08X%08X]",
-                                (uint32_t)(g_amec->wof.pgpe_wof_values_dw0 >>32),
-                                (uint32_t)(g_amec->wof.pgpe_wof_values_dw0) );
-                   }
-                }
-                else if(!L_pgpe_perf_loss_error_logged) // Hmm freq is low but no WOF clip and no OCC reason
-                {
+                   // Hmm freq is low but no WOF clip and no OCC reason
                    TRAC_ERR("Current freq %dMHz is below disabled freq %dMHz For unknown reason!  System max %dMHz",
                               g_amec->wof.avg_freq_mhz,
                               G_sysConfigData.sys_mode_freq.table[OCC_FREQ_PT_MODE_DISABLED],
@@ -934,7 +851,7 @@ void amec_slv_proc_voting_box(void)
                    l_log_error = TRUE;
                 }
             }
-        }
+        } // else if PGPE reason
         else
             L_ticks_below_disabled_freq = 0;
 
@@ -950,7 +867,7 @@ void amec_slv_proc_voting_box(void)
             * @userdata4   OCC_NO_EXTENDED_RC
             * @devdesc     Frequency below nominal due to power or thermal
             */
-            if( (l_pgpe_error) || (l_wof_clip_error) || (l_ocs_dirty_error) ) // add PGPE trace?
+            if( (l_pgpe_error) || (l_ocs_dirty_error) ) // add PGPE trace?
             {
                // add WOF traces if WOF is enabled
                if(!g_amec->wof.wof_disabled)
@@ -980,13 +897,9 @@ void amec_slv_proc_voting_box(void)
                    // set msb to distinguish between WOF clip and other unknown reason
                    l_user_data2 |= 0x80000000;
                }
-               else if(l_ocs_dirty_error)
+               else // l_ocs_dirty_error
                {
                    L_pgpe_ocs_dirty_error_logged = TRUE;
-               }
-               else // l_wof_clip_error
-               {
-                   L_wof_clip_perf_loss_error_logged = TRUE;
                }
 
                l_err = createPgpeErrl(AMEC_SLV_PROC_VOTING_BOX,       //modId
@@ -996,15 +909,6 @@ void amec_slv_proc_voting_box(void)
                                        g_amec->wof.avg_freq_mhz,      //userdata1
                                        l_user_data2);                 //userdata2
 
-               // add WOF user data section if error is due to WOF clip
-               if(l_wof_clip_error)
-               {
-                  addUsrDtlsToErrl( l_err,
-                                   (uint8_t*)&(g_amec_sys.wof),
-                                   sizeof(amec_wof_t),
-                                   ERRL_USR_DTL_STRUCT_VERSION_1,
-                                   ERRL_USR_DTL_WOF_DATA);
-               }
             }
             else // error due to OCC reason
             {
