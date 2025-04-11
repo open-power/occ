@@ -99,8 +99,8 @@
 // general defines
 #define TOD_SIZE                 6
 #define NUM_TOD_SENSORS          3
-#define SLV_INBOX_RSV_SIZE       170
-#define SLV_OUTBOX_RSV_SIZE      433
+#define SLV_INBOX_RSV_SIZE       154
+#define SLV_OUTBOX_RSV_SIZE      431
 #define DOORBELL_RSV_SIZE        1
 #define DCOM_MAX_ERRH_ENTRIES    8
 #define DCOM_MAX_MMA_ON_ENTRIES  3
@@ -168,6 +168,9 @@ typedef struct __attribute__ ((packed))
     // Idle Power Saver parameters
     uint16_t ips_freq_request;                                      // [52] -  2 bytes
 
+    // AVSBUS VIO power
+    uint16_t avs_vio_power[MAX_OCCS];                               // [54] - 16 bytes
+
     // Reserved Bytes
     union
     {
@@ -176,7 +179,7 @@ typedef struct __attribute__ ((packed))
           uint32_t     counter;
           uint8_t      tb_record;
       };
-      uint8_t  reserved[ SLV_INBOX_RSV_SIZE ];                      // [54] - 170 bytes
+      uint8_t  reserved[ SLV_INBOX_RSV_SIZE ];                      // [70] - 154 bytes
     };
 
     // General Firmware Message Passing
@@ -245,11 +248,13 @@ typedef struct __attribute__ ((packed))
     uint32_t ocs_dirty_type1_count;                              // [543] - 4 bytes
 
     af_calc_t af_calcs[DCOM_MAX_AF_ENTRIES];                     // [547] - 12 bytes
+    // AVSBUS VIO power (needed by other chip on the DCM)
+    uint16_t avsVIOPower;                                        // [559] - 2 bytes
 
     // Reserved Bytes
     union
     {
-        uint8_t  reserved2[SLV_OUTBOX_RSV_SIZE];                 // [559] - 433 bytes
+        uint8_t  reserved2[SLV_OUTBOX_RSV_SIZE];                 // [561] - 431 bytes
         struct __attribute__ ((packed))
         {
             uint8_t _reserved2_1;
@@ -281,8 +286,10 @@ typedef struct
             uint32_t addr_slv_inbox_buffer0;        //  4 bytes
             // PowerCap data sent from master to slaves
             pcap_config_data_t pcap;                // 14 bytes
+            // Present OCCs bitmap
+            uint8_t occs_present;                   //  1 byte
             // Reserved
-            uint8_t _reserved0[2];                  //  2 bytes
+            uint8_t _reserved0;                     //  1 byte
             // GPIO pins from APSS
             uint16_t gpio[2];                       //  4 bytes
             // Raw ADC Channels from APSS

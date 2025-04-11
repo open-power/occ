@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2024                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2025                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -155,6 +155,13 @@ uint32_t dcom_build_slv_inbox(void)
         G_dcom_slv_inbox_tx[l_slv_idx].tb_record = g_amec_tb_record;
 
         G_dcom_slv_inbox_tx[l_slv_idx].counter++;
+
+        // Send VIO chip power for use by other chip on DCM
+        uint32_t l_idx2 = 0;
+        for (; l_idx2 < MAX_OCCS; l_idx2++)
+        {
+            G_dcom_slv_inbox_tx[l_slv_idx].avs_vio_power[l_idx2] = G_dcom_slv_outbox_rx[l_idx2].avsVIOPower;
+        }
     }
 
     dcom_build_occfw_msg( SLAVE_INBOX );
@@ -178,6 +185,7 @@ uint32_t dcom_build_slv_inbox(void)
             (void *) &G_apss_pwr_meas.adc[0],
             sizeof( G_dcom_slv_inbox_doorbell_tx.adc ));
 
+    G_dcom_slv_inbox_doorbell_tx.occs_present = G_sysConfigData.is_occ_present;
     G_dcom_slv_inbox_doorbell_tx.gpio[0] = G_apss_pwr_meas.gpio[0];
     G_dcom_slv_inbox_doorbell_tx.gpio[1] = G_apss_pwr_meas.gpio[1];
     G_dcom_slv_inbox_doorbell_tx.tod = G_apss_pwr_meas.tod;

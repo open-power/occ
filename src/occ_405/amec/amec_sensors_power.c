@@ -111,6 +111,10 @@ extern task_t G_task_table[TASK_END];
 
 extern uint16_t G_configured_mbas;
 extern uint8_t G_injected_epow_asserted;
+extern amec_sys_t g_amec_sys;
+
+#define VRM_EFFICIENCY_PCT 85
+#define CONVERT_VRM_POWER_TO_OUTPUT(input) ((input) * VRM_EFFICIENCY_PCT / 100)
 
 //*************************************************************************/
 // Code
@@ -227,6 +231,185 @@ uint32_t amec_value_from_apss_adc(uint8_t i_chan)
 #define ROUND_POWER(value) ((((uint64_t)value) + ADCMULT_ROUND) / ADCMULT_TO_UNITS)
 #define NUM_DEBUG_TRACE 4
 #define DEBUG_HIGH_READ 900
+
+void calculateProcPower(const uint64_t l_bulk_voltage)
+{
+    // Determine DCM# (and partner chip)
+    uint8_t module = G_pbax_id.chip_id;
+    uint8_t partnerChip = G_pbax_id.chip_id;
+
+    bool isSCM = false;
+    if (G_sysConfigData.apss_adc_map.sense_12v == 14)
+    {
+        // McKinley has 12V Sense on Channel 14
+        isSCM = true;
+    }
+    else
+    {
+        // DCM or ioSCM?
+
+        // TODO: Determine if Blue Ridge is DCM or ioSCM
+
+        // Get chip number for module partner
+        module >>= 1;
+        if (G_pbax_id.chip_id % 2 == 0)
+        {
+            ++partnerChip;
+        }
+        else
+        {
+            --partnerChip;
+        }
+    }
+
+    // Get the AVSBUS data (from PGPE)
+    uint32_t avsVddChipPower = 0;
+    uint32_t avsVcsChipPower = 0;
+    uint32_t avsVdnModulePower = 0;
+    sensor_t *l_sensor = getSensorByGsid(PWRVDD);   // VDD per CHIP
+    if (l_sensor)
+        avsVddChipPower = l_sensor->sample;
+
+    l_sensor = getSensorByGsid(PWRVCS);             // VCS per CHIP
+    if (l_sensor)
+        avsVcsChipPower = l_sensor->sample;
+
+    l_sensor = getSensorByGsid(PWRVDN);             // VDN is per MODULE
+    if (l_sensor)
+        avsVdnModulePower = l_sensor->sample;
+
+    // Read applicable APSS power data
+    uint32_t vcsiopciePower = 0;
+    uint16_t vioChipPower = 0;
+    uint16_t vpcieChipPower = 0;
+    uint16_t avddPower = 0;
+    uint8_t l_channel = 0;
+    for (l_channel = 0; l_channel < MAX_APSS_ADC_CHANNELS; l_channel++)
+    {
+        const uint8_t function_id = G_apss_ch_to_function[l_channel];
+        if (((function_id == ADC_VCS_VIO_VPCIE_PROC_0) && (module == 0)) ||
+            ((function_id == ADC_VCS_VIO_VPCIE_PROC_1) && (module == 1)) ||
+            ((function_id == ADC_VCS_VIO_VPCIE_PROC_2) && (module == 2)) ||
+            ((function_id == ADC_VCS_VIO_VPCIE_PROC_3) && (module == 3)))
+        {
+            // Blue Ridge / Balcones / McKinley
+            // APSS reading contains VCS, VIO & VPCIE for each module
+            vcsiopciePower = ROUND_POWER(ADC_CONVERTED_VALUE(l_channel) * l_bulk_voltage);
+            if (!isSCM)
+            {
+                // Split modeule power between both chips
+                vcsiopciePower /= 2;
+            }
+        }
+        else if (((function_id == ADC_VIO_CURRENT_DCM0) && (module == 0)) ||
+                 ((function_id == ADC_VIO_CURRENT_DCM1) && (module == 1)) ||
+                 ((function_id == ADC_VIO_CURRENT_DCM2) && (module == 2)) ||
+                 ((function_id == ADC_VIO_CURRENT_DCM3) && (module == 3)))
+        {
+            // Fuji only (VIO per module)
+
+            // TODO: do we want to weight the chips differently?  70:30, etc
+
+            vioChipPower = ROUND_POWER(ADC_CONVERTED_VALUE(l_channel) * l_bulk_voltage) / 2;
+        }
+        else if (((function_id == ADC_VPCIE_CURRENT_DCM0) && (module == 0)) ||
+                 ((function_id == ADC_VPCIE_CURRENT_DCM1) && (module == 1)) ||
+                 ((function_id == ADC_VPCIE_CURRENT_DCM2) && (module == 2)) ||
+                 ((function_id == ADC_VPCIE_CURRENT_DCM3) && (module == 3)))
+        {
+            // Fuji only (PCIE per module)
+
+            // TODO: do we want to weight the chips differently?  70:30, etc
+
+            vpcieChipPower = ROUND_POWER(ADC_CONVERTED_VALUE(l_channel) * l_bulk_voltage) / 2;
+        }
+        else if (function_id == ADC_AVDD_CURRENT_TOTAL)
+        {
+            // Fuji only (AVDD is shared between ALL DCMs, so chip power is divided by 8)
+            avddPower = ROUND_POWER(ADC_CONVERTED_VALUE(l_channel) * l_bulk_voltage) / 8;
+            // TODO: Should it really be /8 or do we need to determine how many
+
+            // TODO: Justin said to use Power Proxy for Fuji also, but left APSS reading to compare
+            // TODO: do we want to weight the chips differently?  70:30, etc
+        }
+    }
+
+    bool convertToOutput = false;
+        // APSS readings will need to be converted from input to output power
+        if (G_sysConfigData.apss_adc_map.sense_12v == 3)
+        {
+            // Fuji has 12V Sense on Channel 3
+            convertToOutput = true;
+        }
+        else
+        {
+            // Blue Ridge/McKinley/Balcones: Calculate Vdn/Vio/Vpcie/AVdd powers
+
+            uint16_t vioModulePower = 0;
+            if (g_amec_sys.static_wof_data.xgpe_values_sram_addr)
+            {
+                // Read VIO Proxy Power (per chip) from XGPE/WOF data
+                xgpe_wof_values_t l_XgpeWofValues;
+                l_XgpeWofValues.value = in64(g_amec_sys.static_wof_data.xgpe_values_sram_addr);
+                vioChipPower = (uint16_t)l_XgpeWofValues.fields.io_power_proxy_w;
+                uint16_t vioModulePower = vioChipPower;
+                if (!isSCM)
+                {
+                    // Save VIO power to send to master (to broadcast to partner chip)
+                    G_dcom_slv_outbox_tx.avsVIOPower = vioChipPower;
+                    // Read partners VIO power to calculate module VIO power
+                    const uint16_t partnerVioPower = G_dcom_slv_inbox_rx.avs_vio_power[partnerChip];
+                    vioModulePower += partnerVioPower;
+                }
+            }
+
+            if (vcsiopciePower > 0)
+            {
+                // Blue Ridge / Balcones / McKinley - Calculate the PCIE power for this chip
+                uint32_t avsVcsModulePower = avsVcsChipPower;
+                if (!isSCM)
+                {
+                    // Get VCS power from DCM partner chip
+                    const uint16_t partnerVcsPower = G_dcom_slv_outbox_rx[partnerChip].pwrvcs;
+                    avsVcsModulePower += partnerVcsPower;
+                }
+
+                // VPCIE = (APSS VCS/VIO/VPCIE * RegEfficiency)  (need to convert to output power)
+                //       - AVSBUS VCS (for module)
+                //       - AVSBUS VDN (for module)
+                //       - PROXY POWER (for module)
+                int16_t vpcieModulePower = CONVERT_VRM_POWER_TO_OUTPUT(vcsiopciePower) - avsVcsModulePower - avsVdnModulePower - vioModulePower;
+                if (vpcieModulePower < 0)
+                {
+                    vpcieChipPower = 0;
+                }
+                else
+                {
+                    vpcieChipPower = vpcieModulePower;
+                    if (!isSCM)
+                        vpcieChipPower /= 2;
+                }
+            }
+        }
+
+    // Determine chip VDN power (for DCMs)
+    uint32_t avsVdnChipPower = avsVdnModulePower;
+    if (!isSCM)
+    {
+        // VDN is per module so split to get the chip power
+        avsVdnChipPower /= 2;
+    }
+
+    // Calculate processor power for this chip
+    uint16_t procPower = avsVddChipPower + avsVcsChipPower + avsVdnChipPower + vioChipPower + vpcieChipPower;
+    if (convertToOutput)
+    {
+        // Fuji uses all power readings from APSS (convert to output power)
+        procPower = CONVERT_VRM_POWER_TO_OUTPUT(procPower);
+    }
+    sensor_update(AMECSENSOR_PTR(PWRPROC), procPower);
+}
+
 // Function Specification
 //
 // Name: amec_update_apss_sensors
@@ -257,17 +440,17 @@ bool amec_update_apss_sensors(void)
             uint8_t l_proc   = G_pbax_id.chip_id;
             uint32_t temp32  = 0;
             uint64_t temp64  = 0;
-            uint8_t  l_idx   = 0;
+            uint8_t  l_channel   = 0;
 
             // ----------------------------------------------------
             // Convert all ADC Channels immediately
             // ----------------------------------------------------
-            for (l_idx = 0; l_idx < MAX_APSS_ADC_CHANNELS; l_idx++)
+            for (l_channel = 0; l_channel < MAX_APSS_ADC_CHANNELS; l_channel++)
             {
                 // These values returned are gain adjusted. The APSS readings for
                 // the remote ground and voltage sense are returned in mVs, all other
                 // readings are treated as mAs.
-                G_lastValidAdcValue[l_idx] = amec_value_from_apss_adc(l_idx);
+                G_lastValidAdcValue[l_channel] = amec_value_from_apss_adc(l_channel);
             }
 
             // --------------------------------------------------------------
@@ -315,34 +498,34 @@ bool amec_update_apss_sensors(void)
             }
 
             // Update channel sensors for all channels (except voltage sense and gnd)
-            for (l_idx = 0; l_idx < MAX_APSS_ADC_CHANNELS; l_idx++)
+            for (l_channel = 0; l_channel < MAX_APSS_ADC_CHANNELS; l_channel++)
             {
-                if(l_idx == G_sysConfigData.apss_adc_map.current_12v_stby)
+                if(l_channel == G_sysConfigData.apss_adc_map.current_12v_stby)
                 {
                     // Save value of 12V Standby Current (.01A) in a sensor for lab use only
-                    temp32 = ADC_CONVERTED_VALUE(l_idx)/100;  // convert mA to .01A
+                    temp32 = ADC_CONVERTED_VALUE(l_channel)/100;  // convert mA to .01A
                     sensor_update(AMECSENSOR_PTR(CUR12VSTBY), (uint16_t) temp32);
                 }
-                else if((l_idx != G_sysConfigData.apss_adc_map.sense_12v) &&
-                        (l_idx != G_sysConfigData.apss_adc_map.remote_gnd))
+                else if((l_channel != G_sysConfigData.apss_adc_map.sense_12v) &&
+                        (l_channel != G_sysConfigData.apss_adc_map.remote_gnd))
                 {
-                    temp32 = ROUND_POWER(ADC_CONVERTED_VALUE(l_idx) * l_bulk_voltage);
-                    sensor_update(AMECSENSOR_PTR(PWRAPSSCH00 + l_idx), (uint16_t) temp32);
+                    temp32 = ROUND_POWER(ADC_CONVERTED_VALUE(l_channel) * l_bulk_voltage);
+                    sensor_update(AMECSENSOR_PTR(PWRAPSSCH00 + l_channel), (uint16_t) temp32);
                     if (OCC_MASTER == G_occ_role)
                     {
                         // extra debug traces if the value seems too high, trace from master only
-                        if( (l_idx != G_sysConfigData.apss_adc_map.total_current_12v) &&
-                            (temp32 >= DEBUG_HIGH_READ) && (L_trace_high_channel_reading[l_idx] < NUM_DEBUG_TRACE) )
+                        if( (l_channel != G_sysConfigData.apss_adc_map.total_current_12v) &&
+                            (temp32 >= DEBUG_HIGH_READ) && (L_trace_high_channel_reading[l_channel] < NUM_DEBUG_TRACE) )
                         {
-                            L_trace_high_channel_reading[l_idx]++;
+                            L_trace_high_channel_reading[l_channel]++;
                             // Read Raw Value in mA (divide masked channel data by 2)
-                            l_trace32 = ((l_idx << 24) | (G_apss_ch_to_function[l_idx] << 16) | (temp32 & 0xFFFF));
-                            l_raw = (G_dcom_slv_inbox_rx.adc[l_idx] & APSS_12BIT_ADC_MASK)/2;
+                            l_trace32 = ((l_channel << 24) | (G_apss_ch_to_function[l_channel] << 16) | (temp32 & 0xFFFF));
+                            l_raw = (G_dcom_slv_inbox_rx.adc[l_channel] & APSS_12BIT_ADC_MASK)/2;
                             TRAC_IMP("APSS channel/FuncID/Power[%08X] high??? raw/2=0x%04X, offset=0x%08X, gain=0x%08X",
-                                     l_trace32, l_raw, G_sysConfigData.apss_cal[l_idx].offset,
-                                     G_sysConfigData.apss_cal[l_idx].gain);
+                                     l_trace32, l_raw, G_sysConfigData.apss_cal[l_channel].offset,
+                                     G_sysConfigData.apss_cal[l_channel].gain);
                             TRAC_IMP("ADC converted value[%d mA] 12V bulk voltage[%d mV]",
-                                     (uint32_t)G_lastValidAdcValue[l_idx], (uint16_t)l_bulk_voltage);
+                                     (uint32_t)G_lastValidAdcValue[l_channel], (uint16_t)l_bulk_voltage);
                         }
                     }
                 }
@@ -365,16 +548,7 @@ bool amec_update_apss_sensors(void)
 
             //Update channel specific sensors based on saved pairing between function Ids and Channels.
 
-            // Make sure there is a channel for processor power else proc power sensor is using AVS bus and will
-            // be updated in update_avsbus_power_sensors() instead
-            if( (G_sysConfigData.apss_adc_map.vdd[l_proc] != SYSCFG_INVALID_ADC_CHAN) ||
-                (G_sysConfigData.apss_adc_map.vcs_vio_vpcie[l_proc] != SYSCFG_INVALID_ADC_CHAN) )
-            {
-                uint32_t l_vdd = ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.vdd[l_proc]);
-                uint32_t l_vcs_vio_vpcie = ADC_CONVERTED_VALUE(G_sysConfigData.apss_adc_map.vcs_vio_vpcie[l_proc]);
-                temp32 = ROUND_POWER((l_vcs_vio_vpcie + l_vdd) * l_bulk_voltage);
-                sensor_update(AMECSENSOR_PTR(PWRPROC), (uint16_t) temp32);
-            }
+            calculateProcPower(l_bulk_voltage);
 
             // All readings from APSS come back as milliUnits, so if we want
             // to convert one, we need to
@@ -417,14 +591,14 @@ bool amec_update_apss_sensors(void)
             {
                 // No Total System Power - Add powers for channels
                 temp64 = 0;
-                for (l_idx = 0; l_idx < MAX_APSS_ADC_CHANNELS; l_idx++)
+                for (l_channel = 0; l_channel < MAX_APSS_ADC_CHANNELS; l_channel++)
                 {
-                    if ((l_idx != G_sysConfigData.apss_adc_map.sense_12v) &&
-                        (l_idx != G_sysConfigData.apss_adc_map.remote_gnd) &&
-                        (l_idx != G_sysConfigData.apss_adc_map.current_12v_stby))
+                    if ((l_channel != G_sysConfigData.apss_adc_map.sense_12v) &&
+                        (l_channel != G_sysConfigData.apss_adc_map.remote_gnd) &&
+                        (l_channel != G_sysConfigData.apss_adc_map.current_12v_stby))
                     {
                         // Add power for this channel
-                        temp64 += l_bulk_voltage * G_lastValidAdcValue[l_idx];
+                        temp64 += l_bulk_voltage * G_lastValidAdcValue[l_channel];
                     }
                 }
                 temp32 = ROUND_POWER(temp64);
@@ -736,18 +910,6 @@ void update_avsbus_power_sensors(const uint8_t i_types)
             }
         }
     }while(l_updated_types != i_types);
-
-    if(l_proc_power)
-    {
-         // check if there is an APSS with processor channel that would be providing the processor power sensor
-         if( ( G_pwr_reading_type != PWR_READING_TYPE_APSS ) ||
-             ( (G_sysConfigData.apss_adc_map.vdd[G_pbax_id.chip_id] == SYSCFG_INVALID_ADC_CHAN) &&
-               (G_sysConfigData.apss_adc_map.vcs_vio_vpcie[G_pbax_id.chip_id] == SYSCFG_INVALID_ADC_CHAN) ) )
-         {
-            // no proc pwr from APSS, update the processor power sensor with AVS bus total processor power
-            sensor_update(AMECSENSOR_PTR(PWRPROC), l_proc_power);
-         }
-    }
 
 } // end update_avsbus_power_sensors()
 
