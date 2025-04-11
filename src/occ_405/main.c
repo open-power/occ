@@ -741,6 +741,18 @@ void read_wof_header(void)
                                 WOF_RC_NO_WOF_HEADER_MASK,
                                 ERC_WOF_NO_WOF_HEADER_MASK );
     }
+    // Disable WOF until we are getting non-zero pstates from PGPE. In P11 Pstate 0 is never valid with
+    // expanded frequency
+    if( (g_amec->static_wof_data.wof_header.header_version == WOF_TABLES_VERSION) &&
+        (g_amec->static_wof_data.wof_header.sys_flags & WOF_HEADER_FLAGS_EXPAND_FREQ_ENCODING_MASK) )
+    {
+         MAIN_TRAC_IMP("Enabling 0 Pstate check for WOF version[%d] sys_flags[0x%02X]",
+                        g_amec->static_wof_data.wof_header.header_version,
+                        g_amec->static_wof_data.wof_header.sys_flags);
+         // must set bit directly here and not call set_clear_wof_disabled() which would create an error
+         g_amec->wof.wof_disabled |= WOF_RC_ZERO_PSTATE;
+    }
+
 } // end read_wof_header()
 
 /*
@@ -1291,10 +1303,6 @@ bool read_oppb_params()
             MAIN_TRAC_IMP("read_oppb_params:  pstate_max_throttle[0x%02X]/%dkHz(%d steps)  Fmin Pstate[0x%02X]",
                           G_oppb.pstate_max_throttle, l_max_throt_freq, l_steps,
                           G_oppb.pstate_min);
-
-           // Disable WOF until we are getting non-zero pstates from PGPE. In P11 Pstate 0 is never valid
-           // must set bit directly here and not call set_clear_wof_disabled() which would create an error log
-           g_amec->wof.wof_disabled |= WOF_RC_ZERO_PSTATE;
         }
         else
         {

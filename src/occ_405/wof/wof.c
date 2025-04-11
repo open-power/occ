@@ -948,8 +948,15 @@ void read_pgpe_produced_wof_values( void )
     uint8_t  l_update_pwr_sensors = 0;
     uint16_t l_uv_avg_0p1pct = 0;
     uint16_t l_ov_avg_0p1pct = 0;
+    static bool L_skip_0_pstate_check = TRUE;  // default allow 0 Pstate to be valid
     static bool L_traced_no_readings       = FALSE;
     static bool L_traced_received_readings = FALSE;
+
+    // If WOF is disabled due to 0 Pstate we must check for non 0 Pstate to enable WOF
+    if(g_wof->wof_disabled & WOF_RC_ZERO_PSTATE)
+    {
+         L_skip_0_pstate_check = FALSE;
+    }
 
     // Read in OCS bits from OCC Flag 0 register
     uint32_t occ_flags0 = 0;
@@ -1078,8 +1085,8 @@ void read_pgpe_produced_wof_values( void )
     // populate values used by WOF alg
 
     // Average Frequency
-    // Pstate should never be 0
-    if(l_PgpeWofValues.dw0.fields.average_frequency_pstate && l_PgpeWofValues.dw0.fields.average_pstate)
+    if( (l_PgpeWofValues.dw0.fields.average_frequency_pstate && l_PgpeWofValues.dw0.fields.average_pstate) ||
+        (L_skip_0_pstate_check) )
     {
        if(g_wof->wof_disabled & WOF_RC_ZERO_PSTATE)
        {
@@ -1119,7 +1126,7 @@ void read_pgpe_produced_wof_values( void )
        sensor_update(AMECSENSOR_PTR(OV_AVG), l_ov_avg_0p1pct);
        // Save the Over volting difference to adjust ceff later
        g_wof->ov_uv_diff_0p01pct = 10*(l_ov_avg_0p1pct - l_uv_avg_0p1pct);
-    }  // if non-zero Pstate
+    }  // if non-zero Pstate or 0 pstate check skipped
     else if(!(g_wof->wof_disabled & WOF_RC_ZERO_PSTATE))
     {
        INTR_TRAC_ERR("read_pgpe_produced_wof_values: Pstate is 0 from PGPE dw0[0x%08X%08X]",
