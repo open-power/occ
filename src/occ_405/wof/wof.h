@@ -64,6 +64,10 @@ extern uint32_t G_max_ceff_ratio;
 #define OCS_PGPE_DIRTY_MASK 0x40
 #define OCS_PGPE_DIRTY_TYPE_MASK 0x20
 
+#define DIRTY_REASON_OV_MASK           0x80000000
+#define DIRTY_REASON_CURRENT_RDP_MASK  0x40000000
+#define DIRTY_REASON_HEAVY_DROOP_MASK  0x20000000
+
 //******************************************************************************
 // WOF Header System Flag Masks
 //******************************************************************************
@@ -476,7 +480,13 @@ typedef struct __attribute__ ((packed))
     uint64_t pgpe_wof_values_dw4;
     // [971] PGPE Produced WOF Values
     uint64_t pgpe_wof_values_dw5;
-} amec_wof_t;  // 979 bytes total
+    // [979] count of number of times dirty reason is overvolt limit (OCC Flag bit 0)
+    uint32_t dirty_reason_ov_count;
+    // [983] count of number of times dirty reason is current above rdp_limit_10ma (OCC Flag bit 1)
+    uint32_t dirty_reason_current_above_rdp_count;
+    // [987] count of number of times dirty reason is heavy droop (OCC Flag bit 2)
+    uint32_t dirty_reason_heavy_droop_count;
+} amec_wof_t;  // 991 bytes total
 
 // Structure used in g_amec to hold static WOF data
 typedef struct __attribute__ ((packed, aligned(128)))

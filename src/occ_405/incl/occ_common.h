@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2024                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2025                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -322,6 +322,15 @@ typedef struct __attribute__ ((packed))
     uint8_t  update_tag;
     uint16_t reading;
 } mma_reading_t;
+
+// struct to hold AF calculation needed by dcom and chom
+typedef struct __attribute__ ((packed))
+{
+    uint8_t  reserved;
+    uint8_t  update_tag;
+    uint16_t AFv;
+    uint16_t AF;
+} af_calc_t;
 
 #endif //_OCC_COMMON_H
 

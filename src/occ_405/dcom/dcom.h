@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2024                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2025                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -100,10 +100,11 @@
 #define TOD_SIZE                 6
 #define NUM_TOD_SENSORS          3
 #define SLV_INBOX_RSV_SIZE       170
-#define SLV_OUTBOX_RSV_SIZE      445
+#define SLV_OUTBOX_RSV_SIZE      433
 #define DOORBELL_RSV_SIZE        1
 #define DCOM_MAX_ERRH_ENTRIES    8
 #define DCOM_MAX_MMA_ON_ENTRIES  3
+#define DCOM_MAX_AF_ENTRIES      2
 
 
 #define DCOM_250us_GAP 1
@@ -243,10 +244,12 @@ typedef struct __attribute__ ((packed))
     uint32_t ocs_dirty_type0_count;                              // [539] - 4 bytes
     uint32_t ocs_dirty_type1_count;                              // [543] - 4 bytes
 
+    af_calc_t af_calcs[DCOM_MAX_AF_ENTRIES];                     // [547] - 12 bytes
+
     // Reserved Bytes
     union
     {
-        uint8_t  reserved2[SLV_OUTBOX_RSV_SIZE];                 // [547] - 445 bytes
+        uint8_t  reserved2[SLV_OUTBOX_RSV_SIZE];                 // [559] - 433 bytes
         struct __attribute__ ((packed))
         {
             uint8_t _reserved2_1;

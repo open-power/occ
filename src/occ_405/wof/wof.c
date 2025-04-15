@@ -975,6 +975,14 @@ void read_pgpe_produced_wof_values( void )
     else
         INTR_TRAC_ERR("???????? Invalid ocs_dirty[%d]", g_wof->ocs_dirty);
 
+    // INC counters for dirty reason (multiple bits may be set)
+    if(occ_flags0 & DIRTY_REASON_OV_MASK)
+        g_wof->dirty_reason_ov_count++;
+    if(occ_flags0 & DIRTY_REASON_CURRENT_RDP_MASK)
+        g_wof->dirty_reason_current_above_rdp_count++;
+    if(occ_flags0 & DIRTY_REASON_HEAVY_DROOP_MASK)
+        g_wof->dirty_reason_heavy_droop_count++;
+
     // if WOF is disabled determine the Pstate clip based on dirty bits for OC protection
     if( (g_wof->wof_init_state < PGPE_WOF_ENABLED_NO_PREV_DATA) || g_wof->wof_disabled )
     {

@@ -28,7 +28,7 @@
 #include <string.h>
 #include "parser_common.h"
 
-#define WOF_DATA_SIZE 979
+#define WOF_DATA_SIZE 991
 // NOTE: This tool is to be used when WOF Dynamic data is dumped by the OCC, and currently
 //       only accepts input files in binary format.
 
@@ -324,6 +324,9 @@ int main(int argc, char** argv)
     printf("     Dirty Current 10ma:    %d\n", get_uint16(wof_file));
     printf("pgpe_wof_values_dw5:\n");
     printf("     Dirty TTSR: 0x%08X%08X\n", get_uint32(wof_file), get_uint32(wof_file));
+    printf("dirty_reason_ov_count: 0x%08X\n", get_uint32(wof_file));
+    printf("dirty_reason_current_above_rdp_count: 0x%08X\n", get_uint32(wof_file));
+    printf("dirty_reason_heavy_droop_count: 0x%08X\n", get_uint32(wof_file));
 
     // Close the file
     if(wof_file != NULL)

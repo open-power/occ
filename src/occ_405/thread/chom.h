@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2024                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2025                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -31,7 +31,7 @@
 #include <apss.h>
 
 #define  CHOM_GEN_LOG_PERIODIC_TIME     86400 // seconds in a day
-#define  CHOM_VERSION                   0x11
+#define  CHOM_VERSION                   0x12
 // Max size of chom data this should be less than MAX_ERRL_CALL_HOME_SZ
 // to account for error log header/possible other data in the call home log
 #define  CHOM_LOG_DATA_MAX              (MAX_ERRL_CALL_HOME_SZ - 256)
@@ -396,6 +396,19 @@ struct ChomSensor
 
 typedef struct ChomSensor ChomSensor_t;
 
+// Voltage Acceleration Factor structure
+struct ChomVoltageAF
+{
+    uint32_t    samples;         // Number of samples in the accumulator
+    uint32_t    accumulator;     // accumulator of AF (AFt * AFv)
+    uint16_t    min;             // min AF (AFt *AFv) recorded during polling period
+    uint16_t    minAFv;          // associated AFv for min (user can calculate AFt)
+    uint16_t    max;             // max AF (AFt *AFv) recorded during polling period
+    uint16_t    maxAFv;          // associated AFv for max (user can calcultate AFt)
+}__attribute__ ((__packed__));
+
+typedef struct ChomVoltageAF ChomVoltageAF_t;
+
 
 // Power mode structure
 struct ChomPwrMode
@@ -431,6 +444,7 @@ struct ChomSensorData
 {
     ChomPwrMode_t   pwrMode;
     ChomSensor_t    sensor[CHOM_NUM_OF_SENSORS];
+    ChomVoltageAF_t voltageAF[CHOM_MAX_OCCS];
 }__attribute__ ((__packed__));
 
 typedef struct ChomSensorData ChomSensorData_t;

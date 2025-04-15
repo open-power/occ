@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2024                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2025                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -48,6 +48,37 @@
 #include <pstates_occ.H>
 #include <wof.h>
 #include <cmdh_fsp_cmds.h>      // For G_apss_ch_to_function
+//*************************************************************************/
+// Defines/Enums
+//*************************************************************************/
+
+// For Acceleration Factor (AF) calculation
+#define NUM_TICKS_AF_CALC 10000   // 5s in 500us ticks
+#define NUM_SAMPLES_VSENSE_AVG 16 // 8ms same time scale TEMPPROCTHRM updated
+#define MIN_AFT 2
+#define MAX_AFT 43
+#define MIN_XV 93
+#define NUM_XV 18
+#define MAX_XV (MIN_XV + NUM_XV - 1) // 110
+uint16_t G_AFv_lookup[NUM_XV] = { 1,      // AFv for MIN_XV
+                                  2,
+                                  2,
+                                  4,
+                                  6,
+                                  9,
+                                  13,
+                                  20,
+                                  31,
+                                  46,
+                                  69,
+                                  103,
+                                  154,
+                                  228,
+                                  337,
+                                  495,
+                                  726,
+                                  1061 }; // AFv for MAX_XV
+
 /******************************************************************************/
 /* Globals                                                                    */
 /******************************************************************************/
@@ -432,6 +463,149 @@ bool amec_update_apss_sensors(void)
 
 } // end amec_update_apss_sensors()
 
+// Function Specification
+//
+// Name: calculate_AF
+//
+// Description: Calculate Acceleration Factor
+// End Function Specification
+void calculate_AF(uint16_t i_chip_voltage_100uv)
+{
+    sensor_t       *l_sensor_ptr = NULL;
+
+    uint8_t  i = 0;
+    uint8_t  j = 0;
+    uint8_t  l_xv_index = 0;
+    uint16_t l_proc_temp = 0;
+    uint16_t l_Xt = 0;
+    uint16_t l_Xt_square = 0;
+    uint16_t l_Xt_cube = 0;
+    uint16_t l_AFt = 0;
+    uint16_t l_Xv = 0;
+    uint16_t l_AFv = 0;
+    uint16_t l_AF = 0;
+    uint32_t l_vsense_sum = 0;
+    static uint16_t L_ticks = 0;
+    static bool     L_vsense_avg_avail = FALSE;
+    static bool     L_trace_invalid_AFt = TRUE;
+    static uint8_t  L_update_tag = 0;
+    static uint16_t L_proc_temp_max = 0;
+    static uint16_t L_vsense_samples = 0;
+    static uint16_t L_vsense_avg = 0;
+    static uint16_t L_vsense_readings[NUM_SAMPLES_VSENSE_AVG] = {0};
+
+    // keep track of how often this is called
+    L_ticks++;
+
+    if(L_vsense_samples == NUM_SAMPLES_VSENSE_AVG)
+    {
+        L_vsense_samples = 0;
+        L_vsense_avg_avail = TRUE;
+    }
+    else
+    {
+        L_vsense_samples++;
+    }
+
+    // save the reading to keep a running average
+    L_vsense_readings[L_vsense_samples] = i_chip_voltage_100uv;
+
+    // only update if we have been running long enough to calculate an average voltage
+    if(L_vsense_avg_avail)
+    {
+        // Check if we have a new max temp temperature
+        l_sensor_ptr = getSensorByGsid(TEMPPROCTHRM);
+        l_proc_temp = l_sensor_ptr->sample;
+        if(l_proc_temp > L_proc_temp_max)
+        {
+            L_proc_temp_max = l_proc_temp;
+
+            // calculate the voltage chip average
+            for(i=0; i<NUM_SAMPLES_VSENSE_AVG; i++)
+            {
+                l_vsense_sum += L_vsense_readings[i];
+            }
+            L_vsense_avg = (uint16_t)(l_vsense_sum / NUM_SAMPLES_VSENSE_AVG);
+        }
+
+        // check if it is time to calculate AF
+        if(L_ticks == NUM_TICKS_AF_CALC)
+        {
+            // calculate AF for temperature (AFt)
+            // first calculate l_Xt which is a scaled function of max proc temp
+            if(L_proc_temp_max < 40)
+                l_Xt = 0;
+            else if(L_proc_temp_max > 112)
+                l_Xt = 18;
+            else
+                l_Xt = (uint8_t)((L_proc_temp_max - 40) / 4);
+
+            // Now calculate AFt
+            // AFt = (Xt^^3 + 2Xt^^2 + 98Xt + 400) / 200
+            l_Xt_cube = l_Xt * l_Xt * l_Xt;
+            l_Xt_square = 2 * l_Xt * l_Xt;
+            l_Xt *= 98;
+            l_AFt = l_Xt_cube + l_Xt_square + l_Xt + 400;
+            l_AFt /= 200;
+            // sanity check l_AFt
+            if((l_AFt < MIN_AFT) || (l_AFt > MAX_AFT))
+            {
+                if(L_trace_invalid_AFt)
+                {
+                    L_trace_invalid_AFt = FALSE;
+                    TRAC_ERR("calculate_AF: AFt[%d] not within valid range %d to %d",
+                              l_AFt, MIN_AFT, MAX_AFT);
+                }
+                if(l_AFt < MIN_AFT)
+                    l_AFt = MIN_AFT;
+                else
+                    l_AFt = MAX_AFT;
+            }
+
+            // calculate AF for voltage (AFv)
+            // first calculate a scaled Voltage l_Xv to get the scaled voltage as an integer from 93 to 110
+            l_Xv = (uint16_t)(L_vsense_avg / 100);
+            // round
+            if((L_vsense_avg % 100) >= 50)
+               l_Xv++;
+
+            if(l_Xv < MIN_XV)
+               l_Xv = MIN_XV;
+            else if(l_Xv > MAX_XV)
+               l_Xv = MAX_XV;
+
+            // Use hard-code table to get from l_Xv to AFv
+            l_xv_index = (uint8_t)(l_Xv - MIN_XV);
+            l_AFv = G_AFv_lookup[l_xv_index];
+
+            // Calculate AF
+            l_AF = (l_AFt * l_AFv);
+
+            // update the dcom values to be sent to master for the call home log
+            L_update_tag++;
+            if(L_update_tag == 0)
+                 L_update_tag++;
+            for( j = 0; j < DCOM_MAX_AF_ENTRIES-1; j++ )
+            {
+               // reading [0] is oldest, shift previous readings over
+               G_dcom_slv_outbox_tx.af_calcs[j].update_tag = G_dcom_slv_outbox_tx.af_calcs[j+1].update_tag;
+               G_dcom_slv_outbox_tx.af_calcs[j].AF = G_dcom_slv_outbox_tx.af_calcs[j+1].AF;
+               G_dcom_slv_outbox_tx.af_calcs[j].AFv = G_dcom_slv_outbox_tx.af_calcs[j+1].AFv;
+            }
+            // place new AF at end
+            G_dcom_slv_outbox_tx.af_calcs[DCOM_MAX_AF_ENTRIES-1].update_tag = L_update_tag;
+            G_dcom_slv_outbox_tx.af_calcs[DCOM_MAX_AF_ENTRIES-1].AF = l_AF;
+            G_dcom_slv_outbox_tx.af_calcs[DCOM_MAX_AF_ENTRIES-1].AFv = l_AFv;
+
+            //reset for next AF calc
+            L_ticks = 0;
+            L_proc_temp_max = 0;
+        }  // if time to calculate AF
+
+    }  // if L_vsense_avg_avail
+
+}  // calculate_AF()
+
 // Calculate chip voltage and power and update sensors
 void update_avsbus_power_sensors(const uint8_t i_types)
 {
@@ -545,6 +719,12 @@ void update_avsbus_power_sensors(const uint8_t i_types)
 
                 // Update chip voltage (remote sense adjusted for loadline) (100uV units)
                 sensor_update(AMECSENSOR_PTR(l_voltageChip), (uint16_t)l_chip_voltage_100uv);
+
+                if(l_voltageChip == VOLTVDDSENSE)
+                {
+                    // Acceleration Factor Handling
+                    calculate_AF((uint16_t)l_chip_voltage_100uv);
+                }
 
                 // Power value stored in the sensor should be in W (scale 0)
                 // p(W) = v(V) * i(A) = v(100uV)*100/1,000,000 * i(10mA)*10/1000

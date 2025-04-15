@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2011,2024                        */
+/* Contributors Listed Below - COPYRIGHT 2011,2025                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -316,8 +316,12 @@ void chom_update_sensors()
     uint16_t l_sample = 0;
     uint32_t l_dirty_accum = 0;
     uint16_t l_mma_idx = 0;
+    uint16_t l_AF = 0;
+    uint16_t l_AFv = 0;
     uint8_t  l_new_last_mma_tag = 0;
+    uint8_t  l_new_last_af_tag = 0;
 
+    static uint8_t  L_last_af_sample_tag[CHOM_MAX_OCCS] = {0};
     static uint8_t  L_last_mma_sample_tag[CHOM_MAX_OCCS] = {0};
     static uint32_t L_prev_ocsDirtyType0[CHOM_MAX_OCCS] = {0};
     static uint32_t L_prev_ocsDirtyType1[CHOM_MAX_OCCS] = {0};
@@ -355,6 +359,11 @@ void chom_update_sensors()
         for (i=0 ; i<CHOM_NUM_OF_SENSORS ; i++)
         {
             g_chom->sensorData[0].sensor[i].sampleMin = 0xffff;
+        }
+        // initial min value for AF
+        for ( i = 0; i < CHOM_MAX_OCCS; i++ )
+        {
+            g_chom->sensorData[0].voltageAF[i].min = 0xffff;
         }
 
         // update the number of power modes during the polling period
@@ -610,6 +619,45 @@ void chom_update_sensors()
         }
         g_chom->nodeData.ocsDirtyTypeHold[proc_idx] += l_dirty_accum;
         L_prev_ocsDirtyType0[proc_idx] = G_dcom_slv_outbox_rx[proc_idx].ocs_dirty_type0_count;
+
+        // Add voltage acceleration factor data
+        // multiple readings will be sent, only add new readings to the call home sensor
+        l_new_last_af_tag = L_last_af_sample_tag[proc_idx];
+        for( j = 0; j < DCOM_MAX_AF_ENTRIES; j++ )
+        {
+           // reading [0] is oldest, 0 update tag indicates no reading
+           if(G_dcom_slv_outbox_rx[proc_idx].af_calcs[j].update_tag)
+           {
+                // check if this is a new reading, handle update tag roll over
+                if( (G_dcom_slv_outbox_rx[proc_idx].af_calcs[j].update_tag > L_last_af_sample_tag[proc_idx]) ||
+                    ( (L_last_af_sample_tag[proc_idx] > (0xFF - DCOM_MAX_AF_ENTRIES) &&
+                      (G_dcom_slv_outbox_rx[proc_idx].af_calcs[j].update_tag) <= DCOM_MAX_AF_ENTRIES) ) )
+                {
+                    // add new reading to the sensor
+                    l_new_last_af_tag = G_dcom_slv_outbox_rx[proc_idx].af_calcs[j].update_tag;
+                    l_AF = G_dcom_slv_outbox_rx[proc_idx].af_calcs[j].AF;
+                    l_AFv = G_dcom_slv_outbox_rx[proc_idx].af_calcs[j].AFv;
+                    if(l_AF)
+                    {
+                        g_chom->sensorData[0].voltageAF[proc_idx].samples++;
+                        g_chom->sensorData[0].voltageAF[proc_idx].accumulator += l_AF;
+
+                        // update min/max AF and dave associated AFv for the min/max
+                        if (g_chom->sensorData[0].voltageAF[proc_idx].min > l_AF)
+                        {
+                            g_chom->sensorData[0].voltageAF[proc_idx].min = l_AF;
+                            g_chom->sensorData[0].voltageAF[proc_idx].minAFv = l_AFv;
+                        }
+                        if (g_chom->sensorData[0].voltageAF[proc_idx].max < l_AF)
+                        {
+                            g_chom->sensorData[0].voltageAF[proc_idx].max = l_AF;
+                            g_chom->sensorData[0].voltageAF[proc_idx].maxAFv = l_AFv;
+                        }
+                    }
+                } // if new reading
+           } // if non-zero update tag
+        }  // for AF reading
+        L_last_af_sample_tag[proc_idx] = l_new_last_af_tag;
 
         // If we are on the master proc, skip ERRH and Fclip since it is already
         // present in the call home log
