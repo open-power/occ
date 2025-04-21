@@ -801,7 +801,7 @@ ERRL_RC cmdh_poll_v20(cmdh_fsp_rsp_t * o_rsp_ptr)
         l_extnSensorList[l_sensorHeader.count].data[2] = g_amec->wof.VRT[3];
         l_extnSensorList[l_sensorHeader.count].data[3] = g_amec->wof.dimm_credit_disable;
         l_extnSensorList[l_sensorHeader.count].data[4] = g_amec->wof.ambient_adj_for_dimm;
-        l_extnSensorList[l_sensorHeader.count].data[5] = 0; // reserved
+        l_extnSensorList[l_sensorHeader.count].data[5] = CONVERT_UINT16_UINT8_LOW(G_amec_sensor_list[TEMPAMBIENT]->sample);
     }
     l_sensorHeader.count++;
 
