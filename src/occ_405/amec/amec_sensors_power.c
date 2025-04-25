@@ -282,7 +282,7 @@ void calculateProcPower(const uint64_t l_bulk_voltage)
     uint32_t vcsiopciePower = 0;
     uint16_t vioChipPower = 0;
     uint16_t vpcieChipPower = 0;
-    uint16_t avddPower = 0;
+    //uint16_t avddPower = 0;
     uint8_t l_channel = 0;
     for (l_channel = 0; l_channel < MAX_APSS_ADC_CHANNELS; l_channel++)
     {
@@ -326,7 +326,7 @@ void calculateProcPower(const uint64_t l_bulk_voltage)
         else if (function_id == ADC_AVDD_CURRENT_TOTAL)
         {
             // Fuji only (AVDD is shared between ALL DCMs, so chip power is divided by 8)
-            avddPower = ROUND_POWER(ADC_CONVERTED_VALUE(l_channel) * l_bulk_voltage) / 8;
+            //avddPower = ROUND_POWER(ADC_CONVERTED_VALUE(l_channel) * l_bulk_voltage) / 8;
             // TODO: Should it really be /8 or do we need to determine how many
 
             // TODO: Justin said to use Power Proxy for Fuji also, but left APSS reading to compare
