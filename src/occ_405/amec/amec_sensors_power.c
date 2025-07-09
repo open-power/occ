@@ -265,6 +265,7 @@ void calculateProcPower(const uint64_t l_bulk_voltage)
     // Get the AVSBUS data (from PGPE)
     uint32_t avsVddChipPower = 0;
     uint32_t avsVcsChipPower = 0;
+    uint32_t avsVdnChipPower = 0;
     uint32_t avsVdnModulePower = 0;
     sensor_t *l_sensor = getSensorByGsid(PWRVDD);   // VDD per CHIP
     if (l_sensor)
@@ -276,13 +277,34 @@ void calculateProcPower(const uint64_t l_bulk_voltage)
 
     l_sensor = getSensorByGsid(PWRVDN);             // VDN is per MODULE
     if (l_sensor)
+    {
         avsVdnModulePower = l_sensor->sample;
+        if (isSCM)
+        {
+            avsVdnChipPower = avsVdnModulePower;
+        }
+        else
+        {
+            if ((G_pbax_id.chip_id & 1) == 0)
+            {
+                // VDN is only available to primary chip
+                // Save VDN module power (for other chip to read)
+                G_dcom_slv_outbox_tx.vdnPower = avsVdnModulePower;
+            }
+            else
+            {
+                // Read VDN module power from primary chip
+                avsVdnModulePower = G_dcom_slv_inbox_rx.vdn_power[partnerChip];
+            }
+            // VDN is per module so split to get the chip power
+            avsVdnChipPower = avsVdnModulePower / 2;
+        }
+    }
 
     // Read applicable APSS power data
     uint32_t vcsiopciePower = 0;
     uint16_t vioChipPower = 0;
     uint16_t vpcieChipPower = 0;
-    //uint16_t avddPower = 0;
     uint8_t l_channel = 0;
     for (l_channel = 0; l_channel < MAX_APSS_ADC_CHANNELS; l_channel++)
     {
@@ -295,118 +317,83 @@ void calculateProcPower(const uint64_t l_bulk_voltage)
             // Blue Ridge / Balcones / McKinley
             // APSS reading contains VCS, VIO & VPCIE for each module
             vcsiopciePower = ROUND_POWER(ADC_CONVERTED_VALUE(l_channel) * l_bulk_voltage);
-            if (!isSCM)
-            {
-                // Split modeule power between both chips
-                vcsiopciePower /= 2;
-            }
-        }
-        else if (((function_id == ADC_VIO_CURRENT_DCM0) && (module == 0)) ||
-                 ((function_id == ADC_VIO_CURRENT_DCM1) && (module == 1)) ||
-                 ((function_id == ADC_VIO_CURRENT_DCM2) && (module == 2)) ||
-                 ((function_id == ADC_VIO_CURRENT_DCM3) && (module == 3)))
-        {
-            // Fuji only (VIO per module)
-
-            // TODO: do we want to weight the chips differently?  70:30, etc
-
-            vioChipPower = ROUND_POWER(ADC_CONVERTED_VALUE(l_channel) * l_bulk_voltage) / 2;
         }
         else if (((function_id == ADC_VPCIE_CURRENT_DCM0) && (module == 0)) ||
                  ((function_id == ADC_VPCIE_CURRENT_DCM1) && (module == 1)) ||
                  ((function_id == ADC_VPCIE_CURRENT_DCM2) && (module == 2)) ||
                  ((function_id == ADC_VPCIE_CURRENT_DCM3) && (module == 3)))
         {
-            // Fuji only (PCIE per module)
-
-            // TODO: do we want to weight the chips differently?  70:30, etc
-
+            // Fuji only (PCIE per module) - split between the chips
             vpcieChipPower = ROUND_POWER(ADC_CONVERTED_VALUE(l_channel) * l_bulk_voltage) / 2;
-        }
-        else if (function_id == ADC_AVDD_CURRENT_TOTAL)
-        {
-            // Fuji only (AVDD is shared between ALL DCMs, so chip power is divided by 8)
-            //avddPower = ROUND_POWER(ADC_CONVERTED_VALUE(l_channel) * l_bulk_voltage) / 8;
-            // TODO: Should it really be /8 or do we need to determine how many
-
-            // TODO: Justin said to use Power Proxy for Fuji also, but left APSS reading to compare
-            // TODO: do we want to weight the chips differently?  70:30, etc
+            // APSS readings need to be converted from input to output power
+            vpcieChipPower = CONVERT_VRM_POWER_TO_OUTPUT(vpcieChipPower);
         }
     }
 
-    bool convertToOutput = false;
-        // APSS readings will need to be converted from input to output power
-        if (G_sysConfigData.apss_adc_map.sense_12v == 3)
-        {
-            // Fuji has 12V Sense on Channel 3
-            convertToOutput = true;
-        }
-        else
-        {
-            // Blue Ridge/McKinley/Balcones: Calculate Vdn/Vio/Vpcie/AVdd powers
-
-            uint16_t vioModulePower = 0;
-            if (g_amec_sys.static_wof_data.xgpe_values_sram_addr)
-            {
-                // Read VIO Proxy Power (per chip) from XGPE/WOF data
-                xgpe_wof_values_t l_XgpeWofValues;
-                l_XgpeWofValues.value = in64(g_amec_sys.static_wof_data.xgpe_values_sram_addr);
-                vioChipPower = (uint16_t)l_XgpeWofValues.fields.io_power_proxy_w;
-                uint16_t vioModulePower = vioChipPower;
-                if (!isSCM)
-                {
-                    // Save VIO power to send to master (to broadcast to partner chip)
-                    G_dcom_slv_outbox_tx.avsVIOPower = vioChipPower;
-                    // Read partners VIO power to calculate module VIO power
-                    const uint16_t partnerVioPower = G_dcom_slv_inbox_rx.avs_vio_power[partnerChip];
-                    vioModulePower += partnerVioPower;
-                }
-            }
-
-            if (vcsiopciePower > 0)
-            {
-                // Blue Ridge / Balcones / McKinley - Calculate the PCIE power for this chip
-                uint32_t avsVcsModulePower = avsVcsChipPower;
-                if (!isSCM)
-                {
-                    // Get VCS power from DCM partner chip
-                    const uint16_t partnerVcsPower = G_dcom_slv_outbox_rx[partnerChip].pwrvcs;
-                    avsVcsModulePower += partnerVcsPower;
-                }
-
-                // VPCIE = (APSS VCS/VIO/VPCIE * RegEfficiency)  (need to convert to output power)
-                //       - AVSBUS VCS (for module)
-                //       - AVSBUS VDN (for module)
-                //       - PROXY POWER (for module)
-                int16_t vpcieModulePower = CONVERT_VRM_POWER_TO_OUTPUT(vcsiopciePower) - avsVcsModulePower - avsVdnModulePower - vioModulePower;
-                if (vpcieModulePower < 0)
-                {
-                    vpcieChipPower = 0;
-                }
-                else
-                {
-                    vpcieChipPower = vpcieModulePower;
-                    if (!isSCM)
-                        vpcieChipPower /= 2;
-                }
-            }
-        }
-
-    // Determine chip VDN power (for DCMs)
-    uint32_t avsVdnChipPower = avsVdnModulePower;
-    if (!isSCM)
+    // Read VIO chip power and calculate module power
+    uint16_t vioModulePower = 0;
+    if (g_amec_sys.static_wof_data.xgpe_values_sram_addr)
     {
-        // VDN is per module so split to get the chip power
-        avsVdnChipPower /= 2;
+        // Read VIO Power (in 10mW per chip) from XGPE/WOF data
+        xgpe_wof_values_t l_XgpeWofValues;
+        l_XgpeWofValues.value = in64(g_amec_sys.static_wof_data.xgpe_values_sram_addr);
+        vioChipPower = (uint16_t)l_XgpeWofValues.fields.vio_pwr_10mw;
+        vioModulePower = vioChipPower;
+        if (!isSCM)
+        {
+            // Save VIO chip power (10mW) to send to master (to broadcast to partner chip)
+            G_dcom_slv_outbox_tx.vioPower = vioChipPower;
+            // Read partners VIO power to calculate module VIO power
+            const uint16_t partnerVioPower = G_dcom_slv_inbox_rx.vio_power[partnerChip];
+            vioModulePower += partnerVioPower;
+        }
+    }
+    else
+    {
+        // No VIO power on this chip, so get partners VIO chip power
+        vioChipPower = G_dcom_slv_inbox_rx.vio_power[partnerChip];
+        vioModulePower = vioChipPower;
+    }
+    // Convert 10mW to W
+    vioChipPower /= 100;
+    vioModulePower /= 100;
+
+    // Fuji has 12V Sense is on Channel 3
+    if (G_sysConfigData.apss_adc_map.sense_12v != 3)
+    {
+        // Blue Ridge/McKinley/Balcones:
+        // VPCIE power is calculated based on APSS VCS reading (per module)
+        if (vcsiopciePower > 0)
+        {
+            // Blue Ridge / Balcones / McKinley - Calculate the PCIE power for this chip
+            uint32_t avsVcsModulePower = avsVcsChipPower;
+            if (!isSCM)
+            {
+                // Get VCS power from DCM partner chip
+                const uint16_t partnerVcsPower = G_dcom_slv_outbox_rx[partnerChip].pwrvcs;
+                avsVcsModulePower += partnerVcsPower;
+            }
+
+            // VPCIE = (APSS VCS/VIO/VPCIE * RegEfficiency)  (need to convert to output power)
+            //       - AVSBUS VCS (for module)
+            //       - AVSBUS VDN (for module)
+            //       - VIO (for module)
+            int16_t vpcieModulePower = CONVERT_VRM_POWER_TO_OUTPUT(vcsiopciePower) - avsVcsModulePower - avsVdnModulePower - vioModulePower;
+            if (vpcieModulePower < 0)
+            {
+                vpcieChipPower = 0;
+            }
+            else
+            {
+                vpcieChipPower = vpcieModulePower;
+                if (!isSCM)
+                    vpcieChipPower /= 2;
+            }
+        }
     }
 
     // Calculate processor power for this chip
     uint16_t procPower = avsVddChipPower + avsVcsChipPower + avsVdnChipPower + vioChipPower + vpcieChipPower;
-    if (convertToOutput)
-    {
-        // Fuji uses all power readings from APSS (convert to output power)
-        procPower = CONVERT_VRM_POWER_TO_OUTPUT(procPower);
-    }
     sensor_update(AMECSENSOR_PTR(PWRPROC), procPower);
 }
 

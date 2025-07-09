@@ -156,11 +156,12 @@ uint32_t dcom_build_slv_inbox(void)
 
         G_dcom_slv_inbox_tx[l_slv_idx].counter++;
 
-        // Send VIO chip power for use by other chip on DCM
+        // Send VIO/VDN chip power for use by other chip on DCM
         uint32_t l_idx2 = 0;
         for (; l_idx2 < MAX_OCCS; l_idx2++)
         {
-            G_dcom_slv_inbox_tx[l_slv_idx].avs_vio_power[l_idx2] = G_dcom_slv_outbox_rx[l_idx2].avsVIOPower;
+            G_dcom_slv_inbox_tx[l_slv_idx].vio_power[l_idx2] = G_dcom_slv_outbox_rx[l_idx2].vioPower;
+            G_dcom_slv_inbox_tx[l_slv_idx].vdn_power[l_idx2] = G_dcom_slv_outbox_rx[l_idx2].vdnPower;
         }
     }
 

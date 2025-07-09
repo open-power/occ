@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2016,2024                        */
+/* Contributors Listed Below - COPYRIGHT 2016,2025                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -44,7 +44,6 @@ extern "C" {
 
 #define HCODE_OCC_SHARED_MAGIC_NUMBER_OPS2      0x4F505332 //OPS2
 #define HCODE_OCC_SHARED_MAGIC_NUMBER_OPS3      0x4F505333 //OPS3
-
 
 //---------------
 // IPC from 405
@@ -347,7 +346,7 @@ typedef union
         uint64_t reserved0                      : 8;
         uint64_t io_index                       : 8;
         uint64_t compute_pwr_10mw               : 16;
-        uint64_t reserved1                      : 16;
+        uint64_t vio_pwr_10mw                   : 16;
     } fields;
 } xgpe_wof_values_t;
 
