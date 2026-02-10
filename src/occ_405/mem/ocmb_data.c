@@ -5,7 +5,7 @@
 /*                                                                        */
 /* OpenPOWER OnChipController Project                                     */
 /*                                                                        */
-/* Contributors Listed Below - COPYRIGHT 2016,2024                        */
+/* Contributors Listed Below - COPYRIGHT 2016,2026                        */
 /* [+] International Business Machines Corp.                              */
 /*                                                                        */
 /*                                                                        */
@@ -126,6 +126,9 @@ void disable_membuf(uint32_t i_membuf)
     {
         //remove checkstopped membuf from presence bitmap
         G_present_membufs &= ~(MEMBUF_BY_MASK(i_membuf));
+
+        // disable membuf DTS
+        G_membuf_dts_enabled &= ~(MEMBUF_BY_MASK(i_membuf));
 
         if(!IS_I2C_MEM_TYPE(G_sysConfigData.mem_type))
         {
