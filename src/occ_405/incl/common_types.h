@@ -44,8 +44,8 @@ typedef unsigned long ULONG;
 typedef int           INT;
 typedef void          VOID;
 
-// Skip this typedef in x86 environment
-#if !defined(OCC_X86_PARSER) && !defined(__cplusplus)
+// Skip this typedef in x86 environment, and on C23+ where bool is a builtin keyword
+#if !defined(OCC_X86_PARSER) && !defined(__cplusplus) && (!defined(__STDC_VERSION__) || __STDC_VERSION__ < 202311L)
 typedef uint8_t       bool;
 #endif
 
