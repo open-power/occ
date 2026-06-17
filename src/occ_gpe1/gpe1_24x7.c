@@ -732,22 +732,8 @@ uint32_t configure_pmu(uint8_t state, uint64_t speed, GpeErrorStruct* o_err)
                 continue;
             else if( ((i==64) || (i==65)) && (!(G_CUR_UAV & MASK_PEC0)) && (!(G_CUR_UAV & MASK_PEC1)) )
                 continue;
-            else if( ((i==66) || (i==67)) && (!((G_CUR_UAV & MASK_TLPM0) == MASK_XLINK0)) && (!((G_CUR_UAV & MASK_TLPM0) == MASK_ALINK0)) )
-                continue;
-            else if( ((i==68) || (i==69)) && (!((G_CUR_UAV & MASK_TLPM1) == MASK_XLINK1)) && (!((G_CUR_UAV & MASK_TLPM1) == MASK_ALINK1)) )
-                continue;
-            else if( ((i==70) || (i==71)) && (!((G_CUR_UAV & MASK_TLPM2) == MASK_XLINK2)) && (!((G_CUR_UAV & MASK_TLPM2) == MASK_ALINK2)) )
-                continue;
-            else if( ((i==72) || (i==73)) && (!((G_CUR_UAV & MASK_TLPM3) == MASK_XLINK3)) && (!((G_CUR_UAV & MASK_TLPM3) == MASK_ALINK3)) )
-                continue;
-            else if( ((i==74) || (i==75)) && (!((G_CUR_UAV & MASK_TLPM4) == MASK_XLINK4)) && (!((G_CUR_UAV & MASK_TLPM4) == MASK_ALINK4)) )
-                continue;
-            else if( ((i==76) || (i==77)) && (!((G_CUR_UAV & MASK_TLPM5) == MASK_XLINK5)) && (!((G_CUR_UAV & MASK_TLPM5) == MASK_ALINK5)) )
-                continue;
-            else if( ((i==78) || (i==79)) && (!((G_CUR_UAV & MASK_TLPM6) == MASK_XLINK6)) && (!((G_CUR_UAV & MASK_TLPM6) == MASK_ALINK6)) )
-                continue;
-            else if( ((i==80) || (i==81)) && (!((G_CUR_UAV & MASK_TLPM7) == MASK_XLINK7)) && (!((G_CUR_UAV & MASK_TLPM7) == MASK_ALINK7)) )
-                continue;
+
+            //EWM 781887 X-Link/A link related PMUs will be configured unconditionally
             else if( ((i>=82) && (i<=87)) && (!((G_CUR_UAV & MASK_TLPM0) == MASK_OCAPI0)) )
                 continue;
             else if( ((i>=88) && (i<=93)) && (!((G_CUR_UAV & MASK_TLPM3) == MASK_OCAPI3)) )
@@ -1023,7 +1009,9 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                 }
 
                 if ( ((G_CUR_UAV & MASK_TLPM0) == MASK_XLINK0) ||
-                     ((G_CUR_UAV & MASK_TLPM0) == MASK_ALINK0) )
+                     ((G_CUR_UAV & MASK_TLPM1) == MASK_XLINK1) ||
+                     ((G_CUR_UAV & MASK_TLPM0) == MASK_ALINK0) ||
+                     ((G_CUR_UAV & MASK_TLPM1) == MASK_ALINK1) )
                 {
                     rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_DMA, o_err);
                     if ( rc )
@@ -1091,11 +1079,7 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                         *post_addr = (uint64_t)u3.ev.e[j];
                         post_addr++;
                     }
-                }
 
-                if ( ((G_CUR_UAV & MASK_TLPM1) == MASK_XLINK1) ||
-                     ((G_CUR_UAV & MASK_TLPM1) == MASK_ALINK1) )
-                {
                     rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_DMA, o_err);
                     if ( rc )
                     {
@@ -1104,6 +1088,7 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                     }
 
                     *L_DBG_UNIT = 2;
+
                     if ( (G_CUR_UAV & MASK_TLPM1) == MASK_XLINK1 )
                     {
                         post_addr = (uint64_t*) (POST_OFFSET_G2A_X_1 | PBA_ENABLE);
@@ -1112,6 +1097,7 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                     {
                         post_addr = (uint64_t*) (POST_OFFSET_G2A_A_1 | PBA_ENABLE);
                     }
+
                     rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_ATOMIC, o_err);
                     if ( rc )
                     {
@@ -1165,7 +1151,10 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                 }
 
                 if ( ((G_CUR_UAV & MASK_TLPM2) == MASK_XLINK2) ||
-                        ((G_CUR_UAV & MASK_TLPM2) == MASK_ALINK2) )
+                        ((G_CUR_UAV & MASK_TLPM3) == MASK_XLINK3) ||
+                        ((G_CUR_UAV & MASK_TLPM2) == MASK_ALINK2) ||
+                        ((G_CUR_UAV & MASK_TLPM3) == MASK_ALINK3) )
+
                 {
                     rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_DMA, o_err);
                     if ( rc )
@@ -1233,11 +1222,7 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                         *post_addr = (uint64_t)u3.ev.e[j];
                         post_addr++;
                     }
-                }
 
-                if ( ((G_CUR_UAV & MASK_TLPM3) == MASK_XLINK3) ||
-                        ((G_CUR_UAV & MASK_TLPM3) == MASK_ALINK3) )
-                {
                     rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_DMA, o_err);
                     if ( rc )
                     {
@@ -1353,7 +1338,9 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                 }
 
                 if ( ((G_CUR_UAV & MASK_TLPM4) == MASK_XLINK4) ||
-                        ((G_CUR_UAV & MASK_TLPM4) == MASK_ALINK4) )
+                        ((G_CUR_UAV & MASK_TLPM5) == MASK_XLINK5) ||
+                        ((G_CUR_UAV & MASK_TLPM4) == MASK_ALINK4) ||
+                        ((G_CUR_UAV & MASK_TLPM5) == MASK_ALINK5) )
                 {
                     rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_DMA, o_err);
                     if ( rc )
@@ -1421,11 +1408,7 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                         *post_addr = (uint64_t)u3.ev.e[j];
                         post_addr++;
                     }
-                }
 
-                if ( ((G_CUR_UAV & MASK_TLPM5) == MASK_XLINK5) ||
-                        ((G_CUR_UAV & MASK_TLPM5) == MASK_ALINK5) )
-                {
                     rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_DMA, o_err);
                     if ( rc )
                     {
@@ -1494,8 +1477,10 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                     }
                 }
 
-                if ( ((G_CUR_UAV & MASK_TLPM6) == MASK_XLINK6) ||
-                        ((G_CUR_UAV & MASK_TLPM6) == MASK_ALINK6) )
+                if ( ((G_CUR_UAV & MASK_TLPM6) == MASK_XLINK6)    ||
+                        ((G_CUR_UAV & MASK_TLPM7) == MASK_XLINK7) ||
+                        ((G_CUR_UAV & MASK_TLPM6) == MASK_ALINK6) ||
+                        ((G_CUR_UAV & MASK_TLPM7) == MASK_ALINK7) )
                 {
                     rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_DMA, o_err);
                     if ( rc )
@@ -1563,11 +1548,7 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
                         *post_addr = (uint64_t)u3.ev.e[j];
                         post_addr++;
                     }
-                }
 
-                if ( ((G_CUR_UAV & MASK_TLPM7) == MASK_XLINK7) ||
-                        ((G_CUR_UAV & MASK_TLPM7) == MASK_ALINK7) )
-                {
                     rc = putScom (PBASLVCTL1_C0040028, PBASLV_SET_DMA, o_err);
                     if ( rc )
                     {
