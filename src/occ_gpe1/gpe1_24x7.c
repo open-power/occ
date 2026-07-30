@@ -934,22 +934,8 @@ uint32_t post_pmu_events (int grp, GpeErrorStruct* o_err)
 
                     for(j=0; j<4; j++)
                     {
-                        // PB unit is always avaiable and its events always populated
+                        // PB unit is always available and its events always populated
                         // so no need for PB unit check
-                        if ( ( i == 0 && j == 1 && !( (G_CUR_UAV & MASK_MC00) || (G_CUR_UAV & MASK_MC01) ) ) ||
-                             ( i == 0 && j == 2 && !( (G_CUR_UAV & MASK_MC00) || (G_CUR_UAV & MASK_MC01) ) ) ||
-                             ( i == 1 && j == 1 && !( (G_CUR_UAV & MASK_MC10) || (G_CUR_UAV & MASK_MC11) ) ) ||
-                             ( i == 1 && j == 2 && !( (G_CUR_UAV & MASK_MC10) || (G_CUR_UAV & MASK_MC11) ) ) ||
-                             ( i == 4 && j == 1 && !( (G_CUR_UAV & MASK_MC20) || (G_CUR_UAV & MASK_MC21) ) ) ||
-                             ( i == 4 && j == 2 && !( (G_CUR_UAV & MASK_MC20) || (G_CUR_UAV & MASK_MC21) ) ) ||
-                             ( i == 5 && j == 1 && !( (G_CUR_UAV & MASK_MC30) || (G_CUR_UAV & MASK_MC31) ) ) ||
-                             ( i == 5 && j == 2 && !( (G_CUR_UAV & MASK_MC30) || (G_CUR_UAV & MASK_MC31) ) ) ||
-                             ( i == 0 && j == 3 && !(G_CUR_UAV & MASK_PEC0) ) ||
-                             ( i == 4 && j == 3 && !(G_CUR_UAV & MASK_PEC1) ) )
-                        {
-                            post_addr++;
-                            continue;
-                        }
                         *post_addr = (uint64_t)u3.ev.e[j];
                         post_addr++;
                     }
